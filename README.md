@@ -42,7 +42,7 @@ Velox is a next-generation programming language that aims to combine performance
 | floating       | `f128`           | `0.0f` `-1.0f` `10f128`    | 128 bit        |
 | decimal        | `deci`           | `0.0` `-1.0` `10d` default | numbers*8  bit |
 | udecimal       | `udeci`           | `10ud`                       | numbers*8  bit |
-| decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
+| decimal constructor    | COBOL inspiration `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
 | no type        | `u0`, `void`   |  | 
 | ascii          | `ascii`          | `"a"ascii`                   | 8 bits (latin1) |
 | utf32      | `utf32`           | `"⚜"utf32` `"⚜"` default         | 32 bits  |                   
