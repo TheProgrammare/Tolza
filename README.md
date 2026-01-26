@@ -141,6 +141,8 @@ you can use some sugar to avoid the heavy standard syntax
 | table of optional | `[T?]`,<br> `[T? -> size]` |
 | optional ptr |`ptr?'T` |
 | optional pointee | `ptr'T?` |
+| volatile | `T!` |
+| same as const/optional placement |
 
 # operators
 |      name      |    Syntax    |       description       |
