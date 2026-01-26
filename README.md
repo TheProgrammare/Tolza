@@ -72,7 +72,7 @@ no memory loss allowed
 | floating       | `fsize` -> `f32` or `fsize` -> `f64`      |
 | decimal        | inferior decimal -> superior decimal      |
 | udecimal       | udecimal -> decimal                       |
-| ascii          | `ascii` -> `char`                         |
+| ascii          | `ascii` -> `utf32`                         |
 | string         | `str` -> `text`                           |
 
 ### forbid/allow implicit cast
