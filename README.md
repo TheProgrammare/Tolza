@@ -246,8 +246,7 @@ if the new line don't have # the metacode is no longer cumulative
 # export
 # async
 
-# where T
-fn function(a: T) -> i32 {
+fn function<T>(a: T) -> i32 {
 
 }
 ```
@@ -326,8 +325,8 @@ namespace operations {
   }
 
   sys get_map_pos -> (lat: i32, long: i32) {
-    where m_pos: CMap_pos {
-      return m_pos.lat, m_pos.long    
+    CMap_pos(pos) {
+      return pos.lat, pos.long    
     } 
   }
   
