@@ -189,7 +189,7 @@ you can use some sugar to avoid the heavy standard syntax
 | shift right a  | `[a]>>`      | fill left with MSB (arithmetic) |
 | rotate left    | `<<[r]`      | rotate bits to the left |
 | rotate right   | `[r]>>`      | rotate bits to the right |
-| slice bits     | `:[0..8]`    | get bits from range     |
+| slice bits     | `~[0..8]`    | get bits from range     |
 
 
 # type alias
