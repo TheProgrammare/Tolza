@@ -176,19 +176,6 @@ Syntax:
 type <name> = <expression>
 ```
 
-e.g.
-```
-type tResult = future::Future<i32>
-
-# async
-fn calculation() -> tResult {
-  // operation
-}
-
-var future_result = calculation()
-var future_result: tResult = calculation()
-``` 
-
 # table population
 when you create a table instance `{ a, b, ... }` you can avoid the explicit value affectation and use an table population syntax to put in table literal !
 
@@ -205,203 +192,12 @@ table population use compiler reserved indentifier to use the indexation during 
 - `@j` second dimension
 - ... 
 
-# metaprogrammation
-metaprogrammation is behaviour declarative who starts with `#`
-can define some behaviour : module exportation, async, parallel, contigous memory alignment, etc...
-
-## cumulative metacode
-cumulative metacode union behaviours when the new line have # 
-
-if the new line don't have # the metacode is no longer cumulative
-```
-# export
-# async
-
-fn function<T>(a: T) -> i32 {
-
-}
-```
-the function will only be generic and not exported and not async because an new line without # separate them
-example:
-```
-# async
-fn functionOnThreads() {}
-
-# align 8
-class City {
-  var code: i32;
-  var name: str;
-}
-
-// cumulate behaviour
-# export
-# async 
-fn sum() {} 
-```
-cumulative metacode can be in a unique line
-```
-# export # async
-fn sum() {}
-```
-
-## metacode block
-you can reuse metacode with names, parameters can be passed 
-```
-# meta name(parameters) -> fn|var|let|class|trait|method|...
-# // sub metacode
-```
-target permit to precise the object applied
-if the target is not specified a warning will be triggered
-```
-# meta metacode_reused_name(timeout_: f32) -> func
-# export
-# async
-# timeout timeout_
-
-# metacode_reused_name
-fn fonc_example() {};
-```
-
-metacode block can be exported
-```
-# export
-# meta metacode_reused() -> fn
-# export
-# async
-```
-
-## metacode scoped
-replication of the metacode specification to all objects in the scope 
-use simply `# scope ... # end` or named scode `# scope name ... # end`.
-the scope is the end of the metacode block
-
-you can disable all metacode superior scope with: `# exclude` or for a specific scope: `# exclude name`
-scopes are not interdependent, an exclusion of an specific scope disable only the named scope, the superiors or inferiors scopes will not be impacted.
-
-example:
-```
-# if os == windows or os == linux
-
-# async main
-# scope
-namespace operations {
-  fn add() {}
-  comp CMap_pos { 
-    var lat: i32 = 0
-    var long: i32 = 0 
-  }
-
-  entity THouse {
-    use CMap_pos
-  }
-
-  sys get_map_pos -> (lat: i32, long: i32) {
-    CMap_pos(pos) {
-      return pos.lat, pos.long    
-    } 
-  }
-  
-  # if os == linux
-  fn lin_convert_pos(lat: i32, long: i32) { ... }
-  # elif os == windows
-  fn win_convert_pos(lat: i32, long: i32) { ... }
-  # end if // elif
-
-  # exclude
-  # export
-  fn update_pos_ui() { ... }
-}
-# end if // scope
-```
-
-## metacode conditional
-metacodes can set condition during the compilation to compile or exclude code parts
-
-| name | syntax | e.g. | info |
-|-|-|-|-|
-| if condition | `# if ...` | `# if some_user_define`,<br> `#  user_define == 10` | |
-| elif condition | `# elif ...` | `# elif other_user_define` | |
-| else condition | `# else` | `# else` | |
-| end condition | `# end if` | `# end if` | to terminate the conditional metacode | |
-
-> there is some native conditions for clean compilation and reading
-
-| name | syntax | e.g. | info |
-|-|-|-|-|
-| bits condition | `# if bits == ...` | `# if bits == 64` | indicate the architecture bits (8/16/32/64) |
-| architecture condition | `# if arch == ...` | `# if arch == x86_64` | indicate the architecture type (ARM64/x86_64/x86/IBM/...) |
-| operating system condition | `# if os == ...` | `# if os == linux` | indicate the operating system (Linux/Windows/MacOS/...) |
-| mode condition | `# if debug` | `# if debug` | for the compilation in debug mode |
-
-## metacode expansion
-metacodes can generate code before the compilation
-
-- use `# expand` to set the code expansion 
-- use `# for _NAME as a | b | c ...` to define the generation placeholder
-- use `# each` to define the expansion scope
-
-you can define multiple placeholders (it's became like a dimensions like table)
-
-use placeholders in code with double square like: `[[_U]]`
-
-> Note: the generation will iterate for all placeholders multiply by their alts
-
-e.g.
-```
-# expand
-# for _T as a | b | c
-# for _U as 1 | 2
-# each
-  fn add(val: [[_T]]) -> isize {
-    return [[_T]] + [[_U]]
-  }
-# end each// expand
-``` 
-will generate for
-
-| `_U` | `_T` | | |
-|-|-|-|-|
-|   | a  | b  | c  |
-| 1 | a1 | b1 | c1 |
-| 2 | a2 | b2 | c2 |
-
-You can set some exceptions or conditions during the expansion:
-use `# expand if ...` `# expand elif` `# expand else` `# end`
-```
-# expand
-# for _T as i32 | i64 | i128
-# for _U as f32 | f64 | f128
-# each
-  fn add(a: [[_T]], b: [[_T]]) -> [[_U]] {
-    # expand if [[_U]] == f128 or [[_T]] == i128
-    log::warning("usage of 128 bytes type, please check your architecture!")
-    # end expand if
-    
-    return a + b;
-  }
-# end each
-```
- 
-## module alias
-you can give an alias to an module (hightly not recommended)
-`use fs = core::file_system`
-
 # cast
 | type | syntax | note
 |-|-|-|
 | static cast | `<value> as <type>` | always successful |
 | safe cast | `<value> as? <type>` | optional return `T?` |
 | reinterpret cast | `<value> as! <type>` | getelementptr on speficied type 
-
-
-# type check
-polymorphism/variant check
-will return only boolean
-
-| nature | syntax | description |
-|-|-|-|
-| composing check | `<comp> in <entity>` | check if entity have a component | 
-| composing check | `<role> in <entity>` | check if entity have a role (sum of specific components) | 
 
 # format string
 formatted text literal:
@@ -421,7 +217,6 @@ use in format string like:
 ```
 "duration {<expression>:<format_specifier>} s"
 ```
-
 
 ## format conditional (experimental)
 you can specify some reaction with a comparison from the expression returned value:
@@ -447,6 +242,36 @@ f"You have {messages}:(==0:no messages,==1:one message,>1:{messages} messages)"
 var gender = "F"
 f"{gender}:(=='F':'She is online', =='M':'He is online', other:'online')"
 ```
+
+# variable
+Variables are statically typed or type inferred
+
+A variable always must be declared with a value
+
+| type | syntax |
+|-|-|
+| mutable typed | `var name: T` |
+| mutable typed setted | `var name: T = ...` |
+| mutable inferred setted | `var name = ...` |
+| immutable typed | `let name: T = ...` |
+| immutable inferred | `let name = ...` |
+| compiletime typed | `const name: T = ...` |
+| compiletime inferred | `const name = ...` |
+
+## variable assignation
+variables are managed by a explicit borrowing
+the default affectation `=` is a move semantic except for primitives who are a copy
+
+| type | syntax | note |
+|-|-|-|
+| copy value    | `lvalue1 copy= rvalue / lvalue2`     |  |
+| reference value (no mutable)   | `lvalue1 ref= lvalue2`   | multiple ref permitted but mutable ref are prohibied until all ref are removed before |
+| mutable ref value | `lvalue1 mut= lvalue2` | only one mutable ref permitted
+| move semantic   | `lvalue1 move= lvalue2` `lvalue1 = lvalue2`   | remove all ref and mutable ref anterior
+
+## operation assignation
+
+`+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
 
 # function
 > Use `fn` keyword to declare a function
@@ -477,14 +302,6 @@ calling:
 | unpack result | `var (a, _, c) = name()` | `_` is for ignore field
 
 ## local variables
-variables are declared by a kind:
-
-- use `const` to make a compile time constant
-- use `let` to make a constant variable
-- use `var` to make a mutable variable
-
-A variable always must be declared with a value
-
 Syntax:
 ```
 <kind> <name> [: <type>] = <value>
@@ -496,9 +313,9 @@ e.g.
 ```
 fn add_counter() -> i32 {
   # static
-  var counter: i32 = 0; // will init at 0 but not reset to 0 between calls
-  counter++;
-  return counter;
+  var counter: i32 = 0 // will init at 0 but not reset to 0 between calls
+  counter += 1
+  return counter
 }
 ```
 
@@ -569,7 +386,6 @@ call ordering: positional -> named -> variadic args
 | variadic param (variadic name is obligatory to specify the start of the variadic args). In a function call, variadic arguments must be prefixed by ... once, before the first variadic value. All subsequent values are considered part of the variadic list |  `fn sum(args: T...)` | `sum()` or `sum(... 10 as i32, 2.5 as f32)` | 
 | optional/obligatory param with positional and named args and variadic args | `fn msg_add(msg: str, left: f32 = 0, right: f32 = 0, args: T...)` | `msg_add("result")` or `msg_add("result", 10.0)` or `msg_add("result", 10.0, right= 10 as f32, ... 10, 5.0, 6)`
 
-
 ## pass mode
 default pass mode:
 
@@ -587,7 +403,7 @@ user pass mode:
 | address pass mode | `addr` | designed to modify the address of the pointer (pointers accepted only) | `foo(addr a: T)` | default value prohibied |
 | variadic pass mode | `...` | variadic parameter (always the last parameter) you can specify a general pass mode | `sum(copy term: T...)` | default value prohibied (but optional argument)
 
-# returns
+## returns
 multiple returns are handled (but the compiler pack them as a tuple)
 complex types pass by copy or move semantic if local variables and primitives pass by copy by default
 you can specify the pointer type in return
@@ -618,12 +434,13 @@ Syntax:
 gen <name>'<'<typename> [, <typename2>, ...]'>' { .. }
 ```
 
-## generics conditions:
-
+## generics conditions
 syntax:
 ```
 <typename> <kind> <symbol>
 ```
+
+the conditions are cumulatives and not alternatives
 
 | filter kind | kind | syntax |
 |-|-|-|
@@ -674,45 +491,6 @@ fn add(a: GNumeric, b: GNumeric) {
 }
 ```
 
-## generic use in COP and call
-> Usage is the same as rust generic call type args
-
-> It's possible tu specify a generic in the args
-
-generic function call (turbofish used in calling)
-
-syntax:
-```
-<name>::'<'type[, type, ...]'>'([<parameters>])
-```
-
-```
-add::<GNumeric, i32>(10, 20)
-```
-
-entity with generic fixed component:
-```
-entity TCity {
-  use CArray<THouse>
-}
-```
-
-entity with generic component:
-```
-entity TAnimal<T> {
-  use CLife<T>
-}
-```
-
-component with generic fixed:
-```
-comp CNames { names: TArray<str> }
-```
-
-component with generic:
-```
-comp CLife<T: GDecimalScaled, U> { render: U, metabolism: Map<str, T> }
-```
 
 # flag
 > Use `flag` keyword to declare a flag
@@ -786,6 +564,238 @@ match result {
   None => println("Failure")
 }
 ```
+
+# modules
+modules permit to avoid naming collision, it's possible to use native types as modules
+
+declaration:
+```
+mod name { ... }
+```
+
+call:
+```
+City::House::new(N: 37.0379f, E: 27.4241f)
+```
+
+to export module, use the instruction `export <name> { ... }` and use as a module
+
+## module alias
+you can give an alias to an module (hightly not recommended)
+`use fs = core::file_system`
+
+
+# memory managment
+The memory use a fine managment, there is no GC
+
+Memory types:
+
+| name | syntax | info |
+|-|-|-|
+| non typed memory address | `ptr'void` | useful for C interop (`void*`) |
+| raw pointer | `ptr'T` | if no escape in the scope, will delete |
+| unique pointer | `uptr'T` | use `move` to change his position and invalidate his last position |
+| shared pointer | `sptr'T` | Use `mut` to add his reference to the counter and new position. A `move` will keep the counter, a `mut` will keep the counter if on another lvalue by the borrow rule
+
+## pointer creation (on heap)
+To use a memory space by pointer creation use `new` key, uses the C malloc
+
+Allocate new memory space like:
+```
+new <ptr>'<type>(<value>)
+```
+
+e.g.
+```
+var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
+```
+
+# tuple
+tuples are implicit they a deduced most of the time in `( ... )`
+
+tuple cases:
+
+| name | syntax | info
+|-|-|-|
+| tuple type | `(T, U, ...)` | |
+| tuple instance | `(val1, val2, ...)` | |
+| named tuple type | `(name1: T, name2: U, ...)` | |
+| named tuple instance | `(name1= val1, name2= val2)` | |  
+| static access | `let first = a.0` | |
+| static access named | `let first = a.name` | |
+| dynamic access | `let first = a.get(k)` | |
+| function return | `fn name() -> T, U, ...` | tuple return |
+| function return | `fn name() -> name1: T, name2: U, ...` | named tuple return | 
+| unpack tuple from call | `var a, b, c = name()` | |
+| unpack tuple from variable | `var a, _, c = var_tuple` | |
+
+## tuple cast
+Tuples and named tuples are the same for the compilator but need to de distinguished for users to makes proprer conversion.
+
+Conversions:
+
+| cast type | base | syntax | result | info |
+|-|-|-|-|-|
+| positional | `let t1 = (10, 2.0, "hello")` | `t2 = t1 as (2, 1, 0)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the index |
+| nomenclature | `let t1 = (a= 10, b= 2.0, c= "hello")` | `t2 = t1 as (c, b, a)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the field name | 
+
+# flow
+
+## if elif else
+control flow by condition
+
+| flow | syntax codeblock | syntax inline |
+|-|-|
+| if | `if <condition> { ... }` | `if <condition> then ...` |
+| elif | `elif <condition> { ... }` | `elif <condition> then ...` |
+| else | `else { ... }` | `else ...` |
+
+## ternary if
+Ternary if is a control flow for value
+
+syntax:
+```
+if <condition> then <true statement>
+if <condition> then <true_statement> else <false_statement>
+```
+
+## match
+Match statement control flow for code logic by matching comparison on value. 
+
+Execution stop to the case executed. Or use metacode `# fallthrough`
+
+syntax:
+```
+match <value> {
+  // case states ...
+}
+```
+
+## case statement
+Define inside match
+
+| statement case | syntax |
+|-|-|
+| case codeblock | `<evaluator> => { ... }` |
+| case inline | `<evaluator> => ...` |
+
+e.g.
+
+| type | syntax |
+|-|-|
+| compare literal integral | `10 =>` |
+| compare literal string | `"hello" =>` |
+| compare value | `if val > 100 =>` |
+| compare in range | `10..=30 =>` |
+| match typed enum and bind value | `Some(a) =>` |
+| match typed enum, bind value and compare | `Some(a) if a > 10 =>` |
+| match on enum | `EEnum::Elem =>` |
+| other case | `_ =>` | 
+
+# loop
+Highlty not recommended
+
+| statement type | syntax |
+|-|-|
+| codeblock | `loop { ... }` |
+| inline | `loop then ...` |
+
+# while
+| statement type | syntax |
+|-|-|
+| codeblock | `while <condition> { ... }` |
+| inline | `while <condition> then ...` |
+
+# do-while statement
+| statement type | syntax |
+|-|-|
+| codeblock | `do { ... } while <condition>;` |
+| inline | `do ... while <condition>;` |
+
+# for loop statement
+For loop can be used on range, slice, collection and map
+
+Syntax:
+
+| statement type | syntax | info |
+|-|-|-|
+| for index | `for <index> in <range> [step <constant>] { ... }` | can use `step` after `<range>` |
+| for item | `for [<index>] mut/ref/copy/move <item> in <slice/collection> { ... }` |  |
+| for item | `for [<index>] mut/ref/copy/move (<item1>, <item2>, ...) in <slice/collection> { ... }` | useful for map or tuple array  |
+
+# goto statement
+Highlty not recommended, designed for flexibility and code specific behaviour.
+
+| state | syntax |
+|-|-|
+| go to and label | `goto name` |
+| label definition | `label name:` |
+
+# range statement
+Borned with a start integral, end integral and optional step (only for `for` loop).
+
+range can be use to extract slice from collection with special ranges.
+
+| range type | syntax | info |
+|-|-|-|
+| range end exclude | `0..10` | will go from 0 to 9 |
+| range end include | `0..=10` | will go from 0 to 10 |
+| range all | `collection[..]` | will return the collection, not very useful there |
+| range from 0 | `..11` | will go from 0 or the start of the collection to the 10th index (so 11 elements slice) |
+| range to max | `5..` | will go from 5 to the end of the collection or the max value `i64` |
+
+# slice
+Returns a view according to specified range, can be mutable and immutable
+
+| slice type | syntax |
+|-|-|
+| immutable slice | `collection[start..end]` |
+| mutable slice | `mut'collection[start..end]` | 
+
+slice body
+basically a fat pointer
+```
+slice { first_elem: ptr'T, length: usize }
+```
+
+# pattern
+the pattern matching can be used from if/elif/while and match statement
+
+general syntax:
+```
+[if/elif/while] ref/mut/copy/move <pattern> = <expression> [if <condition>] {...}
+```
+pattern element kind | e.g. | info |
+|-|-|-|
+| bind value | `Some(a)` | bind value on a |
+| matching value | `("Marc", 20)` | compare tuple with value "Marc" and 20 |
+| ignore value | `(a, _, b)` | ignore the second element |
+
+| pattern kind | e.g. |
+|-|-|
+| enum pattern | `MyEnum::Elem(a, _, 10) = <expression>` |
+| tuple pattern | `(a, _, 7, "hello") = <expression>` |
+| entity pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
+| entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
+| component pattern | `CId{name: name, id: 10} = <expression>` |
+
+# module import/export
+The import and exportation of the code use the LLVM declare/extern
+The modules are also modules namespaces to avoid any name collision (to avoid the module exported with his namespace, use `# native \n export <name> {...}`)
+
+| type | syntax | e.g. | info |
+|-|-|-|-|
+| export module | optional: `[#native]` <br> `export <name> {...}` | `export math {...}` | Exports the current code as a module under its own namespace. If native is used, importing it will expose all symbols directly in the file’s root scope.  |
+| export also the imported module (mirror) | `[#native]` <br> `export import <name>` | `export import math` | Declares that when this module is imported, the specified module(s) will also be imported automatically. If native is used, those symbols are also imported into the file’s root scope. | 
+| export to other language | `export <name> extern <lang> {...}`  | `export math extern C {...}` | callable from another language | 
+| import from module | `import <name>` | `import city` | import the code be the module name (by default is import user, else, will import from the standard lib) |
+| import from standard module | `import @<name>` | `import @core` | import from the standard lib |
+| import from user module | `import $<name>` | `import $math` | import from user script and imported lib |
+| import from external language lib | `import extern <lang>::<lib>` | `import extern C::stdio` | C is natively handled, will generate automatically a parallel bind folder and imported in the script with the wrapper used |
+
+> Elements exportable :
+mod, entity, role, component, system, generics, function, global, enum, metacode
+
 
 # COP paradigm (Compositional Oriented Programming)
 COP, short for Compositional Oriented Programming, is a programming paradigm where entities are built through the static composition of components, without inheritance, without polymorphism, and without dynamic components
@@ -1009,254 +1019,45 @@ call with system
 player::>move((10.0, 20.0, 30.0), 5.0)
 ```
 
+# COP and function generic and function call
+> Usage is the same as rust generic call type args
 
-# modules
-modules permit to avoid naming collision, it's possible to use native types as modules
+> It's possible tu specify a generic in the args
 
-declaration:
-```
-mod name { ... }
-```
-
-call:
-```
-City::House::new(N: 37.0379f, E: 27.4241f)
-```
-
-to export module, use the instruction `export <name> { ... }` and use as a module
-
-# variable
-Variables are statically typed or type inferred
-
-| type | syntax |
-|-|-|
-| mutable typed | `var name: T` |
-| mutable typed setted | `var name: T = ...` |
-| mutable inferred setted | `var name = ...` |
-| immutable typed | `let name: T = ...` |
-| immutable inferred | `let name = ...` |
-| compiletime typed | `const name: T = ...` |
-| compiletime inferred | `const name = ...` |
-
-# variable affectation
-
-| type | syntax | note |
-|-|-|-|
-| copy value    | `lvalue copy= rvalue / lvalue`     |  |
-| reference value (no mutable)   | `lvalue ref= lvalue`   | multiple ref permitted but mutable ref are prohibied until all ref are removed before |
-| mutable ref value | `lvalue mut= lvalue` | only one mutable ref permitted
-| move semantic   | `lvalue move= lvalue`   | remove all ref and mutable ref anterior
-
-# memory managment
-The memory use a fine managment, there is no GC
-
-Memory types:
-
-| name | syntax | info |
-|-|-|-|
-| non typed memory address | `ptr'void` | useful for C interop (`void*`) |
-| raw pointer | `ptr'T` | if no escape in the scope, will delete |
-| unique pointer | `uptr'T` | use `move` to change his position and invalidate his last position |
-| shared pointer | `sptr'T` | Use `mut` to add his reference to the counter and new position. A `move` will keep the counter, a `mut` will keep the counter if on another lvalue by the borrow rule
-
-## pointer creation (on heap)
-To use a memory space by pointer creation use `new` key, uses the C malloc
-
-Allocate new memory space like:
-```
-new <ptr>'<type>(<value>)
-```
-
-e.g.
-```
-var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
-```
-
-# tuple
-tuples are implicit they a deduced most of the time in `( ... )`
-
-tuple cases:
-
-| name | syntax | info
-|-|-|-|
-| tuple type | `(T, U, ...)` | |
-| tuple instance | `(val1, val2, ...)` | |
-| named tuple type | `(name1: T, name2: U, ...)` | |
-| named tuple instance | `(name1= val1, name2= val2)` | |  
-| static access | `let first = a.0` | |
-| static access named | `let first = a.name` | |
-| dynamic access | `let first = a.get(k)` | |
-| function return | `fn name() -> T, U, ...` | tuple return |
-| function return | `fn name() -> name1: T, name2: U, ...` | named tuple return | 
-| unpack tuple from call | `var a, b, c = name()` | |
-| unpack tuple from variable | `var a, _, c = var_tuple` | |
-
-## tuple cast
-Tuples and named tuples are the same for the compilator but need to de distinguished for users to makes proprer conversion.
-
-Conversions:
-
-| cast type | base | syntax | result | info |
-|-|-|-|-|-|
-| positional | `let t1 = (10, 2.0, "hello")` | `t2 = t1 as (2, 1, 0)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the index |
-| nomenclature | `let t1 = (a= 10, b= 2.0, c= "hello")` | `t2 = t1 as (c, b, a)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the field name | 
-
-# flow
-
-## if elif else
-control flow by condition
-
-| flow | syntax codeblock | syntax inline |
-|-|-|
-| if | `if <condition> { ... }` | `if <condition> then ...` |
-| elif | `elif <condition> { ... }` | `elif <condition> then ...` |
-| else | `else { ... }` | `else ...` |
-
-## ternary if
-Ternary if is a control flow for value
+generic function call (turbofish used in calling)
 
 syntax:
 ```
-if <condition> then <true statement>
-if <condition> then <true_statement> else <false_statement>
+<name>::'<'type[, type, ...]'>'([<parameters>])
 ```
 
-## match
-Match statement control flow for code logic by matching comparison on value. 
-
-Execution stop to the case executed. Or use metacode `# fallthrough`
-
-syntax:
 ```
-match <value> {
-  // case states ...
+add::<GNumeric, i32>(10, 20)
+```
+
+entity with generic fixed component:
+```
+entity TCity {
+  use CArray<THouse>
 }
 ```
 
-## case statement
-Define inside match
-
-| statement case | syntax |
-|-|-|
-| case codeblock | `<evaluator> => { ... }` |
-| case inline | `<evaluator> => ...` |
-
-e.g.
-
-| type | syntax |
-|-|-|
-| compare literal integral | `10 =>` |
-| compare literal string | `"hello" =>` |
-| compare value | `if val > 100 =>` |
-| compare in range | `10..=30 =>` |
-| match typed enum and bind value | `Some(a) =>` |
-| match typed enum, bind value and compare | `Some(a) if a > 10 =>` |
-| match on enum | `EEnum::Elem =>` |
-| other case | `_ =>` | 
-
-# loop
-Highlty not recommended
-
-| statement type | syntax |
-|-|-|
-| codeblock | `loop { ... }` |
-| inline | `loop then ...` |
-
-# while
-| statement type | syntax |
-|-|-|
-| codeblock | `while <condition> { ... }` |
-| inline | `while <condition> then ...` |
-
-# do-while statement
-| statement type | syntax |
-|-|-|
-| codeblock | `do { ... } while <condition>;` |
-| inline | `do ... while <condition>;` |
-
-# for loop statement
-For loop can be used on range, slice, collection and map
-
-Syntax:
-
-| statement type | syntax | info |
-|-|-|-|
-| for index | `for <index> in <range> [step <constant>] { ... }` | can use `step` after `<range>` |
-| for item | `for [<index>] mut/ref/copy/move <item> in <slice/collection> { ... }` |  |
-| for item | `for [<index>] mut/ref/copy/move (<item1>, <item2>, ...) in <slice/collection> { ... }` | useful for map or tuple array  |
-
-# goto statement
-Highlty not recommended, designed for flexibility and code specific behaviour.
-
-| state | syntax |
-|-|-|
-| go to and label | `goto name` |
-| label definition | `label name:` |
-
-# range statement
-Borned with a start integral, end integral and optional step (only for `for` loop).
-
-range can be use to extract slice from collection with special ranges.
-
-| range type | syntax | info |
-|-|-|-|
-| range end exclude | `0..10` | will go from 0 to 9 |
-| range end include | `0..=10` | will go from 0 to 10 |
-| range all | `collection[..]` | will return the collection, not very useful there |
-| range from 0 | `..11` | will go from 0 or the start of the collection to the 10th index (so 11 elements slice) |
-| range to max | `5..` | will go from 5 to the end of the collection or the max value `i64` |
-
-# slice
-Returns a view according to specified range, can be mutable and immutable
-
-| slice type | syntax |
-|-|-|
-| immutable slice | `collection[start..end]` |
-| mutable slice | `mut'collection[start..end]` | 
-
-slice body
-basically a fat pointer
+entity with generic component:
 ```
-slice { first_elem: ptr'T, length: usize }
+entity TAnimal<T> {
+  use CLife<T>
+}
 ```
 
-# pattern
-the pattern matching can be used from if/elif/while and match statement
-
-general syntax:
+component with generic fixed:
 ```
-[if/elif/while] ref/mut/copy/move <pattern> = <expression> [if <condition>] {...}
+comp CNames { names: TArray<str> }
 ```
-pattern element kind | e.g. | info |
-|-|-|-|
-| bind value | `Some(a)` | bind value on a |
-| matching value | `("Marc", 20)` | compare tuple with value "Marc" and 20 |
-| ignore value | `(a, _, b)` | ignore the second element |
 
-| pattern kind | e.g. |
-|-|-|
-| enum pattern | `MyEnum::Elem(a, _, 10) = <expression>` |
-| tuple pattern | `(a, _, 7, "hello") = <expression>` |
-| entity pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
-| entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
-| component pattern | `CId{name: name, id: 10} = <expression>` |
-
-# module import/export
-The import and exportation of the code use the LLVM declare/extern
-The modules are also modules namespaces to avoid any name collision (to avoid the module exported with his namespace, use `# native \n export <name> {...}`)
-
-| type | syntax | e.g. | info |
-|-|-|-|-|
-| export module | optional: `[#native]` <br> `export <name> {...}` | `export math {...}` | Exports the current code as a module under its own namespace. If native is used, importing it will expose all symbols directly in the file’s root scope.  |
-| export also the imported module (mirror) | `[#native]` <br> `export import <name>` | `export import math` | Declares that when this module is imported, the specified module(s) will also be imported automatically. If native is used, those symbols are also imported into the file’s root scope. | 
-| export to other language | `export <name> extern <lang> {...}`  | `export math extern C {...}` | callable from another language | 
-| import from module | `import <name>` | `import city` | import the code be the module name (by default is import user, else, will import from the standard lib) |
-| import from standard module | `import @<name>` | `import @core` | import from the standard lib |
-| import from user module | `import $<name>` | `import $math` | import from user script and imported lib |
-| import from external language lib | `import extern <lang>::<lib>` | `import extern C::stdio` | C is natively handled, will generate automatically a parallel bind folder and imported in the script with the wrapper used |
-
-> Elements exportable :
-mod, entity, role, component, system, generics, function, global, enum, metacode
+component with generic:
+```
+comp CLife<T: GDecimalScaled, U> { render: U, metabolism: Map<str, T> }
+```
 
 # Bindgen
 Bindgen is external binds auto generated scripts when a user use `# import extern lang::lib`
@@ -1278,14 +1079,193 @@ bindgen script:
 ```
 // C_bind.vlxb
 
-export module C 
-extern {
+export C {
 
+# extern 
 fn printf(_Format: str, args: addr...) -> void;
 
 }
 ```
-LLVM will mark these functions externals (`# extern`) and search in C ABI (`# export module C`)
+LLVM will mark these functions externals (`# extern`) and search in C ABI (`export C {...}`)
+
+
+# metaprogrammation
+metaprogrammation is behaviour declarative who starts with `#`
+can define some behaviour : module exportation, async, parallel, contigous memory alignment, etc...
+
+## cumulative metacode
+cumulative metacode union behaviours when the new line have # 
+
+if the new line don't have # the metacode is no longer cumulative
+```
+# export
+# async
+
+fn function<T>(a: T) -> i32 {
+
+}
+```
+the function will only be generic and not exported and not async because an new line without # separate them
+example:
+```
+# async
+fn functionOnThreads() {}
+
+# align 8
+class City {
+  var code: i32;
+  var name: str;
+}
+
+// cumulate behaviour
+# export
+# async 
+fn sum() {} 
+```
+cumulative metacode can be in a unique line
+```
+# export # async
+fn sum() {}
+```
+
+## metacode block
+you can reuse metacode with names, parameters can be passed 
+```
+# meta name(parameters) -> fn|var|let|class|trait|method|...
+# // sub metacode
+```
+target permit to precise the object applied
+if the target is not specified a warning will be triggered
+```
+# meta metacode_reused_name(timeout_: f32) -> func
+# export
+# async
+# timeout timeout_
+
+# metacode_reused_name
+fn fonc_example() {};
+```
+
+metacode block can be exported
+```
+# export
+# meta metacode_reused() -> fn
+# export
+# async
+```
+
+## metacode scoped
+replication of the metacode specification to all objects in the scope 
+use simply `# scope ... # end` or named scode `# scope name ... # end`.
+the scope is the end of the metacode block
+
+you can disable all metacode superior scope with: `# exclude` or for a specific scope: `# exclude name`
+scopes are not interdependent, an exclusion of an specific scope disable only the named scope, the superiors or inferiors scopes will not be impacted.
+
+example:
+```
+# if os == windows or os == linux
+
+# async main
+# scope
+namespace operations {
+  fn add() {}
+  comp CMap_pos { 
+    var lat: i32 = 0
+    var long: i32 = 0 
+  }
+
+  entity THouse {
+    use CMap_pos
+  }
+
+  sys get_map_pos -> (lat: i32, long: i32) {
+    CMap_pos(pos) {
+      return pos.lat, pos.long    
+    } 
+  }
+  
+  # if os == linux
+  fn lin_convert_pos(lat: i32, long: i32) { ... }
+  # elif os == windows
+  fn win_convert_pos(lat: i32, long: i32) { ... }
+  # end if // elif
+
+  # exclude
+  # export
+  fn update_pos_ui() { ... }
+}
+# end if // scope
+```
+
+## metacode conditional
+metacodes can set condition during the compilation to compile or exclude code parts
+
+| name | syntax | e.g. | info |
+|-|-|-|-|
+| if condition | `# if ...` | `# if some_user_define`,<br> `#  user_define == 10` | |
+| elif condition | `# elif ...` | `# elif other_user_define` | |
+| else condition | `# else` | `# else` | |
+| end condition | `# end if` | `# end if` | to terminate the conditional metacode | |
+
+> there is some native conditions for clean compilation and reading
+
+| name | syntax | e.g. | info |
+|-|-|-|-|
+| bits condition | `# if bits == ...` | `# if bits == 64` | indicate the architecture bits (8/16/32/64) |
+| architecture condition | `# if arch == ...` | `# if arch == x86_64` | indicate the architecture type (ARM64/x86_64/x86/IBM/...) |
+| operating system condition | `# if os == ...` | `# if os == linux` | indicate the operating system (Linux/Windows/MacOS/...) |
+| mode condition | `# if debug` | `# if debug` | for the compilation in debug mode |
+
+## metacode expansion
+metacodes can generate code before the compilation
+
+- use `# expand` to set the code expansion 
+- use `# for _NAME as a | b | c ...` to define the generation placeholder
+- use `# each` to define the expansion scope
+
+you can define multiple placeholders (it's became like a dimensions like table)
+
+use placeholders in code with double square like: `[[_U]]`
+
+> Note: the generation will iterate for all placeholders multiply by their alts
+
+e.g.
+```
+# expand
+# for _T as a | b | c
+# for _U as 1 | 2
+# each
+  fn add(val: [[_T]]) -> isize {
+    return [[_T]] + [[_U]]
+  }
+# end each// expand
+``` 
+will generate for
+
+| `_U` | `_T` | | |
+|-|-|-|-|
+|   | a  | b  | c  |
+| 1 | a1 | b1 | c1 |
+| 2 | a2 | b2 | c2 |
+
+You can set some exceptions or conditions during the expansion:
+use `# expand if ...` `# expand elif` `# expand else` `# end`
+```
+# expand
+# for _T as i32 | i64 | i128
+# for _U as f32 | f64 | f128
+# each
+  fn add(a: [[_T]], b: [[_T]]) -> [[_U]] {
+    # expand if [[_U]] == f128 or [[_T]] == i128
+    log::warning("usage of 128 bytes type, please check your architecture!")
+    # end expand if
+    
+    return a + b;
+  }
+# end each
+```
+ 
 
 # naming convention (recommended)
 Types : entity, component, role, system, enum, type, union, generic, named metacode
