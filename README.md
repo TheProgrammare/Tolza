@@ -260,18 +260,30 @@ A variable always must be declared with a value
 
 ## variable assignation
 variables are managed by a explicit borrowing
-the default affectation `=` is a move semantic except for primitives who are a copy
-
-| type | syntax | note |
-|-|-|-|
-| copy value    | `lvalue1 copy= rvalue / lvalue2`     |  |
-| reference value (no mutable)   | `lvalue1 ref= lvalue2`   | multiple ref permitted but mutable ref are prohibied until all ref are removed before |
-| mutable ref value | `lvalue1 mut= lvalue2` | only one mutable ref permitted
-| move semantic   | `lvalue1 move= lvalue2` `lvalue1 = lvalue2`   | remove all ref and mutable ref anterior
+the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
 
 ## operation assignation
-
+variables can be mofied directly by a arithmetic operation (read/write) operation
 `+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
+
+# explicit borrowing
+the borrowing is explicit for better code security
+
+## assignation
+| type | syntax | note |
+|-|-|-|
+| copy value    | `lhs copy= rhs`    | for complex: check if have copy method, for primitive: copy |
+| clone value    | `lhs clone= rhs`     | for complex: check if have clone method, for primitive: copy |
+| reference value (no mutable)   | `lhs ref= rhs`   | multiple ref permitted but mutable ref are prohibied until all ref are removed before |
+| mutable ref value | `lhs mut= rhs` | only one mutable ref permitted
+| move semantic   | `lhs move= rhs` or `lhs = rhs`   | remove all ref and mutable ref anterior
+
+## lifetime
+Any borrow is invalided by some cases:
+- explicit `drop` instruction -> `drop a_ref` -> a_ref is dropped
+- explicit origin usage (read/write) -> all ref and mut are invalided
+- scope
+- 
 
 # function
 > Use `fn` keyword to declare a function
