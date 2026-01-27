@@ -17,29 +17,11 @@ Velox is a next-generation programming language that aims to combine performance
 ## primitives
 |      type      |      syntax      |            literal           |      size      |
 |-|-|-|-|
-| boolean        | `bool`           | `true` `false`               | 1 bit          |
-| binary         | `bsize`          | `0b10010010` `0x0F` `0bsize` | 8/16/32/64 bit |
-| binary         | `b8`           | `0b10010010` `0x0F` `0b8`    | 8 bit          |
-| binary         | `b16`           | `0b10010010` `0x0F` `0b16`   | 16 bit         |
-| binary         | `b32`           | `0b10010010` `0x0F` `0b32`   | 32 bit         |
-| binary         | `b64`           | `0b10010010` `0x0F` `0b64`   | 64 bit         |
-| binary         | `b128`           | `0b10010010` `0x0F` `0b128`  | 128 bit        |
-| integral       | `isize`          | `0 ` `-1` `10isize`         | 8/16/32/64 bit |
-| integral       | `i8`           | `0 ` `-1` `10i8`            | 8 bit          |
-| integral       | `i16`           | `0 ` `-1` `10i16`           | 16 bit         |
-| integral       | `i32`           | `0 ` `-1` `10i32`           | 32 bit         |
-| integral       | `i64`           | `0 ` `-1` `10i64`           | 64 bit         |
-| integral       | `i128`           | `0 ` `-1` `10i128`          | 128 bit        |
-| unsigned       | `usize`          | `0 ` `10usize`              | 8/16/32/64 bit |
-| unsigned       | `u8`           | `0 ` `10u8`                 | 8 bit          |
-| unsigned       | `u16`           | `0 ` `10u16`                | 16 bit         |
-| unsigned       | `u32`           | `0 ` `10u32`                | 32 bit         |
-| unsigned       | `u64`           | `0 ` `10u64`                | 64 bit         |
-| unsigned       | `u128`           | `0 ` `10u128`               | 128 bit        |
-| floating       | `fsize`          | `0.0f` `-1.0f` `10fsize`   | 32/64 bit      |
-| floating       | `f32`           | `0.0f` `-1.0f` `10f32`     | 32 bit         |
-| floating       | `f64`           | `0.0f` `-1.0f` `10f64`     | 64 bit         |
-| floating       | `f128`           | `0.0f` `-1.0f` `10f128`    | 128 bit        |
+| boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
+| binary         | `bsize` `b8-b128` | `0b10010010` `0x0F` `0bsize` | 8-128 bits |
+| integral       | `isize` `i8-i128` | `0 ` `-1` `10isize`         | 8-128 bits |
+| unsigned       | `usize` `u8-u128` | `0 ` `10usize`              | 8-128 bits |
+| floating       | `fsize` `f32-f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
 | decimal        | `deci`           | `0.0` `-1.0` `10d` default | numbers*8  bit |
 | udecimal       | `udeci`           | `10ud`                       | numbers*8  bit |
 | decimal constructor    | COBOL inspiration `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
@@ -48,7 +30,7 @@ Velox is a next-generation programming language that aims to combine performance
 | utf32      | `utf32`           | `"⚜"utf32` `"⚜"` default         | 32 bits  |                   
 | string         | `str`            | `"hello"s`                   | ascii*len + 2*bsize (fat pointer) bit (latin1) |
 | text | `text`           | `"hello"t` `"world"` default | utf32*len + 2*bsize (fat pointer) bit (utf32) |
-| opaque ptr     | `addr`           | `...`                      | bsize bit      |
+| opaque ptr     | `ptr'void`           | `...`                      | bsize bit      |
 | static table   | `[T; N]`       | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | N*size + bisize (pointer) |
 | static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | N*size + bisize (pointer) |
 | dynamic  table  | `[T]`            | same of static table, but literal is instanciation only | List entity |
@@ -59,21 +41,15 @@ no memory loss allowed
 
 |      type      |                   cast to                 |
 |----------------|-------------------------------------------|
-| binary         | `b8` -> `b16` -> `b32` -> `b64` -> `b128` |
-| binary         | `bsize` -> `b32` or `bsize` -> `b64`      |
-| integral       | `i8` -> `i16` -> `i32` -> `i64` -> `i128` |
-| integral       | `isize` -> `i32` or `isize` -> `i64`      |
-| integral       | integral -> floating                      |
-| unsigned       | `u8` -> `u16` -> `u32` -> `u64` -> `u128` |
-| unsigned       | `usize` -> `u32` or `usize` -> `u64`      |
-| unsigned       | unsigned -> integral                      |
-| unsigned       | unsigned -> floating                      |
-| floating       | `f32` -> `f64` -> `f128`                  |
-| floating       | `fsize` -> `f32` or `fsize` -> `f64`      |
+| numeric        | `b/u/i 8` -> `b/u/i 16` -> `b/u/i 32` -> `b/u/i 64` -> `b/u/i 128` (`b/u/i size` are api dependend) |
+| numeric        | numeric -> floating                      |
+| floating       | `f32` -> `f64` -> `f128` (`fisize` is api dependend) |
 | decimal        | inferior decimal -> superior decimal      |
-| udecimal       | udecimal -> decimal                       |
-| ascii          | `ascii` -> `utf32`                         |
-| string         | `str` -> `text`                           |
+| ascii          | `ascii` -> `utf32` latin1 -> utf32 |
+| str            | `str` -> `text` place every str ascii on last utf32 byte (Big endian) |
+| text           | `text` -> `str` place every utf32 4 bytes (Big endian) on every str ascii (except for the ascii compatible characters) 
+
+> note a casting with binary is always a reinterpret cast 
 
 ### forbid/allow implicit cast
 
@@ -97,7 +73,7 @@ Handled by the compiler
 | flag           | `flag name {}`          | named bit                        |
 | entity         | `entity name {}`        | entity                           |
 | fn             | `fn name() -> T {}`     | function                         |
-| fn ty          | `fn () -> ()`           | function signature               |
+| fn prototype   | `fn () -> ()`           | function signature               |
 | Str            | `Str`                   | String type mutable (Latin-1)    |
 | Text           | `Text`                  | Text type mutable (UTF32) access O(1) size `4*Str` |
 | Decimal        | `100.00` or `5d2`       |                                  |
@@ -111,7 +87,7 @@ Handled by the compiler
 | flag | `flag name { a, b, c }` -> it's a named byteset |
 | entity | `entity name : parent { ... }` |
 | fn | `fn name(a: T, b: U) -> (T, U) { ... } ` |
-| fn type | `fn(T, U) -> (T, U, V)` |
+| fn prototype | `fn(T, U) -> (T, U, V)` |
 | string | `str` -> encoding utf8, literal `"Hello World!"str`, format `f"Hello {name}"` |
 | other string | `utf8`(same as `str`) `utf16` `utf32` -> good for traduction, literal `"Hello World!"utf16`, format `f"Hello {name}"utf32` |
 | decimal | `deci<3, 2>`, literal/type definition `123.45` (default) or `1'234.5deci` |
@@ -229,11 +205,6 @@ table population use compiler reserved indentifier to use the indexation during 
 - `@j` second dimension
 - ... 
 
-# reserved values
-to set default value or uninit use: `null`
-
-to set invalid address memory use: `nullptr`
-
 # metaprogrammation
 metaprogrammation is behaviour declarative who starts with `#`
 can define some behaviour : module exportation, async, parallel, contigous memory alignment, etc...
@@ -309,7 +280,7 @@ scopes are not interdependent, an exclusion of an specific scope disable only th
 
 example:
 ```
-# if os == windows | linux
+# if os == windows or os == linux
 
 # async main
 # scope
@@ -808,11 +779,11 @@ enum Optional<T> {
   None,
 }
 
-let result = getVal<f32>(); // type Optional<f32>
+let result = Optional(10.0) // type Optional<f32>
 
 match result {
-  case Some(i) then println(i as f32::string(2));
-  case None then println("Failure");
+  Some(i) => println("{i}")
+  None => println("Failure")
 }
 ```
 
@@ -926,7 +897,7 @@ entity Animal {
 }
 
 entity Human {
-  use Specie 
+  use Specie
   use Position
   use Job
   cast self to Animal {
@@ -1073,13 +1044,6 @@ Variables are statically typed or type inferred
 | mutable ref value | `lvalue mut= lvalue` | only one mutable ref permitted
 | move semantic   | `lvalue move= lvalue`   | remove all ref and mutable ref anterior
 
-# operations borrowing
-
-| type | syntax | note |
-|-|-|-|
-| always borrow
-
-
 # memory managment
 The memory use a fine managment, there is no GC
 
@@ -1134,7 +1098,9 @@ Conversions:
 | positional | `let t1 = (10, 2.0, "hello")` | `t2 = t1 as (2, 1, 0)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the index |
 | nomenclature | `let t1 = (a= 10, b= 2.0, c= "hello")` | `t2 = t1 as (c, b, a)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the field name | 
 
-# if else elif statement
+# flow
+
+## if elif else
 control flow by condition
 
 | flow | syntax codeblock | syntax inline |
@@ -1143,7 +1109,7 @@ control flow by condition
 | elif | `elif <condition> { ... }` | `elif <condition> then ...` |
 | else | `else { ... }` | `else ...` |
 
-# ternary if
+## ternary if
 Ternary if is a control flow for value
 
 syntax:
@@ -1152,7 +1118,7 @@ if <condition> then <true statement>
 if <condition> then <true_statement> else <false_statement>
 ```
 
-# match statement
+## match
 Match statement control flow for code logic by matching comparison on value. 
 
 Execution stop to the case executed. Or use metacode `# fallthrough`
@@ -1179,31 +1145,27 @@ e.g.
 | compare literal integral | `10 =>` |
 | compare literal string | `"hello" =>` |
 | compare value | `if val > 100 =>` |
-| compare in range | `if val in 10..=30 =>` |
-| match typed enum and extract value | `Some(a) =>` |
+| compare in range | `10..=30 =>` |
+| match typed enum and bind value | `Some(a) =>` |
+| match typed enum, bind value and compare | `Some(a) if a > 10 =>` |
 | match on enum | `EEnum::Elem =>` |
-| other case | `other =>` | 
+| other case | `_ =>` | 
 
-# loop statement
+# loop
 Highlty not recommended
-syntax:
 
 | statement type | syntax |
 |-|-|
 | codeblock | `loop { ... }` |
 | inline | `loop then ...` |
 
-# while statement
-syntax:
-
+# while
 | statement type | syntax |
 |-|-|
 | codeblock | `while <condition> { ... }` |
 | inline | `while <condition> then ...` |
 
 # do-while statement
-syntax:
-
 | statement type | syntax |
 |-|-|
 | codeblock | `do { ... } while <condition>;` |
@@ -1216,9 +1178,9 @@ Syntax:
 
 | statement type | syntax | info |
 |-|-|-|
-| for index | `for <index> in <range> { ... }` | can use `step` after `<range>` |
-| for mutable ref item | `for var <item> in <slice/collection> { ... }` | can be immutable with `let` instead of `var` |
-| for key/val | `for let <key>, let <item> in <slice/collection> { ... }` | can be each immutable with `let` instead of `var` |
+| for index | `for <index> in <range> [step <constant>] { ... }` | can use `step` after `<range>` |
+| for item | `for [<index>] mut/ref/copy/move <item> in <slice/collection> { ... }` |  |
+| for item | `for [<index>] mut/ref/copy/move (<item1>, <item2>, ...) in <slice/collection> { ... }` | useful for map or tuple array  |
 
 # goto statement
 Highlty not recommended, designed for flexibility and code specific behaviour.
@@ -1235,11 +1197,11 @@ range can be use to extract slice from collection with special ranges.
 
 | range type | syntax | info |
 |-|-|-|
-| range exclusive | `0..10` | will go from 0 to 9 |
-| range inclusive | `0..=10` | will go from 0 to 10 |
+| range end exclude | `0..10` | will go from 0 to 9 |
+| range end include | `0..=10` | will go from 0 to 10 |
 | range all | `collection[..]` | will return the collection, not very useful there |
-| range no begin | `..11` | will go from 0 or the start of the collection to the 10th index (so 11 elements slice) |
-| range no end | `5..` | will go from 5 to the end of the collection or the max value `i64` |
+| range from 0 | `..11` | will go from 0 or the start of the collection to the 10th index (so 11 elements slice) |
+| range to max | `5..` | will go from 5 to the end of the collection or the max value `i64` |
 
 # slice
 Returns a view according to specified range, can be mutable and immutable
@@ -1254,6 +1216,27 @@ basically a fat pointer
 ```
 slice { first_elem: ptr'T, length: usize }
 ```
+
+# pattern
+the pattern matching can be used from if/elif/while and match statement
+
+general syntax:
+```
+[if/elif/while] ref/mut/copy/move <pattern> = <expression> [if <condition>] {...}
+```
+pattern element kind | e.g. | info |
+|-|-|-|
+| bind value | `Some(a)` | bind value on a |
+| matching value | `("Marc", 20)` | compare tuple with value "Marc" and 20 |
+| ignore value | `(a, _, b)` | ignore the second element |
+
+| pattern kind | e.g. |
+|-|-|
+| enum pattern | `MyEnum::Elem(a, _, 10) = <expression>` |
+| tuple pattern | `(a, _, 7, "hello") = <expression>` |
+| entity pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
+| entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
+| component pattern | `CId{name: name, id: 10} = <expression>` |
 
 # module import/export
 The import and exportation of the code use the LLVM declare/extern
