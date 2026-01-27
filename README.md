@@ -788,7 +788,8 @@ match result {
 ```
 
 # COP paradigm (Compositional Oriented Programming)
-COP, short for Compositional Oriented Programming, is a programming paradigm where entities are built through the static composition of components, without inheritance, without polymorphism, and without dynamic collections 
+COP, short for Compositional Oriented Programming, is a programming paradigm where entities are built through the static composition of components, without inheritance, without polymorphism, and without dynamic components
+it's itended to be flexible with a deterministic syntax
 
 inspired by POO and ECS
 
@@ -1029,11 +1030,13 @@ Variables are statically typed or type inferred
 
 | type | syntax |
 |-|-|
-| variable typed | `var name: T` |
-| variable typed setted | `var name: T = ...` |
-| variable inferred setted | `var name = ...` |
-| constant typed | `let name: T = ...` |
-| constant inferred | `let name = ...` |
+| mutable typed | `var name: T` |
+| mutable typed setted | `var name: T = ...` |
+| mutable inferred setted | `var name = ...` |
+| immutable typed | `let name: T = ...` |
+| immutable inferred | `let name = ...` |
+| compiletime typed | `const name: T = ...` |
+| compiletime inferred | `const name = ...` |
 
 # variable affectation
 
