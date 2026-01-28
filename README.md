@@ -267,7 +267,14 @@ variables can be mofied directly by a arithmetic operation (read/write) operatio
 `+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
 
 # explicit borrowing
-the borrowing is explicit for better code security
+The borrowing is explicit for better code security
+Contrary to Rust, the borrow checker is focused on the origin variable usage of ref/mut borrow:
+- the usage of the origin variable will remove all anterior borrow variable
+- read the origin variable break the exclusivity (mut borrow ony)
+- write the origin variable break the sharing (mut borrow + all ref borrow)
+- all anterior borrowed variable invalided can't be reaffected
+- a new ref borrow, remove any mut borrow anterior
+- a new mut borrow, remove all ref borrow anterior
 
 ## assignation
 | type | syntax | note |
@@ -278,12 +285,44 @@ the borrowing is explicit for better code security
 | mutable ref value | `lhs mut= rhs` | only one mutable ref permitted
 | move semantic   | `lhs move= rhs` or `lhs = rhs`   | remove all ref and mutable ref anterior
 
-## lifetime
-Any borrow is invalided by some cases:
+## other lifetime case
+Any borrow is invalided by some additional cases:
 - explicit `drop` instruction -> `drop a_ref` -> a_ref is dropped
-- explicit origin usage (read/write) -> all ref and mut are invalided
-- scope
-- 
+- end of scope
+- parent data handler usage -> children will follows the parent (read/write) operation on their borrowing (fields of component, components of entity)
+- move instruction `move=` or move parameter -> ref/mut dropped + origin dropped
+
+## origin usage case on borrowing
+There is some case of the usage of the variable origin who is reflected on the borrowing
+| variable operation mode | borrow consequence |
+|-|-|
+| read only | all anterior mut borrow dropped |
+| copy | all anterior mut borrow dropped |
+| write | all anteror borrows dropped |
+| move | all anterior mut borrow dropped + origin variable dropped |
+
+e.g. 
+| code case | variable operation mode |
+|-|-|
+| parameter pass mode ref | read only |
+| parameter pass mode copy | read only |
+| parameter pass mode mut | read/write |
+| parameter pass mode move | move |
+| entity/component field access | read only |
+| entity/component field affected | write |
+| system non-const | write |
+| system const | read only |
+| variable operator assignation | read/write |
+| binary operation (on variables) | read only |
+
+### anti crossed borrow
+The borrowing can't be crossed: usage of ref/mut borrow before AND after usage of the origin
+Valid borrow:
+```
+```
+Invalid borrow:
+```
+```
 
 # function
 > Use `fn` keyword to declare a function
