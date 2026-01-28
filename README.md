@@ -124,10 +124,9 @@ you can use some sugar to avoid the heavy standard syntax
 |      name      |    Syntax    |       description       |
 |----------------|--------------|-------------------------|
 | memory | | |
-| copy           | `=` or `copy=`  | assignation by copy ()   |
-| ref            | `ref=`       | assignation by ref borrow immutable |
-| mut            | `mut=`       | assignation by mutable borrow |
-| move           | `move=`      | assignation by move     |
+| copy           | `copy=`  | assignation by copy method |
+| copy           | `clone=`  | assignation by clone method |
+| move           | `move=` `=` | assignation by move     |
 | arithmetic (consider version of assignation operation)| | |
 | add            | `+`          | works ont pointers too  |
 | subtract       | `-`          | works ont pointers too  |
@@ -259,7 +258,7 @@ A variable always must be declared with a value
 | compiletime inferred | `const name = ...` |
 
 ## variable assignation
-variables are managed by a explicit borrowing
+variables are managed by a explicit move mode and capacity assignation
 the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
 
 ## operation assignation
@@ -269,13 +268,18 @@ variables can be mofied directly by a arithmetic operation (read/write) operatio
 # explicit Capabilities
 
 Access to a variable is based on **explicit capabilities** for better code safety.
-| capability | function |
-|-|-|
-| `ref` | shared reading |
-| `mut` | exclusive r/w |
+| capability | function | declaration syntax |
+|-|-|-|
+| `ref` | shared reading | `ref a = x` |
+| `mut` | exclusive r/w | `mut a = x` |
+
+capabilities is based on xor reference/mutable:
+- multiple ref are allowed
+- exclusive mut is allowed
 
 Unline Rust, the capability chercker focuses on **the usage of the origin variable**
 | case | consequence |
+|-|-|
 | r/w origin | revoke **all existing ret/mut** |
 | Read origin | revoke **existing mut** |
 | Write origin | revoke **all existing ref** |
@@ -292,8 +296,8 @@ Unline Rust, the capability chercker focuses on **the usage of the origin variab
 |-|-|-|
 | Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
 | Clone | `lhs clone= rhs`     | For complex types: check for a clone method. For primitives: copy |
-| Ref (read) | `lhs ref= rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
-| Mut (r/w) | `lhs mut= rhs` | Only one mutable capability permitted at a time. |
+| Ref (read) | `ref lhs = rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
+| Mut (r/w) | `mut lhs = rhs` | Only one mutable capability permitted at a time. |
 | Move   | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) |
 
 
