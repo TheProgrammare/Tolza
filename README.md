@@ -275,6 +275,8 @@ Contrary to Rust, the borrow checker is focused on the origin variable usage of 
 - all anterior borrowed variable invalided can't be reaffected
 - a new ref borrow, remove any mut borrow anterior
 - a new mut borrow, remove all ref borrow anterior
+- a index/slice ref can't be overlapped by another index/slice
+- reborrow permitted from a slice borrow to an index borrow
 
 ## assignation
 | type | syntax | note |
@@ -289,7 +291,8 @@ Contrary to Rust, the borrow checker is focused on the origin variable usage of 
 Any borrow is invalided by some additional cases:
 - explicit `drop` instruction -> `drop a_ref` -> a_ref is dropped
 - end of scope
-- parent data handler usage -> children will follows the parent (read/write) operation on their borrowing (fields of component, components of entity)
+- parent data handler usage -> children will follows the parent (read/write) operation on their borrowing (fields of component, components of entity)<br>fields are considered separated from each-other
+- collection data handler usage -> all slice and index follows the parent (read/write) operation on their borrowing
 - move instruction `move=` or move parameter -> ref/mut dropped + origin dropped
 
 ## origin usage case on borrowing
