@@ -261,6 +261,12 @@ A variable always must be declared with a value
 variables are managed by a explicit move mode and capacity assignation
 the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
 
+| assignation mode | syntax | note |
+|-|-|-|
+| Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
+| Clone | `lhs clone= rhs`     | For complex types: check for a clone method. For primitives: copy |
+| Move   | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) see explicit Capabilities |
+
 ## operation assignation
 variables can be mofied directly by a arithmetic operation (read/write) operation
 `+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
@@ -280,7 +286,7 @@ capabilities is based on xor reference/mutable:
 Unline Rust, the capability chercker focuses on **the usage of the origin variable**
 | case | consequence |
 |-|-|
-| r/w origin | revoke **all existing ret/mut** |
+| r/w origin | revoke **all existing ref/mut** |
 | Read origin | revoke **existing mut** |
 | Write origin | revoke **all existing ref** |
 | New ref | **revokes any previous mut** |
@@ -294,11 +300,8 @@ Unline Rust, the capability chercker focuses on **the usage of the origin variab
 ## assignment and Capability types
 | type | syntax | note |
 |-|-|-|
-| Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
-| Clone | `lhs clone= rhs`     | For complex types: check for a clone method. For primitives: copy |
 | Ref (read) | `ref lhs = rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
 | Mut (r/w) | `mut lhs = rhs` | Only one mutable capability permitted at a time. |
-| Move   | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) |
 
 
 ## revocation of Capabilities (other cases)
@@ -338,7 +341,7 @@ A capability can be revoked by:
 
 There is 2 rules:
 - A ref capability **cannot be used after the origin has been Modified**
-- A mut capavility **cannot be used after the origin has been Read/Modified** 
+- A mut capability **cannot be used after the origin has been Read/Modified** 
 
 Error on ref:
 ```
