@@ -268,7 +268,7 @@ variables can be mofied directly by a arithmetic operation (read/write) operatio
 
 # explicit Capabilities
 
-Access toa variable is based on **explicit capabilities** for better code safety.
+Access to a variable is based on **explicit capabilities** for better code safety.
 | capability | function |
 |-|-|
 | `ref` | shared reading |
