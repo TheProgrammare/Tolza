@@ -266,66 +266,102 @@ the default affectation `=` is a move semantic except for primitives who are a c
 variables can be mofied directly by a arithmetic operation (read/write) operation
 `+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
 
-# explicit borrowing
-The borrowing is explicit for better code security
-Contrary to Rust, the borrow checker is focused on the origin variable usage of ref/mut borrow:
-- the usage of the origin variable will remove all anterior borrow variable
-- read the origin variable break the exclusivity (mut borrow ony)
-- write the origin variable break the sharing (mut borrow + all ref borrow)
-- all anterior borrowed variable invalided can't be reaffected
-- a new ref borrow, remove any mut borrow anterior
-- a new mut borrow, remove all ref borrow anterior
-- a index/slice ref can't be overlapped by another index/slice
-- reborrow permitted from a slice borrow to an index borrow
+# explicit Capabilities
 
-## assignation
+Access toa variable is based on **explicit capabilities** for better code safety.
+| capability | function |
+|-|-|
+| `ref` | shared reading |
+| `mut` | exclusive r/w |
+
+Unline Rust, the capability chercker focuses on **the usage of the origin variable**
+| case | consequence |
+| r/w origin | revoke **all existing ret/mut** |
+| Read origin | revoke **existing mut** |
+| Write origin | revoke **all existing ref** |
+| New ref | **revokes any previous mut** |
+| New mut | **revokes all previous ref** |
+| Mut indexations | cannot overlap |
+| Mut slices | cannot overlap |
+| Mut/ref index on slice | only in deterministic slice |
+
+> note: all revoked capabilities **cannot be reused**
+
+## assignment and Capability types
 | type | syntax | note |
 |-|-|-|
-| copy value    | `lhs copy= rhs`    | for complex: check if have copy method, for primitive: copy |
-| clone value    | `lhs clone= rhs`     | for complex: check if have clone method, for primitive: copy |
-| reference value (no mutable)   | `lhs ref= rhs`   | multiple ref permitted but mutable ref are prohibied until all ref are removed before |
-| mutable ref value | `lhs mut= rhs` | only one mutable ref permitted
-| move semantic   | `lhs move= rhs` or `lhs = rhs`   | remove all ref and mutable ref anterior
+| Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
+| Clone | `lhs clone= rhs`     | For complex types: check for a clone method. For primitives: copy |
+| Ref (read) | `lhs ref= rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
+| Mut (r/w) | `lhs mut= rhs` | Only one mutable capability permitted at a time. |
+| Move   | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) |
 
-## other lifetime case
-Any borrow is invalided by some additional cases:
-- explicit `drop` instruction -> `drop a_ref` -> a_ref is dropped
-- end of scope
-- parent data handler usage -> children will follows the parent (read/write) operation on their borrowing (fields of component, components of entity)<br>fields are considered separated from each-other
-- collection data handler usage -> all slice and index follows the parent (read/write) operation on their borrowing
-- move instruction `move=` or move parameter -> ref/mut dropped + origin dropped
 
-## origin usage case on borrowing
-There is some case of the usage of the variable origin who is reflected on the borrowing
-| variable operation mode | borrow consequence |
+## revocation of Capabilities (other cases)
+
+A capability can be revoked by:
+- **Explicit drop**: `drop a_ref` -> the capability is removed.
+- **End of scope** -> automatic revocation
+- **Parent/child data handling** -> r/w a parent revokes children's capabilities. Fields are considered separate.
+- **Collection operations** -> slice/index capabilites follow the parent's (collection base) operations.
+- **Move instruction**: `move=` or move parameter -> all capabilities are revoked and the origin is removed.
+
+## origin usage and Capability consequences
+
+| Operation on origin | Capability consequence |
 |-|-|
-| read only | all anterior mut borrow dropped |
-| copy | all anterior mut borrow dropped |
-| write | all anteror borrows dropped |
-| move | all anterior mut borrow dropped + origin variable dropped |
+| Read only | All previous mut revoked |
+| Copy | All previous mut revoked |
+| Write | All previous ref+mut revoked |
+| Move | All previous ref+mut revoked + origin removed |
 
-e.g. 
+### expamples of correspondence with code
+
 | code case | variable operation mode |
 |-|-|
-| parameter pass mode ref | read only |
-| parameter pass mode copy | read only |
-| parameter pass mode mut | read/write |
-| parameter pass mode move | move |
-| entity/component field access | read only |
-| entity/component field affected | write |
-| system non-const | write |
-| system const | read only |
-| variable operator assignation | read/write |
-| binary operation (on variables) | read only |
+| Parameter passed by ref | Read only |
+| Parameter passed by copy | Read only |
+| Parameter passed by mut | Read/write |
+| Parameter passed by move | Move |
+| Access entity/component field | Read only |
+| Modify entity/component field | Write |
+| System non-const | Read/write |
+| System const | Read only |
+| Operator assignment | Read/write |
+| Binary operation on variables | Read only |
 
-### anti crossed borrow
-The borrowing can't be crossed: usage of ref/mut borrow before AND after usage of the origin
-Valid borrow:
+## anti-crossed Capability
+
+There is 2 rules:
+- A ref capability **cannot be used after the origin has been Modified**
+- A mut capavility **cannot be used after the origin has been Read/Modified** 
+
+Error on ref:
 ```
+1: var origin = 10              + classic variable declaration
+2: var e mut= origin            + add mutable to origin
+2: var a ref= origin            + add reference to origin : - any mutable revoked
+3: var b ref= origin            + add reference to origin
+4:                              |
+5: printf("%d", a)              r read ref a
+6: printf("%d", origin)         r read origin
+7: origin += 1                  w set origin : - all ref revoked
+8: printf("%d", b)              X ERROR crossed capability: b revoked after origin writted
 ```
-Invalid borrow:
+Error on mut:
 ```
+1: var origin = 10              + classic variable declaration
+2: var a ref= origin            + add reference to origin
+3: var b mut= origin            + add mutable to origin : - all references revoked
+4:                              |
+5: printf("%d", a)              X ERROR crossed capability : a revoked after b mutable on origin declared
+5: printf("%d", b)              r read mut b
+5: b += 1                       w write mut b
+6: printf("%d", origin)         r read origin : - mut ref revoked
+7: origin += 1                  w set origin : - mut ref (already) revoked
+8: printf("%d", b)              X ERROR crossed capability: b revoked after origin read
 ```
+
 
 # function
 > Use `fn` keyword to declare a function
