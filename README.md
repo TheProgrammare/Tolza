@@ -31,6 +31,9 @@ Velox is a next-generation programming language that aims to combine performance
 | string         | `str`            | `"hello"s`                   | ascii*len + 2*bsize (fat pointer) bit (latin1) |
 | text | `text`           | `"hello"t` `"world"` default | utf32*len + 2*bsize (fat pointer) bit (utf32) |
 | opaque ptr     | `ptr'void`           | `...`                      | bsize bit      |
+| unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
+| shared ptr     | `sptr'void`           | `sptr'i32`                      | bsize bit      |
+| function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
 | static table   | `[T; N]`       | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | N*size + bisize (pointer) |
 | static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | N*size + bisize (pointer) |
 | dynamic  table  | `[T]`            | same of static table, but literal is instanciation only | List entity |
@@ -62,75 +65,42 @@ no memory loss allowed
 var d: i64 = a // no compilation error
 ```
 
-## native types (or in core lib)
-Handled by the compiler
-
-| type | syntax | description |
+# type modifier
+There is 3 main type modifiers:
+| modifier | syntax | info
 |-|-|-|
-| unique ptr           | `uptr'T`                | unique pointers                  |
-| shared ptr     | `sptr'T`                | shared pointer                   |
-| enum           | `enum name {}`          | enumerator typed                 |
-| flag           | `flag name {}`          | named bit                        |
-| entity         | `entity name {}`        | entity                           |
-| fn             | `fn name() -> T {}`     | function                         |
-| fn prototype   | `fn () -> ()`           | function signature               |
-| Str            | `Str`                   | String type mutable (Latin-1)    |
-| Text           | `Text`                  | Text type mutable (UTF32) access O(1) size `4*Str` |
-| Decimal        | `100.00` or `5d2`       |                                  |
-| List           | `List<T>`               | Dynamic array                    |
+| constant | `T$` | cannot be modified |
+| optional | `T?` | sugar syntax of `Option<T>` |
+| volatile | `T!` | value can be modified at any moment by the hardware, compiler cannot makes some optimization | 
+| raw ptr  | `ptr'T` | raw pointer |
+| unique ptr | `uptr'T` | unique pointer |
+| shared ptr | `sptr'T` | shared pointer |
 
-| name | syntax |
-|-|-|
-| dynamic table       | `List<T>`                                      |
-| pointers            | `ptr'T` `uptr'T` `sptr'T`         |
-| enumerator          | `enum name { a, b, c }` or typed `enum name<T> { Valid(T), Invalid }` |
-| flag | `flag name { a, b, c }` -> it's a named byteset |
-| entity | `entity name : parent { ... }` |
-| fn | `fn name(a: T, b: U) -> (T, U) { ... } ` |
-| fn prototype | `fn(T, U) -> (T, U, V)` |
-| string | `str` -> encoding utf8, literal `"Hello World!"str`, format `f"Hello {name}"` |
-| other string | `utf8`(same as `str`) `utf16` `utf32` -> good for traduction, literal `"Hello World!"utf16`, format `f"Hello {name}"utf32` |
-| decimal | `deci<3, 2>`, literal/type definition `123.45` (default) or `1'234.5deci` |
-| unsigned decimal | `udeci<3, 2>`, literal/type definition `123.45udeci` `100'000.000'000udeci` |
-| tuple | `tuple<T, U, V>` |
-| named tuple | `tuple<a: T, b: U>` |
-| variant | `variant<T, U, V>` |
+> Note: the modifier can be placed before or after the type (except pointers), is only must be juxtaposed outside the targereted type or
+> Note: `$` `?` `!` are cumulatives : `i32?!`-> optional i32 with volatile possibility 
 
-# sugar syntax
-you can use some sugar to avoid the heavy standard syntax
-
-| name | syntax |
-|-|-|
-| pointer  | `ptr'T` `uptr'T` `sptr'T`       |
-| static table | `[T -> static_size]` |
-| dynamic table | `[T]`,<br> `new ptr'[T -> variant_size]` |
-| static matrix | `[T -> static_size]*N`,<br> `[T -> static_size, static_size, ...]` |
-| dynamic matrix | `[T]*N`<br> `[T]`<br> `new ptr'[T -> variant_size, variant_size, ...]`,<br> `new ptr'[T -> variant_size]*N` |
-| const | `$T` |
-| special cases |
-| table of const | `$[T]`,<br> `$[T -> size]`,<br> `[$T]`,<br> `[$T -> size]` |
-| const ptr | `$ptr'T` T mutable |
-| const pointee | `ptr'$T` ptr mutable |
-| optional | `T?` |
-| optional | special cases |
-| optional table | `[T]?`,<br> `[T -> size]?` |
-| table of optional | `[T?]`,<br> `[T? -> size]` |
-| optional ptr |`ptr?'T` |
-| optional pointee | `ptr'T?` |
-| volatile | `T!` |
-| same as const/optional placement |
+Placement e.g. (place possible: `@`)
+| rule | syntax | info |
+| `@T@` | `i32?` | `i32` is optional `?`
+| `@T<@GenArg@>@` | `Vec<i32$>?` | `Vec` is optional `?`, `i32` is constant `$`
+| `@[@i32@]@` | `[i32?]$` | Dynamic table is constant `$`, `i32` is optional `?`
+| `@ptr'@T@` | `ptr'[i32]` | Raw pointer on dynamic table of `i32`
+| `@ptr'@[@i32@]@` | `$ptr'[i32]` | Constant raw pointer on dynamic table of `i32`
+| `@[@ptr'@i32@]@` | `[uptr'i32]` | dynamic table of unique pointer on `i32` 
 
 # operators
-|      name      |    Syntax    |       description       |
-|----------------|--------------|-------------------------|
-| memory | | |
-| copy           | `copy=`  | assignation by copy method |
-| copy           | `clone=`  | assignation by clone method |
-| move           | `move=` `=` | assignation by move     |
-| arithmetic (consider version of assignation operation)| | |
-| add            | `+`          | works ont pointers too  |
-| subtract       | `-`          | works ont pointers too  |
-| multiply       | `*`          |                         |
+| stack | syntax | info |
+|-|-|-|
+| move           | `move=`, complex type default: `=` | assignation by move semantic  |
+| copy           | `copy=`, primitive default: `=` | assignation by copy method |
+| clone          | `clone=`  | assignation by clone method |
+
+
+| arithmetic | syntax | info |
+|-|-|-|
+| add            | `+`          | |
+| subtract       | `-`          | |
+| multiply       | `*`          | |
 | matrix multiplication | `@` | only on matrices |
 | divide         | `/`          | result always f32/f64   |
 | remain         | `%rem%`      | remainder singed with dividend |
@@ -139,7 +109,9 @@ you can use some sugar to avoid the heavy standard syntax
 | power          | `**`         |                         |
 | increment      | `++`         |                         |
 | decrement      | `--`         |                         |
-| comparator | | |
+
+| comparison | syntax | info |
+|-|-|-|
 | greater        | `>`          |                         |
 | lower          | `<`          |                         |
 | greater equal  | `>=`         |                         |
@@ -148,14 +120,18 @@ you can use some sugar to avoid the heavy standard syntax
 | equal strictly | `===`        | for string and float    |
 | not equal      | `!=`         |                         |
 | not eq strictly| `!==`        | for string and float    |
-| logical | | |
-| and    and.b   |`and` `and.b`  |                         |
-| nand   nand.b  |`nand` `nand.b`|                         |
-| or     or.b    |`or` `or.b`    |                         |
-| xor    xor.b   |`xor` `xor.b`  |                         |
-| nor    nor.b   |`nor` `nor.b`  |                         |
-| xnor   xnor.b  |`xnor` `xnor.b`|                         |
-| binary | | |
+
+| logical | bitwise | syntax | syntax bitwise |
+|-|-|-|-|
+| and   | and.b   |`and`  | `and.b`  |
+| nand  | nand.b  |`nand` | `nand.b` |
+| or    | or.b    |`or`   | `or.b`   |
+| xor   | xor.b   |`xor`  | `xor.b`  |
+| nor   | nor.b   |`nor`  | `nor.b`  |
+| xnor  | xnor.b  |`xnor` | `xnor.b` |
+
+| binary | syntax | info |
+|-|-|-|
 | shift left 0   | `<<[0]`      | fill right with 0       |
 | shift left 1   | `<<[1]`      | fill right with 1       |
 | shift right 0  | `[0]>>`      | fill left with 0        |
