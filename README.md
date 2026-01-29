@@ -283,12 +283,9 @@ capabilities is based on xor reference/mutable:
 - multiple ref are allowed
 - exclusive mut is allowed
 
-Unline Rust, the capability chercker focuses on **the usage of the origin variable**
+Unline Rust, the capability chercker focuses on Capabilities usage
 | case | consequence |
 |-|-|
-| r/w origin | revoke **all existing ref/mut** |
-| Read origin | revoke **existing mut** |
-| Write origin | revoke **all existing ref** |
 | New ref | **revokes any previous mut** |
 | New mut | **revokes all previous ref** |
 | Mut indexations | cannot overlap |
@@ -303,6 +300,14 @@ Unline Rust, the capability chercker focuses on **the usage of the origin variab
 | Ref (read) | `ref lhs = rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
 | Mut (r/w) | `mut lhs = rhs` | Only one mutable capability permitted at a time. |
 
+## origin usage and Capability consequences
+
+| Operation on origin | Capability consequence |
+|-|-|
+| Read only | All previous mut revoked |
+| Copy | All previous mut revoked |
+| Write | All previous ref+mut revoked |
+| Move | All previous ref+mut revoked + origin removed |
 
 ## revocation of Capabilities (other cases)
 
@@ -312,15 +317,6 @@ A capability can be revoked by:
 - **Parent/child data handling** -> r/w a parent revokes children's capabilities. Fields are considered separate.
 - **Collection operations** -> slice/index capabilites follow the parent's (collection base) operations.
 - **Move instruction**: `move=` or move parameter -> all capabilities are revoked and the origin is removed.
-
-## origin usage and Capability consequences
-
-| Operation on origin | Capability consequence |
-|-|-|
-| Read only | All previous mut revoked |
-| Copy | All previous mut revoked |
-| Write | All previous ref+mut revoked |
-| Move | All previous ref+mut revoked + origin removed |
 
 ### expamples of correspondence with code
 
@@ -346,9 +342,9 @@ There is 2 rules:
 Error on ref:
 ```
 1: var origin = 10              + classic variable declaration
-2: var e mut= origin            + add mutable to origin
-2: var a ref= origin            + add reference to origin : - any mutable revoked
-3: var b ref= origin            + add reference to origin
+2: mut e = origin               + add mutable to origin
+2: ref a = origin               + add reference to origin : - any mutable revoked
+3: ref b = origin               + add reference to origin
 4:                              |
 5: printf("%d", a)              r read ref a
 6: printf("%d", origin)         r read origin
@@ -358,8 +354,8 @@ Error on ref:
 Error on mut:
 ```
 1: var origin = 10              + classic variable declaration
-2: var a ref= origin            + add reference to origin
-3: var b mut= origin            + add mutable to origin : - all references revoked
+2: ref a = origin               + add reference to origin
+3: mut b = origin               + add mutable to origin : - all references revoked
 4:                              |
 5: printf("%d", a)              X ERROR crossed capability : a revoked after b mutable on origin declared
 5: printf("%d", b)              r read mut b
@@ -487,16 +483,16 @@ call ordering: positional -> named -> variadic args
 default pass mode:
 
 - primitive types : pass by copy (optimisation)
-- complex types : pass by reference const
+- complex types : pass by ref
 
 user pass mode:
 
 | type | key | behaviour | syntax | info |
 |-|-|-|-|-|
-| reference pass mode | `ref` | borrow immutable, designed to avoid copy cost (for non primitive) | `foo(ref a: T)` | default value permitted (become optional argument) |
-| mutable pass mode | `mut` | borrow mutable, designed to transfer modifications from function | `foo(mut a: T)` | default value prohibied (not optional argument) |
+| ref pass mode | `ref` | designed to avoid copy cost (for non primitive) | `foo(ref a: T)` | default value permitted (become optional argument) |
+| mut pass mode | `mut` | designed to transfer modifications from function | `foo(mut a: T)` | default value prohibied (not optional argument) |
 | copy pass mode | `copy` | force the copy (e.g. avoid threading cocurrency) you can specify | `foo(copy a: T)` | default value permitted (become optional argument) |
-| move pass mode | `move` | move semantic : ref and invalidate origin | `foo(move a: T)` | default value prohibied (not optional argument) |
+| move pass mode | `move` | move semantic : mut and invalidate origin | `foo(move a: T)` | default value prohibied (not optional argument) |
 | address pass mode | `addr` | designed to modify the address of the pointer (pointers accepted only) | `foo(addr a: T)` | default value prohibied |
 | variadic pass mode | `...` | variadic parameter (always the last parameter) you can specify a general pass mode | `sum(copy term: T...)` | default value prohibied (but optional argument)
 
@@ -721,10 +717,10 @@ tuple cases:
 | static access | `let first = a.0` | |
 | static access named | `let first = a.name` | |
 | dynamic access | `let first = a.get(k)` | |
-| function return | `fn name() -> T, U, ...` | tuple return |
-| function return | `fn name() -> name1: T, name2: U, ...` | named tuple return | 
-| unpack tuple from call | `var a, b, c = name()` | |
-| unpack tuple from variable | `var a, _, c = var_tuple` | |
+| function return | `fn name() -> (T, U, ...)` | tuple return |
+| function return | `fn name() -> (name1: T, name2: U, ...)` | named tuple return | 
+| unpack tuple from call | `var (a, b, c) = name()` | |
+| unpack tuple from variable | `var (a, _, c) = var_tuple` | |
 
 ## tuple cast
 Tuples and named tuples are the same for the compilator but need to de distinguished for users to makes proprer conversion.
@@ -878,7 +874,8 @@ pattern element kind | e.g. | info |
 
 # module import/export
 The import and exportation of the code use the LLVM declare/extern
-The modules are also modules namespaces to avoid any name collision (to avoid the module exported with his namespace, use `# native \n export <name> {...}`)
+- Exports are also modules 
+- To export the module in the root module, use `# native \n export <name> {...}`)
 
 | type | syntax | e.g. | info |
 |-|-|-|-|
@@ -891,7 +888,7 @@ The modules are also modules namespaces to avoid any name collision (to avoid th
 | import from external language lib | `import extern <lang>::<lib>` | `import extern C::stdio` | C is natively handled, will generate automatically a parallel bind folder and imported in the script with the wrapper used |
 
 > Elements exportable :
-mod, entity, role, component, system, generics, function, global, enum, metacode
+entity, role, component, system, generic, function, global, enum, metacode, type
 
 
 # COP paradigm (Compositional Oriented Programming)
