@@ -35,9 +35,8 @@ Velox does not use a garbage collector or a borrow checker.
 
 Instead, it relies on a system of **explicit capabilities** that control:
 - read access
-- write access
-- mutation
-- lifetime validity
+- mutation (read/write access)
+- lifetime validity (from the origin usage and new access declared)
 
 These rules are:
 - local (no global inference)
@@ -54,10 +53,14 @@ It favors **static composition (COP)**:
 
 This avoids hidden polymorphism and runtime dispatch by default.
 
+> COP: Compositional Oriented Paradigm
+
 ### 4. Strong typing with explicit costs
 Velox makes value semantics explicit by distinguishing between:
 - `copy`
 - `clone`
+- `ref` (immutable reference)
+- `mut` (mutable reference)
 - `move`
 
 No duplication of data occurs implicitly.
@@ -91,6 +94,41 @@ Async execution and message passing are explicit, and functions remain pure unle
 
 Full details are described in the language manifesto.
 
+# Small and Large Project Support
+
+Velox is designed to scale from small scripts to large projects:
+
+- Modules can be imported/exported with full namespace isolation  
+- Only the symbols actually used are imported  
+- The compiler supports building projects composed of multiple scripts  
+- Local variable name shadowing is prohibited
+
+# Native External Module Binder
+
+Velox allows the use of external code with minimal boilerplate and no name collisions:
+
+- External functions, globals, and types from an imported library are automatically declared in a binding script  
+- All operations on external elements are considered inherently unsafe  
+- Compiler plug-ins can generate binders for other languages, allowing other language communities to provide recommended bindings for Velox  
+- Currently, only C libraries are supported natively  
+
+> Only the C binder is compiler-native. A copy of the C binder script is included to illustrate the binding logic.
+
+## Example: Using a C Library
+```Velox
+  import extern C::stdio
+
+  fn main() {
+    C::printf("%s", "Hello World")
+  }
+```
+Explanation:
+- `import extern C::stdio` declares the external library to import
+- `C::printf` references the function in the library using the language namespace
+- The compiler generates a binding script linking the external function automatically
+
+> The compiler requires access to the library code to generate the bindings.
+
 # What Velox Is Not
 - ❌ An object-oriented language
 - ❌ A garbage-collected language
@@ -112,6 +150,9 @@ Major areas of exploration include:
 - deterministic async systems
 
 Documentation
-- 📘 Language Manifesto & Specification: `MANIFESTE.md`
+- 📘 Language Manifesto & Specification: `MANIFEST.md`
 - 📄 Examples: coming later
-- 🛠️ Compiler / tooling: work in progress
+- 🛠️ Front-end Compiler: work in progress (build in C++)
+- 🖥️ Back-end Compiler: LLVM-IR generation work in progress
+- 🔍 Highlighter: done (VS Code)
+- 📜 Snippet: done (VS Code)
