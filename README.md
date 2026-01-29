@@ -71,16 +71,17 @@ There is 3 main type modifiers:
 |-|-|-|
 | constant | `T$` | cannot be modified |
 | optional | `T?` | sugar syntax of `Option<T>` |
-| volatile | `T!` | value can be modified at any moment by the hardware, compiler cannot makes some optimization | 
+| volatile | `T!` | value can be modified by the hardware, avoid optimization | 
 | raw ptr  | `ptr'T` | raw pointer |
 | unique ptr | `uptr'T` | unique pointer |
 | shared ptr | `sptr'T` | shared pointer |
 
-> Note: the modifier can be placed before or after the type (except pointers), is only must be juxtaposed outside the targereted type or
+> Note: the modifier can be placed before or after the type (except pointers), is only must be juxtaposed outside the targereted type
 > Note: `$` `?` `!` are cumulatives : `i32?!`-> optional i32 with volatile possibility 
 
 Placement e.g. (place possible: `@`)
 | rule | syntax | info |
+|-|-|-|
 | `@T@` | `i32?` | `i32` is optional `?`
 | `@T<@GenArg@>@` | `Vec<i32$>?` | `Vec` is optional `?`, `i32` is constant `$`
 | `@[@i32@]@` | `[i32?]$` | Dynamic table is constant `$`, `i32` is optional `?`
