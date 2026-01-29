@@ -84,7 +84,8 @@ In this example:
 - no hidden copies are made
 - mutation is not allowed unless explicitly stated
 
-# Async and Messaging (Overview)
+## Some Utilities
+### 1. Async and Messaging (Overview)
 Velox provides an async model designed to remain:
 - deterministic
 - capability-safe
@@ -94,7 +95,7 @@ Async execution and message passing are explicit, and functions remain pure unle
 
 Full details are described in the language manifesto.
 
-# Small and Large Project Support
+### 2. Small and Large Project Support
 
 Velox is designed to scale from small scripts to large projects:
 
@@ -103,7 +104,7 @@ Velox is designed to scale from small scripts to large projects:
 - The compiler supports building projects composed of multiple scripts  
 - Local variable name shadowing is prohibited
 
-# Native External Module Binder
+### 3. Native External Module Binder
 
 Velox allows the use of external code with minimal boilerplate and no name collisions:
 
@@ -114,7 +115,7 @@ Velox allows the use of external code with minimal boilerplate and no name colli
 
 > Only the C binder is compiler-native. A copy of the C binder script is included to illustrate the binding logic.
 
-## Example: Using a C Library
+### Example: Using a C Library
 ```Velox
   import extern C::stdio
 
