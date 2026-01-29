@@ -13,8 +13,8 @@ Some features and syntax are still under development.
 Velox is a next-generation programming language that aims to combine performance, simplicity, and extensibility. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate.
 
 
-# type
-## primitives
+# Type
+## Primitives
 |      type      |      syntax      |            literal           |      size      |
 |-|-|-|-|
 | boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
@@ -39,7 +39,7 @@ Velox is a next-generation programming language that aims to combine performance
 | dynamic  table  | `[T]`            | same of static table, but literal is instanciation only | List entity |
 | dynamic matrix  | `[T]*D` | same of static matrix, but literal is instanciation only  | Matrix entity    |
 
-### implicit cast
+### Implicit Cast
 no memory loss allowed 
 
 |      type      |                   cast to                 |
@@ -54,8 +54,7 @@ no memory loss allowed
 
 > note a casting with binary is always a reinterpret cast 
 
-### forbid/allow implicit cast
-
+### Forbid/Allow implicit cast
 ```
 # no cast implicit
 # scope
@@ -65,7 +64,7 @@ no memory loss allowed
 var d: i64 = a // no compilation error
 ```
 
-# type modifier
+# Type Modifier
 There is 3 main type modifiers:
 | modifier | syntax | info
 |-|-|-|
@@ -89,13 +88,12 @@ Placement e.g. (place possible: `@`)
 | `@ptr'@[@i32@]@` | `$ptr'[i32]` | Constant raw pointer on dynamic table of `i32`
 | `@[@ptr'@i32@]@` | `[uptr'i32]` | dynamic table of unique pointer on `i32` 
 
-# operators
+# Operators
 | stack | syntax | info |
 |-|-|-|
 | move           | `move=`, complex type default: `=` | assignation by move semantic  |
 | copy           | `copy=`, primitive default: `=` | assignation by copy method |
 | clone          | `clone=`  | assignation by clone method |
-
 
 | arithmetic | syntax | info |
 |-|-|-|
@@ -144,15 +142,13 @@ Placement e.g. (place possible: `@`)
 | slice bits     | `~[0..8]`    | get bits from range     |
 
 
-# type alias
+# Type Alias
 designed to reuse parametred type
-
-Syntax:
 ```
 type <name> = <expression>
 ```
 
-# table population
+# Table Population
 when you create a table instance `{ a, b, ... }` you can avoid the explicit value affectation and use an table population syntax to put in table literal !
 
 | type | syntax | e.g. | explicit form | info |
@@ -168,21 +164,21 @@ table population use compiler reserved indentifier to use the indexation during 
 - `@j` second dimension
 - ... 
 
-# cast
+# Cast
 | type | syntax | note
 |-|-|-|
 | static cast | `<value> as <type>` | always successful |
 | safe cast | `<value> as? <type>` | optional return `T?` |
 | reinterpret cast | `<value> as! <type>` | getelementptr on speficied type 
 
-# format string
+# Format String
 formatted text literal:
 ```
 "text{variable} and other {variable}"
 ```
 same as: "text" + variable + "and other" + variable
 
-## format specifier
+## Format Specifier
 you can use some parameter to specify the out formatation of variable formatted
 ```
 [[<fill>]<align>][<sign>]["#"]["0"][<width>][<grouping_option>]["."<precision>][<type>]
@@ -194,10 +190,8 @@ use in format string like:
 "duration {<expression>:<format_specifier>} s"
 ```
 
-## format conditional (experimental)
+## Format Conditional (experimental)
 you can specify some reaction with a comparison from the expression returned value:
-
-Syntax:
 ```
 (<comparison_op><value>:<return_text> [, <comparison_op><value>:<return_text>, ...])
 ```
@@ -219,10 +213,10 @@ var gender = "F"
 f"{gender}:(=='F':'She is online', =='M':'He is online', other:'online')"
 ```
 
-# variable
+# Variable
 Variables are statically typed or type inferred
 
-A variable always must be declared with a value
+A variable always must be declared with a value before any read
 
 | type | syntax |
 |-|-|
@@ -234,7 +228,7 @@ A variable always must be declared with a value
 | compiletime typed | `const name: T = ...` |
 | compiletime inferred | `const name = ...` |
 
-## variable assignation
+## Assignation
 variables are managed by a explicit move mode and capacity assignation
 the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
 
@@ -242,14 +236,42 @@ the default affectation `=` is a move semantic except for primitives who are a c
 |-|-|-|
 | Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
 | Clone | `lhs clone= rhs`     | For complex types: check for a clone method. For primitives: copy |
-| Move   | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) see explicit Capabilities |
+| Move | `lhs move= rhs` or `lhs = rhs`   | Revokes all previous capabilities (ref + mut) see explicit Capabilities |
 
-## operation assignation
+## Operation Assignation
 variables can be mofied directly by a arithmetic operation (read/write) operation
 `+=` `-=` `*=` `/=` `%mod%=` `%quo%=` `%rem%=` `**=` 
 
-# explicit Capabilities
 
+# Memory Managment
+The memory use a fine managment, there is no GC
+
+There is two types of management of memory:
+- Pointers
+- Capabilities
+
+# Memory Managment: Pointers
+| name | syntax | info |
+|-|-|-|
+| non typed memory address | `ptr'void` | useful for C interop (`void*`) |
+| raw pointer | `ptr'T` | if no escape in the scope, will delete |
+| unique pointer | `uptr'T` | use `move` to change his position and invalidate his last position |
+| shared pointer | `sptr'T` | Use `mut` to add his reference to the counter and new position. A `move` will keep the counter, a `mut` will keep the counter if on another lvalue by the borrow rule
+
+## Pointer Creation (on heap)
+To use a memory space by pointer creation use `new` key, uses the C malloc
+
+Allocate new memory space like:
+```
+new <ptr>'<type>(<value>)
+```
+
+e.g.
+```
+var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
+```
+
+# Memory Managment: Capabilities
 Access to a variable is based on **explicit capabilities** for better code safety.
 | capability | function | declaration syntax |
 |-|-|-|
@@ -260,93 +282,34 @@ capabilities is based on xor reference/mutable:
 - multiple ref are allowed
 - exclusive mut is allowed
 
-Unline Rust, the capability chercker focuses on Capabilities usage
-| case | consequence |
-|-|-|
-| New ref | **revokes any previous mut** |
-| New mut | **revokes all previous ref** |
-| Mut indexations | cannot overlap |
-| Mut slices | cannot overlap |
-| Mut/ref index on slice | only in deterministic slice |
+Unline Rust, the capability chercker focuses on Capabilities and origine usage
+| Operation on origin | e.g. | consequence |
+|-|-|-|
+| Read only / copy | `println(player.CId.name)` | **revokes any previous mut** |
+| Write | `x += 10` | **revokes any previous ref/mut** |
+| Move | `b move= a` | **revokes any previous ref/mut** (+ origin moved) |
+| New ref | `ref r = a` | **revokes any previous mut** |
+| New mut | `mut m = a` | **revokes all previous ref** |
+| Mut indexations | `mut index = a[i]` | cannot overlap |
+| Mut slices | `mut col_slice = a[0..10]` | cannot overlap |
+| Mut/ref index on slice | ref index = mut_slice[4] | only in deterministic slice |
 
 > note: all revoked capabilities **cannot be reused**
 
-## assignment and Capability types
-| type | syntax | note |
-|-|-|-|
-| Ref (read) | `ref lhs = rhs`   | Multiple ref (read) allowed. Mutable capability prohibied while any read exists. |
-| Mut (r/w) | `mut lhs = rhs` | Only one mutable capability permitted at a time. |
+## Revocation of Capabilities (other cases)
+| Case | syntax | consequence |
+| **Explicit drop** | `drop a_ref` | the capability is removed |
+| **End of scope** | `var a = 10<br>{<br>mut m = a<br>m += 10<br>}` | automatic revocation |
+| **Parent/child data handling** | `mut p_name = player.name<br>player = Player::new("marc", 25)` |  r/w a parent revokes children's capabilities. But fields are considered separate.
+| **Collection operations** | `mut slice_mut = a[0..10]<br>a = {10, 20, 30}` | slice/index capabilites follow the parent's (collection base) operations.
+| **Move instruction** | `ref a_ref = a<br>b move= a` or move parameter -> all capabilities are revoked and the origin is removed.
 
-## origin usage and Capability consequences
+> note: for parameter passage, see parameters section
 
-| Operation on origin | Capability consequence |
-|-|-|
-| Read only | All previous mut revoked |
-| Copy | All previous mut revoked |
-| Write | All previous ref+mut revoked |
-| Move | All previous ref+mut revoked + origin removed |
+### Examples of Correspondence with code
 
-## revocation of Capabilities (other cases)
-
-A capability can be revoked by:
-- **Explicit drop**: `drop a_ref` -> the capability is removed.
-- **End of scope** -> automatic revocation
-- **Parent/child data handling** -> r/w a parent revokes children's capabilities. Fields are considered separate.
-- **Collection operations** -> slice/index capabilites follow the parent's (collection base) operations.
-- **Move instruction**: `move=` or move parameter -> all capabilities are revoked and the origin is removed.
-
-### expamples of correspondence with code
-
-| code case | variable operation mode |
-|-|-|
-| Parameter passed by ref | Read only |
-| Parameter passed by copy | Read only |
-| Parameter passed by mut | Read/write |
-| Parameter passed by move | Move |
-| Access entity/component field | Read only |
-| Modify entity/component field | Write |
-| System non-const | Read/write |
-| System const | Read only |
-| Operator assignment | Read/write |
-| Binary operation on variables | Read only |
-
-## anti-crossed Capability
-
-There is 2 rules:
-- A ref capability **cannot be used after the origin has been Modified**
-- A mut capability **cannot be used after the origin has been Read/Modified** 
-
-Error on ref:
-```
-1: var origin = 10              + classic variable declaration
-2: mut e = origin               + add mutable to origin
-2: ref a = origin               + add reference to origin : - any mutable revoked
-3: ref b = origin               + add reference to origin
-4:                              |
-5: printf("%d", a)              r read ref a
-6: printf("%d", origin)         r read origin
-7: origin += 1                  w set origin : - all ref revoked
-8: printf("%d", b)              X ERROR crossed capability: b revoked after origin writted
-```
-Error on mut:
-```
-1: var origin = 10              + classic variable declaration
-2: ref a = origin               + add reference to origin
-3: mut b = origin               + add mutable to origin : - all references revoked
-4:                              |
-5: printf("%d", a)              X ERROR crossed capability : a revoked after b mutable on origin declared
-5: printf("%d", b)              r read mut b
-5: b += 1                       w write mut b
-6: printf("%d", origin)         r read origin : - mut ref revoked
-7: origin += 1                  w set origin : - mut ref (already) revoked
-8: printf("%d", b)              X ERROR crossed capability: b revoked after origin read
-```
-
-
-# function
+# Function
 > Use `fn` keyword to declare a function
-
-syntax:
 ```
 fn name([<pass_mode> <name>: <type> [= <default_value>] [, ...]]) [-> <return_type>] { ... }
 ```
@@ -364,15 +327,14 @@ fn name([<pass_mode> <name>: <type> [= <default_value>] [, ...]]) [-> <return_ty
 > overloading prohibed
 
 calling:
-
 | type | syntax | info |
 |-|-|-|
 | discarded | `name()` | | 
 | no discarded | `var result_name = name()` | |
 | unpack result | `var (a, _, c) = name()` | `_` is for ignore field
 
-## local variables
-Syntax:
+## Local Variables
+No name shadowing permitted
 ```
 <kind> <name> [: <type>] = <value>
 ```
@@ -416,10 +378,8 @@ the type verification is static
 | mutable pip-call generic args | `let result: f32 = sum <-| <i32> 10 |+ <f32> 2.0 |+ <i32> avg(a, b, c) |+ <i32> k |+ <f32> "100" as f32 |+ <f32> 10.5;` |
 | pure pip-call generic args | `let position3D: (f32, f32, f32) = offset<f32> | x | y | z;` |
 
-# lambda
+# Lambda
 > use `lam` keyword to declare a lambda, threated like c++ : anonym functions
-
-Syntax:
 ```
 lam [<name>]['['<capture>']'][(<params>)] [-> <return_type>] { ... }
 ```
@@ -432,7 +392,7 @@ lam [<name>]['['<capture>']'][(<params>)] [-> <return_type>] { ... }
 
 > same calling as function
 
-## lambda capture
+## Lambda Capture
 to capture variables in scopes
 
 | target | syntax | extension with exceptions |
@@ -441,76 +401,57 @@ to capture variables in scopes
 | to copy all variables | `[copy]` | `[copy, mut a, mut b]` |
 | to get instance | `[self]` | `[..., self,...]` |
 
-# parameters
+# Parameters
 parameters are managed by a pass mode and a type base
 
-## parameter arrangement rule
-call ordering: positional -> named -> variadic args
+Pass Modes
+| mode | syntax | info | capability |
+|-|-|-|-|
+| ref | `ref name: T [= default_val]` | pass by reference, primitives are copied | creates new ref on origin, or redirect ref capability |
+| mut | `mut name: T` | pass by mutable | creates new mut on origin, or redirect mut capability until the end of call (for async logic) |
+| copy | `copy name: T [= default_val]` | pass by copy, complex types must handle copy method* | read operation on origin, ref and mut |
+| clone | `clone name: T [= default_val]` | pass by copy, complex types must handle clone method* | read operation on origin, ref and mut |
+| move | `move name: T` | pass by move semantic, primitives are copied | origin, ref and mut consumed |
+| addr | `addr name: T` | change of pointer address, for pointer type only | capabilities prohibied |
+| variadic | `passMode args: T...` | pass mode is general, can be typed | pass mode dependent |
 
-| behaviour | definition | call |
-|-|-|-|
-| obligatory param with positional args | `fn add(a: i32, b: str)` | `add(10, val)` |
-| obligatory param with named args | `fn add(a: i32, b: str)` | `add(b= 10, a= val)` |
-| optional param with no or positional args | `fn rand(s: f32 = 0.0)` | `rand()` or `rand(2.5)` |
-| optional/obligatory param with positional and named args | `fn lerp(x: f32, a: f32 = 0, b: f32 = 1)` | `lerp(val)` or `rand(val, b= 100)` or `rand(b= 100, x= val)` |
-| variadic param (variadic name is obligatory to specify the start of the variadic args). In a function call, variadic arguments must be prefixed by ... once, before the first variadic value. All subsequent values are considered part of the variadic list |  `fn sum(args: T...)` | `sum()` or `sum(... 10 as i32, 2.5 as f32)` | 
-| optional/obligatory param with positional and named args and variadic args | `fn msg_add(msg: str, left: f32 = 0, right: f32 = 0, args: T...)` | `msg_add("result")` or `msg_add("result", 10.0)` or `msg_add("result", 10.0, right= 10 as f32, ... 10, 5.0, 6)`
+> Note: any pass mode can be optional with the type modifier `?`, not necessary for parameters with a default value
 
-## pass mode
-default pass mode:
+## Parameter Arrangement Rules
+call parameter ordering left to right: positional -> named -> variadic args
+> Note: optional arguments are from parameter with optional type modifier `?` of with a default value
+| case | case info | call | call info |
+|-|-|-|-|
+| `fn(mut a: i32, mut b: i32)` | Mandatory arguments (no default value) must be specified by their position or name | `(value_a, b= value_b)` | value_a on a, value_b on b |
+| `fn(copy a: i32 = 0, mut b: i32)` | If a optional argument is before a mandatory argument, you mut discriminate arguments proprely | `(None, valueb)` or `(b= valueb)` | Optional arguments can be used without None | 
+| `fn(mut a: i32, mut args: i32...)` | The variadic argument case is always optional despite of his pass mode | `(value_a ...value_arg1, value_arg2)` or `(value_a)` | Variadic args list must begins with `...` token |
 
-- primitive types : pass by copy (optimisation)
-- complex types : pass by ref
+## Returns
+multiple returns is handled with the tuple logic `fn() -> (a, b, c, ...)`
 
-user pass mode:
-
-| type | key | behaviour | syntax | info |
-|-|-|-|-|-|
-| ref pass mode | `ref` | designed to avoid copy cost (for non primitive) | `foo(ref a: T)` | default value permitted (become optional argument) |
-| mut pass mode | `mut` | designed to transfer modifications from function | `foo(mut a: T)` | default value prohibied (not optional argument) |
-| copy pass mode | `copy` | force the copy (e.g. avoid threading cocurrency) you can specify | `foo(copy a: T)` | default value permitted (become optional argument) |
-| move pass mode | `move` | move semantic : mut and invalidate origin | `foo(move a: T)` | default value prohibied (not optional argument) |
-| address pass mode | `addr` | designed to modify the address of the pointer (pointers accepted only) | `foo(addr a: T)` | default value prohibied |
-| variadic pass mode | `...` | variadic parameter (always the last parameter) you can specify a general pass mode | `sum(copy term: T...)` | default value prohibied (but optional argument)
-
-## returns
-multiple returns are handled (but the compiler pack them as a tuple)
-complex types pass by copy or move semantic if local variables and primitives pass by copy by default
-you can specify the pointer type in return
-
-## calling
-there is multiple ways:
-
-| type | syntax |
-|-|-|
-| positional affectation | `add(value1, value2)` |
-| positional + named affectation | `window("Title", length = 10, height = 10)` |
-| positional + named affectation + variadic args | `scale2D_sum(scaleVal1, scale_dimension2 = scaleVal2, ... val1, val2, val3, val4)` |
-
-if a value is passed without parameter specification, the standard order of affection will be used
-you can use both as long as there is no parameter conflict and named affectation are at the end
-variadic args are always at the end of arguments and after named parameters, the first non named parameter after named parameter is the begining of variadic arguments
-if the function is not variadic, an error will occur because only named parameters are at the end
-
-parameters no specified needs to have a default value 
-
-# generics
+# Generics
 > Use `gen` keyword to declare a generic type
 
 technically, generic restriction return true (valid type) or false (invalid type) you can reuse generic with named generic
-
-Syntax:
 ```
 gen <name>'<'<typename> [, <typename2>, ...]'>' { .. }
 ```
 
-## generics conditions
-syntax:
+Generics are usable on:
+- functions
+- parameters
+- entity
+- systems
+- components
+- roles (for generic components)
+- type-alias
+
+
+## Generics Conditions
 ```
 <typename> <kind> <symbol>
 ```
-
-the conditions are cumulatives and not alternatives
+Conditions are cumulatives and not alternatives
 
 | filter kind | kind | syntax |
 |-|-|-|
@@ -521,12 +462,12 @@ the conditions are cumulatives and not alternatives
 | cast filter | `cast to`<br> `cast from` | `T cast to i32` `T cast from i32` `T cast to U` (commutative : valid if at least one cast is compatible) |
 | generic filter | `is` | `T is gen::base_of<CAnimal> | ...` or `T is Integral | Signed | i128 | ...` (first arg is left of `is`) can have alternative |
 
-named generic example: 
+Named generic example: 
 ```
 gen GMoveable<T> { 
-  T comp CPosition
-  T use op +
-  T use op - 
+  T comp CPosition,
+  T use op +,
+  T use op -,
 } 
 
 gen GVelocity_Applied<T> {
@@ -535,23 +476,21 @@ gen GVelocity_Applied<T> {
 }
 ```
 
-## generic use
-generic usage on functions/component/entity/lambda: use metacode 
+## Generic Usage
+generic usage on functions/component/entity/lambda 
 
-e.g.
+function:
 ```
-# gen T, U
-# where T is Numeric
-# where U op +
-fn add(a: T, b: U) {
+fn add<T: is i32 + is i64, U: op + + is integral>(a: T, b: U) {
   return a + b;
 }
 ```
+> Note: `U: op + + integral` the first `+` is the operator, the second `+` is the cumulative generic filter with `is integral`
+> It's a very bad syntax: use generic declaration instead to use like fn<T: Numeric, U: Numeric>(copy a: T, copy b: U)
 
 generic without condition is possible (not recommended)
 ```
-# gen T
-comp item { N: usize, value: T }
+comp items<T> { size: usize, value: T }
 ```
 
 generic type usage is possible (not recommended)
@@ -561,44 +500,38 @@ fn add(a: GNumeric, b: GNumeric) {
 }
 ```
 
-
-# flag
+# Flag
 > Use `flag` keyword to declare a flag
 
 Flag is a optimized named bits, max 255 elements, use only 8 bits
-
-syntax:
 ```
 flag FFileMode {
   Read, Write, Read_Write, Lock
 }
 ```
+Explicit byte
+```
+flat FFileMode {
+  Read => 0x0, Write => 0x1, Read_Write => 0x2, Lock => 0x3
+}
+```
 
-# union
+> bit enum type can be explicit cast with bytes, integrals : `0x1 as FName` or `1 as FName` => return FName::elem2
+
+# Union
 > Use `union` keyword to declare a union
 
 Union is similar to an C union, so a non discriminant container who will consider the data as a type from the index in the input and output in the discretion of the user, no indexation or flag used to determine wich type is active.
-
-Useful for C interop
-
-syntax:
 ```
 union UNumber {
   i: isize,
   f: fsize,
 }
 ```
+> Note: Useful for C interop
 
-# enumerator
+# Enumerator
 > Use `enum` keyword to declare a enumerator
-
-C like enum:
-```
-enum ESpecices {
-  Dog, Cat, Horse, Sheep
-}
-```
-prefer the `flag` type to use C like enum and keep performances
 
 rust like enum (typed):
 ```
@@ -609,17 +542,16 @@ enum EInteractIssue {
   None,
 }
 ```
+>Note: for untyped enum prefer the `flag` to keep performances
 
-to use enumerator
-
+Enum usage
 | type | syntax |
 |-|-|
 | access to a C like element | `EName::elem1` |
 | access to a typed element | `EName::elem1` or `EName::elem1(val)` |
 
-> bit enum type can be explicit cast with integrals : `1 as EName` => return EName::elem2
 
-## match enumerator
+## Match Enumerator
 enums are linked to the match mecanism
 ```
 enum Optional<T> {
@@ -635,10 +567,8 @@ match result {
 }
 ```
 
-# modules
+# Modules
 modules permit to avoid naming collision, it's possible to use native types as modules
-
-declaration:
 ```
 mod name { ... }
 ```
@@ -650,37 +580,12 @@ City::House::new(N: 37.0379f, E: 27.4241f)
 
 to export module, use the instruction `export <name> { ... }` and use as a module
 
-## module alias
+## Module Alias
 you can give an alias to an module (hightly not recommended)
 `use fs = core::file_system`
 
 
-# memory managment
-The memory use a fine managment, there is no GC
-
-Memory types:
-
-| name | syntax | info |
-|-|-|-|
-| non typed memory address | `ptr'void` | useful for C interop (`void*`) |
-| raw pointer | `ptr'T` | if no escape in the scope, will delete |
-| unique pointer | `uptr'T` | use `move` to change his position and invalidate his last position |
-| shared pointer | `sptr'T` | Use `mut` to add his reference to the counter and new position. A `move` will keep the counter, a `mut` will keep the counter if on another lvalue by the borrow rule
-
-## pointer creation (on heap)
-To use a memory space by pointer creation use `new` key, uses the C malloc
-
-Allocate new memory space like:
-```
-new <ptr>'<type>(<value>)
-```
-
-e.g.
-```
-var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
-```
-
-# tuple
+# Tuple
 tuples are implicit they a deduced most of the time in `( ... )`
 
 tuple cases:
@@ -699,7 +604,7 @@ tuple cases:
 | unpack tuple from call | `var (a, b, c) = name()` | |
 | unpack tuple from variable | `var (a, _, c) = var_tuple` | |
 
-## tuple cast
+## Tuple Cast
 Tuples and named tuples are the same for the compilator but need to de distinguished for users to makes proprer conversion.
 
 Conversions:
@@ -709,9 +614,9 @@ Conversions:
 | positional | `let t1 = (10, 2.0, "hello")` | `t2 = t1 as (2, 1, 0)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the index |
 | nomenclature | `let t1 = (a= 10, b= 2.0, c= "hello")` | `t2 = t1 as (c, b, a)` | `t2 = ("hello", 2.0, 10)` | in each position, set the new position by the field name | 
 
-# flow
+# Flow
 
-## if elif else
+## Conditions: if elif else
 control flow by condition
 
 | flow | syntax codeblock | syntax inline |
@@ -720,28 +625,24 @@ control flow by condition
 | elif | `elif <condition> { ... }` | `elif <condition> then ...` |
 | else | `else { ... }` | `else ...` |
 
-## ternary if
-Ternary if is a control flow for value
-
-syntax:
+### Ternary if
+Ternary if is a control flow for value fields
 ```
 if <condition> then <true statement>
 if <condition> then <true_statement> else <false_statement>
 ```
 
-## match
+## Match
 Match statement control flow for code logic by matching comparison on value. 
 
 Execution stop to the case executed. Or use metacode `# fallthrough`
-
-syntax:
 ```
 match <value> {
   // case states ...
 }
 ```
 
-## case statement
+### Case Statement
 Define inside match
 
 | statement case | syntax |
@@ -750,7 +651,6 @@ Define inside match
 | case inline | `<evaluator> => ...` |
 
 e.g.
-
 | type | syntax |
 |-|-|
 | compare literal integral | `10 =>` |
@@ -762,7 +662,7 @@ e.g.
 | match on enum | `EEnum::Elem =>` |
 | other case | `_ =>` | 
 
-# loop
+## Loop
 Highlty not recommended
 
 | statement type | syntax |
@@ -770,19 +670,19 @@ Highlty not recommended
 | codeblock | `loop { ... }` |
 | inline | `loop then ...` |
 
-# while
+## While
 | statement type | syntax |
 |-|-|
 | codeblock | `while <condition> { ... }` |
 | inline | `while <condition> then ...` |
 
-# do-while statement
+## Do-while Statement
 | statement type | syntax |
 |-|-|
 | codeblock | `do { ... } while <condition>;` |
 | inline | `do ... while <condition>;` |
 
-# for loop statement
+## For Loop Statement
 For loop can be used on range, slice, collection and map
 
 Syntax:
@@ -793,7 +693,7 @@ Syntax:
 | for item | `for [<index>] mut/ref/copy/move <item> in <slice/collection> { ... }` |  |
 | for item | `for [<index>] mut/ref/copy/move (<item1>, <item2>, ...) in <slice/collection> { ... }` | useful for map or tuple array  |
 
-# goto statement
+# Goto Statement
 Highlty not recommended, designed for flexibility and code specific behaviour.
 
 | state | syntax |
@@ -801,7 +701,7 @@ Highlty not recommended, designed for flexibility and code specific behaviour.
 | go to and label | `goto name` |
 | label definition | `label name:` |
 
-# range statement
+# Range Statement
 Borned with a start integral, end integral and optional step (only for `for` loop).
 
 range can be use to extract slice from collection with special ranges.
@@ -814,7 +714,7 @@ range can be use to extract slice from collection with special ranges.
 | range from 0 | `..11` | will go from 0 or the start of the collection to the 10th index (so 11 elements slice) |
 | range to max | `5..` | will go from 5 to the end of the collection or the max value `i64` |
 
-# slice
+# Slice
 Returns a view according to specified range, can be mutable and immutable
 
 | slice type | syntax |
@@ -828,10 +728,8 @@ basically a fat pointer
 slice { first_elem: ptr'T, length: usize }
 ```
 
-# pattern
+# Patterns
 the pattern matching can be used from if/elif/while and match statement
-
-general syntax:
 ```
 [if/elif/while] ref/mut/copy/move <pattern> = <expression> [if <condition>] {...}
 ```
@@ -849,7 +747,7 @@ pattern element kind | e.g. | info |
 | entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
 | component pattern | `CId{name: name, id: 10} = <expression>` |
 
-# module import/export
+# Module Import / Export
 The import and exportation of the code use the LLVM declare/extern
 - Exports are also modules 
 - To export the module in the root module, use `# native \n export <name> {...}`)
@@ -868,18 +766,15 @@ The import and exportation of the code use the LLVM declare/extern
 entity, role, component, system, generic, function, global, enum, metacode, type
 
 
-# COP paradigm (Compositional Oriented Programming)
+# COP Paradigm (Compositional Oriented Programming)
 COP, short for Compositional Oriented Programming, is a programming paradigm where entities are built through the static composition of components, without inheritance, without polymorphism, and without dynamic components
 it's itended to be flexible with a deterministic syntax
 
-inspired by POO and ECS
-
 An entity is defined by composition; components exist only within the entity, and systems operate by recognizing that composition.
-
 - component is a contigous list of variables
 - system is a behaviour who contains block of statement according to component combinaison
 
-## component
+## Component
 > Use `comp` to declare a component
 
 is a contigous list of variables, default values are required to avoid any undetermined value
@@ -911,7 +806,7 @@ fn start() {
 
 A component used in function parameter is a guarantee of the presence of the values as long as the entity have the component expected.
 
-### component field
+### Component Field
 A field is a primtive type or an entity, no nested component field are accepted. To keep the composition clean
 
 Components can't handle a nested entity for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
@@ -926,7 +821,7 @@ Filed entity typed mode
 | pointer | `use ptr EntityT` | nullable, raw pointer, independent lifetime |
 | pointer | `use sptr EntityT` | nullable, reference counted, lifetime shared |
 
-## role
+## Role
 > Use `role` to declare a role
  
 roles are a package of components to check if entities have some components
@@ -939,12 +834,10 @@ declaration:
 role name { components, ... }
 ```
 
-## entity
+## Entity
 > Use `entity` to declare a entity
 
 entites have a static composition of components who define his behaviour for systems and the accepted parameter arugment of component/role in fuctions.
-
-declaration:
 ```
 entity name { 
   use component ...
@@ -957,8 +850,11 @@ entity can contains:
 |-|-|-|
 | component | `use name { field: value }` | with default value | 
 | component | `use name` | default value from component |
-| cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used | 
-| cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used |
+| cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | 
+| cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used, permit to use `my_val as Type(my_entity)` |
+| constructor | `new(params) { ... }` | overloading possible, must returns the same entity type |
+| copier | `copy { ... }` | must returns the same entity type |
+| cloner | `clone { ... }` | must returns the same entity type |
 | constructor | `new(params) { ... }` | overloading possible, must returns the same entity type |
 | destructor | `del { ... }` | no parameter, reserved key `self` used | 
 | operator | `op == { ... }` | all operators handled but type are restrictives |
@@ -990,14 +886,14 @@ entity Human {
 
 ```
 
-### member usage
+### Member Usage
 
 | meber type | usage syntax | note |
 |-|-|-|
 | call native constructor | `var cat = Cat{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended |
 | call custom constructor | `var cat = Cat::new("Ted", 2)` | clean constructor |
 
-### entity operator overloading
+### Entity Operator Overloading
 there is some restrictions in operator definition:
 
 | operator | other term | return type | syntax |
@@ -1010,7 +906,7 @@ there is some restrictions in operator definition:
 | `[..]` range | none | custome slice U | `op [r: ..] -> mut'[U]` |
 
 
-# system
+# System
 
 A system is a composition-driven orchestration unit. It does not define behavior itself, but selects and orders behavior executions based on the set of components and roles present in an entity.
 A system guarantees that any entity allowed to execute it will follow at least one valid case path derived from its composition, case path evaluation resolved at compile time.
@@ -1038,12 +934,12 @@ Flow explanation :
 - Entity have C composition -> run C and stop (no more statement)
 - Entity have B + C composition -> run B and stop (return)
 
-# COP in functions parameter
+# COP in Function Parameters
 The COP paradigm can be used in functions to simplify the code and avoid the generic boilerplate
 
 Keep in mind that any component and role type in parameter is values garantee.
 
-## with components
+## Component Parameters
 CPosition and CPhysic guarantee the members values for the entity calling
 ```
 type xyz_pos = (x: f32, y: f32, z: f32)
@@ -1055,14 +951,14 @@ fn move_entity(mut pos: CPosition, mut phy: CPhysic, copy new_pos: xyz_pos, copy
   phy.vel copy= vel
 }
 ```
-the calling
+calling
 ```
 var player = Player{CPosition.x= 100, CPosition.y= 100, CPosition.z= 100}
 move_entity(player, player, (10.0, 20.0, 30.0), 5.0)
 ```
 note a role or a system can simplify the function declaration and call:
 
-## with role
+## Role Parameters
 ```
 role RMovable { CPosition, CPhysic }
 fn move_entity_role(mut mov: RMovable, copy new_pos: xyz_pos, copy vel: f32) {
@@ -1072,12 +968,12 @@ fn move_entity_role(mut mov: RMovable, copy new_pos: xyz_pos, copy vel: f32) {
   mov.CPhysic.vel copy= vel
 }
 ```
-call with role
+calling
 ```
 move_entity_role(player, (10.0, 20.0, 30.0), 5.0)
 ```
 
-## with system
+## Systems Simplification
 ```
 sys move(copy new_pos: xyz_pos, copy vel: f32) {
   CPosition(pos) + CPhysic(phy) {
@@ -1085,23 +981,20 @@ sys move(copy new_pos: xyz_pos, copy vel: f32) {
   }
 }
 ```
-call with system
+calling
 ```
 player::>move((10.0, 20.0, 30.0), 5.0)
 ```
 
-# COP and function generic and function call
+# COP and Function Generics and Function Calls
 > Usage is the same as rust generic call type args
-
 > It's possible tu specify a generic in the args
 
 generic function call (turbofish used in calling)
-
-syntax:
 ```
 <name>::'<'type[, type, ...]'>'([<parameters>])
 ```
-
+e.g.
 ```
 add::<GNumeric, i32>(10, 20)
 ```
@@ -1130,7 +1023,7 @@ component with generic:
 comp CLife<T: GDecimalScaled, U> { render: U, metabolism: Map<str, T> }
 ```
 
-# multi-threading
+# Multi-threading
 Multi-threading is handled natively.
 
 The threading logic is simple:
@@ -1140,7 +1033,7 @@ The threading logic is simple:
 - Access intermediate values during async execution via messages
 - Access the final result after async via `await`
 
-## async function
+## Async Function
 A `async` function is **always pure**, without side effects.
 - All externals values must be passed as parameters.
 - Only global constants can be used inside the function.
@@ -1160,7 +1053,7 @@ fn calculate(copy a: i32, copy b: i32) -> i32 // return i32 packed as Future<i32
 }
 ```
 
-## thread invoking
+## Thread Invoking
 A thread is invoked using the `async` or `await` prefixes before a function call
 
 async execution
@@ -1203,7 +1096,7 @@ result = await calculate(args...) // or directly await calculate(args...)
 > Note: to bind on messages, you must specify the prefix `sync` or `await` to avoid non thread logic
 > Messages are considered as a threading tweak, not a regular coding case
 
-# Key points
+# Key Points
 - async always launches an asynchronous thread.
 - await blocks the caller, but the thread remains async internally.
 - FIFO messages + future for the final result provide a predictable and readable flow.
@@ -1240,11 +1133,11 @@ fn printf(_Format: str, args: addr...) -> void;
 LLVM will mark these functions externals (`# extern`) and search in C ABI (`export C {...}`)
 
 
-# metaprogrammation
+# Metaprogrammation
 metaprogrammation is behaviour declarative who starts with `#`
 can define some behaviour : module exportation, async, parallel, contigous memory alignment, etc...
 
-## cumulative metacode
+## Cumulative Metacode
 cumulative metacode union behaviours when the new line have # 
 
 if the new line don't have # the metacode is no longer cumulative
@@ -1279,7 +1172,7 @@ cumulative metacode can be in a unique line
 fn sum() {}
 ```
 
-## metacode block
+## Metacode Block
 you can reuse metacode with names, parameters can be passed 
 ```
 # meta name(parameters) -> fn|var|let|class|trait|method|...
@@ -1305,7 +1198,7 @@ metacode block can be exported
 # async
 ```
 
-## metacode scoped
+## Metacode Scoped
 replication of the metacode specification to all objects in the scope 
 use simply `# scope ... # end` or named scode `# scope name ... # end`.
 the scope is the end of the metacode block
@@ -1349,7 +1242,7 @@ namespace operations {
 # end if // scope
 ```
 
-## metacode conditional
+## Metacode Conditional
 metacodes can set condition during the compilation to compile or exclude code parts
 
 | name | syntax | e.g. | info |
@@ -1368,7 +1261,7 @@ metacodes can set condition during the compilation to compile or exclude code pa
 | operating system condition | `# if os == ...` | `# if os == linux` | indicate the operating system (Linux/Windows/MacOS/...) |
 | mode condition | `# if debug` | `# if debug` | for the compilation in debug mode |
 
-## metacode expansion
+## Metacode Expansion
 metacodes can generate code before the compilation
 
 - use `# expand` to set the code expansion 
@@ -1418,7 +1311,7 @@ use `# expand if ...` `# expand elif` `# expand else` `# end`
 ```
  
 
-# naming convention (recommended)
+# Naming Convention (recommended)
 Types : entity, component, role, system, enum, type, union, generic, named metacode
 
 Naming rules:
@@ -1471,7 +1364,7 @@ use this for too long names and for most used local variable or temporary variab
 | temporary | prefix `tmp_`<br> if copy of var, peek first letter on syllab<br> or first letters (for one word)<br> or first words letters, or standard convention (`lhs`, `rhs`, ...) | `temp_buff` `temp_lhs` |
 | most used variable | peek first letter on syllab<br> or first letters (for one word)<br> or first words letters<br> or standard convention (`lhs`, `rhs`, ...) | `expansion_meta->placeholders_pos` : `phs_pos` |
 
-# mangling 
+# Mangling 
 
 - `[]` optional
 - <name> : `<size><name>`
@@ -1526,8 +1419,8 @@ entities:
 | metacode       | `[<path__>]mc_<name>` | `_V_6Forest__mc_10ConstAsync` |
 
 
-# other metacodes
-## Script target
+# Other Metacodes
+## Script Target
 | name | syntax | info
 |-|-|-|
 | author name | `# author "name"` | declare the script author. |
@@ -1546,7 +1439,7 @@ entities:
 | documentation | `# doc ""` | |
 | operating system used | `# os ""` | |
 
-## Function / Lambda target (`fn`, `lam`)
+## Function / Lambda Target (`fn`, `lam`)
 | name | syntax | info 
 |-|-|-|
 | asynchrone execution | `# async` | mark the function as asynchronous. |
@@ -1557,18 +1450,18 @@ entities:
 | unit test | `# test` | the function is a unit test. |
 | for performance | `# benchmark` | the function is for performance benchmarking. |
 
-## Entity target
+## Entity Target
 | name | syntax | info 
 |-|-|-|
 |  | `# align N` | enforce memory alignment (e.g. `# align(8)`). |
 |  | `# serializable` | allow automatic serialization. |
 
-## Enum target
+## Enum Target
 | name | syntax | info 
 |-|-|-|
 |  | `# repr(type)` | define underlying representation (e.g. `i8`, `u32`). |
 
-## Scope target
+## Scope Target
 | name | syntax | info 
 |-|-|-|
 | scope | `# scope ... # end scope` | define a named scope where metacodes apply. |
@@ -1576,83 +1469,3 @@ entities:
 | exclusion | `# exclude all` | exclude current block from inherited metacodes. |
 | exclusion | `# exclude name` | exclude a named scope only. |
 
-# script structure recommandation
-```
-// script definition section (COBOL inspiration)
-# author ""
-# title "" 
-# version ""
-# description ""
-# localisation "" // file path
-# platform "" // platform target designed
-
-// export import section
-import math
-import timer
-
-export Forest {
-// constant definition section
-let PI: f32 = 3.14159265359
-
-// reusable metacode definition section
-# meta threadSafeFn() -> fn | lam 
-# pure
-# async
-
-// reusable generic definition section
-gen sizeable<T> {
-  T is integral;
-  T is unsigned;
-}
-
-// enum definition section
-enum opt<T> {
-  Valid<T>,
-  None,
-}
-
-// components definition
-comp Position { x: f32 = 0, y: f32 = 0 }
-comp Velocity { dx: f32 = 0, dy: f32 = 0 }
-comp Health { life: f32 = 0 }
-
-// entity definition
-entity Animal {
-  use Position
-  use Velocity
-  use Health { life: 100 }
-}
-
-// systems definition
-sys Move {
-  Position(pos) + Velocity(vel) => {
-    pos.x += vel.dx
-    pos.y += vel.dy
-  }
-}
-
-// main function
-fn main() {
-  var animals = new_forest()
-  var _timer: f32 = 0.0
-
-  while timer < 60 {
-    for item in animals {
-      move() on item
-    }
-
-    _timer += timer::delta
-  }
-}
-
-
-fn new_forest() -> List<Animal> {
-  var animals: List<Animal>(10)
-
-  for i in 0..10 {
-      animals.add(Animal{Position= {math::rand(), math::rand()}})
-    }
-}
-
-} // end export
-```
