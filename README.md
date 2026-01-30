@@ -11,7 +11,7 @@
 ![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
 ![Platform](https://img.shields.io/badge/Current_Platform-Linux-darkblue)
 
-**Memory explicit, behavior predictable.**
+*Memory explicit, behavior predictable.*
 
 </div>
 
@@ -23,7 +23,7 @@ game engines, simulation, embedded systems, runtimes, and deterministic backends
 
 Velox deliberately avoids implicit behavior in favor of clarity, predictability, and compile-time guarantees.
 
-> To see technical implementation, see ![MANIFEST](MANIFEST.md)
+> For technical implementation details, see the ![MANIFEST](MANIFEST.md)
 
 ## Why Velox?
 
