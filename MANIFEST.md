@@ -92,14 +92,14 @@ Placement e.g. (place possible: `@`)
 ## Memory
 > See Memory section
 
-| stack | syntax | info |
+| memory | syntax | info |
 |-|-|-|
 | move           | `move=`, complex type default: `=` | assignation by move semantic
 | copy           | `copy=`, primitive default: `=` | assignation by copy method, otherwise clone method used
 | clone          | `clone=`  | assignation by clone method, otherwise copy method used
 | drop           | `drop my_var` | revoke `ref`/`mut`
-| delete         | `del my_ptr` | free pointer
 | new            | `new ptr'T()` | memory allocation on heap
+| delete         | `del my_ptr` | free pointer
 
 ## Arithmetic
 > See COP section
