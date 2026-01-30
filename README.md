@@ -4,22 +4,14 @@
 
 ![Velox logo title](logo/velox-logo-title.png)
 
-### Copiler Status
+**Static composition, dynamic possibilities.**
+
 ![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
-![Compilation_Pipeline](https://img.shields.io/badge/Compilation_Pipeline-Done-darkgreen)
-![Lexer](https://img.shields.io/badge/Lexer-Done-darkgreen)
-![Preprocessor](https://img.shields.io/badge/Preprocessor-Done-darkgreen)
-![Parser](https://img.shields.io/badge/Parser-Work_in_progress-brightgreen)
-![EMBinder](https://img.shields.io/badge/EMBinder-Done-darkgreen)
-![Exporter](https://img.shields.io/badge/Exporter-Done-darkgreen)
-![ResolverSymbol](https://img.shields.io/badge/Resolver_Symbol-Work_in_progress-brightgreen)
-![ResolverType](https://img.shields.io/badge/Resolver_Type-Work_in_progress-brightgreen)
-![ResolverSemantic](https://img.shields.io/badge/Resolver_Semantic-Work_in_progress-brightgreen)
-![LLVMGeneration](https://img.shields.io/badge/LLVM_Generation-Work_in_progress-brightgreen)</br>
-### Tools Status
-![Highlighter](https://img.shields.io/badge/Highlighter-Done-darkgreen)
-![Snippet](https://img.shields.io/badge/Snippet-Done-darkgreen)
-![Compilation_Dot](https://img.shields.io/badge/Compilation_debug_dot_graph-Done-darkgreen)
+![Version](https://img.shields.io/badge/Version-2026.1b-blue)
+![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
+![Platform](https://img.shields.io/badge/Current_Platform-Linux-darkblue)
+
+**Memory explicit, behavior predictable.**
 
 </div>
 
@@ -30,6 +22,8 @@ It targets domains where control over memory, data access, and execution costs i
 game engines, simulation, embedded systems, runtimes, and deterministic backends.
 
 Velox deliberately avoids implicit behavior in favor of clarity, predictability, and compile-time guarantees.
+
+> To see technical implementation, see ![MANIFEST](MANIFEST.md)
 
 ## Why Velox?
 
