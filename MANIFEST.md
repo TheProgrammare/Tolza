@@ -564,10 +564,10 @@ Useful for low-level coding like asm { } in C
 ```
 llvm {...}
 ```
-
-Any in variable must be marked `# llvm in`
-Any out variable result must be marked `# llvm out`
-The function who contains the `llvm` instruction must be marked `# unsafe`
+Rules:
+- Any in variable must be marked `# llvm in`
+- Any out/inout variable result must be marked `# llvm out`
+- The function who contains the `llvm` instruction must be marked `# unsafe`
 
 e.g.
 ```
