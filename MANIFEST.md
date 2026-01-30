@@ -407,9 +407,9 @@ to capture variables in scopes
 # Parameters
 parameters are managed by a pass mode and a type base
 
-Pass Modes
+Pass Modes:
 | mode | syntax | info | primitive type | complex type | regular variable | ref | mut | ptr | uptr | sptr |
-|-|-|-|-|-|-|-|-|-|
+|-|-|-|-|-|-|-|-|-|-|-|
 | ref | `ref name: T [= default_val]` | pass by reference | `copy` | `ref` | local ref, no add ref | add ref to origin | X | read only ptr and pointee | X | read only sptr and pointee |
 | mut | `mut name: T` | pass by mutable | `mut` | `mut` | local mut, no add mut | X | redirect mut | read only ptr, mutable pointee | X | read only sptr, mutable pointee | 
 | copy | `copy name: T [= default_val]` | pass by copy | `copy` | try `copy`* otherwise `clone` otherwise prohibied | read operation, call copy | idem | idem | copy ptr address | X | share uptr (sharing > copy) |
