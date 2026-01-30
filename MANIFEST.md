@@ -331,7 +331,7 @@ calling:
 |-|-|-|
 | discarded | `name()` | | 
 | no discarded | `var result_name = name()` | |
-| unpack result | `var (a, _, c) = name()` | `_` is for ignore field
+| unpack result | `var (a, _, c) = name()` | `_` is for ignore field, see patterns section 
 
 ## Local Variables
 No name shadowing permitted
@@ -731,7 +731,7 @@ slice { first_elem: ptr'T, length: usize }
 # Patterns
 the pattern matching can be used from if/elif/while and match statement
 ```
-[if/elif/while] ref/mut/copy/move <pattern> = <expression> [if <condition>] {...}
+[if/elif/while] [let/var] <pattern> = <expression> [if <condition>] {...}
 ```
 pattern element kind | e.g. | info |
 |-|-|-|
@@ -746,6 +746,19 @@ pattern element kind | e.g. | info |
 | entity pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
 | entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
 | component pattern | `CId{name: name, id: 10} = <expression>` |
+
+## Pattern Binding Mode
+| Binding Mode | syntax | info |
+|-|-|-|
+| Bind | `let (a)` | Copy all primitives, Move all complex types |
+| Bind | `var (a)` | Mut all primitives, Mut all complex types |
+| Override bind by copy | `(copy a)` | Will read the value and put a copy in binding |
+| Override bind by clone | `(clone a)` | Will read the value and put a clone in binding |
+| Override bind by mut | `(mut a)` | Will add a mut capability in binding |
+| Override bind by ref | `(ref a)` | Will add a ref capability in binding |
+| Override bind by move | `(move a)` | Move the value in binding and invalid the origin |
+
+> Note: Override a bind by * will ignore let/var variables declaration
 
 # Module Import / Export
 The import and exportation of the code use the LLVM declare/extern
