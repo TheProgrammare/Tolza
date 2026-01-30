@@ -590,8 +590,7 @@ fn add(copy a: i32, copy b: i32) -> i32 {
 }
 ```
 
->Note: Considered unsafe by nature
->Syntax error handled by llvm back-end directly 
+>Note: Considered unsafe by nature. Syntax error handled by llvm back-end directly 
 
 # Flag
 > Use `flag` keyword to declare a flag
