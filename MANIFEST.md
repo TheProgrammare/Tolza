@@ -376,10 +376,10 @@ the type verification is static
 
 | type | syntax |
 |-|-|
-| mutable pip-call | ```let result: f32 = sum <-| 10 |+ 2.0 |+ avg(a, b, c) |+ k |+ "100" as f32 |+ 10.5;``` |
-| pure pip-call | ```let position3D: (f32, f32, f32) = offset | x | y | z;```
-| mutable pip-call generic args | ```let result: f32 = sum <-| <i32> 10 |+ <f32> 2.0 |+ <i32> avg(a, b, c) |+ <i32> k |+ <f32> "100" as f32 |+ <f32> 10.5;``` |
-| pure pip-call generic args | ```let position3D: (f32, f32, f32) = offset<f32> | x | y | z;``` |
+| mutable pip-call | `let result: f32 = sum <-\| 10 \|+ 2.0 \|+ avg(a, b, c) \|+ k \|+ "100" as f32 \|+ 10.5`
+| pure pip-call | `let position3D: (f32, f32, f32) = offset \| x \| y \| z`
+| mutable pip-call generic args | `let result: f32 = sum <-\| <i32> 10 \|+ <f32> 2.0 \|+ <i32> avg(a, b, c) \|+ <i32> k \|+ <f32> "100" as f32 \|+ <f32> 10.5`
+| pure pip-call generic args | `let position3D: (f32, f32, f32) = offset<f32> \| x \| y \| z`
 
 # Lambda
 > use `lam` keyword to declare a lambda, threated like c++ : anonym functions
@@ -417,6 +417,7 @@ There is 6 pass modes:
 | `clone` | `clone name: T [= default_val]` | by clone forced
 | `move` | `move name: T` | by move semantic
 | `addr` | `addr name: T` | only pointer address manipulation
+| `...` | `<pass_mode> args: T...` | Variadic, non type (C convention) : `ptr'u0`
 
 >Note: variadic is technically not a pass mode, it's permit multiple parameters with a pass mode and type 
 >any pass mode can be optional with the type modifier `?`, not necessary for parameters with a default value
@@ -454,8 +455,10 @@ There is 6 pass modes:
 | `addr` | mutable ptr, mutable pointee | X | X
 
 ## Parameter Arrangement Rules
+
 call parameter ordering left to right: positional -> named -> variadic args
 > Note: optional arguments are from parameter with optional type modifier `?` of with a default value
+
 | case | case info | call | call info |
 |-|-|-|-|
 | `fn(mut a: i32, mut b: i32)` | Mandatory arguments (no default value) must be specified by their position or name | `(value_a, b= value_b)` | value_a on a, value_b on b |
@@ -496,7 +499,7 @@ Conditions are cumulatives and not alternatives
 | role filter | `role` | `T role Merchant` |
 | system filter | `sys` | `T sys Move` |
 | cast filter | `cast to`<br> `cast from` | `T cast to i32` `T cast from i32` `T cast to U` (commutative : valid if at least one cast is compatible) |
-| generic filter | `is` | `T is gen::base_of<CAnimal> | ...` or `T is Integral | Signed | i128 | ...` (first arg is left of `is`) can have alternative |
+| generic filter | `is` | `T is gen::base_of<CAnimal> \| ...` or `T is Integral \| Signed \| i128 \| ...` (first arg is left of `is`) can have alternative |
 
 Named generic example: 
 ```
