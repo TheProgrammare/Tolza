@@ -1,4 +1,10 @@
-# Velox
+<div align="center">
+
+![Velox logo title](logo/velox-logo-tilted.svg) 
+
+# Velox</br> TECHNICAL IMPLEMENTATION
+
+</div>
 
 A hybrid-level programming language designed to emphasize safety and simplicity through innovative syntax and paradigms.
 
