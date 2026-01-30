@@ -18,7 +18,8 @@ Some features and syntax are still under development.
 
 Velox is a next-generation programming language that aims to combine performance, simplicity, and extensibility. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate.
 
-> Explicit Inspirations: Rust - C - Cpp - Python - COBOL - FORTAN - Lisp
+> Explicit Inspirations: ![Rust](https://github.com/rust-lang/rust) - ![C](https://github.com/llvm/llvm-project) - ![C++](https://github.com/llvm/llvm-project) - ![Python](https://github.com/python) - ![COBOL](https://github.com/dscobol/Cobol-Projects) - ![FORTAN](https://github.com/fortran-lang) - ![Lisp](https://github.com/topics/common-lisp?l=scheme&o=desc&s=) - ![Zen-C](https://github.com/z-libs/Zen-C)</br>
+The Zen-C programming language demonstrates a clear commitment to modernizing C, offering a safer language that aligns with modern programming practices. We are following the progress of this project with great interest, as it shares some of the goals we are pursuing in our own language.
 
 ### Copiler Status
 ![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
