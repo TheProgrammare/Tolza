@@ -48,6 +48,8 @@ Any operation with a cost or effect is **explicit in the code**, including:
 
 Nothing “just happens”.
 
+> But there is some conventions to avoid the syntax boilerplate
+
 ### 2. Memory safety via explicit capabilities
 Velox does not use a garbage collector or a borrow checker.
 
