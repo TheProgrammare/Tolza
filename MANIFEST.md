@@ -659,16 +659,16 @@ Conversions:
 control flow by condition
 
 | flow | syntax codeblock | syntax inline |
-|-|-|
-| if | `if <condition> { ... }` | `if <condition> then ...` |
-| elif | `elif <condition> { ... }` | `elif <condition> then ...` |
+|-|-|-|
+| if | `if <condition> { ... }` | `if <condition> => ...` |
+| elif | `elif <condition> { ... }` | `elif <condition> => ...` |
 | else | `else { ... }` | `else ...` |
 
 ### Ternary if
 Ternary if is a control flow for value fields
 ```
-if <condition> then <true statement>
-if <condition> then <true_statement> else <false_statement>
+if <condition> => <true statement>
+if <condition> => <true_statement> else <false_statement>
 ```
 
 ## Match
@@ -707,19 +707,19 @@ Highlty not recommended
 | statement type | syntax |
 |-|-|
 | codeblock | `loop { ... }` |
-| inline | `loop then ...` |
+| inline | `loop => ...` |
 
 ## While
 | statement type | syntax |
 |-|-|
 | codeblock | `while <condition> { ... }` |
-| inline | `while <condition> then ...` |
+| inline | `while <condition> => ...` |
 
 ## Do-while Statement
 | statement type | syntax |
 |-|-|
 | codeblock | `do { ... } while <condition>;` |
-| inline | `do ... while <condition>;` |
+| inline | `do => ... while <condition>;` |
 
 ## For Loop Statement
 For loop can be used on range, slice, collection and map
@@ -732,13 +732,15 @@ Syntax:
 | for item | `for [<index>] mut/ref/copy/move <item> in <slice/collection> { ... }` |  |
 | for item | `for [<index>] mut/ref/copy/move (<item1>, <item2>, ...) in <slice/collection> { ... }` | useful for map or tuple array  |
 
+>Inline case: `for ... => <expression>`
+
 # Goto Statement
 Highlty not recommended, designed for flexibility and code specific behaviour.
 
 | state | syntax |
 |-|-|
 | go to and label | `goto name` |
-| label definition | `label name:` |
+| label definition | `label name =>` |
 
 # Range Statement
 Borned with a start integral, end integral and optional step (only for `for` loop).
