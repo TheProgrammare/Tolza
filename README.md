@@ -2,7 +2,7 @@
 
 \- ![Français](README_FR.md) -
 
-![Velox logo title](logo/velox-logo-title.png)
+![Velox logo title](logo/velox-logo-title.svg)
 
 **Static composition, dynamic possibilities.**
 
