@@ -1,4 +1,28 @@
-# Velox
+<div align = "center">
+
+\- ![Français](README_FR.md) -
+
+![Velox logo title](logo/velox-logo-title.png)
+
+### Copiler Status
+![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
+![Compilation_Pipeline](https://img.shields.io/badge/Compilation_Pipeline-Done-darkgreen)
+![Lexer](https://img.shields.io/badge/Lexer-Done-darkgreen)
+![Preprocessor](https://img.shields.io/badge/Preprocessor-Done-darkgreen)
+![Parser](https://img.shields.io/badge/Parser-Work_in_progress-brightgreen)
+![EMBinder](https://img.shields.io/badge/EMBinder-Done-darkgreen)
+![Exporter](https://img.shields.io/badge/Exporter-Done-darkgreen)
+![ResolverSymbol](https://img.shields.io/badge/Resolver_Symbol-Work_in_progress-brightgreen)
+![ResolverType](https://img.shields.io/badge/Resolver_Type-Work_in_progress-brightgreen)
+![ResolverSemantic](https://img.shields.io/badge/Resolver_Semantic-Work_in_progress-brightgreen)
+![LLVMGeneration](https://img.shields.io/badge/LLVM_Generation-Work_in_progress-brightgreen)</br>
+### Tools Status
+![Highlighter](https://img.shields.io/badge/Highlighter-Done-darkgreen)
+![Snippet](https://img.shields.io/badge/Snippet-Done-darkgreen)
+![Compilation_Dot](https://img.shields.io/badge/Compilation_debug_dot_graph-Done-darkgreen)
+
+</div>
+
 
 Velox is a statically typed, garbage-collector-free systems programming language designed for **deterministic, explicit, and secure code**.
 
