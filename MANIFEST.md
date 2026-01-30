@@ -407,19 +407,51 @@ to capture variables in scopes
 # Parameters
 parameters are managed by a pass mode and a type base
 
-Pass Modes:
-| mode | syntax | info | primitive type | complex type | regular variable | ref | mut | ptr | uptr | sptr |
-|-|-|-|-|-|-|-|-|-|-|-|
-| ref | `ref name: T [= default_val]` | pass by reference | `copy` | `ref` | local ref, no add ref | add ref to origin | X | read only ptr and pointee | X | read only sptr and pointee |
-| mut | `mut name: T` | pass by mutable | `mut` | `mut` | local mut, no add mut | X | redirect mut | read only ptr, mutable pointee | X | read only sptr, mutable pointee | 
-| copy | `copy name: T [= default_val]` | pass by copy | `copy` | try `copy`* otherwise `clone` otherwise prohibied | read operation, call copy | idem | idem | copy ptr address | X | share uptr (sharing > copy) |
-| clone | `clone name: T [= default_val]` | pass by clone | `copy` | try `clone`* otherwise `copy` otherwise prohibied | read operation, call clone | idem | idem | new ptr address affected, call clone on pointee put in new ptr address | X | share sptr (sharing > copy) |
-| move | `move name: T` | pass by move semantic | `copy`  | `move` and invalidate origin | consumed | ref consumed | mut consumed | ptr consumed | uptr consumed | uptr consumed | 
-| addr | `addr name: T` | change of pointer address | b8-b128 or `ptr'T` only | only `ptr'T` | X | X | X | mutable ptr, mutable pointee | X | X
-| variadic | `passMode args: T...` | pass mode is general, can be typed | pass mode dependent | idem | idem | idem | idem | idem | idem | idem
+## Pass Modes
+There is 6 pass modes:
+| mode | syntax | info |
+|-|-|-|
+| `ref` | `ref name: T [= default_val]` | by reference (immutable)
+| `mut` | `mut name: T` | by mutation (mutable)
+| `copy` | `copy name: T [= default_val]` | by copy forced
+| `clone` | `clone name: T [= default_val]` | by clone forced
+| `move` | `move name: T` | by move semantic
+| `addr` | `addr name: T` | only pointer address manipulation
 
-> Note: any pass mode can be optional with the type modifier `?`, not necessary for parameters with a default value
+>Note: variadic is technically not a pass mode, it's permit multiple parameters with a pass mode and type 
+>any pass mode can be optional with the type modifier `?`, not necessary for parameters with a default value
+
+### by Type
+| mode | primitive | complex type |
+|-|-|-|
+| `ref` | `copy` | add `ref`
+| `mut` | local `mut` capbility, no calling scope `mut`/`ref` revoked | idem
+| `copy` | `copy` | call `copy`, fallback `clone`*
+| `clone` | `clone` | call `clone`, fallback `copy`**
+| `move` | `copy` | `move` and invalidate origin 
+| `addr` | only b8-b128 | only `ptr'T`
+
 > * Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`
+
+### by Capability
+| mode | regular variable | ref | mut
+|-|-|-|-|
+| `ref` | local ref, no add ref | add ref to origin | X 
+| `mut` | local mut, no add mut | X | redirect mut 
+| `copy` | read operation, call copy | idem | idem 
+| `clone` | read operation, call clone | idem | idem 
+| `move` | consumed | ref consumed | mut consumed 
+| `addr` | only raw pointer `ptr'T` | X | X
+
+### by Pointer
+| mode | ptr | uptr | sptr |
+|-|-|-|-|
+| `ref` | read only ptr and pointee | X | read only sptr and pointee |
+| `mut` | read only ptr, mutable pointee | X | read only sptr, mutable pointee | 
+| `copy` | copy ptr address | X | share uptr (sharing > copy) |
+| `clone` | new ptr address affected, call clone on pointee put in new ptr address | X | share sptr (sharing > copy) |
+| `move` | ptr consumed | uptr consumed | uptr consumed | 
+| `addr` | mutable ptr, mutable pointee | X | X
 
 ## Parameter Arrangement Rules
 call parameter ordering left to right: positional -> named -> variadic args
