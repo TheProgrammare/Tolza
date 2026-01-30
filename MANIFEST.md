@@ -7,10 +7,13 @@ The public repository reflects the current implementation.
 
 Velox is currently in an experimental stage and should be considered a work in progress.
 
-This README presents the vision and core ideas behind the language.  
+This MANIEST presents the vision and core ideas behind the language.  
 Some features and syntax are still under development.
 
 Velox is a next-generation programming language that aims to combine performance, simplicity, and extensibility. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate.
+
+## Explicit Inspirations
+Rust - C - Cpp - Python - COBOL - FORTAN - Lisp
 
 
 # Type
@@ -24,7 +27,7 @@ Velox is a next-generation programming language that aims to combine performance
 | floating       | `fsize` `f32-f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
 | decimal        | `deci`           | `0.0` `-1.0` `10d` default | numbers*8  bit |
 | udecimal       | `udeci`           | `10ud`                       | numbers*8  bit |
-| decimal constructor    | COBOL inspiration `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
+| decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
 | no type        | `u0`, `void`   |  | 
 | ascii          | `ascii`          | `"a"ascii`                   | 8 bits (latin1) |
 | utf32      | `utf32`           | `"⚜"utf32` `"⚜"` default         | 32 bits  |                   
