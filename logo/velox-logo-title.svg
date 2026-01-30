@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 210 297"
+   width="175.54405mm"
+   height="59.551689mm"
+   viewBox="0 0 175.54405 59.551689"
    version="1.1"
    id="svg1"
    xml:space="preserve"
@@ -23,12 +23,12 @@
      borderopacity="1"
      inkscape:showpageshadow="0"
      inkscape:pageopacity="0"
-     inkscape:pagecheckerboard="0"
+     inkscape:pagecheckerboard="true"
      inkscape:deskcolor="#505050"
      inkscape:document-units="mm"
      inkscape:zoom="1.0267829"
-     inkscape:cx="869.21976"
-     inkscape:cy="514.22749"
+     inkscape:cx="258.57462"
+     inkscape:cy="224.97453"
      inkscape:window-width="1920"
      inkscape:window-height="1009"
      inkscape:window-x="0"
@@ -44,9 +44,9 @@
      inkscape:groupmode="layer"
      id="layer1"
      style="display:inline"
-     transform="matrix(0.34839858,0,0,0.34839858,12.696962,150.58525)"><g
+     transform="matrix(0.34839858,0,0,0.34839858,-6.7888182,31.861095)"><g
        id="g4"
-       transform="translate(0,-22.465577)"><g
+       transform="translate(0,-161.57737)"><g
          id="g2"
          transform="matrix(0.74886603,-0.74886603,0.74886603,0.74886603,-82.186281,136.63536)"
          inkscape:label="lys"
@@ -90,20 +90,20 @@
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:59.1399px;line-height:0.8;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#bcd700;stroke:#000000;stroke-width:6.59383;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:23.811;paint-order:markers stroke fill"
        x="242.66756"
-       y="106.41058"
+       y="-48.074654"
        id="text1"><tspan
          sodipodi:role="line"
          id="tspan1"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:59.1399px;font-family:Z003;-inkscape-font-specification:'Z003, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:6.59382"
          x="242.66756"
-         y="106.41058">The Velox</tspan><tspan
+         y="-48.074654">The Velox</tspan><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:59.1399px;font-family:Z003;-inkscape-font-specification:'Z003, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:6.59382"
          x="242.66756"
-         y="161.45163"
+         y="6.9663973"
          id="tspan3">Programming</tspan><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:59.1399px;font-family:Z003;-inkscape-font-specification:'Z003, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:6.59382"
          x="242.66756"
-         y="216.49269"
+         y="62.007446"
          id="tspan4">Language</tspan></text></g></svg>
