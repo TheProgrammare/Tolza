@@ -89,12 +89,19 @@ Placement e.g. (place possible: `@`)
 | `@[@ptr'@i32@]@` | `[uptr'i32]` | dynamic table of unique pointer on `i32` 
 
 # Operators
+## Memory
+> See Memort section
 | stack | syntax | info |
 |-|-|-|
-| move           | `move=`, complex type default: `=` | assignation by move semantic  |
-| copy           | `copy=`, primitive default: `=` | assignation by copy method, otherwise clone method used  |
-| clone          | `clone=`  | assignation by clone method, otherwise copy method used |
+| move           | `move=`, complex type default: `=` | assignation by move semantic
+| copy           | `copy=`, primitive default: `=` | assignation by copy method, otherwise clone method used
+| clone          | `clone=`  | assignation by clone method, otherwise copy method used
+| drop           | `drop my_var` | revoke `ref`/`mut`
+| delete         | `del my_ptr` | free pointer
+| new            | `new ptr'T()` | memory allocation on heap
 
+## Arithmetic
+> See COP section
 | arithmetic | syntax | info |
 |-|-|-|
 | add            | `+`          | |
@@ -109,6 +116,8 @@ Placement e.g. (place possible: `@`)
 | increment      | `++`         |                         |
 | decrement      | `--`         |                         |
 
+## Comparison
+> See COP section
 | comparison | syntax | info |
 |-|-|-|
 | greater        | `>`          |                         |
@@ -120,6 +129,8 @@ Placement e.g. (place possible: `@`)
 | not equal      | `!=`         |                         |
 | not eq strictly| `!==`        | for string and float    |
 
+## Logical
+> See COP section
 | logical | bitwise | syntax | syntax bitwise |
 |-|-|-|-|
 | and   | and.b   |`and`  | `and.b`  |
@@ -129,6 +140,8 @@ Placement e.g. (place possible: `@`)
 | nor   | nor.b   |`nor`  | `nor.b`  |
 | xnor  | xnor.b  |`xnor` | `xnor.b` |
 
+## Binary
+> Only on `flag` and `b8`-`b128` 
 | binary | syntax | info |
 |-|-|-|
 | shift left 0   | `<<[0]`      | fill right with 0       |
@@ -233,7 +246,7 @@ A variable always must be declared with a value before any read
 ## Assignation
 variables are managed by a explicit move mode and capacity assignation
 the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
-
+> See Capability
 | assignation mode | syntax | note |
 |-|-|-|
 | Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
@@ -249,8 +262,8 @@ variables can be mofied directly by a arithmetic operation (read/write) operatio
 The memory use a fine managment, there is no GC
 
 There is two types of management of memory:
-- Pointers
-- Capabilities
+- Pointers -> memory on heap
+- Capabilities -> memory on stack
 
 # Memory Managment: Pointers
 | name | syntax | info |
@@ -912,6 +925,7 @@ entity can contains:
 | deleter*** | `del { ... }` | no parameter, reserved key `self` used | | |
 | arithmetic operator | `op + { ... }` | all operators handled but type are restrictives | `mutable` only if with a operation assignation `+=` | if operation assignation: in-place modification, otherwise copy |
 | comparison operator | `op == { ... }` | all operators handled `self` `other` are same type | `const` | `bool` |
+| logical operator | `op and { ... }` | all operators handled `self` `other` are same type | `const` | `bool` |
 
 >* Without copier, the compiler will copy each components fileds, if ref/ptr/sptr fields -> call copy on type, copy ptr address, share pointer
 >** Without cloner, the compiler will clone each components fields, if ref/ptr/sptr fields -> call clone on type, new ptr address then call clone on type, share pointer
