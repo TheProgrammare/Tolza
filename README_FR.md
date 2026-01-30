@@ -1,15 +1,15 @@
 <div align = "center">
 
-\- ![English](README.md) -
+\- 🇬🇧 ![English](README.md) -
 
 ![Velox logo title](logo/velox-logo-title.svg)
 
 **Une composition statique, des possibilitées dynamiques.**
 
-![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
+![Compilateur](https://img.shields.io/badge/Compilateur-En_cours-brightgreen)</br>
 ![Version](https://img.shields.io/badge/Version-2026.1b-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
-![Platform](https://img.shields.io/badge/Current_Platform-Linux-darkblue)
+![Platforme](https://img.shields.io/badge/Platforme_Actuelle-Linux-darkblue)
 
 *Une mémoire explicite, un comportement prévisible.*
 
