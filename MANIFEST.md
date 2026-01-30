@@ -90,7 +90,8 @@ Placement e.g. (place possible: `@`)
 
 # Operators
 ## Memory
-> See Memort section
+> See Memory section
+
 | stack | syntax | info |
 |-|-|-|
 | move           | `move=`, complex type default: `=` | assignation by move semantic
@@ -102,6 +103,7 @@ Placement e.g. (place possible: `@`)
 
 ## Arithmetic
 > See COP section
+
 | arithmetic | syntax | info |
 |-|-|-|
 | add            | `+`          | |
@@ -118,6 +120,7 @@ Placement e.g. (place possible: `@`)
 
 ## Comparison
 > See COP section
+
 | comparison | syntax | info |
 |-|-|-|
 | greater        | `>`          |                         |
@@ -131,6 +134,7 @@ Placement e.g. (place possible: `@`)
 
 ## Logical
 > See COP section
+
 | logical | bitwise | syntax | syntax bitwise |
 |-|-|-|-|
 | and   | and.b   |`and`  | `and.b`  |
@@ -141,7 +145,8 @@ Placement e.g. (place possible: `@`)
 | xnor  | xnor.b  |`xnor` | `xnor.b` |
 
 ## Binary
-> Only on `flag` and `b8`-`b128` 
+> Only on `flag` and `b8`-`b128`
+
 | binary | syntax | info |
 |-|-|-|
 | shift left 0   | `<<[0]`      | fill right with 0       |
