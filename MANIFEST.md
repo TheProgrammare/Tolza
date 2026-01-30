@@ -557,6 +557,42 @@ fn add(a: GNumeric, b: GNumeric) {
 }
 ```
 
+# Literal LLVM Instruction
+> To make inline LLVM code directly added in the code generation
+
+Useful for low-level coding like asm { } in C
+```
+llvm {...}
+```
+
+Any in variable must be marked `# llvm in`
+Any out variable result must be marked `# llvm out`
+The function who contains the `llvm` instruction must be marked `# unsafe`
+
+e.g.
+```
+# unsafe
+fn add(copy a: i32, copy b: i32) -> i32 {
+  # llvm in
+  let _a: i32 = a
+  # llvm in
+  let _b: i32 = b
+  # llvm out
+  let result: i32
+  
+  llvm {
+      %va = load i32, ptr %_a
+      %vb = load i32, ptr %_b
+      %sum = add i32 %va, %vb
+      store i32 %sum, ptr %result
+  }
+  return result
+}
+```
+
+>Note: Considered unsafe by nature
+>Syntax error handled by llvm back-end directly 
+
 # Flag
 > Use `flag` keyword to declare a flag
 
