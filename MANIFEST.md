@@ -65,7 +65,7 @@ var d: i64 = a // no compilation error
 ```
 
 # Type Modifier
-There is 3 main type modifiers:
+There is 6 main type modifiers:
 | modifier | syntax | info
 |-|-|-|
 | constant | `T$` | cannot be modified |
@@ -92,8 +92,8 @@ Placement e.g. (place possible: `@`)
 | stack | syntax | info |
 |-|-|-|
 | move           | `move=`, complex type default: `=` | assignation by move semantic  |
-| copy           | `copy=`, primitive default: `=` | assignation by copy method |
-| clone          | `clone=`  | assignation by clone method |
+| copy           | `copy=`, primitive default: `=` | assignation by copy method, otherwise clone method used  |
+| clone          | `clone=`  | assignation by clone method, otherwise copy method used |
 
 | arithmetic | syntax | info |
 |-|-|-|
@@ -193,24 +193,26 @@ use in format string like:
 ## Format Conditional (experimental)
 you can specify some reaction with a comparison from the expression returned value:
 ```
-(<comparison_op><value>:<return_text> [, <comparison_op><value>:<return_text>, ...])
+(<value>:"<return_text>", ...)
 ```
 special comparison operator:
-```
-other:<return_text>
-```
+- other case `_:"<return_text>"`
+- positive `+:"<return_text>"`
+- negative `-:"<return_text>"`
 
 In format string:
 ```
-f"Gender: {<expression>}:<format_conditional>"
+"Gender: {lerp}:<format_conditional>"
 ```
 
 e.g.
 ```
 var messages = 3
-f"You have {messages}:(==0:no messages,==1:one message,>1:{messages} messages)"
+"You have {messages}:(0:"no messages",1:"one message",_:{messages} "messages")"
 var gender = "F"
-f"{gender}:(=='F':'She is online', =='M':'He is online', other:'online')"
+"{gender}:("F":"She is online", "M":"He is online", _:"online")"
+var account_balance = -2.0f
+"{balance}:(+:"no depts", -:"some depts")"
 ```
 
 # Variable
@@ -255,8 +257,10 @@ There is two types of management of memory:
 |-|-|-|
 | non typed memory address | `ptr'void` | useful for C interop (`void*`) |
 | raw pointer | `ptr'T` | if no escape in the scope, will delete |
-| unique pointer | `uptr'T` | use `move` to change his position and invalidate his last position |
-| shared pointer | `sptr'T` | Use `mut` to add his reference to the counter and new position. A `move` will keep the counter, a `mut` will keep the counter if on another lvalue by the borrow rule
+| unique pointer | `uptr'T` | only `move=` to change his position and invalidate his last position |
+| shared pointer | `sptr'T` | only `=` to add his reference to the new position and increment his counter |
+
+> Note: the capability checker will ignore all operations on pointers excepts the `move=` operation to invalidate the origin
 
 ## Pointer Creation (on heap)
 To use a memory space by pointer creation use `new` key, uses the C malloc
@@ -272,7 +276,7 @@ var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
 ```
 
 # Memory Managment: Capabilities
-Access to a variable is based on **explicit capabilities** for better code safety.
+Access to a variable wihout any copy/clone/pointers, use the **explicit capabilities** for better code safety.
 | capability | function | declaration syntax |
 |-|-|-|
 | `ref` | shared reading | `ref a = x` |
@@ -298,6 +302,7 @@ Unline Rust, the capability chercker focuses on Capabilities and origine usage
 
 ## Revocation of Capabilities (other cases)
 | Case | syntax | consequence |
+|-|-|-|
 | **Explicit drop** | `drop a_ref` | the capability is removed |
 | **End of scope** | `var a = 10<br>{<br>mut m = a<br>m += 10<br>}` | automatic revocation |
 | **Parent/child data handling** | `mut p_name = player.name<br>player = Player::new("marc", 25)` |  r/w a parent revokes children's capabilities. But fields are considered separate.
@@ -305,8 +310,6 @@ Unline Rust, the capability chercker focuses on Capabilities and origine usage
 | **Move instruction** | `ref a_ref = a<br>b move= a` or move parameter -> all capabilities are revoked and the origin is removed.
 
 > note: for parameter passage, see parameters section
-
-### Examples of Correspondence with code
 
 # Function
 > Use `fn` keyword to declare a function
@@ -373,10 +376,10 @@ the type verification is static
 
 | type | syntax |
 |-|-|
-| mutable pip-call | `let result: f32 = sum <-| 10 |+ 2.0 |+ avg(a, b, c) |+ k |+ "100" as f32 |+ 10.5;` |
-| pure pip-call | `let position3D: (f32, f32, f32) = offset | x | y | z;`
-| mutable pip-call generic args | `let result: f32 = sum <-| <i32> 10 |+ <f32> 2.0 |+ <i32> avg(a, b, c) |+ <i32> k |+ <f32> "100" as f32 |+ <f32> 10.5;` |
-| pure pip-call generic args | `let position3D: (f32, f32, f32) = offset<f32> | x | y | z;` |
+| mutable pip-call | ```let result: f32 = sum <-| 10 |+ 2.0 |+ avg(a, b, c) |+ k |+ "100" as f32 |+ 10.5;``` |
+| pure pip-call | ```let position3D: (f32, f32, f32) = offset | x | y | z;```
+| mutable pip-call generic args | ```let result: f32 = sum <-| <i32> 10 |+ <f32> 2.0 |+ <i32> avg(a, b, c) |+ <i32> k |+ <f32> "100" as f32 |+ <f32> 10.5;``` |
+| pure pip-call generic args | ```let position3D: (f32, f32, f32) = offset<f32> | x | y | z;``` |
 
 # Lambda
 > use `lam` keyword to declare a lambda, threated like c++ : anonym functions
@@ -405,17 +408,18 @@ to capture variables in scopes
 parameters are managed by a pass mode and a type base
 
 Pass Modes
-| mode | syntax | info | capability |
-|-|-|-|-|
-| ref | `ref name: T [= default_val]` | pass by reference, primitives are copied | creates new ref on origin, or redirect ref capability |
-| mut | `mut name: T` | pass by mutable | creates new mut on origin, or redirect mut capability until the end of call (for async logic) |
-| copy | `copy name: T [= default_val]` | pass by copy, complex types must handle copy method* | read operation on origin, ref and mut |
-| clone | `clone name: T [= default_val]` | pass by copy, complex types must handle clone method* | read operation on origin, ref and mut |
-| move | `move name: T` | pass by move semantic, primitives are copied | origin, ref and mut consumed |
-| addr | `addr name: T` | change of pointer address, for pointer type only | capabilities prohibied |
-| variadic | `passMode args: T...` | pass mode is general, can be typed | pass mode dependent |
+| mode | syntax | info | primitive type | complex type | regular variable | ref | mut | ptr | uptr | sptr |
+|-|-|-|-|-|-|-|-|-|
+| ref | `ref name: T [= default_val]` | pass by reference | `copy` | `ref` | local ref, no add ref | add ref to origin | X | read only ptr and pointee | X | read only sptr and pointee |
+| mut | `mut name: T` | pass by mutable | `mut` | `mut` | local mut, no add mut | X | redirect mut | read only ptr, mutable pointee | X | read only sptr, mutable pointee | 
+| copy | `copy name: T [= default_val]` | pass by copy | `copy` | try `copy`* otherwise `clone` otherwise prohibied | read operation, call copy | idem | idem | copy ptr address | X | share uptr (sharing > copy) |
+| clone | `clone name: T [= default_val]` | pass by clone | `copy` | try `clone`* otherwise `copy` otherwise prohibied | read operation, call clone | idem | idem | new ptr address affected, call clone on pointee put in new ptr address | X | share sptr (sharing > copy) |
+| move | `move name: T` | pass by move semantic | `copy`  | `move` and invalidate origin | consumed | ref consumed | mut consumed | ptr consumed | uptr consumed | uptr consumed | 
+| addr | `addr name: T` | change of pointer address | b8-b128 or `ptr'T` only | only `ptr'T` | X | X | X | mutable ptr, mutable pointee | X | X
+| variadic | `passMode args: T...` | pass mode is general, can be typed | pass mode dependent | idem | idem | idem | idem | idem | idem | idem
 
 > Note: any pass mode can be optional with the type modifier `?`, not necessary for parameters with a default value
+> * Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`
 
 ## Parameter Arrangement Rules
 call parameter ordering left to right: positional -> named -> variadic args
@@ -859,18 +863,23 @@ entity name {
 
 entity can contains:
 
-| entity members | syntax | note |
+| entity members | syntax | info | method | return |
 |-|-|-|
-| component | `use name { field: value }` | with default value | 
-| component | `use name` | default value from component |
-| cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | 
-| cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used, permit to use `my_val as Type(my_entity)` |
-| constructor | `new(params) { ... }` | overloading possible, must returns the same entity type |
-| copier | `copy { ... }` | must returns the same entity type |
-| cloner | `clone { ... }` | must returns the same entity type |
-| constructor | `new(params) { ... }` | overloading possible, must returns the same entity type |
-| destructor | `del { ... }` | no parameter, reserved key `self` used | 
-| operator | `op == { ... }` | all operators handled but type are restrictives |
+| component | `use name { field: value }` | with default value | | |
+| component | `use name` | default value from component | | |
+| cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | `const` | `T` |
+| cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used, permit to use `my_val as Type(my_entity)` | `const` | `self` |
+| constructor | `new(params) { ... }` | overloading possible, must returns the same entity type | `const` | `self` | 
+| copier* | `copy { ... }` | must returns the same entity type | `const` | `self` | 
+| cloner** | `clone { ... }` | must returns the same entity type | `const` | `self` | 
+| deleter*** | `del { ... }` | no parameter, reserved key `self` used | | |
+| arithmetic operator | `op + { ... }` | all operators handled but type are restrictives | `mutable` only if with a operation assignation `+=` | if operation assignation: in-place modification, otherwise copy |
+| comparison operator | `op == { ... }` | all operators handled `self` `other` are same type | `const` | `bool` |
+
+>* Without copier, the compiler will copy each components fileds, if ref/ptr/sptr fields -> call copy on type, copy ptr address, share pointer
+>** Without cloner, the compiler will clone each components fields, if ref/ptr/sptr fields -> call clone on type, new ptr address then call clone on type, share pointer
+>*** Without deleter, the compiler will delete each components fields, if ref/ptr/sptr fields -> call del on type, free ptr, decrement share pointer
+
 
 examples:
 ```
