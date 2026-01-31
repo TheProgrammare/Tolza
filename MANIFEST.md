@@ -549,11 +549,12 @@ There is 6 pass modes:
 | `ref` | `copy` | add `ref`
 | `mut` | local `mut` capbility, no calling scope `mut`/`ref` revoked | idem
 | `copy` | `copy` | call `copy`, fallback `clone`*
-| `clone` | `clone` | call `clone`, fallback `copy`**
+| `clone` | `clone` | call `clone`, fallback `copy`*
 | `move` | `copy` | `move` and invalidate origin 
 | `addr` | only b8-b128 | only `ptr'T`
 
-> * Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`
+> \* Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`<\br>
+> The compiler will check if the clone or copy method exists, otherwise he will try to call the other method, if no copy and clone exists, a compilation error occur.
 
 ### by Capability
 | mode | regular variable | ref | mut
