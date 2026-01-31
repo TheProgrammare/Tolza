@@ -125,6 +125,8 @@ Placement e.g. (place possible: `@`)
 | drop           | `drop my_var` | revoke `ref`/`mut`
 | new            | `new ptr'T()` | memory allocation on heap
 | delete         | `del my_ptr` | free pointer
+| val of ptr     | `val'my_ptr` | get pointer value (return always optional -> None if ptr is None)
+| address of     | `addr'my_val` | get the memory address of value -> returns raw ptr'T of val type| 
 
 ## Arithmetic
 > See COP section
@@ -318,6 +320,27 @@ e.g.
 var halicarnassus: ptr'City::Monument = new ptr'City::Monument()
 ```
 
+## Pointer on variables
+Not recommended but permitted to avoid capabilities:
+```
+var a: i32 = 100
+var my_ptr: ptr'i32 = addr'a
+var b: i32 = val'my_ptr       // get pointer value
+```
+
+> Pointer on `ref` and `mut` are prohibied !
+
+
+## Pointer usage
+Pointers are handled by the language, despite of the capability system.
+It's designed for low-level operations
+You can use them for some operations: (non-exhaustive list)
+| usage | syntax | info |
+|-|-|-|
+| arbitrary memory location | `let my_console_input: $ptr'i32! = 0xFFFFFF as! $ptr'i32!` | classic const pointer of volatile value from a input for embbed systems |
+| change memory address | `fn swap_ptr(addr a: i32, addr b: i32) {...} swap(my_ptr1, my_ptr2)` | any addr parameter is considered aliased by security |
+| complex function return | `fn get_hardware_output(copy hardware_ty: EHardwareOutType) -> ptr'i32` |  |
+
 # Memory Managment: Capabilities
 Access to a variable wihout any copy/clone/pointers, use the **explicit capabilities** for better code safety.
 | capability | function | declaration syntax |
@@ -508,8 +531,61 @@ call parameter ordering left to right: positional -> named -> variadic args
 | `fn(copy a: i32 = 0, mut b: i32)` | If a optional argument is before a mandatory argument, you mut discriminate arguments proprely | `(None, valueb)` or `(b= valueb)` | Optional arguments can be used without None | 
 | `fn(mut a: i32, mut args: i32...)` | The variadic argument case is always optional despite of his pass mode | `(value_a ...value_arg1, value_arg2)` or `(value_a)` | Variadic args list must begins with `...` token |
 
-## Returns
-multiple returns is handled with the tuple logic `fn() -> (a, b, c, ...)`
+## Return
+multiple returns is handled with the tuple logic 
+```fn() -> (a, b, c, ...)```
+
+return element kind:
+| kind | syntax | out mode | info |
+|-|-|-|-|
+| Primitive type | `fn() -> i32` | `copy` | Local variables can't survive, a copy is the convention |
+| Complex type | `fn() -> MyEntity` | `move` | A move semantic always make because local variables can't survive |
+| mut | `fn(mut a: i32, mut b: i32) -> mut'i32` | `move` | but explicit lifetime is required here (mut is exclusive) see Return mut matching
+| ref | `fn(ref a: i32, ref b: i32) -> ref'i32` | add `ref` | no explicit lifetime required because ref are cumulatives
+| ptr | `fn() -> ptr'i32` | `move` | pointer is escaped
+| ptr | `fn(addr my_ptr: i32) -> ptr'i32` | `move` | ambiguous behaviour
+
+### Return mut capability matching
+When a mut is returned, the lifetime is ambiguous by nature, the convention is one parameter `mut` mode is passed for each `mut` return element
+Capabilities are compiletime determined, so runtime conditions breaks the static determination.
+
+So a explicit capability matching is required to define the lifetime
+
+The problematic:
+```
+fn one_return_explicit(mut a: i32, mut b: i32) -> mut'i32 {
+  a += b
+  return a
+}
+fn one_return(mut a: i32, mut b: i32) -> mut'i32 {
+  if cond1 => return a
+  else => return b
+}
+fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32, mut'i32) {
+  if cond1 => return (a, None)
+  elif cond2 => return (b, a)
+  else => return (a, None)
+}
+```
+Who is returned ? `a`, `b`, `c` ?
+
+For `one_return_explicit` function : no matching required, the return is always `a`
+- `a` argument will be revoked, `b` argument will not be revoked
+
+The solution: capability matching:
+```
+fn one_return(mut a: i32, mut b: i32) -> mut'i32(a, b) {...}
+fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32(a, b), mut'i32(a)) {...}
+```
+
+For `one_return_explicit` function : the return can match on `a` or `b`
+- `a` and `b` are revoked on call
+
+For `two_return` function : the return can match on 1st: `a` or `b` ; 2nd: `a`
+- `a` and `b` are revoked on call
+- `c` is not revoked
+
+> Note: arguments revocation is reserved on `mut` and `ref` capabilities, simples variables are not concerned
 
 # Generics
 > Use `gen` keyword to declare a generic type
