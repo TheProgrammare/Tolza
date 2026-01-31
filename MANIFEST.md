@@ -380,6 +380,54 @@ capabilities is based on xor reference/mutable:
 
 > note: for parameter passage, see parameters section
 
+### Mut capability returned revoke all potential mut parameters 
+Remined: capabilities are determined at compilation time -> static resolution.
+
+Axiom: if a `mut`/`ref` is returned, the function have at least the same number of `mut`/`ref` as parameters. 
+Because capabilities are never null (except packed in enum) but they can be revoked.
+
+Problematic: which parameter is revoked during the call ?
+
+Rule: when a `mut`/`ref` parameter is returned, the argument passed is always revoked.
+
+Signature mandatory: it's mandatory to specify revocables parameters for signature only static checking
+
+The compiler will helps to specify the lifetime matching
+
+e.g.
+```
+fn one_return_explicit(mut a: i32, mut b: i32) -> mut'i32(a) {
+  a += b
+  return a
+}
+```
+Consequence:
+- `a` argument is revoked on call, `b` argument stay valid
+```
+fn one_return<>(mut a: i32, mut b: i32) -> mut'i32(a, b)? {
+  if cond1 => return a
+  elif cond2 => return b
+  else => return None
+}
+```
+Consequence:
+- `a` and `b` arguments are revoked on call
+```
+fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32(a, b), mut'i32(a, b)?) {
+  if cond1 => return (a, b)
+  elif cond2 => return (b, None)
+  else => return (a, b)
+}
+```
+Consequence:
+- `a` and `b` arguments are revoked on call
+- `c` is not revoked
+
+> Note: arguments revocation is reserved on `mut` and `ref` capabilities, simples variables are not concerned
+
+#### Single Responsibility Principle (SRP)
+As the `mut` arguments can be consumed by a `mut` return, the language requires a single resposibility principle design in his functions 
+
 # Function
 > Use `fn` keyword to declare a function
 ```
@@ -548,49 +596,6 @@ return element kind:
 | ptr | `fn() -> ptr'i32` | `move` | pointer is escaped
 | ptr | `fn(addr my_ptr: i32) -> ptr'i32` | `move` | ambiguous return: can be a new ptr or a transfert from `my_ptr`
 
-### Return mut capability revoke parameters returned
-Remined: capabilities are determined at compilation time -> static resolution
-Axiom: if a `mut`/`ref` is returned, the function have at least the same number of `mut`/`ref` as parameters. 
-Because capabilities are never null (except packed in enum) but they can be revoked.
-
-Problematic: which parameter is revoked during the call ?
-
-Rule: when a `mut`/`ref` parameter is returned, the argument passed is always revoked.
-
-Signature mandatory: it's mandatory to specify revocables parameters for signature only static checking
-
-The compiler will helps to specify the lifetime matching
-
-e.g.
-```
-fn one_return_explicit(mut a: i32, mut b: i32) -> mut'i32(a) {
-  a += b
-  return a
-}
-```
-Consequence:
-- `a` argument is revoked on call, `b` argument stay valid
-```
-fn one_return<>(mut a: i32, mut b: i32) -> mut'i32(a, b)? {
-  if cond1 => return a
-  elif cond2 => return b
-  else => return None
-}
-```
-Consequence:
-- `a` and `b` arguments are revoked on call
-```
-fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32(a, b), mut'i32(a, b)?) {
-  if cond1 => return (a, b)
-  elif cond2 => return (b, None)
-  else => return (a, b)
-}
-```
-Consequence:
-- `a` and `b` arguments are revoked on call
-- `c` is not revoked
-
-> Note: arguments revocation is reserved on `mut` and `ref` capabilities, simples variables are not concerned
 
 # Generics
 > Use `gen` keyword to declare a generic type
