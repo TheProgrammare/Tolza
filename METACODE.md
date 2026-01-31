@@ -72,7 +72,7 @@ The replication of the metacode is permitted by:
 >The scope is the end of the metacode block influence
 
 It's possible to filter metacode parent/child scoping with:
-- `# exlude` -> disable all parent scopes
+- `# exclude` `# exclude all` -> disable all parent scopes
 - `# exclude name` -> disable the named parent scope
 
 > Note: Scopes are not interdependent, an exclusion of an specific scope disable only the named scope, the superiors or inferiors scopes will not be impacted.
