@@ -995,7 +995,7 @@ pattern element kind | e.g. | info |
 ## Pattern Binding Mode
 | Binding Mode | syntax | info |
 |-|-|-|
-| Bind | `let (a)` | Copy all primitives, Move all complex types |
+| Bind | `let (a)` | Copy all primitives, Ref all complex types |
 | Bind | `var (a)` | Mut all primitives, Mut all complex types |
 | Override bind by copy | `(copy a)` | Will read the value and put a copy in binding |
 | Override bind by clone | `(clone a)` | Will read the value and put a clone in binding |
