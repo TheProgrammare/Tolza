@@ -281,7 +281,8 @@ A variable always must be declared with a value before any read
 ## Assignation
 variables are managed by a explicit move mode and capacity assignation
 the default affectation `=` is a move semantic except for primitives who are a copy (performance reason)
-> See Capability
+> See Capabilities
+
 | assignation mode | syntax | note |
 |-|-|-|
 | Copy | `lhs copy= rhs`    | For complex types: check for a copy method. For primitives: copy |
