@@ -343,10 +343,12 @@ You can use them for some operations: (non-exhaustive list)
 
 # Memory Managment: Capabilities
 Access to a variable wihout any copy/clone/pointers, use the **explicit capabilities** for better code safety.
-| capability | function | declaration syntax |
+| capability | operation | declaration syntax |
 |-|-|-|
 | `ref` | shared reading | `ref a = x` |
 | `mut` | exclusive r/w | `mut a = x` |
+| `ref` returned | from function return | `fn return_ref(ref a: T) -> ref'T</br>ref b = return_ref(a)` 
+| `mut` returned | from function return | `fn return_mut(mut a: T) -> mut'T</br>mut b = return_mut(a)` 
 
 capabilities is based on xor reference/mutable:
 - multiple ref are allowed
@@ -370,9 +372,10 @@ Unline Rust, the capability chercker focuses on Capabilities and origine usage
 | Case | syntax | consequence |
 |-|-|-|
 | **Explicit drop** | `drop a_ref` | the capability is removed |
-| **End of scope** | `var a = 10<br>{<br>mut m = a<br>m += 10<br>}` | automatic revocation |
-| **Parent/child data handling** | `mut p_name = player.name<br>player = Player::new("marc", 25)` |  r/w a parent revokes children's capabilities. But fields are considered separate.
-| **Collection operations** | `mut slice_mut = a[0..10]<br>a = {10, 20, 30}` | slice/index capabilites follow the parent's (collection base) operations.
+| **End of scope** | `var a = 10 {<br>mut m = a</br>m += 10 }` | automatic revocation |
+| **Revocable parameter** | `mut m = a</br>mut out_mut = revoke_mut(a) }` | revocation |
+| **Parent data handling** | `mut p_name = player.name</br>player = Player::new("marc", 25)` |  r/w a parent revokes children's capabilities. But fields are considered separate.
+| **Parent Collection operations** | `mut slice_mut = a[0..10]</br>a = {10, 20, 30}` | slice/index capabilites follow the parent's (collection base) operations.
 | **Move instruction** | `ref a_ref = a<br>b move= a` or move parameter -> all capabilities are revoked and the origin is removed.
 
 > note: for parameter passage, see parameters section
@@ -543,46 +546,48 @@ return element kind:
 | mut | `fn(mut a: i32, mut b: i32) -> mut'i32` | `move` | but explicit lifetime is required here (mut is exclusive) see Return mut matching
 | ref | `fn(ref a: i32, ref b: i32) -> ref'i32` | add `ref` | no explicit lifetime required because ref are cumulatives
 | ptr | `fn() -> ptr'i32` | `move` | pointer is escaped
-| ptr | `fn(addr my_ptr: i32) -> ptr'i32` | `move` | ambiguous behaviour
+| ptr | `fn(addr my_ptr: i32) -> ptr'i32` | `move` | ambiguous return: can be a new ptr or a transfert from `my_ptr`
 
-### Return mut capability matching
-When a mut is returned, the lifetime is ambiguous by nature, the convention is one parameter `mut` mode is passed for each `mut` return element
-Capabilities are compiletime determined, so runtime conditions breaks the static determination.
+### Return mut capability revoke parameters returned
+Remined: capabilities are determined at compilation time -> static resolution
+Axiom: if a `mut`/`ref` is returned, the function have at least the same number of `mut`/`ref` as parameters. 
+Because capabilities are never null (except packed in enum) but they can be revoked.
 
-So a explicit capability matching is required to define the lifetime
+Problematic: which parameter is revoked during the call ?
 
-The problematic:
+Rule: when a `mut`/`ref` parameter is returned, the argument passed is always revoked.
+
+Signature mandatory: it's mandatory to specify revocables parameters for signature only static checking
+
+The compiler will helps to specify the lifetime matching
+
+e.g.
 ```
-fn one_return_explicit(mut a: i32, mut b: i32) -> mut'i32 {
+fn one_return_explicit(mut a: i32, mut b: i32) -> mut'i32(a) {
   a += b
   return a
 }
-fn one_return(mut a: i32, mut b: i32) -> mut'i32 {
+```
+Consequence:
+- `a` argument is revoked on call, `b` argument stay valid
+```
+fn one_return<>(mut a: i32, mut b: i32) -> mut'i32(a, b)? {
   if cond1 => return a
-  else => return b
-}
-fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32, mut'i32) {
-  if cond1 => return (a, None)
-  elif cond2 => return (b, a)
-  else => return (a, None)
+  elif cond2 => return b
+  else => return None
 }
 ```
-Who is returned ? `a`, `b`, `c` ?
-
-For `one_return_explicit` function : no matching required, the return is always `a`
-- `a` argument will be revoked, `b` argument will not be revoked
-
-The solution: capability matching:
+Consequence:
+- `a` and `b` arguments are revoked on call
 ```
-fn one_return(mut a: i32, mut b: i32) -> mut'i32(a, b) {...}
-fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32(a, b), mut'i32(a)) {...}
+fn two_return(mut a: i32, mut b: i32, mut c: i32) -> (mut'i32(a, b), mut'i32(a, b)?) {
+  if cond1 => return (a, b)
+  elif cond2 => return (b, None)
+  else => return (a, b)
+}
 ```
-
-For `one_return_explicit` function : the return can match on `a` or `b`
-- `a` and `b` are revoked on call
-
-For `two_return` function : the return can match on 1st: `a` or `b` ; 2nd: `a`
-- `a` and `b` are revoked on call
+Consequence:
+- `a` and `b` arguments are revoked on call
 - `c` is not revoked
 
 > Note: arguments revocation is reserved on `mut` and `ref` capabilities, simples variables are not concerned
