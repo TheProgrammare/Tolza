@@ -944,7 +944,7 @@ Highlty not recommended, designed for flexibility and code specific behaviour.
 | state | syntax |
 |-|-|
 | go to and label | `goto name` |
-| label definition | `label name =>` |
+| label definition | `label name:` |
 
 # Range Statement
 Borned with a start integral, end integral and optional step (only for `for` loop).
@@ -976,7 +976,7 @@ slice { first_elem: ptr'T, length: usize }
 # Patterns
 the pattern matching can be used from if/elif/while and match statement
 ```
-[if/elif/while] [let/var] <pattern> = <expression> [if <condition>] {...}
+[if/elif/while] [ref/mut] <pattern> = <expression> [if <condition>] {...}
 ```
 pattern element kind | e.g. | info |
 |-|-|-|
@@ -995,20 +995,20 @@ pattern element kind | e.g. | info |
 ## Pattern Binding Mode
 | Binding Mode | syntax | info |
 |-|-|-|
-| Bind | `let (a)` | Copy all primitives, Ref all complex types |
-| Bind | `var (a)` | Mut all primitives, Mut all complex types |
+| Bind | `ref (a)` | Copy all primitives, Ref all complex types |
+| Bind | `mut (a)` | Mut all primitives, Mut all complex types |
 | Override bind by copy | `(copy a)` | Will read the value and put a copy in binding |
 | Override bind by clone | `(clone a)` | Will read the value and put a clone in binding |
 | Override bind by mut | `(mut a)` | Will add a mut capability in binding |
 | Override bind by ref | `(ref a)` | Will add a ref capability in binding |
 | Override bind by move | `(move a)` | Move the value in binding and invalid the origin |
 
-> Note: Override a bind by * will ignore let/var variables declaration
+> Note: Override a bind by * will ignore general `ref`/`mut` variables declaration
 
 # Module Import / Export
 The import and exportation of the code use the LLVM declare/extern
 - Exports are also modules 
-- To export the module in the root module, use `# native \n export <name> {...}`)
+- To export the module in the root module, use <br>`# native`<br>`export <name> {...}`
 
 | type | syntax | e.g. | info |
 |-|-|-|-|
@@ -1086,8 +1086,6 @@ roles are a package of components to check if entities have some components
 useful for simple generic functions or system case !
 
 a role cannot be used in an entity composition, it's a generic/system_case/parameter guarantee shortcut
-
-declaration:
 ```
 role name { components, ... }
 ```
@@ -1171,11 +1169,35 @@ there is some restrictions in operator definition:
 
 
 # System
-
-A system is a composition-driven orchestration unit. It does not define behavior itself, but selects and orders behavior executions based on the set of components and roles present in an entity.
+A system is a static match case based only on the evaluation of entity components.<br>
 A system guarantees that any entity allowed to execute it will follow at least one valid case path derived from its composition, case path evaluation resolved at compile time.
+```
+sys name<gen_args>(<params>) {...}
+```
 
-declaration:
+Systems are callable only by an entity instance by the instruction `my_entity::>my_system()`
+```
+var my_player = Player{CId.name = "Marc"}
+my_player::>Jump(100)
+```
+
+> Note: if none match occurs, a compilation error occurs
+
+To declare a composition, use a match composition evaluator `CCompType(binding_name)`
+
+Match composition e.g.
+```
+CCompType1(c1) + CCompType2(c2) + ... => {...}
+```
+Explanation: the compiler will check if the entity have the specified composition.<br>
+The components fileds are accessible by the binding name `c1` `c2`
+
+> Note: A `role` can be used in a composition evaluator, his components fields stay accessible by the binding (so components fields in role are accessibles)  
+
+Like `match` statement, a default behaviour can be specified `_ => ...`
+> Note: But the system will be executable by any entity
+
+full entity definition e.g.
 ```
 sys name<generic_parameters>(parameters) {
   CType1(ct1) + CType2(ct2) => { // case A
@@ -1190,13 +1212,14 @@ sys name<generic_parameters>(parameters) {
   _ => call() // case C
 }
 ```
-
 Flow explanation :   
 - Entity have A + B + C composition -> run A + B and stop (return)
 - Entity have A + C composition -> run A + C and stop (no more statement)
 - Entity have A composition -> run A and stop (no other compatible statement)
 - Entity have C composition -> run C and stop (no more statement)
 - Entity have B + C composition -> run B and stop (return)
+
+> Note: It's possible to define any instructions, but it's not recommended to keep the Single Responsibility Principle. Systems must be considered like a function dispatcher on entities  
 
 # COP in Function Parameters
 The COP paradigm can be used in functions to simplify the code and avoid the generic boilerplate
