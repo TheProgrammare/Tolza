@@ -165,26 +165,26 @@ Placement e.g. (place possible: `@`)
 | logical | bitwise | syntax | syntax bitwise |
 |-|-|-|-|
 | and   | and.b   |`and`  | `and.b`  |
-| nand  | nand.b  |`nand` | `nand.b` |
+| nand  | nand.b  |`nand` `!and` | `nand.b` `!and.b` |
 | or    | or.b    |`or`   | `or.b`   |
 | xor   | xor.b   |`xor`  | `xor.b`  |
-| nor   | nor.b   |`nor`  | `nor.b`  |
-| xnor  | xnor.b  |`xnor` | `xnor.b` |
+| nor   | nor.b   |`nor` `!or`  | `nor.b` `!or.b` |
+| xnor  | xnor.b  |`xnor` `!xor` | `xnor.b` `!xor.b` |
 
 ## Binary
 > Only on `flag` and `b8`-`b128`
 
-| binary | syntax | info |
-|-|-|-|
-| shift left 0   | `<<[0]`      | fill right with 0       |
-| shift left 1   | `<<[1]`      | fill right with 1       |
-| shift right 0  | `[0]>>`      | fill left with 0        |
-| shift right 1  | `[1]>>`      | fill left with 1        |
-| shift left a   | `<<[a]`      | fill right with MSB (arithmetic) |
-| shift right a  | `[a]>>`      | fill left with MSB (arithmetic) |
-| rotate left    | `<<[r]`      | rotate bits to the left |
-| rotate right   | `[r]>>`      | rotate bits to the right |
-| slice bits     | `~[0..8]`    | get bits from range     |
+| binary | syntax | alt | info |
+|-|-|-|-|
+| left shift 0   | `<<[0]` `<<` | `ls0.b` `ls.b` | fill right with 0       |
+| left shift 1   | `<<[1]`   | `ls1.b` | fill right with 1       |
+| right shift 0  | `[0]>>` `>>` | `rs0.b` `rs.b` | fill left with 0        |
+| right shift 1  | `[1]>>`   | `rs1.b` | fill left with 1        |
+| left shift a   | `<<[a]`   | `lsa.b` | fill right with MSB (arithmetic) |
+| right shift a  | `[a]>>`   | `rsa.b` | fill left with MSB (arithmetic) |
+| left rotate    | `<<[r]`   | `lr.b` | rotate bits to the left |
+| right rotate   | `[r]>>`   | `rr.b` | rotate bits to the right |
+| slice bits     | `~[0..8]` | - | get bits from range     |
 
 
 # Type Alias
@@ -1182,7 +1182,7 @@ sys name<generic_parameters>(parameters) {
     call(rt.CType1, rt.CType3)
     return
   }
-  other => call() // case C
+  _ => call() // case C
 }
 ```
 
