@@ -347,14 +347,14 @@ Access to a variable wihout any copy/clone/pointers, use the **explicit capabili
 |-|-|-|
 | `ref` | shared reading | `ref a = x` |
 | `mut` | exclusive r/w | `mut a = x` |
-| `ref` returned | from function return | `fn return_ref(ref a: T) -> ref'T</br>ref b = return_ref(a)` 
-| `mut` returned | from function return | `fn return_mut(mut a: T) -> mut'T</br>mut b = return_mut(a)` 
+| `ref` returned | from function return | `fn return_ref(ref a: T) -> ref'T(a)</br>ref b = return_ref(a)` 
+| `mut` returned | from function return | `fn return_mut(mut a: T) -> mut'T(a)</br>mut b = return_mut(a)` 
 
 capabilities is based on xor reference/mutable:
 - multiple ref are allowed
 - exclusive mut is allowed
 
-Unline Rust, the capability chercker focuses on Capabilities and origine usage
+## Origin Usage: Revocation of Previous Capabilities
 | Operation on origin | e.g. | consequence |
 |-|-|-|
 | Read only / copy | `println(player.CId.name)` | **revokes any previous mut** |
@@ -373,7 +373,7 @@ Unline Rust, the capability chercker focuses on Capabilities and origine usage
 |-|-|-|
 | **Explicit drop** | `drop a_ref` | the capability is removed |
 | **End of scope** | `var a = 10 {<br>mut m = a</br>m += 10 }` | automatic revocation |
-| **Revocable parameter** | `mut m = a</br>mut out_mut = revoke_mut(a) }` | revocation |
+| **Revocable parameter** | `fn revoke_mut(mut a: i32) -> mut'i32(a)</br>mut m = a</br>mut out_mut = revoke_mut(a) }` | revocation from function lifetime signature |
 | **Parent data handling** | `mut p_name = player.name</br>player = Player::new("marc", 25)` |  r/w a parent revokes children's capabilities. But fields are considered separate.
 | **Parent Collection operations** | `mut slice_mut = a[0..10]</br>a = {10, 20, 30}` | slice/index capabilites follow the parent's (collection base) operations.
 | **Move instruction** | `ref a_ref = a<br>b move= a` or move parameter -> all capabilities are revoked and the origin is removed.
