@@ -1323,7 +1323,7 @@ await result                 // mandatory after async
 println(result)              // retrieve the final value
 ```
 
-sync execution
+await (sync) execution
 ```
 let result = await my_fn() // or simply `my_fn()`, declaration optional
 // synchronous execution by nature
@@ -1348,14 +1348,13 @@ Sync syntax
 ```
 result = await calculate(args...) // or directly await calculate(args...)
 ->msg(out) { // optional message binding
-  
 }
 // end of sync
 ```
 > Note: to bind on messages, you must specify the prefix `sync` or `await` to avoid non thread logic
 > Messages are considered as a threading tweak, not a regular coding case
 
-# Key Points
+## Key Points
 - async always launches an asynchronous thread.
 - await blocks the caller, but the thread remains async internally.
 - FIFO messages + future for the final result provide a predictable and readable flow.
