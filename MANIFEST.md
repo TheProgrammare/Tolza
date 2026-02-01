@@ -67,6 +67,14 @@ The Zen-C programming language demonstrates a clear commitment to modernizing C,
 | dynamic  table  | `[T]`            | same of static table, but literal is instanciation only | List entity |
 | dynamic matrix  | `[T]*D` | same of static matrix, but literal is instanciation only  | Matrix entity    |
 
+## Complex
+| type | syntax | literal | size |
+|-|-|-|-|
+| enum | `enum EMyEnum<T>{ Some(T), None }` | `EMyEnum::Some(10)` | size of the biggest type + index `usize`
+| flag | `flag FMyFlag { read, write, access }` | `FMyFlag::read` | `u8` 
+| union | `union UMyUnion { i: i32; u: u64 }` | `UMyUnion.i = ...` `var a = UMyUnion.i` | size of the biggest type
+| gen | `gen GNumeric<T> { ... }` | `var a: GNumeric = ...` | 
+
 ### Implicit Cast
 no memory loss allowed 
 
