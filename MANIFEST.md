@@ -46,10 +46,10 @@ The Zen-C programming language demonstrates a clear commitment to modernizing C,
 |      type      |      syntax      |            literal           |      size      |
 |-|-|-|-|
 | boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
-| binary         | `bsize` `b8-b128` | `0b10010010` `0x0F` `0bsize` | 8-128 bits |
-| integral       | `isize` `i8-i128` | `0 ` `-1` `10isize`         | 8-128 bits |
-| unsigned       | `usize` `u8-u128` | `0 ` `10usize`              | 8-128 bits |
-| floating       | `fsize` `f32-f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
+| binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0bsize` | 8-128 bits |
+| integral       | `isize` `i8`-`i128` | `0 ` `-1` `10isize`         | 8-128 bits |
+| unsigned       | `usize` `u8`-`u128` | `0 ` `10usize`              | 8-128 bits |
+| floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
 | decimal        | `deci`           | `0.0` `-1.0` `10d` default | numbers*8  bit |
 | udecimal       | `udeci`           | `10ud`                       | numbers*8  bit |
 | decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
@@ -559,7 +559,7 @@ There is 6 pass modes:
 | `copy` | `copy` | call `copy`, fallback `clone`*
 | `clone` | `clone` | call `clone`, fallback `copy`*
 | `move` | `copy` | `move` and invalidate origin 
-| `addr` | only b8-b128 | only `ptr'T`
+| `addr` | only `b8`-`b128` | only `ptr'T`
 
 > \* Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`<\br>
 > The compiler will check if the clone or copy method exists, otherwise he will try to call the other method, if no copy and clone exists, a compilation error occur.
