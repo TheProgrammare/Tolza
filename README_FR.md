@@ -93,7 +93,7 @@ comp Vec2 {
     y: f32 = 0,
 }
 
-fn length(mut v: Vec2) -> f32 {
+fn length(ref v: Vec2) -> f32 {
     return math::sqrt(v.x * v.x + v.y * v.y)
 }
 ```
