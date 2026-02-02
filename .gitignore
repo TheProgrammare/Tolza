@@ -1,3 +1,12 @@
+# Velox compiler generation
+build/
+llvm-ir/
+EMBinds/
+post_preprocess/
+dot/
+.vscode/
+source/
+
 # Prerequisites
 *.d
 
