@@ -376,7 +376,7 @@ capabilities is based on xor reference/mutable:
 | New mut | `mut m = a` | **revokes all previous ref** |
 | Mut indexations | `mut index = a[i]` | cannot overlap |
 | Mut slices | `mut col_slice = a[0..10]` | cannot overlap |
-| Mut/ref index on slice | ref index = mut_slice[4] | only in deterministic slice |
+| Mut/ref index on slice | `ref index = mut_slice[4]` | only in deterministic slice |
 
 > note: all revoked capabilities **cannot be reused**
 
