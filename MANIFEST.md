@@ -1,6 +1,6 @@
 <div align="center">
 
-![Velox logo title](logo/velox-logo-tilted.svg) 
+![Velox logo](logo/velox-logo.svg) 
 
 # Velox</br> TECHNICAL IMPLEMENTATION
 
