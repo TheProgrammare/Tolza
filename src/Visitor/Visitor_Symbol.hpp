@@ -14,7 +14,7 @@ struct Visitor_Symbol : public Visitor_Default {
 	
 	std::shared_ptr<AST::Declaration::ECS::Component> current_component;
 	std::shared_ptr<AST::Declaration::Function> current_function;
-	std::shared_ptr<AST::Declaration::ECS::System> current_function;
+	std::shared_ptr<AST::Declaration::ECS::System> current_system;
 	std::shared_ptr<AST::Declaration::Local::Lambda> current_lambda;
 
 	//void resolve_arguments(std::vector<std::unique_ptr<AST::Declaration::Call_Arg>>& args, AST::Type::FunctionProto& fn);
@@ -138,58 +138,58 @@ struct Visitor_Symbol : public Visitor_Default {
 	void visit(AST::Literal::Entity &n) override;
 //
 //	// ============ REFERENCE ============
-	void visit(AST::Reference::Enum &n) override;
-
-	void visit(AST::Reference::Member_Access &n) override;		
-
+//	void visit(AST::Reference::Enum &n) override;
+//
+//	void visit(AST::Reference::Member_Access &n) override;		
+//
 	void visit(AST::Reference::Self &n) override;
-	void visit(AST::Reference::Other &n) override;
-
-	void visit(AST::Reference::Call &n) override;
-	void visit(AST::Reference::Call_Argument &n) override;			
-	void visit(AST::Reference::Call_System &n) override;				
-	void visit(AST::Reference::Call_Pipe &n) override;				
-
-	void visit(AST::Reference::Table_Access &n) override;				
-
-	// ============ STATEMENT ============
-	void visit(AST::Statement::If &n) override;	
-	void visit(AST::Statement::If_Ternary &n) override;				
-
-	void visit(AST::Statement::For &n) override;	
-	void visit(AST::Statement::Loop &n) override;
-	void visit(AST::Statement::While &n) override;
-	void visit(AST::Statement::GoTo &n) override;
-	void visit(AST::Statement::GoTo_Label &n) override;				
-
-	void visit(AST::Statement::Return &n) override;
-	void visit(AST::Statement::Break &n) override;
-	void visit(AST::Statement::Continue &n) override;				
-
-	void visit(AST::Statement::Match &n) override;
-	void visit(AST::Statement::Match_Case &n) override;
-
-	// ============ OPERATION ============
-	void visit(AST::Operation::Cast_As &n) override;                 
-	void visit(AST::Operation::Is &n) override;                      
-	void visit(AST::Operation::In &n) override;                      
-	void visit(AST::Operation::Assignment &n) override;              
-	void visit(AST::Operation::Binary &n) override;
-	void visit(AST::Operation::Unary &n) override;
-	void visit(AST::Operation::Interval &n) override;
-
-
-	// ============ MEMORY ============
-	void visit(AST::Memory::Move &n) override;
-	void visit(AST::Memory::New &n) override;
-	void visit(AST::Memory::Del &n) override;
-	void visit(AST::Memory::Val_Of_Ptr &n) override;
-	void visit(AST::Memory::Addr_Of_Ref &n) override;
-	void visit(AST::Memory::Dist &n) override;
-	void visit(AST::Memory::Size &n) override;
-	void visit(AST::Memory::Align &n) override;
-	void visit(AST::Memory::GetBits &n) override;
-	void visit(AST::Memory::Drop &n) override;
+//	void visit(AST::Reference::Other &n) override;
+//
+//	void visit(AST::Reference::Call &n) override;
+//	void visit(AST::Reference::Call_Argument &n) override;			
+//	void visit(AST::Reference::Call_System &n) override;				
+//	void visit(AST::Reference::Call_Pipe &n) override;				
+//
+//	void visit(AST::Reference::Table_Access &n) override;				
+//
+//	// ============ STATEMENT ============
+//	void visit(AST::Statement::If &n) override;	
+//	void visit(AST::Statement::If_Ternary &n) override;				
+//
+//	void visit(AST::Statement::For &n) override;	
+//	void visit(AST::Statement::Loop &n) override;
+//	void visit(AST::Statement::While &n) override;
+//	void visit(AST::Statement::GoTo &n) override;
+//	void visit(AST::Statement::GoTo_Label &n) override;				
+//
+//	void visit(AST::Statement::Return &n) override;
+//	void visit(AST::Statement::Break &n) override;
+//	void visit(AST::Statement::Continue &n) override;				
+//
+//	void visit(AST::Statement::Match &n) override;
+//	void visit(AST::Statement::Match_Case &n) override;
+//
+//	// ============ OPERATION ============
+//	void visit(AST::Operation::Cast_As &n) override;                 
+//	void visit(AST::Operation::Is &n) override;                      
+//	void visit(AST::Operation::In &n) override;                      
+//	void visit(AST::Operation::Assignment &n) override;              
+//	void visit(AST::Operation::Binary &n) override;
+//	void visit(AST::Operation::Unary &n) override;
+//	void visit(AST::Operation::Interval &n) override;
+//
+//
+//	// ============ MEMORY ============
+//	void visit(AST::Memory::Move &n) override;
+//	void visit(AST::Memory::New &n) override;
+//	void visit(AST::Memory::Del &n) override;
+//	void visit(AST::Memory::Val_Of_Ptr &n) override;
+//	void visit(AST::Memory::Addr_Of_Ref &n) override;
+//	void visit(AST::Memory::Dist &n) override;
+//	void visit(AST::Memory::Size &n) override;
+//	void visit(AST::Memory::Align &n) override;
+//	void visit(AST::Memory::GetBits &n) override;
+//	void visit(AST::Memory::Drop &n) override;
 };
 
 inline const std::string SYM_HINT =

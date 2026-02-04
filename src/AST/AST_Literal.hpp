@@ -154,39 +154,6 @@ struct Text : public ALiteral {
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::text; }
 };
 
-struct Format_Specifier;
-
-// "{expression}" "{expression:spec}"
-struct Text_Lerp : public Node {
-    std::unique_ptr<AST::Node> expression;
-    std::unique_ptr<Format_Specifier> spec;
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "text_lerp"; }
-};
-
-struct Textual_Element {
-    enum class Kind { Text, Lerp };
-
-    Kind kind;
-    std::unique_ptr<Node> val;
-
-    Textual_Element(std::unique_ptr<Text> text) 
-        : val(std::move(text))
-        , kind(Kind::Text) {}
-    Textual_Element(std::unique_ptr<Text_Lerp> lerp)
-        : val(std::move(lerp))
-        , kind(Kind::Lerp) {}
-};
-
-// "format node {formatVariable} can be formated"
-struct Textual_Format : public ALiteral {
-    std::vector<Textual_Element> values;
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "format_text"; }
-};
-
 // format_spec ::= [options][width][grouping]["." precision][type]
 // options     ::= [[fill]align] [sign]["z"]["#"]["0"]
 // fill        ::= <any character>
@@ -223,6 +190,39 @@ struct Format_Specifier : public Node {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<format> specifier \":" + src_Str + "\""; }
 };
+
+// "{expression}" "{expression:spec}"
+struct Text_Lerp : public Node {
+    std::unique_ptr<AST::Node> expression;
+    std::unique_ptr<Format_Specifier> spec;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    [[nodiscard]] std::string debug_str() const override { return "text_lerp"; }
+};
+
+struct Textual_Element {
+    enum class Kind { Text, Lerp };
+
+    Kind kind;
+    std::unique_ptr<Node> val;
+
+    Textual_Element(std::unique_ptr<Text> text) 
+        : val(std::move(text))
+        , kind(Kind::Text) {}
+    Textual_Element(std::unique_ptr<Text_Lerp> lerp)
+        : val(std::move(lerp))
+        , kind(Kind::Lerp) {}
+};
+
+// "format node {formatVariable} can be formated"
+struct Textual_Format : public ALiteral {
+    std::vector<Textual_Element> values;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    [[nodiscard]] std::string debug_str() const override { return "format_text"; }
+};
+
+
 
 
 struct Table_Population : public ALiteral {

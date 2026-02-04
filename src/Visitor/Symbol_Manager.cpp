@@ -1,7 +1,7 @@
 #include "Symbol_Manager.hpp"
 
-#include "AST/ASTBase.hpp"
-#include "AST/ASTDeclaration.hpp"
+#include "AST/AST_Base.hpp"
+#include "AST/AST_Declaration.hpp"
 
 std::string Symbols_Manager::get_current_export_name() const
 {
@@ -53,8 +53,8 @@ std::vector<std::string> Symbols_Manager::get_current_path() const
 
 std::optional<std::shared_ptr<AST::ADeclaration>> Symbols_Manager::find_symbol(const std::string &full_name)
 {
-	if (auto it = symbols.find(full_name); it != symbols.end())
-		return it->second;
-	else
-		return std::nullopt;
+	for (auto sym : symbols) {
+		if (sym.mangling == full_name) return sym.symbol;
+	}
+	return std::nullopt;
 }

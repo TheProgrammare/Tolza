@@ -64,6 +64,7 @@ struct Primitive final : public Node, AType {
 
     [[nodiscard]] std::string mangle_type() const override { return EPrimTy_to_mangle(_type); }
     [[nodiscard]] std::string debug_str() const override { return EPrimTy_to_str(_type); }
+    [[nodiscard]] EPrimType get_type() const override { return _type; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 

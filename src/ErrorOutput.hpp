@@ -2,16 +2,22 @@
 
 #include <string>
 
-std::string trim(const std::string& str);
+struct error_text {
+	size_t line;
+	size_t col;
+	size_t cursor_len; 
+	std::string line_str; 
+	std::string error_code; 
+	std::string error_msg;
+	std::string hint_msg; 
+	std::string file;
 
-std::string make_error_output(
-	size_t line, 
-	size_t col, 
-	size_t cursor_len, 
-	const std::string& lineStr, 
-	const std::string& errCode, 
-	const std::string& errMsg, 
-	const std::string& hintMsg, 
-	const std::string& f);
+	std::string print_error() const;
+	std::ostringstream print_line() const;
+	std::ostringstream print_source() const: 
 
-inline std::string escapeChar(unsigned char c);
+private:
+	std::string trim(const std::string& str) const;
+	std::string escapeChar(unsigned char c) const;
+};
+

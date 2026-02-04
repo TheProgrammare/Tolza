@@ -51,7 +51,7 @@ struct Call_Argument : public Node {
     std::string name;
     std::unique_ptr<Node> val;
     // resolved by superior node
-    std::shared_ptr<Node> param_sym;
+    std::shared_ptr<Node> resolved_symbol;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return name; }

@@ -135,8 +135,7 @@ std::unique_ptr<AST::AReference> PAR::Parser_Reference::parse_reference()
 		// only identifier typed
 		// no value accessible
 		if (!ctx.tok_v.check_any({TokTy::OPEN_PAREN, TokTy::OPEN_BRACE})) {
-			std::unique_ptr<AST::AReference> ref = std::make_unique<AST::Type_Reference>(id_typed);
-			return ref;
+			return std::unique_ptr<AST::AReference>(id_typed.value().release());
 		}
 		gen_args = std::move(id_typed.value()->gen_args);
 	}

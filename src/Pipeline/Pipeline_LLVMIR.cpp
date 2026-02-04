@@ -1,4 +1,4 @@
-#include "PipelineLLVMIR.hpp"
+#include "Pipeline_LLVMIR.hpp"
 
 #include <vector>
 #include <tuple>
@@ -12,7 +12,7 @@
 
 #include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
-#include "Visitor/VisitorCodegen.hpp"
+#include "Visitor/Visitor_Codegen.hpp"
 
 bool pipeline_start_LLVM_IR(const PipelineScripts* pipe_scripts) {
 	std::vector<std::tuple<std::string, std::vector<std::string>>> llvmIRErrors;
@@ -26,7 +26,7 @@ bool pipeline_start_LLVM_IR(const PipelineScripts* pipe_scripts) {
         std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 		auto start = std::chrono::high_resolution_clock::now();
-		VisitorCodegen codegen_visi(scr_info.get());
+		Visitor_Codegen codegen_visi(*scr_info);
 		codegen_visi.visit(*scr_info->rootNode);
 		auto end = std::chrono::high_resolution_clock::now();
 		double milli = std::chrono::duration<double, std::milli>(end - start).count();

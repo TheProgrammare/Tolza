@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "Visitor_Default.hpp"
 #include "AST/AST_Forward.hpp"
 
@@ -68,7 +70,7 @@ public:
 	//void visit(AST::Type_Reference &n) override;			
 	//void visit(AST::Type_Arguments &n) override;			
 //
-	//void visit(AST::Root &n) override;
+	void visit(AST::Root &n) override;
 
 	void visit(AST::ID &n) override;	
 

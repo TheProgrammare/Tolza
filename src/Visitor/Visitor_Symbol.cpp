@@ -26,11 +26,11 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	const std::string absolue_name = ref.id.mangle_absolute_name();
 
 	// get local symbol
-	if (auto sym = scrInfo->m_sym->find_symbol(name)) {
+	if (auto sym = scrInfo.m_sym->find_symbol(name)) {
 		target_resolution = sym.value();
 		return sym.value();
 	}
-	else if (auto sym = scrInfo->m_sym->find_symbol(absolue_name)) {
+	else if (auto sym = scrInfo.m_sym->find_symbol(absolue_name)) {
 		target_resolution = sym.value();
 		return sym.value();
 	}
@@ -38,7 +38,7 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	else if (!ref.id.path.empty()) {
 		const std::string supposed_import_name = ref.id.path[0];
 	
-		if (auto imp = scrInfo->get_import_module(supposed_import_name)) {
+		if (auto imp = scrInfo.get_import_module(supposed_import_name)) {
 			for (auto &mod : imp->target_modules) {
 				if (auto sym = mod->m_sym->find_symbol(absolue_name)) {
 					target_resolution = sym.value();
@@ -61,8 +61,33 @@ void Visitor_Symbol::visit(AST::AReference &n)
 	resolve_def(n, n.get_symbol_resolution());
 }
 
+void Visitor_Symbol::visit(AST::Literal::Component &n)
+{
+	Visitor_Default::visit(n);
+	if (!n.resolved_sym) return;
 
-void Visitor_Symbol::visit(AST::Declaration::ECS::Entity &n) 
+	size_t count = 0;
+	for (auto &field_arg : n.field_args) {
+		if (!field_arg->name.empty()) {
+			for (auto &comp_field : n.resolved_sym->fields) {
+				if (comp_field->id.name == field_arg->name) {
+					field_arg->resolved_symbol = comp_field;
+					break;
+				}
+			}
+		}
+		else if (count < n.field_args.size()) {
+			field_arg->
+		}
+		else {
+			this->error_add(n, "SYM1120", "Too much symbols to resolve ")
+		}
+
+		count++;
+	}
+}
+
+void Visitor_Symbol::visit(AST::Declaration::ECS::Entity &n)
 {
 	current_entity = &n;
     Visitor_Default::visit(n);

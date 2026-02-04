@@ -1,4 +1,4 @@
-#include "PipelineResolvers.hpp"
+#include "Pipeline_Resolvers.hpp"
 
 #include <string>
 #include <vector>
@@ -10,11 +10,11 @@
 #include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
 
-#include "Visitor/VisitorSymbol.hpp"
-#include "Visitor/VisitorType.hpp"
-#include "Visitor/VisitorSemantic.hpp"
-#include "AST/ASTNodes.hpp"
-#include "AST/ASTSymbol.hpp"
+#include "Visitor/Symbol_Manager.hpp"
+#include "Visitor/Visitor_Symbol.hpp"
+#include "Visitor/Visitor_Type.hpp"
+#include "Visitor/Visitor_Semantic.hpp"
+#include "AST/AST_Base.hpp"
 
 
 bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
@@ -40,20 +40,20 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
 			std::vector<std::string> errs;
 			// symbols
 			if (k == 0) {
-				VisitorSym sym(scrInfo.get());
+				Visitor_Symbol sym(*scrInfo);
 				scrInfo->rootNode->accept(sym);
 				errs = scrInfo->m_sym->decl_errors;
 				errs.insert(errs.begin(), sym.errors.begin(), sym.errors.end());
 			}
 			// types
 			if (k == 1) {
-				VisitorType ty(scrInfo.get());
+				Visitor_Type ty(*scrInfo);
 				scrInfo->rootNode->accept(ty);
 				errs = ty.errors;
 			}
 			// semantics
 			if (k == 2) {
-				VisitorSem sem(scrInfo.get());
+				Visitor_Semantic sem(*scrInfo);
 				scrInfo->rootNode->accept(sem);
 				errs = sem.errors;
 			}

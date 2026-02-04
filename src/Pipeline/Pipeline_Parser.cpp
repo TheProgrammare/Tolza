@@ -1,9 +1,10 @@
-#include "PipelineParser.hpp"
+#include "Pipeline_Parser.hpp"
 
 #include "Globals.hpp"
 
-#include "Parser/ParserBase.hpp"
-#include "Parser/ParserContext.hpp"
+#include "Parser/Parser_Base.hpp"
+#include "Parser/Parser_Context.hpp"
+#include "Visitor/Symbol_Manager.hpp"
 #include "Pipeline.hpp"
 
 #include <iostream>

@@ -148,7 +148,7 @@ protected:
 
 struct ALocal : ADeclaration {
 
-    [[nodiscard]] ESymbolType get_symbol_type() const override;
+    [[nodiscard]] virtual ESymbolType get_symbol_type() const = 0;
 };
 
 // for every node who need a symbolic resolution

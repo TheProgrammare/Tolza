@@ -11,7 +11,7 @@
 #include "Compilation.hpp"
 
 #include "ScriptInfo.hpp"
-#include "AST/ASTData.hpp"
+#include "AST/AST_Data.hpp"
 #include "Lexer/TokenViewer.hpp"
 #include "Lexer/Token.hpp"
 

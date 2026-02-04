@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(velox
-    VERSION 1.0
+    VERSION 120261
     LANGUAGES CXX
 )
 
@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # =========================
-# Sources (récursif)
+# Sources (recursive)
 # =========================
 file(GLOB_RECURSE PROJECT_SOURCES
     src/*.cpp
@@ -24,7 +24,7 @@ file(GLOB_RECURSE PROJECT_SOURCES
 )
 
 if (PROJECT_SOURCES STREQUAL "")
-    message(FATAL_ERROR "Aucun fichier source trouvé dans src/")
+    message(FATAL_ERROR "None source file found in src/")
 endif()
 
 # =========================
@@ -63,7 +63,7 @@ execute_process(
 )
 
 # =========================
-# Cible
+# Target
 # =========================
 add_executable(${PROJECT_NAME}
     ${PROJECT_SOURCES}
@@ -71,7 +71,6 @@ add_executable(${PROJECT_NAME}
 # =========================
 # Clang / libclang
 # =========================
-# Include de ton projet + clang
 target_include_directories(velox
     PRIVATE
         src
@@ -79,7 +78,7 @@ target_include_directories(velox
         /usr/lib/llvm/include
 )
 
-# Link explicite
+# Explicit link
 target_link_libraries(velox
     PRIVATE
         clang

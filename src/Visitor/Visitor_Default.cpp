@@ -17,7 +17,7 @@
 
 void Visitor_Default::error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) {
 	auto pos = n._token.span;
-	std::string errStr = make_error_output(pos.line, pos.col, pos.size, scrInfo->src_lines[pos.line - 1], errCode, err, hint, scrInfo->file_path);
+	std::string errStr = make_error_output(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path);
 	errors.push_back(errStr);
 }
 
@@ -319,7 +319,6 @@ void Visitor_Default::visit(AST::Type::Function_Proto &n)
 void Visitor_Default::visit(AST::Type::Get_Expr_Type &n)
 {
 	n.target->accept(*this);
-	n.resolved_sym->accept(*this);
 }			
 
 // ============ LITERAL ============
@@ -425,8 +424,8 @@ void Visitor_Default::visit(AST::Reference::Enum &n)
 
 void Visitor_Default::visit(AST::Reference::Member_Access &n)
 {
-	n.source->accept(*this);
-	for (auto &elem : n.elements) elem->accept(*this);
+	n.left->accept(*this);
+	n.right->accept(*this);
 }		
 
 void Visitor_Default::visit(AST::Reference::Self &n)
@@ -462,7 +461,6 @@ void Visitor_Default::visit(AST::Reference::Call_Pipe &n)
 
 void Visitor_Default::visit(AST::Reference::Table_Access &n)
 {
-	n.target->accept(*this);
 	n.selector->accept(*this);
 }				
 

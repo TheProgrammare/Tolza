@@ -13,6 +13,7 @@
 struct ScriptInfo;
 
 enum class EScopeType;
+enum class ESymbolType;
 
 namespace AST {
 	struct ADeclaration;
@@ -25,7 +26,7 @@ struct ScopeData {
 };
 
 struct SymbolData {
-	ESymbolType type = ESymbolType::NONE;
+	ESymbolType type;
 
 	std::string mangling;
 	std::string mangling_convention_name = "Velox";

@@ -8,7 +8,7 @@ namespace AST {
 namespace Declaration {
 namespace ECS {
 
-struct Component_Field : public Node {
+struct Component_Field : public ADeclaration {
     ID id;
     std::unique_ptr<AType> ty;
     std::unique_ptr<Node> default_value;
@@ -28,7 +28,7 @@ struct Component_Field : public Node {
 struct Component : public ADeclaration, AType {
     [[maybe_unused]]
     std::shared_ptr<Local::Generic_Parameter> gen_where;
-    std::vector<std::unique_ptr<Component_Field>> fields;
+    std::vector<std::shared_ptr<Component_Field>> fields;
 
     [[nodiscard]] std::string mangle_type() const override { return "comp"; }
     [[nodiscard]] std::string debug_str() const override { return "<ty> comp[" + id.debug_str() + "]"; }

@@ -15,12 +15,13 @@ namespace AST {
 template<typename T>
 concept DerivedFromType = std::is_base_of_v<AST::AType, T>;
 
-struct VisitorType : public Visitor_Default {
+struct Visitor_Type : public Visitor_Default {
 	// keep parent constructor
 	using Visitor_Default::Visitor_Default;
 
-	std::optional<AST::AType*> resolve_ty(AST::Node& n, AST::AType* targetNode, bool silentError = false);
+	std::optional<AST::AType*> resolve_type(AST::Node& n, AST::AType* input_type, bool silentError = false);
 
+/*
 
 	// all commented visit are not concerned by the symbol resolution
 	// ============ AST ============
@@ -188,18 +189,8 @@ struct VisitorType : public Visitor_Default {
 	void visit(AST::Memory::Align &n) override;
 	void visit(AST::Memory::GetBits &n) override;
 	void visit(AST::Memory::Drop &n) override;
+	*/
 };
 
-std::optional<AST::AType*> get_type(AST::Node* n);
 
-enum class EOpType;
-
-// success, err, hint
-std::tuple<bool, std::string, std::string> check_unaryOp(AST::AType* inner, EOpType opTy);
-
-// return: value, err, hint
-std::tuple<AST::AType*, std::string, std::string> get_binOp_type(AST::AType* left, AST::AType* right, EOpType opTy);
-
-//  result, castWithValCaster, err, hint
-std::tuple<bool, bool, std::string, std::string> check_explicit_cast(AST::AType* valTy, AST::AType* targetTy);
 

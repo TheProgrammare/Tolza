@@ -103,7 +103,7 @@ std::unique_ptr<AST::Statement::For> PAR::Parser_Statement::for_statement() {
 		index->passMode = EPassMode::Mut;
 		auto ty = ctx.Create_Node<AST::Type::Primitive>(index.get()->_token);
 		ty->_type = EPrimType::iSize;
-		index->ty = std::make_shared<AST::Type::Primitive>(ty.release());
+		index->ty = std::shared_ptr<AST::Type::Primitive>(ty.release());
 		
 		ctx.m_sym->add_decl(index);
 		forState->index = std::move(index);
