@@ -287,22 +287,12 @@ std::unique_ptr<AST::Statement::Return> PAR::Parser_Statement::return_flow() {
 	return node;
 }
 
-std::shared_ptr<AST::Statement::GoTo_Label> PAR::Parser_Statement::goto_label_statement()
+std::unique_ptr<AST::Statement::GoTo_Label> PAR::Parser_Statement::goto_label_statement()
 {
 	ctx.tok_v.match(TokTy::GOTO_LABEL);
- 	auto goto_label =  ctx.Create_Decl<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
+ 	auto goto_label =  ctx.Create_Node<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
 	goto_label->id = ctx.p_ref->identifier(true);
-	ctx.m_sym->add_decl(goto_label);
 	ctx.tok_v.expect(TokTy::COLON, "PAR1978", "Expected colon ':' after label name.", 
 		"define goto label like: `label my_label:`");
 	return goto_label;
-}
-
-std::shared_ptr<AST::Statement::GoTo> PAR::Parser_Statement::goto_statement()
-{
-	ctx.tok_v.match(TokTy::GOTO);
- 	auto _goto =  ctx.Create_Decl<AST::Statement::GoTo>(ctx.tok_v.peek(-1));
-	_goto->id = ctx.p_ref->identifier(true);
-	ctx.m_sym->add_decl(_goto);
-	return _goto;
 }

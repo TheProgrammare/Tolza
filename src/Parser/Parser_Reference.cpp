@@ -173,16 +173,16 @@ std::unique_ptr<AST::AReference> PAR::Parser_Reference::parse_reference()
 		target_ref = std::move(id_ref);
 	}
 
-	if (auto table_access = try_table_access()) {
-		table_access.value()->target = std::move(target_ref);
-		target_ref = std::move(table_access.value());
+	if (!gen_args) {
+		if (auto table_access = try_table_access()) {
+			table_access.value()->id = id;
+			target_ref = std::move(table_access.value());
+		}
+		if (auto member_access = try_member_access(id)) {
+			member_access.value()->left = std::move(target_ref);
+			target_ref = std::move(member_access.value());
+		}
 	}
-
-	if (auto member_access = try_member_access(id)) {
-		member_access.value()->source = std::move(target_ref);
-		target_ref = std::move(member_access.value());
-	}
-
 
 	return target_ref;
 }
@@ -262,12 +262,8 @@ std::optional<std::unique_ptr<AST::Reference::Member_Access>> PAR::Parser_Refere
 
 	auto access = ctx.Create_Node<AST::Reference::Member_Access>(ctx.tok_v.peek(-2));
 
-	while (!ctx.tok_v.is_end()) {
-		access->elements.push_back(parse_reference());
+	access->right = parse_reference();
 
-		if (!ctx.tok_v.match(TokTy::DOT)) break;
-	}
-	
 	return access;
 }
 

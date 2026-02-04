@@ -6,11 +6,7 @@
 
 std::string AST::Reference::Member_Access::debug_str() const
 { 
-    std::string out = id.debug_str();
-    for (auto &elem : elements) {
-        out += "." + elem->id.debug_str();
-    }
-    return out;
+    return left->debug_str() + "." + right->debug_str();
 }
 
 std::shared_ptr<AST::ADeclaration> AST::Reference::Enum::get_symbol_resolution()

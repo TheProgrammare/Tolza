@@ -26,10 +26,10 @@ struct ScriptInfo;
 
 struct Visitor_Base {
 	virtual ~Visitor_Base() = default;
+	Visitor_Base() = delete;
+	Visitor_Base(ScriptInfo &scrInfo) : scrInfo(scrInfo) {}
 
-	Visitor_Base(ScriptInfo *scrInfo) : scrInfo(scrInfo) {}
-
-	ScriptInfo *scrInfo = nullptr;
+	ScriptInfo &scrInfo;
 
 	std::vector<std::string> errors;
 

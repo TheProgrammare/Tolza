@@ -17,18 +17,11 @@ struct Enum : public AReference {
     [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override;
 };
 
-// must be attached to an entity instance e.g. 'var id = person.CIdentity.id'
-// source: 'person'
-// elements[0]: '.CIdentity'
-// elements[1]: '.id'
-// get_symbol_resolution: elements.back() '.id' -> declaration
-// resolved_sym: source: 'person'
-
 struct Member_Access : public AReference {
     std::shared_ptr<ADeclaration> resolved_sym;
 
-    std::unique_ptr<AReference> source;
-    std::vector<std::unique_ptr<AReference>> elements;
+    std::unique_ptr<AReference> left;
+    std::unique_ptr<AReference> right;
 
     [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override {
         return resolved_sym;

@@ -20,11 +20,12 @@ static inline std::string escapeDot(const std::string& s) {
 	return out;
 }
 
+struct ScriptInfo; 
 
 struct DOTVisitor : public Visitor_Default {
 public:
-	DOTVisitor(ScriptInfo *scrInfo, std::ostream& os) :
-		VisitorDefault(scrInfo), 
+	DOTVisitor(ScriptInfo &scrInfo, std::ostream& os) :
+		Visitor_Default(scrInfo), 
 		os_(os) { }
 
 	void parent_dot(const AST::Node& n, const std::string& context = "");
@@ -170,7 +171,6 @@ public:
 	// ============ REFERENCE ============
 	void visit(AST::Reference::Enum &n) override;
 
-	void visit(AST::Reference::Element_Access &n) override;			
 	void visit(AST::Reference::Member_Access &n) override;		
 
 	void visit(AST::Reference::Self &n) override;

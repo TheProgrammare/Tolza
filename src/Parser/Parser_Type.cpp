@@ -199,7 +199,7 @@ std::shared_ptr<AST::Type::Function_Proto> PAR::Parser_Type::function_proto(bool
 	ty->parameters = parameters();
 	if (!ty->parameters.empty() && ty->parameters.back()->isVariadic) {
 		ty->isVariadic = true;
-		ty->variadic_ty = ty->parameters.back()->ty.get();
+		ty->variadic_ty = ty->parameters.back()->ty;
 	}
 
 	// check return 

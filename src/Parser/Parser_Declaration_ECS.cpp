@@ -100,11 +100,11 @@ std::shared_ptr<AST::Declaration::ECS::Entity> PAR::Parser_Declaration_ECS::enti
 	auto def_entity = ctx.Create_Decl<AST::Declaration::ECS::Entity>(ctx.tok_v.peek());
 
 	// metacode
-	def_entity->isCastable = !ctx.metablock_contains(def_entity.get(), "nocast");
-	def_entity->isExtCastable = !ctx.metablock_contains(def_entity.get(), "no_extern_cast");
+	def_entity->isCastable = !ctx.metablock_contains(*def_entity, "nocast");
+	def_entity->isExtCastable = !ctx.metablock_contains(*def_entity, "no_extern_cast");
 
-	def_entity->isMoveable = !ctx.metablock_contains(def_entity.get(), "no_move");
-	def_entity->isDestructible = !ctx.metablock_contains(def_entity.get(), "no_destruct");
+	def_entity->isMoveable = !ctx.metablock_contains(*def_entity, "no_move");
+	def_entity->isDestructible = !ctx.metablock_contains(*def_entity, "no_destruct");
 
 	def_entity->id = ctx.p_ref->identifier(def_entity.get());
 	ctx.m_sym->add_decl(def_entity);
