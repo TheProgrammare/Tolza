@@ -148,13 +148,12 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
 		// ignore variable
 		if (!ctx.tok_v.match(TokTy::UNDERSCORE)) {
 			std::string name = ctx.tok_v.expect_id("PAR1130", "Expected name (identifier) in variable unpack declaration.", hint);
-			auto loc = ctx.Create_Decl<AST::Declaration::Local::Variable>(ctx.tok_v.peek(-1));
+			auto loc = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek(-1));
 			loc->id.name = name;
-			loc->isStatic = unpack->isStatic;
-			unpack->var_names.push_back(std::move(loc));
+			unpack->elements.push_back(loc);
 			ctx.m_sym->add_decl(loc);
 		}
-		else unpack->var_names.push_back(nullptr);
+		else unpack->elements.push_back(nullptr);
 
 		if (ctx.match_field_separator(TokTy::COMMA, TokTy::ASSIGN)) break;
 	}
@@ -193,9 +192,10 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
 	while (!ctx.tok_v.is_end()) {
 		auto elem = ctx.Create_Node<AST::Declaration::Local::Capture_Member>(ctx.tok_v.peek());
 
-		if (ctx.tok_v.match_val("mut")) elem->isMutable = true;
+		auto tok_capa = ctx.tok_v.expect_any(kCapabilityKind, "PAR1782", "Expected capture capability kind.", hint);
+		elem->capability = TokTy_to_ECapability(tok_capa.ty);
 
-		elem->name = ctx.tok_v.expect_id("PAR1420", "Expected name (identifier) in capture declaration.", hint);
+		elem->id = ctx.p_ref->identifier(true);
 		capture->elements.push_back(std::move(elem));
 	}
 
@@ -225,7 +225,7 @@ std::shared_ptr<AST::Declaration::Local::Lambda> PAR::Parser_Declaration_Local::
 	if (ctx.tok_v.match(TokTy::OPEN_SQUARE))
 		lam->capture = lambda_capture();
 
-	lam->fn_type = ctx.p_type->function_proto(true);
+	lam->prototype = ctx.p_type->function_proto(true);
 	lam->codeblock = ctx.p_loc->code_block_instruction();
 
 	ctx.m_sym->exit_scope();
@@ -286,7 +286,7 @@ std::shared_ptr<AST::Declaration::Local::Capability> PAR::Parser_Declaration_Loc
 
 	ctx.tok_v.expect(TokTy::ASSIGN, "PAR1209", "Expected classic assignation '=' after capability declaration.", hint);
 
-	capa->right = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+	capa->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
 
 	return capa;
 }
