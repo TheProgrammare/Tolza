@@ -80,7 +80,7 @@ struct Boolean : public ALiteral {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "bool(" + std::to_string(val) + ")"; }
-    [[nodiscard]] EPrimType get_type() const override { EPrimType::boolean; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::boolean; }
 };
 
 struct Integral : public ALiteral {

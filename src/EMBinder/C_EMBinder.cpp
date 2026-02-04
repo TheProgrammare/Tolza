@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <assert.h>
+#include <set>
 
 #include "Globals.hpp"
 #include "ScriptInfo.hpp"
@@ -106,7 +107,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
     switch (kind) {
         case CXCursor_StructDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+            if (ty_names.count(name) == 0) break;
 
             if (!clang_isCursorDefinition(cursor)) break; // ignorer forward declaration
             CVeloxComp comp = c_struct_to_velox_comp(cursor);
@@ -116,7 +117,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_UnionDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+            if (!ty_names.count(name) == 0) break;
 
             if (!clang_isCursorDefinition(cursor)) break;
             CVeloxUnion u = c_union_to_velox_union(cursor);
@@ -126,7 +127,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_EnumDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+            if (!ty_names.count(name) == 0) break;
 
             if (!clang_isCursorDefinition(cursor)) break;
             CVeloxFlag e = c_enum_to_velox_flag(cursor);
@@ -136,7 +137,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_FunctionDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!fn_names.contains(name)) break;
+            if (!fn_names.count(name) == 0) break;
 
             CVeloxFunc f = c_function_to_velox_function(cursor);
             ast->funcs.push_back(std::move(f));
@@ -145,7 +146,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_VarDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!fn_names.contains(name)) break;
+            if (fn_names.count(name) == 0) break;
 
             CVeloxGlobal g = c_global_to_velox_global(cursor);
             ast->globals.push_back(std::move(g));

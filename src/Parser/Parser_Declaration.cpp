@@ -198,7 +198,7 @@ std::shared_ptr<AST::Declaration::Function> PAR::Parser_Declaration::function() 
 	ctx.m_sym->add_decl(fn);
 	ctx.m_sym->enter_scope(fn->id.name, EScopeType::Function);
 
-	fn->fn_type = ctx.p_type->function_proto(false);
+	fn->prototype = ctx.p_type->function_proto(false);
 
 	// if extern : no definition
 	if (fn->isExtern && ctx.tok_v.check(TokTy::OPEN_BRACE))

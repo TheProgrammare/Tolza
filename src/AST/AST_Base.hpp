@@ -207,7 +207,7 @@ struct Identifier_Reference final : public AReference {
     std::shared_ptr<ADeclaration> resolved_sym;
 
     [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
-    [[nodiscard]] std::string debug_str() const override { id.debug_str(); }
+    [[nodiscard]] std::string debug_str() const override { return id.debug_str(); }
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
@@ -230,7 +230,7 @@ struct Type_Reference final : public AReference, AType {
     }
     [[nodiscard]] std::string mangle_type() const override { return debug_str(); }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] EPrimType get_type() const override { EPrimType::COUNT; };
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::COUNT; };
 };
 
 

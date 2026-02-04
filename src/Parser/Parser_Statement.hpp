@@ -18,6 +18,7 @@ namespace PAR {
 		[[nodiscard]] std::unique_ptr<AST::Statement::Loop>				loop_statement();
 		[[nodiscard]] std::unique_ptr<AST::Statement::Match>			match_statement();
 		[[nodiscard]] std::unique_ptr<AST::Statement::GoTo>				goto_statement();
+		[[nodiscard]] std::unique_ptr<AST::Statement::GoTo_Label>		goto_label_statement();
         [[nodiscard]] std::unique_ptr<AST::Statement::If_Ternary> 		ternary_if();
         [[nodiscard]] std::unique_ptr<AST::Statement::Return> 			return_flow();
 

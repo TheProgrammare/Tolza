@@ -10,6 +10,6 @@ std::string AST::Declaration::Local::Variable_Unpack::debug_str() const
         case EVariableKind::Var: out += "var"; break;
     }
     out += "[";
-    for (auto& elem : var_names) out += elem->id.debug_str() + ", ";
+    for (auto& elem : elements) out += elem->id.debug_str() + ", ";
     return out + "]";
 }

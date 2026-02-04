@@ -19,7 +19,22 @@ struct CodeBlock : public Node {
     [[nodiscard]] std::string debug_str() const override { return "codeblock"; }
 };
 
-struct Variable_Binding;
+
+// inside of Enum/Tuple pattern
+// e.g. Some(a) = value
+// e.g. Player { CId.name: name, CId.age: age } = value
+// e.g. Player { CId { name: name, age: age } } = value
+// e.g. (a, b, c) = triple
+// e.g. match val { Some(a) => ... }
+// e.g. sys name() { Component(c) => ... }
+struct Variable_Binding : public ALocal {
+    std::string name;
+    ECapability capability = ECapability::None;
+    std::shared_ptr<AType> resolved_ty;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    [[nodiscard]] std::string debug_str() const override { return "bind[" + name + "]"; }
+};
 
 struct Pattern_Element {
     enum class Kind { Ignore, Binding, Literal };
@@ -38,26 +53,12 @@ struct Pattern_Element {
         : kind(Kind::Ignore) {}
 
     Node *node() {
-        if (kind == Kind::Binding) return bind.get();
-        else if (kind == Kind::Literal) return literal.get();
-        else return nullptr;
+        switch (kind) {
+        case Kind::Binding: return static_cast<Node*>(bind.get());
+        case Kind::Literal: return static_cast<Node*>(literal.get());
+        case Kind::Ignore:  return nullptr;
+        }
     }
-};
-
-// inside of Enum/Tuple pattern
-// e.g. Some(a) = value
-// e.g. Player { CId.name: name, CId.age: age } = value
-// e.g. Player { CId { name: name, age: age } } = value
-// e.g. (a, b, c) = triple
-// e.g. match val { Some(a) => ... }
-// e.g. sys name() { Component(c) => ... }
-struct Variable_Binding : public ALocal {
-    std::string name;
-    ECapability capability = ECapability::None;
-    std::shared_ptr<AType> resolved_ty;
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "bind[" + name + "]"; }
 };
 
 struct Pattern : public Node {

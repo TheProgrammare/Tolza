@@ -126,7 +126,7 @@ struct Get_Expr_Type final : public Node, AType {
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
     bool operator==(const AType& other) const override {
-        return AType::operator==(other) && *resolved_sym == other;
+        return AType::operator==(other) && *resolved_ty == other;
     }
 
     [[nodiscard]] std::string mangle_type() const override { return resolved_ty->mangle_type(); };

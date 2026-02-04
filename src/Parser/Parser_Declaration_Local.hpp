@@ -29,7 +29,6 @@ namespace PAR {
         [[nodiscard]] std::unique_ptr<AST::Declaration::Local::CodeBlock> 				code_block_instruction();
         [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Lambda_Capture>          lambda_capture();
         [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>>	parameters();
-        [[nodiscard]] std::shared_ptr<AST::Statement::GoTo_Label>                       goto_label_statement();
 
 
         [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Component> 		component_pattern(ECapability capa, AST::ID &comp_id, std::shared_ptr<AST::AReference> comparison_ref);

@@ -93,7 +93,7 @@ struct Drop : public Node {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "drop"; }
-}
+};
 
 }
 }

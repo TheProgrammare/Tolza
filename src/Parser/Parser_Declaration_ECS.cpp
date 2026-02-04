@@ -100,11 +100,11 @@ std::shared_ptr<AST::Declaration::ECS::Entity> PAR::Parser_Declaration_ECS::enti
 	auto def_entity = ctx.Create_Decl<AST::Declaration::ECS::Entity>(ctx.tok_v.peek());
 
 	// metacode
-	def_entity->isCastable = !ctx.metablock_contains(*def_entity, "nocast");
-	def_entity->isExtCastable = !ctx.metablock_contains(*def_entity, "noextern_cast");
+	def_entity->isCastable = !ctx.metablock_contains(def_entity.get(), "nocast");
+	def_entity->isExtCastable = !ctx.metablock_contains(def_entity.get(), "no_extern_cast");
 
-	def_entity->isMoveable = !ctx.metablock_contains(*def_entity, "nomove");
-	def_entity->isDestructible = !ctx.metablock_contains(*def_entity, "nodestruct");
+	def_entity->isMoveable = !ctx.metablock_contains(def_entity.get(), "no_move");
+	def_entity->isDestructible = !ctx.metablock_contains(def_entity.get(), "no_destruct");
 
 	def_entity->id = ctx.p_ref->identifier(def_entity.get());
 	ctx.m_sym->add_decl(def_entity);
@@ -322,7 +322,7 @@ std::shared_ptr<AST::Declaration::ECS::System> PAR::Parser_Declaration_ECS::syst
 	// not handled if (auto where = ctx.p_meta->metacode_where()) system->generic = where.value();
 
 	system->id = ctx.p_ref->identifier(system.get());
-	system->ty = ctx.p_type->function_proto();
+	system->prototype = ctx.p_type->function_proto();
 	bool isNoCompUsed = true;
 
 	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1141", "Expected start code block '{' after system declaration.", hint);

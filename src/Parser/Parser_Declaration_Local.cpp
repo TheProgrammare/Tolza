@@ -26,7 +26,6 @@ std::shared_ptr<AST::ALocal> PAR::Parser_Declaration_Local::parse_local(bool sil
 	case TokTy::LAMBDA:							return lambda();
 	case TokTy::CAPA_REF:
 	case TokTy::CAPA_MUT:						return capability(); 
-	case TokTy::GOTO_LABEL:						return goto_label_statement();
 	}
 	
 	if (!silent_error) {
@@ -463,12 +462,5 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 	return pat;
 }
 
-std::shared_ptr<AST::Statement::GoTo_Label> PAR::Parser_Declaration_Local::goto_label_statement()
-{
-	ctx.tok_v.match(TokTy::GOTO_LABEL);
- 	auto goto_label =  ctx.Create_Decl<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
-	goto_label->id = ctx.p_ref->identifier(true);
-	ctx.m_sym->add_decl(goto_label);
-	return goto_label;
-}
+
 
