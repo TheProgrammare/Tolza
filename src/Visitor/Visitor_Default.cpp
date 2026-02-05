@@ -16,14 +16,14 @@
 #include "AST/AST_Type.hpp"
 
 
-void Visitor_Default::error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) 
+void Visitor_Default::error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) const
 {
 	auto pos = n._token.span;
-	std::string errStr = Error_Text(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path).print_error();
+	const std::string errStr = Error_Text(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path).print_error();
 	errors.push_back(errStr);
 }
 
-void Visitor_Default::error_two_lines(AST::Node &first, AST::Node &second, const std::string &code, const std::string &msg, const std::string &hint) 
+void Visitor_Default::error_two_lines(AST::Node &first, AST::Node &second, const std::string &code, const std::string &msg, const std::string &hint) const
 {
 	Error_Text first_error(
 		first._token.span.line, 

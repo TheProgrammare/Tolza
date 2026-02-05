@@ -20,8 +20,8 @@ void generate_AST_View(const PipelineScripts *pipe_scripts) {
 		std::ofstream f(path);
 		if (!f) throw std::runtime_error("Impossible to open " + path.string());
 		
-		DOT_Visitor dot(*scrInfo, f);
-		dot.visit(*scrInfo->rootNode);
+		AST_Viewer ast_view(*scrInfo, f);
+		ast_view.visit(*scrInfo->rootNode);
         std::cout << "[debug] [AST]";
         std::cout << color_CYAN " [" << i + 1 << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
 		std::cout << "AST View " color_MAGENTA << path << color_RESET "... " << std::flush;
