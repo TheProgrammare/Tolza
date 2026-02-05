@@ -1,6 +1,6 @@
 <div align = "center">
 
-\- 🇬🇧🇺🇸 ![English](README.md) -
+🇬🇧🇺🇸 ![English](README.md)
 
 ![Velox logo title](logo/velox-logo-title.svg)
 
@@ -12,6 +12,10 @@
 ![Platforme](https://img.shields.io/badge/Platforme_Actuelle-Linux-darkblue)
 
 *Une mémoire explicite, un comportement prévisible.*
+
+🏁 ![Démarrer](doc/getting-started.md) 
+
+🛠️ ![Implémentation Technique](MANIFEST.md)
 
 </div>
 
