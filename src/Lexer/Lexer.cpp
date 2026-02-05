@@ -271,10 +271,11 @@ bool Lexer::tokenize_spec() {
         case ' ':   addToken(TokTy::SPACE); return true;
         case '}': return false;
         default:
-            errors.push_back(make_error_output(stream.get_line(), stream.get_column(), 1, 
+            errors.push_back(Error_Text(stream.get_line(), stream.get_column(), 1, 
                 "", "LEX1005", "Unexpected format specifier character", 
                 "define format specifier like:"
-                "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`", file_path));
+                "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`", file_path)
+                .print_error());
     }
     return false;
 }
@@ -539,7 +540,7 @@ bool Lexer::eat() {
 }
 
 void Lexer::add_error(const std::string& code, const std::string& err, const std::string& hint) {
-    std::string out = make_error_output(stream.get_line(), stream.get_column(), buffer.size(), lines[stream.get_line()], code, err, hint, file_path);
+    std::string out = Error_Text(stream.get_line(), stream.get_column(), buffer.size(), lines[stream.get_line()], code, err, hint, file_path).print_error();
     errors.push_back(out);
 }
 

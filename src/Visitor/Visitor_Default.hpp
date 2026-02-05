@@ -6,6 +6,7 @@ struct Visitor_Default : public Visitor_Base {
 	using Visitor_Base::Visitor_Base;
 
 	void error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) override;
+	void error_two_lines(AST::Node &first, AST::Node &second, const std::string &code, const std::string &msg, const std::string &hint) 
 	
 	// ============ AST ============
 	void visit(AST::Node &n) override;

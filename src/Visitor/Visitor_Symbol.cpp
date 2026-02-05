@@ -77,10 +77,10 @@ void Visitor_Symbol::visit(AST::Literal::Component &n)
 			}
 		}
 		else if (count < n.field_args.size()) {
-			field_arg->
+			field_arg->resolved_symbol = n.field_args[count++];
 		}
 		else {
-			this->error_add(n, "SYM1120", "Too much symbols to resolve ")
+			this->error_add(n, "SYM1120", "Too much symbols to resolve")
 		}
 
 		count++;

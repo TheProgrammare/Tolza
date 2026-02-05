@@ -7,7 +7,18 @@
 
 std::string AST::make_error(const Node &n, const ScriptInfo &script, const std::string &code, const std::string &err, const std::string &hint)
 {
-    return make_error_output(n._token.span.line, n._token.span.col, n._token.span.size, script.src_lines[n._token.span.line - 1], code, err, hint, script.file_path);
+    Error_Text out_error(
+        n._token.span.line,
+        n._token.span.col, 
+        n._token.span.size, 
+        script.src_lines[n._token.span.line - 1],
+        code, 
+        err,
+        hint,
+        script.file_path
+    );
+
+    return out_error.print_error();
 }
 
 EPassMode AST::get_defaultParamPassmode(AST::AType &node)

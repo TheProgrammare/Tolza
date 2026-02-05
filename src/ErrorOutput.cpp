@@ -5,68 +5,60 @@
 
 #include "Globals.hpp"
 
-std::string text_error::print_error() const 
-{
 
+// [file] file:LL:CC
+// [code] | code line
+//        |      ^^^^
+// [error] [AAwxyz] blabla
+// [hint] blabla
+std::string Error_Text::print_error() const
+{
+    return print_source() + print_line() + print_messages();
 }
 
-std::ostringstream text_error::print_line() const 
+std::string Error_Text::print_messages() const 
 {
-    size_t finalCursorSize = cursor_len == 0 ? 1 : cursor_len;
-    // Trim code
-    std::string trimmedLine = lineStr.empty() ? "NO LINE FOUND" : trim(lineStr);
-    size_t trimSize = abs(int(trimmedLine.size() - lineStr.size()));
-
-    std::string line_offset_str = std::string(6 - std::to_string(line).size(), ' ');
-    std::string cursor = std::string(finalCursorSize, '^');
-    size_t cursor_offset = col < cursor_len + trimSize ? 0 : col - (cursor_len + trimSize);
-    std::string cursor_offset_str = std::string(cursor_offset, ' ');
-
-    std::ostringstream out;
-    out <<  line_offset_str << line << " | " color_RED << cursor_offset_str << cursor << color_RESET << "\n";    
-    return out;
-}
-
-std::ostringstream text_error::print_source() const 
-{
-    std::ostringstream out;
-    out << "[file] " << f << ":" << line << ":" << col << "\n" << color_GREEN;                
-    out << "[code] | " << trimmedLine << "\n";                                                           
+    std::string out;
+    if (!msg.empty()) {
+        if (code.substr(3, 1) == "0")    
+            out = "[warning] [" color_MAGENTA + code + color_RESET "] " color_GREEN + msg + color_RESET "\n";
+        else                                
+            out = "[error] [" color_MAGENTA + code + color_RESET "] " color_RED + msg + color_RESET "\n";
+    }
+    if (!hint.empty())                   
+        out += "[hint] " color_CYAN + hint + color_RESET "\n";
     return out; 
 }
 
-
-// errorCode : 'AAAwxyz'
-// AAA = LEX: lexer, PAR: parser, SYM: symbol resolution, TYP: type resolution, SEM: semantic resolution
-// w = 0: warning, 1: error, 2: fatal
-// xy = 0-9 0-9 error type
-// z = 0-9 sub error type
-std::string text_error::print_error()
+std::string Error_Text::print_line() const 
 {
-    //[file] file:LL:CC
-    //[code] | code line
-    //       |      ^^^^
-    //[error] [AAwxyz] blabla
-    //[hint] blabla
-    
-    
-    auto source = print_source();
-    auto line_text = print_line();
+    size_t finalCursorSize = cursor_len == 0 ? 1 : cursor_len;
+    // Trim code
+    std::string trimmedLine = line_str.empty() ? "NO LINE FOUND" : trim(line_str);
+    size_t trimSize = abs(int(trimmedLine.size() - line_str.size()));
 
-    std::ostringstream out;
-   
-    if (!error_msg.empty()) {
-        // Color according type
+    // cursor
+    std::string line_offset_str = std::string(6 - std::to_string(line).size(), ' ');
+    std::string cursor = std::string(finalCursorSize, '^');
+    size_t cursor_offset = column < cursor_len + trimSize ? 0 : column - (cursor_len + trimSize);
+    std::string cursor_offset_str = std::string(cursor_offset, ' ');
 
-        if (error_code.substr(3, 1) == "0")    out << "[warning] ["    color_MAGENTA << error_code << color_RESET "] " color_GREEN    << error_msg << color_RESET "\n";
-        else                                out << "[error] ["      color_MAGENTA << error_code << color_RESET "] " color_RED      << error_msg << color_RESET "\n";
-    }
-    if (!hint_msg.empty())                   out << "[hint] " color_CYAN << hint_msg << color_RESET "\n";
-
-    return out.str();
+    // final
+    return line_offset_str + std::to_string(line) + " | " color_RED + cursor_offset_str + cursor + color_RESET "\n";
 }
 
-inline std::string error_text::escapeChar(unsigned char c) const
+std::string Error_Text::print_source() const 
+{
+    return "[file] " + file + ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" color_RESET;
+}
+
+std::string Error_Text::print_link_error() const
+{
+    return std::string();
+}
+
+
+inline std::string Error_Text::escapeChar(unsigned char c) const
 {
     switch (c) {
         case '\a': return "\\a";
@@ -91,7 +83,7 @@ inline std::string error_text::escapeChar(unsigned char c) const
     }
 }
 
-std::string error_text::trim(const std::string& str) const 
+std::string Error_Text::trim(const std::string& str) const 
 {
     const char* whitespace = " \t\n\r\f\v";
 
@@ -109,30 +101,3 @@ std::string error_text::trim(const std::string& str) const
     return str.substr(start, end - start + 1);
 }
 
-
-std::string error_line(
-    size_t line, 
-    size_t col, 
-    size_t cursor_len, 
-    const std::string& lineStr, 
-    const std::string& errCode, 
-    const std::string& errMsg, 
-    const std::string& hintMsg, 
-    const std::string& f) 
-{
-     size_t finalCursorSize = cursor_len == 0 ? 1 : cursor_len;
-    // Trim code
-    std::string trimmedLine = lineStr.empty() ? "NO LINE FOUND" : trim(lineStr);
-    size_t trimSize = abs(int(trimmedLine.size() - lineStr.size()));
-
-    std::string line_offset_str = std::string(6 - std::to_string(line).size(), ' ');
-    std::string cursor = std::string(finalCursorSize, '^');
-    size_t cursor_offset = col < cursor_len + trimSize ? 0 : col - (cursor_len + trimSize);
-    std::string cursor_offset_str = std::string(cursor_offset, ' ');
-
-
-    std::ostringstream headMsg;
-    headMsg << "[file] " << f << ":" << line << ":" << col << "\n" << color_GREEN;                
-    headMsg << "[code] | " << trimmedLine << "\n";                                                           
-    headMsg <<  line_offset_str << line << " | " color_RED << cursor_offset_str << cursor << color_RESET << "\n";
-}

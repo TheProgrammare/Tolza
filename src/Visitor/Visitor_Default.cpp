@@ -2,6 +2,7 @@
 
 #include "ErrorOutput.hpp"
 #include "ScriptInfo.hpp"
+#include "Globals.hpp"
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Declaration.hpp"
@@ -15,13 +16,40 @@
 #include "AST/AST_Type.hpp"
 
 
-void Visitor_Default::error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) {
+void Visitor_Default::error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) 
+{
 	auto pos = n._token.span;
-	std::string errStr = make_error_output(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path);
+	std::string errStr = Error_Text(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path).print_error();
 	errors.push_back(errStr);
 }
 
+void Visitor_Default::error_two_lines(AST::Node &first, AST::Node &second, const std::string &code, const std::string &msg, const std::string &hint) 
+{
+	Error_Text first_error(
+		first._token.span.line, 
+		first._token.span.col,
+		first._token.span.size,
+		scrInfo.src_lines[first._token.span.line - 1],
+		code,
+		msg,
+		hint);
+	Error_Text second_error(
+		second._token.span.line, 
+		second._token.span.col,
+		second._token.span.size,
+		scrInfo.src_lines[second._token.span.line - 1],
+		code,
+		msg,
+		hint);
+	
+	std::string out = "[from file] " color_MAGENTA + first.print_source() + color_RESET "\n";
+	out += first_error.print_line() + color_RESET "\n";
+	out +="[to file]   " color_MAGENTA + second.print_source() + color_RESET "\n";
+	out += second_error.print_line() + color_RESET "\n";
 
+	out += first_error.print_messages();
+	return out;
+}
 
 // ============ AST ============
 void Visitor_Default::visit(AST::Node &n)

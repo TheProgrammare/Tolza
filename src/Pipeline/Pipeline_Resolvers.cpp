@@ -40,7 +40,7 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
 			std::vector<std::string> errs;
 			// symbols
 			if (k == 0) {
-				Visitor_Symbol sym(*scrInfo);
+				Visitor_Symbol sym(&scrInfo);
 				scrInfo->rootNode->accept(sym);
 				errs = scrInfo->m_sym->decl_errors;
 				errs.insert(errs.begin(), sym.errors.begin(), sym.errors.end());

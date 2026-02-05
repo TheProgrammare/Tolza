@@ -184,13 +184,13 @@ void TokenViewer::rewind(size_t pos) {
 }
 
 void TokenViewer::add_error(const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-    errors.push_back(make_error_output(peek().span.line, peek().span.col, peek().span.size, lines[peek().span.line - 1], errCode, errMsg, hintMsg, file));
+    errors.push_back(Error_Text(peek().span.line, peek().span.col, peek().span.size, lines[peek().span.line - 1], errCode, errMsg, hintMsg, file).print_error());
     
     throw std::runtime_error("");
 }
 
 void TokenViewer::add_error_tok(const Token& tok, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-    errors.push_back(make_error_output(tok.span.line, peek().span.col, tok.span.size, lines[tok.span.line - 1], errCode, errMsg, hintMsg, file));
+    errors.push_back(Error_Text(tok.span.line, peek().span.col, tok.span.size, lines[tok.span.line - 1], errCode, errMsg, hintMsg, file).print_error());
    
     throw std::runtime_error("");
 }

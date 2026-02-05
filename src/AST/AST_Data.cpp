@@ -119,7 +119,7 @@ ECapability deduce_type_ECapability(bool is_complex, bool is_mut)
 {
 	if (is_mut) return ECapability::Mut;
 	if (is_complex) return ECapability::Move;
-	if (!is_complex) return ECapability::Copy;
+	return ECapability::Copy;
 }
 
 EUnaryOpType TokTy_to_EUnaryOpType(TokTy tok)

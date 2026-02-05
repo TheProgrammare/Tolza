@@ -2,19 +2,39 @@
 
 #include <string>
 
-struct error_text {
+namespace AST {
+	struct Node;
+}
+
+struct Error_Text {
 	size_t line;
-	size_t col;
+	size_t column;
 	size_t cursor_len; 
 	std::string line_str; 
-	std::string error_code; 
-	std::string error_msg;
-	std::string hint_msg; 
+	std::string code; 
+	std::string msg;
+	std::string hint; 
 	std::string file;
 
-	std::string print_error() const;
-	std::ostringstream print_line() const;
-	std::ostringstream print_source() const: 
+	Error_Text(size_t _line, size_t _column, size_t _cursor_len, 
+    const std::string &_line_str, 
+    const std::string &_code, 
+    const std::string &_msg, 
+    const std::string &_hint, 
+    const std::string &_file) :
+		line(_line), column(_column), cursor_len(_cursor_len),
+		line_str(_line_str),
+		code(_code),
+		msg(_msg),
+		hint(_hint),
+		file(_file) {};
+
+
+	[[nodiscard]] std::string print_error() const;
+	[[nodiscard]] std::string print_line() const;
+	[[nodiscard]] std::string print_source() const;
+	[[nodiscard]] std::string print_link_error() const;
+	[[nodiscard]] std::string print_messages() const;
 
 private:
 	std::string trim(const std::string& str) const;
