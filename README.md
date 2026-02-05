@@ -1,6 +1,6 @@
 <div align = "center">
 
-\- 🇫🇷🏴󠁣󠁡󠁱󠁣󠁿 ![Français](README_FR.md) -
+🇫🇷 ![Français](README_FR.md)
 
 ![Velox logo title](logo/velox-logo-title.svg)
 
@@ -12,6 +12,10 @@
 ![Platform](https://img.shields.io/badge/Current_Platform-Linux-darkblue)
 
 *Memory explicit, behavior predictable.*
+
+🏁 ![Getting Started](doc/getting-started.md) 
+
+🛠️ ![Technical Implementation](MANIFEST.md)
 
 </div>
 
