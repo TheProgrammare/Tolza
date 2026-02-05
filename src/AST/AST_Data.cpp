@@ -2,8 +2,8 @@
 
 #include <system_error>
 
-#include "Globals.hpp"
-#include "Lexer/Token.hpp"
+#include "../Globals.hpp"
+#include "../Lexer/Token.hpp"
 
 EBinOpType TokTy_to_EBinOpType(TokTy tok)
 {

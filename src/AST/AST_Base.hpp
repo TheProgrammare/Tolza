@@ -25,8 +25,8 @@
 
 #include "AST_Data.hpp"
 #include "AST_Forward.hpp"
-#include "Lexer/Token.hpp"
-#include "Visitor/Visitor_Base.hpp"
+#include "../Lexer/Token.hpp"
+#include "../Visitor/Visitor_Base.hpp"
 
 struct ScriptInfo;
 

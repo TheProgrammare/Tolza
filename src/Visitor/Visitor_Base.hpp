@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-#include "AST/AST_Forward.hpp"
+#include "../AST/AST_Forward.hpp"
 
 struct ScriptInfo;
 
@@ -33,7 +33,12 @@ struct Visitor_Base {
 
 	std::vector<std::string> errors;
 
-	virtual void error_add(AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) {};
+	virtual void error_add(const AST::Node& n, 
+		const std::string& errCode, const std::string& err, const std::string& hint) {};
+	virtual void error_two_lines(
+		const AST::Node &first, const std::string &first_f, 
+		const AST::Node &second, const std::string &second_f, 
+		const std::string &code, const std::string &msg, const std::string &hint) {};
 
 	// ============ AST ============
 	virtual void visit(AST::Node &n) = 0;
