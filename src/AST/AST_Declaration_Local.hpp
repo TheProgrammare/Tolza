@@ -122,6 +122,7 @@ struct Variable_Unpack : public ALocal {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override;
+    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
 };
 
 
@@ -136,6 +137,7 @@ struct Lambda : public ALocal, ICallable {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "lam[" + id.debug_str() + "]"; };
     Type::Function_Proto* get_signature() override { return prototype.get(); };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Lambda; };
 };
 
 
@@ -164,6 +166,7 @@ struct Variable : public ALocal {
         out += "[" + id.debug_str() + "]";
         return out;
     }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
 };
 
 struct Capability : public ALocal {
@@ -178,6 +181,7 @@ struct Capability : public ALocal {
         std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
         return str_kind + name;
     }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
 };
 
 

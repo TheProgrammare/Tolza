@@ -42,24 +42,7 @@ PAR::Parser_Context::~Parser_Context() {
 	delete p_base; 		p_base 		= nullptr;
 }
 
-template <DerivedFromNode NodeType>
-inline std::unique_ptr<NodeType> PAR::Parser_Context::Create_Node(Token _token)
-{
-	NodeType* node = new NodeType;
-	node->_token = _token;
-	node->_scope = m_sym->get_current_path();
-	node_count++;
-	return std::unique_ptr<NodeType>(node);
-}
-template <DerivedFromDecl NodeType>
-std::shared_ptr<NodeType> PAR::Parser_Context::Create_Decl(Token _token)
-{
-	NodeType* node = new NodeType;
-	node->_token = _token;
-	node->_scope = m_sym->get_current_path();
-	node_count++;
-	return std::shared_ptr<NodeType>(node);
-};
+
 
 bool PAR::is_gen_args(TokenViewer& tok_v) {
 	size_t originPos = tok_v.position();

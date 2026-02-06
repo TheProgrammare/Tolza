@@ -32,6 +32,8 @@ struct Component : public ADeclaration, AType {
 
     [[nodiscard]] std::string mangle_type() const override { return "comp"; }
     [[nodiscard]] std::string debug_str() const override { return "<ty> comp[" + id.debug_str() + "]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
@@ -40,8 +42,9 @@ struct Role : public ADeclaration, AType {
     std::vector<std::unique_ptr<AReference>> components;
 
     [[nodiscard]] std::string mangle_type() const override { return "rl"; }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<ty> role[" + id.debug_str() + "]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Role; }
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Entity;
@@ -106,7 +109,6 @@ struct Entity : public ADeclaration, AType {
     // faire une injection de nomenclature
     [[nodiscard]] std::string mangle_type() const override { return "et"; }
     [[nodiscard]] std::string debug_str() const override { return "<ty> entity[" + id.debug_str() + "]"; }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     bool contains_op(EBinOpType op, const AType* return_ty) const {
         for (auto& elem : operators) {
             if (elem->operatorType == op) {
@@ -119,7 +121,7 @@ struct Entity : public ADeclaration, AType {
         // difficult resolution:
         // entity have 2 cast way: cast self as T / cast T as self
         // generic have 2 cast way check: T cast to U / T cast from U
-
+        
         if (isCastFrom) {
             for (auto& elem : casts) {
                 if (!elem->isSourceSelf) {
@@ -145,6 +147,8 @@ struct Entity : public ADeclaration, AType {
         }
         return false;
     }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Entity; }
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct System_Case : public ADeclaration {

@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "Visitor/Symbol_Manager.hpp"
+
 #include "Lexer/Token.hpp"
 #include "Lexer/TokenViewer.hpp"
 
@@ -76,10 +78,24 @@ namespace PAR {
 
 
 		// to create node, set some data, store in resolvers
-		template<DerivedFromNode NodeType>
-		[[nodiscard]] std::unique_ptr<NodeType>						Create_Node(Token _token);
-		template<DerivedFromDecl NodeType>
-		[[nodiscard]] std::shared_ptr<NodeType>						Create_Decl(Token _token);
+		template <DerivedFromNode NodeType>
+		inline std::unique_ptr<NodeType> Create_Node(Token _token)
+		{
+			NodeType node;
+			node._token = _token;
+			node._scope = m_sym->get_current_path();
+			node_count++;
+			return std::unique_ptr<NodeType>(node);
+		}
+		template <DerivedFromDecl NodeType>
+		inline std::shared_ptr<NodeType> Create_Decl(Token _token)
+		{
+			NodeType node;
+			node._token = _token;
+			node._scope = m_sym->get_current_path();
+			node_count++;
+			return std::unique_ptr<NodeType>(node);
+		};
 
 		// MetaBlockManager shortcut for ASTNode  
 		[[nodiscard]] bool 											metablock_contains(const AST::Node &n, const std::string &s) const;

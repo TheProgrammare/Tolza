@@ -1,7 +1,7 @@
 #include "AST_Base.hpp"
 
-#include "../ScriptInfo.hpp"
-#include "../ErrorOutput.hpp"
+#include "ScriptInfo.hpp"
+#include "ErrorOutput.hpp"
 
 #include "AST_Type.hpp"
 

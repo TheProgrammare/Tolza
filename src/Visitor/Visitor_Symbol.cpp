@@ -90,7 +90,7 @@ void Visitor_Symbol::visit(AST::Literal::Component &n)
 void Visitor_Symbol::visit(AST::Declaration::ECS::Entity &n)
 {
 	current_entity = &n;
-    Visitor_Default::visit(n);
+  Visitor_Default::visit(n);
 	current_entity = nullptr;
 }
 

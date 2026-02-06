@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-#include "../AST/AST_Forward.hpp"
+#include "AST/AST_Forward.hpp"
 
 struct ScriptInfo;
 

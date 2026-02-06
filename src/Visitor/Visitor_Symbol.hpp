@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <memory>
@@ -33,8 +32,8 @@ struct Visitor_Symbol : public Visitor_Default {
 //	void visit(AST::ADeclaration &n) override;			
 //	void visit(AST::ALocal&n) override;			
 	void visit(AST::AReference &n) override;				
-	void visit(AST::Identifier_Reference &n) override;			
-	void visit(AST::Type_Reference &n) override;			
+//	void visit(AST::Type_Reference &n) override;			
+//	void visit(AST::Identifier_Reference &n) override;			
 //	void visit(AST::Type_Arguments &n) override;			
 //
 //	void visit(AST::Root &n) override;
@@ -62,7 +61,7 @@ struct Visitor_Symbol : public Visitor_Default {
 //
 //	void visit(AST::Declaration::Local::Lambda &n) override;
 //	void visit(AST::Declaration::Local::Lambda_Capture &n) override;			
-	void visit(AST::Declaration::Local::Capture_Member &n) override;		
+//	void visit(AST::Declaration::Local::Capture_Member &n) override;		
 //
 //	void visit(AST::Declaration::Local::Parameter &n) override;				
 //	void visit(AST::Declaration::Local::Generic_Parameter &n) override;
@@ -86,9 +85,9 @@ struct Visitor_Symbol : public Visitor_Default {
 //	void visit(AST::Declaration::ECS::Role &n) override;				
 //
 	void visit(AST::Declaration::ECS::Entity &n) override;				
-	void visit(AST::Declaration::ECS::Entity_Cast &n) override;			
-	void visit(AST::Declaration::ECS::Entity_Op &n) override;			
-	void visit(AST::Declaration::ECS::Entity_OpIndex &n) override;		
+//	void visit(AST::Declaration::ECS::Entity_Cast &n) override;			
+//	void visit(AST::Declaration::ECS::Entity_Op &n) override;			
+//	void visit(AST::Declaration::ECS::Entity_OpIndex &n) override;		
 //	
 //	void visit(AST::Declaration::ECS::System &n) override;				
 //	void visit(AST::Declaration::ECS::System_Case &n) override;	
@@ -135,7 +134,7 @@ struct Visitor_Symbol : public Visitor_Default {
 //	void visit(AST::Literal::Range &n) override;
 //
 	void visit(AST::Literal::Component &n) override;
-	void visit(AST::Literal::Entity &n) override;
+//	  void visit(AST::Literal::Entity &n) override;
 //
 //	// ============ REFERENCE ============
 //	void visit(AST::Reference::Enum &n) override;

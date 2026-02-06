@@ -25,8 +25,8 @@
 
 #include "AST_Data.hpp"
 #include "AST_Forward.hpp"
-#include "../Lexer/Token.hpp"
-#include "../Visitor/Visitor_Base.hpp"
+#include "Lexer/Token.hpp"
+#include "Visitor/Visitor_Base.hpp"
 
 struct ScriptInfo;
 
@@ -82,8 +82,6 @@ inline EPassMode get_defaultParamPassmode(AST::AType &node);
 // for every node who contains a value coded
 struct ALiteral : virtual AType {
     virtual ~ALiteral() = default;
-
-    [[nodiscard]] EPrimType get_type() const override = 0;
 };
 
 
