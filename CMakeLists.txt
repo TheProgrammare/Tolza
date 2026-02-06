@@ -61,7 +61,7 @@ target_link_libraries(velox
 )
 
 # ----------------------------
-# Warnings (disabled)
+# Warnings (disabled by default)
 # ----------------------------
 if (MSVC)
     target_compile_options(velox PRIVATE /w)
