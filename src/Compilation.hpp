@@ -45,6 +45,8 @@ struct CompCtx {
     std::string output = PROJECT_DIR + "/a.out";
     bool LLVM_info_debug = true;
     EEmitMode emit_mode = EEmitMode::OBJ;
+    std::string src_file = PROJECT_DIR;
+    std::string dest_file = PROJECT_DIR;
 };
 
 inline CompCtx COMP_CTX;

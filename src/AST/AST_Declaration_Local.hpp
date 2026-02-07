@@ -29,11 +29,12 @@ struct CodeBlock : public Node {
 // e.g. sys name() { Component(c) => ... }
 struct Variable_Binding : public ALocal {
     std::string name;
-    ECapability capability = ECapability::None;
+    ECapability capability = ECapability::NONE;
     std::shared_ptr<AType> resolved_ty;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "bind[" + name + "]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Bind; };
 };
 
 struct Pattern_Element {
@@ -85,7 +86,7 @@ struct Pattern_Tuple : public Pattern {
     std::shared_ptr<AReference> tuple_reference;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "tuple pattern["  "]"; }
+    [[nodiscard]] std::string debug_str() const override { return "tuple pattern"; }
 };
 
 // e.g. [if/while] let Player{ CId.name: name, CId.id: 10 } 
@@ -97,9 +98,8 @@ struct Pattern_Entity : public Pattern {
     std::vector<std::tuple<ID, std::string, Pattern_Element>> mapping;
     std::shared_ptr<AReference> entity_reference;
 
-
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "entity pattern["  "]"; }
+    [[nodiscard]] std::string debug_str() const override { return "entity pattern"; }
 };
 
 // e.g. [if/while] let CId{ name: name, id: 10 } 
@@ -109,6 +109,9 @@ struct Pattern_Component : public Pattern {
     // field_name, pattern_element
     std::vector<std::tuple<std::string, Pattern_Element>> mapping;
     std::shared_ptr<AReference> component_reference;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    [[nodiscard]] std::string debug_str() const override { return "component pattern"; }
 };
 
 // var (a, b, _, d) = call();
@@ -122,7 +125,7 @@ struct Variable_Unpack : public ALocal {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override;
-    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
 
 
@@ -137,7 +140,7 @@ struct Lambda : public ALocal, ICallable {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "lam[" + id.debug_str() + "]"; };
     Type::Function_Proto* get_signature() override { return prototype.get(); };
-    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Lambda; };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Lambda; };
 };
 
 
@@ -162,11 +165,12 @@ struct Variable : public ALocal {
             case EVariableKind::Const: out += "const"; break; 
             case EVariableKind::Let: out += "let"; break;
             case EVariableKind::Var: out += "var"; break;
+            case EVariableKind::NONE: return "NO VAR KIND";
         }
         out += "[" + id.debug_str() + "]";
         return out;
     }
-    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
 
 struct Capability : public ALocal {
@@ -174,14 +178,14 @@ struct Capability : public ALocal {
 
     std::shared_ptr<AReference> reference;
 
-    ECapability kind = ECapability::None;
+    ECapability kind = ECapability::NONE;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { 
         std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
         return str_kind + name;
     }
-    [[nodiscard]] ESymbolType get_symbol_type() const override { ESymbolType::Local; };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
 
 
@@ -193,6 +197,7 @@ struct Capture_Member : public AReference {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "capture " + id.debug_str(); }
+    [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
 };
 
 struct Lambda_Capture : public Node {

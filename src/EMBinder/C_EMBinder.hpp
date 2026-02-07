@@ -31,6 +31,7 @@
 enum class EExternItem;
 
 enum class EVeloxParamPassMode {
+    NONE,
     copy, ref, mut, move, addr,
 };
 
@@ -53,13 +54,6 @@ struct CVeloxFlag;
 
 struct CVeloxType {
     CVeloxType() = default;
-
-    // Copie et déplacement
-    CVeloxType(const CVeloxType&) = default;
-    CVeloxType(CVeloxType&&) = default;
-
-    CVeloxType& operator=(const CVeloxType&) = default;
-    CVeloxType& operator=(CVeloxType&&) = default;
 
     EVeloxTypeFromC val_type = EVeloxTypeFromC::INVALID;
 

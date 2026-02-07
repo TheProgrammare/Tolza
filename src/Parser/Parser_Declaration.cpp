@@ -39,7 +39,10 @@ std::shared_ptr<AST::ADeclaration> PAR::Parser_Declaration::parse_declaration()
 	case TokTy::SYSTEM:			return ctx.p_ecs->system();
 	case TokTy::ENTITY:			return ctx.p_ecs->entity();
 	case TokTy::EXPORT:			return ctx.p_base->parse_export();
-	case TokTy::IMPORT:			ctx.p_base->parse_import(); return nullptr;
+	case TokTy::IMPORT: {
+		auto ignore = ctx.p_base->parse_import(); 
+		return nullptr;
+	}
 	default:
 		break;
 	}
@@ -160,7 +163,7 @@ std::shared_ptr<AST::Declaration::Global> PAR::Parser_Declaration::global_variab
 	Token assign_tok = ctx.tok_v.next();
 	var->assignment = TokTy_to_EAssignmentType(assign_tok.ty);
 
-	if (var->assignment == EAssignmentType::None && isAutoTy) 
+	if (var->assignment == EAssignmentType::NONE && isAutoTy) 
 		ctx.tok_v.add_error("PAR1161",
 		"Expected assignation '=' in auto inferred variable type.",
 		"define auto inferred variable like `let myName = expression;`");
@@ -198,13 +201,11 @@ std::shared_ptr<AST::Declaration::Function> PAR::Parser_Declaration::function() 
 	ctx.m_sym->add_decl(fn);
 	ctx.m_sym->enter_scope(fn->id.name, EScopeType::Function);
 
-	fn->prototype = ctx.p_type->function_proto(false);
+	fn->prototype = ctx.p_type->explicit_function_proto(false);
 
 	// if extern : no definition
 	if (fn->isExtern && ctx.tok_v.check(TokTy::OPEN_BRACE))
 		ctx.tok_v.add_error("PAR1362", "Unexpected start code block '{' after a extern function declaration", hint);
-	else if (!fn->isExtern) ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1361", "Expected start code block '{' after function definition.", hint);
-
 
 	if (!fn->isExtern) fn->codeblock = ctx.p_loc->code_block_instruction();
 

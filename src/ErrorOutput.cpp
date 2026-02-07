@@ -44,7 +44,9 @@ std::string Error_Text::print_line() const
     std::string cursor_offset_str = std::string(cursor_offset, ' ');
 
     // final
-    return line_offset_str + std::to_string(line) + " | " color_RED + cursor_offset_str + cursor + color_RESET "\n";
+    return
+        line_offset_str + std::to_string(line) + " | " + trimmedLine + "\n"
+        "       | " color_RED + cursor_offset_str + cursor + color_RESET "\n";
 }
 
 std::string Error_Text::print_source() const 

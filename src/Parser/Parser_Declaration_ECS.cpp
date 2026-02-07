@@ -33,7 +33,7 @@ std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::c
 	if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
 
 	while (!ctx.tok_v.is_end()) {
-		auto field = ctx.Create_Node<AST::Declaration::ECS::Component_Field>(ctx.tok_v.peek());
+		auto field = ctx.Create_Decl<AST::Declaration::ECS::Component_Field>(ctx.tok_v.peek());
 		field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
 
 		field->id = ctx.p_ref->identifier(field.get(), true);
@@ -41,13 +41,15 @@ std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::c
 
 		field->ty = ctx.p_type->parse_type();
 
+		ctx.m_sym->add_decl(field);
+
 		if (!field->isNoDefault) {
 			ctx.tok_v.expect(TokTy::ASSIGN, "PAR1405", "Expected default value assignation '=' after field declaration", hint);
 
 			field->default_value = ctx.p_expr->parse_expression();
 		}
 
-		comp->fields.push_back(std::move(field));
+		comp->fields.push_back(field);
 
 		if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
 	}
@@ -156,7 +158,7 @@ void PAR::Parser_Declaration_ECS::parse_entity_declaration(std::shared_ptr<AST::
 	}
 	else if (ctx.tok_v.match(TokTy::NEW)) {
 		ctx.m_sym->enter_scope("new", EScopeType::Entity_New);
-		auto new_fn_ty = ctx.p_type->function_proto();
+		auto new_fn_ty = ctx.p_type->explicit_function_proto();
 		ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1452", "Expected start code '{'.", new_hint);
 		
 		auto cb = ctx.p_loc->code_block_instruction();
@@ -322,7 +324,7 @@ std::shared_ptr<AST::Declaration::ECS::System> PAR::Parser_Declaration_ECS::syst
 	// not handled if (auto where = ctx.p_meta->metacode_where()) system->generic = where.value();
 
 	system->id = ctx.p_ref->identifier(system.get());
-	system->prototype = ctx.p_type->function_proto();
+	system->prototype = ctx.p_type->explicit_function_proto();
 	bool isNoCompUsed = true;
 
 	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1141", "Expected start code block '{' after system declaration.", hint);

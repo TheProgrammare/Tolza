@@ -26,7 +26,7 @@ struct Symbol_Manager;
 template <typename NodeType>
 concept DerivedFromNode = 
 	std::is_base_of_v<AST::Node, NodeType>
- 	&& !std::is_same_v<AST::ADeclaration, NodeType>;
+ 	&& !std::is_base_of_v<AST::ADeclaration, NodeType>;
 
 template <typename NodeType>
 concept DerivedFromDecl = 
@@ -78,23 +78,26 @@ namespace PAR {
 
 
 		// to create node, set some data, store in resolvers
-		template <DerivedFromNode NodeType>
-		inline std::unique_ptr<NodeType> Create_Node(Token _token)
+		template <DerivedFromNode NodeType, typename... Args>
+		inline std::unique_ptr<NodeType> Create_Node(Token token, Args&&... args)
 		{
-			NodeType node;
-			node._token = _token;
-			node._scope = m_sym->get_current_path();
+			static_assert(!std::is_abstract_v<NodeType>,
+        		"Create_Node cannot instantiate abstract AST nodes");
+				
+			auto node = std::make_unique<NodeType>(std::forward<Args>(args)...);
+			node->_token = token;
+			node->_scope = m_sym->get_current_path();
 			node_count++;
-			return std::unique_ptr<NodeType>(node);
+			return node;
 		}
-		template <DerivedFromDecl NodeType>
-		inline std::shared_ptr<NodeType> Create_Decl(Token _token)
+		template <DerivedFromDecl NodeType, typename... Args>
+		inline std::shared_ptr<NodeType> Create_Decl(Token token, Args&&... args)
 		{
-			NodeType node;
-			node._token = _token;
-			node._scope = m_sym->get_current_path();
+			auto node = std::make_shared<NodeType>(std::forward<Args>(args)...);
+			node->_token = token;
+			node->_scope = m_sym->get_current_path();
 			node_count++;
-			return std::unique_ptr<NodeType>(node);
+			return node;
 		};
 
 		// MetaBlockManager shortcut for ASTNode  

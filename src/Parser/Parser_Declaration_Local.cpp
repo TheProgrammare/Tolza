@@ -1,6 +1,7 @@
 #include "Parser_Declaration_Local.hpp"
 
 #include "AST/AST_Base.hpp"
+#include "AST/AST_CodeBlock_Instruction.hpp"
 #include "Parser_Base.hpp"
 #include "Parser_Type.hpp"
 #include "Parser_Reference.hpp"
@@ -26,6 +27,7 @@ std::shared_ptr<AST::ALocal> PAR::Parser_Declaration_Local::parse_local(bool sil
 	case TokTy::LAMBDA:							return lambda();
 	case TokTy::CAPA_REF:
 	case TokTy::CAPA_MUT:						return capability(); 
+	default: break;
 	}
 	
 	if (!silent_error) {
@@ -93,6 +95,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern> PAR::Parser_Declaration_Local:
 	ctx.tok_v.add_error("PAR1178",
 		"Expected pattern.",
 		"define auto inferred variable like `let myName = expression;`");
+	return nullptr;
 }
 
 std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local::variable() {
@@ -118,7 +121,7 @@ std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local
 	Token assign_tok = ctx.tok_v.next();
 	var->assignment = TokTy_to_EAssignmentType(assign_tok.ty);
 
-	if (var->assignment == EAssignmentType::None && isAutoTy) 
+	if (var->assignment == EAssignmentType::NONE && isAutoTy) 
 		ctx.tok_v.add_error("PAR1171",
 			"Expected assignation '=' in auto inferred variable type.",
 			"define auto inferred variable like `let myName = expression;`");
@@ -139,7 +142,7 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
 		"\n  - with ignored values `var (a, _, c) = myFunction()`";
 
 	const auto varKind = ctx.tok_v.next().ty;
-	auto unpack = ctx.Create_Node<AST::Declaration::Local::Variable_Unpack>(ctx.tok_v.peek());
+	auto unpack = ctx.Create_Decl<AST::Declaration::Local::Variable_Unpack>(ctx.tok_v.peek());
 	unpack->kind = TokTy_to_EVariableKind(ctx.tok_v.next().ty);
 
 	unpack->isStatic = ctx.metablock_contains(*unpack, "static");
@@ -160,7 +163,7 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
 
 	unpack->reference = ctx.p_ref->parse_reference();
 
-	return std::shared_ptr<AST::Declaration::Local::Variable_Unpack>(unpack.release());
+	return unpack;
 }
 
 std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration_Local::lambda_capture() {
@@ -225,7 +228,7 @@ std::shared_ptr<AST::Declaration::Local::Lambda> PAR::Parser_Declaration_Local::
 	if (ctx.tok_v.match(TokTy::OPEN_SQUARE))
 		lam->capture = lambda_capture();
 
-	lam->prototype = ctx.p_type->function_proto(true);
+	lam->prototype = ctx.p_type->explicit_function_proto(true);
 	lam->codeblock = ctx.p_loc->code_block_instruction();
 
 	ctx.m_sym->exit_scope();
@@ -262,7 +265,8 @@ std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Loca
 	auto cb = ctx.Create_Node<AST::Declaration::Local::CodeBlock>(ctx.tok_v.peek(-1));
 	
 	while (!ctx.tok_v.is_end()) {
-		cb->elements.push_back(ctx.p_base->parse_instruction());
+		if (auto instruction = ctx.p_base->parse_instruction())
+			cb->elements.push_back(std::move(instruction.value()));
 
 		// one instruction
 		if (inline_code) break;
@@ -336,7 +340,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Entity> PAR::Parser_Declaration
 {
 	static const std::string hint = 
 		"define entity mapping like:"
-		"\n  - component general mapping `[ref/mut] MyEntity::{CComponent{field1: [ref/mut/copy/clone] a, field2: 10}}`";
+		"\n  - component general mapping `[ref/mut] MyEntity::{CComponent{field1: [ref/mut/copy/clone] a, field2: 10}}`"
 		"\n  - component field mapping `[ref/mut] MyEntity::{CComponent.field1: [ref/mut/copy/clone] a, CComponent.field2: 10}`";
 
 	auto entity_pat = ctx.Create_Node<AST::Declaration::Local::Pattern_Entity>(ctx.tok_v.peek());
@@ -441,7 +445,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 		ctx.tok_v.add_error("PAR1206", "Unexpected end of binding on enum types ')'. A enum pattern on condition must have at least one binding. Else, use a check indexation.", hint);
 
 	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().ty);
-	if (pass_mode != EExprPassMode::None) ctx.tok_v.next();
+	if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
 	while (!ctx.tok_v.is_end()) {
 		pat->mapping.push_back(pattern_mapping(capa));

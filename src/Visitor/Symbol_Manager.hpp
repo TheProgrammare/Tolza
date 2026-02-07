@@ -55,6 +55,6 @@ struct Symbols_Manager {
 	void exit_scope();
 	[[nodiscard]] std::vector<std::string> get_current_path() const;
 
-	[[nodiscrad]] std::optional<std::shared_ptr<AST::ADeclaration>> find_symbol(const std::string &full_name);
+	[[nodiscard]] std::optional<std::shared_ptr<AST::ADeclaration>> find_symbol(const std::string &full_name);
 
 };

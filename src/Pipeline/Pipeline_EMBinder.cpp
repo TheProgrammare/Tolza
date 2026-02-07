@@ -32,14 +32,14 @@ bool generate_script(
 	if (!f) throw std::runtime_error("Impossible to open \"" + bind_info->file_path + "\"");
 	f.clear();
 
-	std::string _lang = lang + std::string(abs(double(29 - lang.size())), ' '); 
-	std::string _lib = lib + std::string(abs(double(29 - lib.size())), ' '); 
+	std::string _lang = lang + std::string(labs(static_cast<long>(29 - lang.size())), ' '); 
+	std::string _lib = lib + std::string(labs(static_cast<long>(29 - lib.size())), ' '); 
 	std::string header = EMBINDER_FILE_HEADER;
 	fmt_template(header, { _lang, _lib, lang });
 	f << header << std::flush;
 
 	EMBinder_LibC bind(lang, lib, f, items_to_generate);
-	bind.c_lib_to_velox_lib();
+	auto ignore = bind.c_lib_to_velox_lib();
 
 	// end of export lang
 	f << "\n}" << std::endl;

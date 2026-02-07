@@ -31,7 +31,7 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
 
 		size_t count = 0;
 		for (auto scrInfo : pipe_scripts->scripts_infos) {
-            std::cout << "[resolve]";   
+            std::cout << "[resolver]";   
             std::cout << color_CYAN " [" << ++count << "/3] " color_RESET;
             std::cout << color_CYAN " [" << count << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
 			std::cout << name << " for " color_MAGENTA << scrInfo->file_path << color_RESET "... " << std::flush;

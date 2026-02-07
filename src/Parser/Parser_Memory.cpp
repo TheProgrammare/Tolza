@@ -12,8 +12,28 @@
 #include "AST/AST_Type.hpp"
 #include "AST/AST_Operation.hpp"
 
+std::optional<std::unique_ptr<AST::Node>> PAR::Parser_Memory::try_memory(bool is_silent_error) 
+{
+	switch (ctx.tok_v.peek().ty) {
+		case TokTy::TILDE:						return getbits();
+		case TokTy::NEW:						return _new();
+		case TokTy::DEL:						return del();
+		case TokTy::CAPA_MOVE:					return move();
+		case TokTy::VAL_OF:						return val_of_ptr();
+		case TokTy::ADDR_OF:					return addr_of_ref();
+		case TokTy::DROP:						return drop();
+		default:	break;
+	}
 
-std::unique_ptr<AST::Memory::GetBits> PAR::Parser_Memory::getbits() {
+	if (!is_silent_error) {
+		ctx.tok_v.add_error("PAR1545", "Expected literal value", "");
+	}
+
+	return std::nullopt;
+}
+
+std::unique_ptr<AST::Memory::GetBits> PAR::Parser_Memory::getbits() 
+{
 	static const std::string hint = "define get bit like: `target~[0..8]` get first octect on target.";
 
 	ctx.tok_v.match(TokTy::TILDE);
@@ -27,7 +47,8 @@ std::unique_ptr<AST::Memory::GetBits> PAR::Parser_Memory::getbits() {
 	return get_bit;
 }
 
-std::unique_ptr<AST::Memory::New> PAR::Parser_Memory::_new() {
+std::unique_ptr<AST::Memory::New> PAR::Parser_Memory::_new() 
+{
 	static const std::string hint =
 		"define a dynamic memory allocation:"
 		"\n  - primitive `var myPtr = new ptr'i32(10)`"
@@ -47,23 +68,25 @@ std::unique_ptr<AST::Memory::New> PAR::Parser_Memory::_new() {
 	
 	ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1067", "Expected start value '(' after type", hint);
 	node->expression = ctx.p_expr->parse_expression();
-	ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1067", "Expected end value ')'", hint);
+	ctx.tok_v.expect(TokTy::CLOSE_PAREN, "PAR1068", "Expected end value ')'", hint);
 
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Size> PAR::Parser_Memory::size() {
+std::unique_ptr<AST::Memory::Size> PAR::Parser_Memory::size() 
+{
 	static const std::string hint = "define value memory size like: `mem::size(a)`";
 	auto node = ctx.Create_Node<AST::Memory::Size>(ctx.tok_v.peek(-1));
 
 	ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1790", "Expected start arg '('.", hint);
 	node->target = ctx.p_ref->parse_reference();
-	ctx.tok_v.expect(TokTy::CLOSE_PAREN, "PAR1790", "Expected end arg ')'.", hint);
+	ctx.tok_v.expect(TokTy::CLOSE_PAREN, "PAR1791", "Expected end arg ')'.", hint);
 
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Align> PAR::Parser_Memory::align() {
+std::unique_ptr<AST::Memory::Align> PAR::Parser_Memory::align() 
+{
 	static const std::string hint = "define value memory alignment like: `mem::size(a)`";
 	auto node = ctx.Create_Node<AST::Memory::Align>(ctx.tok_v.peek(-1));
 
@@ -74,14 +97,16 @@ std::unique_ptr<AST::Memory::Align> PAR::Parser_Memory::align() {
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Move> PAR::Parser_Memory::move() {
+std::unique_ptr<AST::Memory::Move> PAR::Parser_Memory::move() 
+{
 	ctx.tok_v.match(TokTy::CAPA_MOVE_OF);
 	auto node = ctx.Create_Node<AST::Memory::Move>(ctx.tok_v.peek());
 	node->target = ctx.p_ref->parse_reference();
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Del> PAR::Parser_Memory::del() {
+std::unique_ptr<AST::Memory::Del> PAR::Parser_Memory::del() 
+{
 	auto node = ctx.Create_Node<AST::Memory::Del>(ctx.tok_v.peek());
 	ctx.tok_v.match(TokTy::DEL);
 	node->element = ctx.p_ref->parse_reference();
@@ -89,7 +114,8 @@ std::unique_ptr<AST::Memory::Del> PAR::Parser_Memory::del() {
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Val_Of_Ptr> PAR::Parser_Memory::val_of_ptr() {
+std::unique_ptr<AST::Memory::Val_Of_Ptr> PAR::Parser_Memory::val_of_ptr() 
+{
 	auto node = ctx.Create_Node<AST::Memory::Val_Of_Ptr>(ctx.tok_v.peek());
 	ctx.tok_v.match(TokTy::VAL_OF);
 	node->target = ctx.p_ref->parse_reference();
@@ -97,13 +123,24 @@ std::unique_ptr<AST::Memory::Val_Of_Ptr> PAR::Parser_Memory::val_of_ptr() {
 	return node;
 }
 
-std::unique_ptr<AST::Memory::Addr_Of_Ref> PAR::Parser_Memory::addr_of_ref() {
+std::unique_ptr<AST::Memory::Addr_Of_Ref> PAR::Parser_Memory::addr_of_ref() 
+{
 	auto node = ctx.Create_Node<AST::Memory::Addr_Of_Ref>(ctx.tok_v.peek());
 	ctx.tok_v.match(TokTy::ADDR_OF);
 	node->target = ctx.p_ref->parse_reference();
 
 	return node;
 }
+
+std::unique_ptr<AST::Memory::Drop> PAR::Parser_Memory::drop()
+{
+	auto node = ctx.Create_Node<AST::Memory::Drop>(ctx.tok_v.peek());
+	ctx.tok_v.match(TokTy::DROP);
+	node->target = ctx.p_ref->parse_reference();
+
+	return node;
+}
+
 
 
 

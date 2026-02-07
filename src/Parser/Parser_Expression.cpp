@@ -23,20 +23,23 @@ std::unique_ptr<AST::Node> PAR::Parser_Expression::parse_expression() {
 
 std::unique_ptr<AST::Node> PAR::Parser_Expression::parse_expression_term() {
 	if (ctx.tok_v.check(TokTy::IF))
-		return ternary_if();
+		return ctx.p_state->ternary_if();
 
 	std::unique_ptr<AST::Node> term;
 
 	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().ty);
-	if (pass_mode != EExprPassMode::None) ctx.tok_v.next();
+	if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
 	if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
 		term = parse_expression();
 		ctx.tok_v.expect(TokTy::CLOSE_PAREN, "PAR1812", "Expected end of nested expression ')'", "");
 	}
 
-	if (auto lit = ctx.p_lit->try_literal()) {
+	if (auto lit = ctx.p_lit->try_literal(true)) {
 		term = std::move(lit.value());
+	}
+	else if (auto mem = ctx.p_mem->try_memory(true)) {
+		term = std::move(mem.value());
 	}
 	else if (auto ref = ctx.p_ref->parse_reference()){
 		// get bit case
@@ -73,11 +76,12 @@ std::optional<std::unique_ptr<AST::Operation::Cast_As>> PAR::Parser_Expression::
 
 	switch (ctx.tok_v.peek().ty) {
 		case TokTy::AS: 
-			asCast->cast_type == AST::Operation::Cast_As::ECastType::AS;
+			asCast->cast_type = AST::Operation::Cast_As::ECastType::AS;
 		case TokTy::AS_REINTERPRET: 
-			asCast->cast_type == AST::Operation::Cast_As::ECastType::AS_REINTERPRET;
+			asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_REINTERPRET;
 		case TokTy::AS_SAFE: 
-			asCast->cast_type == AST::Operation::Cast_As::ECastType::AS_SAFE;
+			asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_SAFE;
+		default: break;
 	}
 
 	ctx.tok_v.next(); // consume as

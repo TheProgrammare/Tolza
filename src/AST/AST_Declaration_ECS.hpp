@@ -21,8 +21,10 @@ struct Component_Field : public ADeclaration {
             isNoDefault == other.isNoDefault;
     }
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "field[" + id.debug_str() + "]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Component : public ADeclaration, AType {
@@ -33,6 +35,7 @@ struct Component : public ADeclaration, AType {
     [[nodiscard]] std::string mangle_type() const override { return "comp"; }
     [[nodiscard]] std::string debug_str() const override { return "<ty> comp[" + id.debug_str() + "]"; }
     [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::Component; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -44,6 +47,8 @@ struct Role : public ADeclaration, AType {
     [[nodiscard]] std::string mangle_type() const override { return "rl"; }
     [[nodiscard]] std::string debug_str() const override { return "<ty> role[" + id.debug_str() + "]"; }
     [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Role; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::Role; }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
@@ -61,6 +66,7 @@ struct Entity_Cast : public ADeclaration {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<cast> entity"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Cast; }
 };
 
 
@@ -75,6 +81,7 @@ struct Entity_Op : public ADeclaration {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return EBinOpType_to_str(operatorType); }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Op; }
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
@@ -88,6 +95,7 @@ struct Entity_OpIndex : public Entity_Op {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "[...]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Entity_OpIndex; }
 };
 
 struct Entity : public ADeclaration, AType {
@@ -148,6 +156,7 @@ struct Entity : public ADeclaration, AType {
         return false;
     }
     [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Entity; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::Entity; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
@@ -166,6 +175,7 @@ struct System_Case : public ADeclaration {
     [[nodiscard]] bool manage_entity(const Entity& entity) const;
 
     [[nodiscard]] bool manage_component(const Component& comp) const;
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::System_Case; }
 };
 
 
@@ -190,6 +200,7 @@ struct System : public ADeclaration, ICallable {
         return false;
     }
     [[nodiscard]] Type::Function_Proto* get_signature() override { return prototype.get(); };
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::System; }
 };
 
 }

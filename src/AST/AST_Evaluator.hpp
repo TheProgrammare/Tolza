@@ -10,16 +10,18 @@
 namespace AST {
 
 struct Evaluator {
-    enum class EKind { Pattern, Condition };
-    EKind kind;
+    enum class EKind { None, Pattern, Condition };
+    EKind kind = EKind::None;
 
     std::unique_ptr<Declaration::Local::Pattern>    pattern;
     std::unique_ptr<Node>                           condition;
 
     Node* node() const {
         if (kind == EKind::Pattern) return dynamic_cast<Node*>(pattern.get());
-        else condition.get();
+        else return condition.get();
     }
+
+    Evaluator() = default;
 
     Evaluator(std::unique_ptr<Declaration::Local::Pattern> _pattern)
         : pattern(std::move(_pattern))

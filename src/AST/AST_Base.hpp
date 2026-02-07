@@ -86,6 +86,7 @@ struct ALiteral : virtual AType {
 
 
 struct ID {
+
     explicit ID(const std::string &name) 
         : name(std::move(name)) {}
     ID(const std::vector<std::string>& p_path, const std::string &name) 
@@ -93,12 +94,13 @@ struct ID {
             path = p_path;
         }
 
+    ID() = default;
     ID(const ID&) = default;
     ID& operator=(const ID&) = default;
     ID(ID&&) = default;
     ID& operator=(ID&&) = default;
 
-    AST::Node *parent;
+    AST::Node *parent = nullptr;
     
     std::string name;
     std::vector<std::string> path;
@@ -145,8 +147,6 @@ protected:
 };
 
 struct ALocal : ADeclaration {
-
-    [[nodiscard]] virtual ESymbolType get_symbol_type() const = 0;
 };
 
 // for every node who need a symbolic resolution
@@ -228,7 +228,7 @@ struct Type_Reference final : public AReference, AType {
     }
     [[nodiscard]] std::string mangle_type() const override { return debug_str(); }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] EPrimType get_type() const override { return EPrimType::COUNT; };
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::NONE; };
 };
 
 

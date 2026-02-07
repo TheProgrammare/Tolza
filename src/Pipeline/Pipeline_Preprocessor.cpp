@@ -56,7 +56,7 @@ bool pipeline_start_preprocessor(const PipelineScripts* pipe_scripts) {
 		// sum of errors
 		size_t err_count = 0;
 		for	(auto& [name, fileError] : errs) { err_count += fileError.size(); }
-		std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET;
+		std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
 		
 		for (auto& [name, fileError] : errs) {
 			if (fileError.empty()) continue;
@@ -73,9 +73,8 @@ bool pipeline_start_preprocessor(const PipelineScripts* pipe_scripts) {
 	}
 
 	if (in_binding_compilation) std::cout << color_YELLOW "[EMBinder] ";
-	std::cout << color_YELLOW "[preprocess] [summary] " << color_RESET << 
-		"duration: " << color_CYAN << std::chrono::duration<double, std::milli>(final_duration).count() << " ms" << color_RESET << "\n";
-	std::cout << std::endl;
+	std::cout << color_YELLOW "[preprocess] [summary] " << color_CYAN << 
+		"duration: " << color_YELLOW << std::chrono::duration<double, std::milli>(final_duration).count() << " ms" << color_RESET "\n" << std::endl;
 
 	if (!errs.empty()) return false;
 

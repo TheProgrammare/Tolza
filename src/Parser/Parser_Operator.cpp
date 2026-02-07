@@ -55,11 +55,7 @@ std::unique_ptr<AST::Node> PAR::Parser_Operator::add() {
 
 std::unique_ptr<AST::Node> PAR::Parser_Operator::shift() {
 	auto node = add();
-	while (ctx.tok_v.match_any({ 
-		TokTy::SHIFT_LEFT_0, TokTy::SHIFT_LEFT_1, TokTy::SHIFT_RIGHT_0, TokTy::SHIFT_RIGHT_1,
-		TokTy::SHIFT_LEFT_A, TokTy::SHIFT_RIGHT_A, 
-		TokTy::ROTATE_LEFT, TokTy::ROTATE_RIGHT, TokTy::ROTATE_LEFT_CARRY, TokTy::ROTATE_RIGHT_CARRY,
-	})) {
+	while (ctx.tok_v.match_any(kBitwiseTokens)) {
 		auto op = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).ty);
 		auto right = add();
 		node = Create_BinOp(std::move(node), op, std::move(right));

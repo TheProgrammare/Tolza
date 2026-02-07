@@ -88,12 +88,12 @@ ModuleImportation *PAR::Parser_Base::parse_import() {
 	// standard lib importation
 	// e.g. import @io
 	if (ctx->tok_v.match(TokTy::AT)) {
-		mod_imp.import_source == ModuleImportation::EImportSource::StandardLib;
+		mod_imp.import_source = ModuleImportation::EImportSource::StandardLib;
 	}
 	// user importation
 	// e.g. import $io
 	else if (ctx->tok_v.match(TokTy::DOLLAR)) {
-		mod_imp.import_source == ModuleImportation::EImportSource::User;
+		mod_imp.import_source = ModuleImportation::EImportSource::User;
 	}
 	else {
 		// import from external code
@@ -175,7 +175,7 @@ std::shared_ptr<AST::Declaration::Export> PAR::Parser_Base::parse_export() {
 	return exp_node;
 }
 
-AST::CodeBlock_instruction PAR::Parser_Base::parse_instruction()
+std::optional<AST::CodeBlock_instruction> PAR::Parser_Base::parse_instruction()
 {
 	static const std::string hint =
 		"define insutrction like:"
@@ -190,28 +190,39 @@ AST::CodeBlock_instruction PAR::Parser_Base::parse_instruction()
 
 	// if elif else for ...
 	if (auto statement = ctx->p_state->parse_statement(true)) {
-		return AST::CodeBlock_instruction(std::move(statement));
+		AST::CodeBlock_instruction cb;
+		cb.data = std::move(statement);
+		return cb;
 	}
 	// local variable + lambda
 	else if (auto local = ctx->p_loc->parse_local(true)) {
-		return AST::CodeBlock_instruction(local);
+		AST::CodeBlock_instruction cb;
+		cb.data = local;
+		return cb;
 	}
 	// del
 	else if (ctx->tok_v.check(TokTy::DEL)) {
 		auto del = ctx->p_mem->del();
-		return AST::CodeBlock_instruction(std::move(del));
+		AST::CodeBlock_instruction cb;
+		cb.data = std::move(del);
+		return cb;
 	}
 	else if (auto ref = ctx->p_ref->parse_reference()) {
 		// assignation and operator assignment
 		if (ctx->tok_v.check_any(kAssignationTokens)) {
 			auto assign = ctx->p_op->assignment(std::move(ref));
-			return AST::CodeBlock_instruction(std::move(assign));
+			AST::CodeBlock_instruction cb;
+			cb.data = std::move(assign);
+			return cb;
 		}
 		// call and sys_call
 		else if (dynamic_cast<AST::Reference::Call*>(ref.get())) {
-			return AST::CodeBlock_instruction(std::move(ref));
+			AST::CodeBlock_instruction cb;
+			cb.data = std::move(ref);
+			return cb;
 		}
 	}
 
 	ctx->tok_v.add_error_tok(ctx->tok_v.peek(), "PAR1577", "Unexpected instruction", hint);
+	return std::nullopt;
 }

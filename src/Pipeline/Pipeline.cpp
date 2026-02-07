@@ -160,7 +160,7 @@ void applyDefaultAndDetectNative() {
         	 if (COMP_CTX.target_arch.find("64") != std::string::npos)	COMP_CTX.target_arch_bits = 64;
         else if (COMP_CTX.target_arch.find("32") != std::string::npos)	COMP_CTX.target_arch_bits = 32;
         else if (COMP_CTX.target_arch.find("16") != std::string::npos)	COMP_CTX.target_arch_bits = 16;
-        else													COMP_CTX.target_arch_bits = 8; // fallback
+        else															COMP_CTX.target_arch_bits = 8; // fallback
     }
 
     if (COMP_CTX.target_os.empty()) {
@@ -179,19 +179,20 @@ void applyDefaultAndDetectNative() {
 void parseArgs(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        	 if (arg.rfind("--abi=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "abi", arg.substr(6) }); 		COMP_CTX.target_abi = arg.substr(6); }
-    	else if (arg.rfind("--arch=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "arch", arg.substr(7) }); 		COMP_CTX.target_arch = arg.substr(7); }
-		else if (arg.rfind("--bits=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "bits", arg.substr(7) }); 		COMP_CTX.target_arch_bits = std::stoul(arg.substr(7)); }
-		else if (arg.rfind("--os=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "os", arg.substr(5) }); 		COMP_CTX.target_os = arg.substr(5); }
-		else if (arg.rfind("--libc=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "libc", arg.substr(7) }); 		COMP_CTX.libc = arg.substr(7); }
-		else if (arg == "--debug") 					{ COMPILATION_ARGS.insert({ "debug", "1" }); 				COMP_CTX.is_debug = true; DEBUG_MODE = true; }
-		else if (arg == "--release") 				{ COMPILATION_ARGS.insert({ "debug", "0" }); 				COMP_CTX.is_debug = false; }
-		else if (arg.rfind("--opt-level=", 0) == 0) { COMPILATION_ARGS.insert({ "opt-level", arg.substr(12) }); COMP_CTX.opt_level = static_cast<uint8_t>(std::stoul(arg.substr(12))); }
-		else if (arg == "--size-opt") 				{ COMPILATION_ARGS.insert({ "size-opt", "true" }); 			COMP_CTX.is_size_opt = true; }
-		else if (arg == "--debug-dot") 				{ COMPILATION_ARGS.insert({ "debug-dot", "true" }); 		DOT_PRINT = true; }
-		else if (arg == "--debug-dot-exposer") 		{ COMPILATION_ARGS.insert({ "debug-dot-exposer", "true" }); DOT_EXPOSER_PRINT = true; }
-		else if (arg == "--debug-postprocessor-output") 
-													{ COMPILATION_ARGS.insert({ "debug-postprocessor-output", "true" }); DEBUG_POSTPROCESSOR_OUTPUT = true; }
+			 if (arg.rfind("--src=", 0) == 0)		{ COMPILATION_ARGS.insert({ "src", 			arg.substr(6) }); 	COMP_CTX.src_file = arg.substr(6); }
+		else if (arg.rfind("--dest=", 0) == 0)		{ COMPILATION_ARGS.insert({ "dest", 		arg.substr(7) }); 	COMP_CTX.dest_file = arg.substr(7); }
+		else if (arg.rfind("--abi=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "abi", 			arg.substr(6) }); 	COMP_CTX.target_abi = arg.substr(6); }
+    	else if (arg.rfind("--arch=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "arch", 		arg.substr(7) }); 	COMP_CTX.target_arch = arg.substr(7); }
+		else if (arg.rfind("--bits=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "bits", 		arg.substr(7) }); 	COMP_CTX.target_arch_bits = std::stoul(arg.substr(7)); }
+		else if (arg.rfind("--os=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "os", 			arg.substr(5) }); 	COMP_CTX.target_os = arg.substr(5); }
+		else if (arg.rfind("--libc=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "libc", 		arg.substr(7) }); 	COMP_CTX.libc = arg.substr(7); }
+		else if (arg == "--debug") 					{ COMPILATION_ARGS.insert({ "debug", 		"1" }); 			COMP_CTX.is_debug = true; DEBUG_MODE = true; }
+		else if (arg == "--release") 				{ COMPILATION_ARGS.insert({ "debug", 		"0" }); 			COMP_CTX.is_debug = false; }
+		else if (arg.rfind("--opt-level=", 0) == 0) { COMPILATION_ARGS.insert({ "opt-level", 	arg.substr(12) }); 	COMP_CTX.opt_level = static_cast<uint8_t>(std::stoul(arg.substr(12))); }
+		else if (arg == "--size-opt") 				{ COMPILATION_ARGS.insert({ "size-opt", 	"true" }); 			COMP_CTX.is_size_opt = true; }
+		else if (arg == "--debug-dot") 				{ COMPILATION_ARGS.insert({ "debug-dot", 	"true" }); 			DOT_PRINT = true; }
+		else if (arg == "--debug-dot-exposer") 		{ COMPILATION_ARGS.insert({ "debug-exposer","true" }); 			DOT_EXPOSER_PRINT = true; }
+		else if (arg == "--debug-pp") 				{ COMPILATION_ARGS.insert({ "debug-pp", 	"true" }); 			DEBUG_POSTPROCESSOR_OUTPUT = true; }
 		else if (arg.rfind("-D", 0) == 0) {
 			auto def = arg.substr(2);
 			auto eq_pos = def.find('=');

@@ -58,18 +58,18 @@ private:
 
     [[nodiscard]] bool                                              process_expand(META::MetaBlock &parent);
     [[nodiscard]] std::unique_ptr<META::MetaBlock_Expand>               _expand_header();
-    [[nodiscrad]] void                                                  _expand_body(META::MetaBlock_Expand &expansion_meta);
-    [[nodiscrad]] bool                                                  _expand_placeholder(META::MetaBlock_Expand &expansion_meta);
+    void                                                  _expand_body(META::MetaBlock_Expand &expansion_meta);
+    [[nodiscard]] bool                                                  _expand_placeholder(META::MetaBlock_Expand &expansion_meta);
     [[nodiscard]] bool                                                  _expand_if(META::MetaBlock_Expand &expansion_meta);
     [[nodiscard]] std::unique_ptr<META::Cond_Base>                  process_condition();
     [[nodiscard]] std::unique_ptr<META::Cond_Base>                      _cond_atom();
 
     [[nodiscard]] bool                                              check_metacode(std::initializer_list<std::string> pattern);
     [[nodiscard]] bool                                              match_metacode(std::initializer_list<std::string> pattern);
-    [[nodiscrad]] bool                                              is_tok_in_pattern(const Token &tok, const std::string &pattern);
+    [[nodiscard]] bool                                              is_tok_in_pattern(const Token &tok, const std::string &pattern);
 
-    [[nodiscrad]] std::vector<Token>                                get_scope_tokens(size_t start_pos, size_t end_pos);
+    [[nodiscard]] std::vector<Token>                                get_scope_tokens(size_t start_pos, size_t end_pos);
 
-    [[nodiscrad]] size_t                                            get_line_last_tok_pos(size_t line);
+    [[nodiscard]] size_t                                            get_line_last_tok_pos(size_t line);
 };
 

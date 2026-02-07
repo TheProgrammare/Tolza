@@ -83,6 +83,7 @@ struct GoTo : public AReference {
 struct GoTo_Label : public ADeclaration {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "LABEL[" + id.debug_str() + "]"; }
+    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Goto_Label; }
 };
 
 

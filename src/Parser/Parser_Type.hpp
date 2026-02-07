@@ -20,9 +20,9 @@ private:
 		// isRef, isConst, isOptional
 		[[nodiscard]] std::tuple<bool, bool, bool>						get_type_annotation();
 public:
-		[[nodiscard]] std::unique_ptr<AST::Type::Tuple>					tuple();
+		[[nodiscard]] std::unique_ptr<AST::Type::Tuple>					explicit_tuple();
 		[[nodiscard]] std::unique_ptr<AST::Type::Get_Expr_Type>			expr_get_expr_type();
-		[[nodiscard]] std::shared_ptr<AST::Type::Function_Proto>		function_proto(bool isLam = false);
+		[[nodiscard]] std::shared_ptr<AST::Type::Function_Proto>		explicit_function_proto(bool isLam = false);
         [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> parameters();
 
         Parser_Context& ctx;

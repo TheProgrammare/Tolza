@@ -14,7 +14,7 @@ bool pipeline_start_linker(const PipelineScripts* pipe_scripts) {/*
 	}
 
 	bool error = false;
-	/*
+	
 	// for each script, check his imports
 	for (auto& script : scriptsInfo) {
 		for (auto& impMod : script->imported_mod) {

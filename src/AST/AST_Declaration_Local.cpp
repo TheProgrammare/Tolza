@@ -8,6 +8,7 @@ std::string AST::Declaration::Local::Variable_Unpack::debug_str() const
         case EVariableKind::Const: out += "const"; break; 
         case EVariableKind::Let: out += "let"; break;
         case EVariableKind::Var: out += "var"; break;
+        case EVariableKind::NONE: return "";
     }
     out += "[";
     for (auto& elem : elements) out += elem->id.debug_str() + ", ";

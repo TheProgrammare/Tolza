@@ -49,13 +49,12 @@ struct Assignment : public Node {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { 
-        switch (assignmentType)
-        {
+        switch (assignmentType) {
         case EAssignmentType::Copy:			return "copy=";
         case EAssignmentType::Clone:	    return "clone=";
         case EAssignmentType::MoveSemantic:	return "move=";
+        case EAssignmentType::NONE:         return "NO ASSIGNMENT TYPE";
         }
-        return "ERROR";
     }
 };
 

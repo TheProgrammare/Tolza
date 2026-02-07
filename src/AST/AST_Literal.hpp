@@ -81,6 +81,7 @@ struct Boolean : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "bool(" + std::to_string(val) + ")"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::boolean; }
+    [[nodiscard]] std::string mangle_type() const override { return "b"; }
 };
 
 struct Integral : public ALiteral {
@@ -90,6 +91,7 @@ struct Integral : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")"; }
     [[nodiscard]] EPrimType get_type() const override { return type; }
+    [[nodiscard]] std::string mangle_type() const override { return EPrimTy_to_str(type); }
 
 };
 
@@ -106,16 +108,19 @@ struct Decimal : public ALiteral {
         return false;
     }
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string mangle_type() const override {
-        return std::to_string(integral_num) + "_" + std::to_string(decimal_num);
-    }
     [[nodiscard]] std::string debug_str() const override { 
         if (is_unsigned) 
-            return "udeci(" + val.i128_to_string() + ")";
+        return "udeci(" + val.i128_to_string() + ")";
         return "deci(" + val.i128_to_string() + ")";
     }
     [[nodiscard]] EPrimType get_type() const override { return is_unsigned ? EPrimType::udeci : EPrimType::deci; }
+    [[nodiscard]] std::string mangle_type() const override
+    {
+        std::string out = is_unsigned ? "ud" : "d";
+        return out + "_" + std::to_string(integral_num) + "_" + std::to_string(decimal_num);
+    }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Floating : public ALiteral {
@@ -125,6 +130,7 @@ struct Floating : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")"; }
     [[nodiscard]] EPrimType get_type() const override { return type; }
+    [[nodiscard]] std::string mangle_type() const override { return EPrimTy_to_str(type); }
 };
 
 // Latin-1 encoding
@@ -134,6 +140,7 @@ struct ASCII : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "ascii('" + std::to_string(val) + "')"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::ASCII; }
+    [[nodiscard]] std::string mangle_type() const override { return "aii"; }
 };
     
 struct UTF32 : public ALiteral {
@@ -142,6 +149,7 @@ struct UTF32 : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "utf32('" + codePoints + "')"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::UTF32; }
+    [[nodiscard]] std::string mangle_type() const override { return "utf"; }
 };
 
 struct Text : public ALiteral {
@@ -152,6 +160,7 @@ struct Text : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "text(\"" + std::string(val.begin(), val.end()) + "\")"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::text; }
+    [[nodiscard]] std::string mangle_type() const override { return "txt"; }
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -220,9 +229,9 @@ struct Textual_Format : public ALiteral {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "format_text"; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::text; }
+    [[nodiscard]] std::string mangle_type() const override { return "ftxt"; }
 };
-
-
 
 
 struct Table_Population : public ALiteral {
@@ -235,6 +244,7 @@ struct Table_Population : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<table population>"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::Array; }
+    [[nodiscard]] std::string mangle_type() const override { return "tpop"; }
 };
 
 struct Table : public ALiteral {
@@ -317,6 +327,7 @@ struct Map : public ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "map[" + std::to_string(keys.size()) + "]"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::map; }
+    [[nodiscard]] std::string mangle_type() const override { return "map"; }
 };
 
 
@@ -391,6 +402,7 @@ struct Component : public AReference, ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<lit> comp[" + id.debug_str() + "]"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::Component; }
+    [[nodiscard]] std::string mangle_type() const override { return "cp_" + id.debug_str(); };
 };
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
@@ -407,6 +419,7 @@ struct Entity: public AReference, ALiteral {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     [[nodiscard]] std::string debug_str() const override { return "<lit> entity[" + id.debug_str() + "]"; }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::Entity; }
+    [[nodiscard]] std::string mangle_type() const override { return "et_" + id.debug_str(); }
 };
 
 
@@ -422,10 +435,11 @@ struct Iterator : public ALiteral {
         return false;
     }
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string mangle_type() const override { return "iter_" + resolved_ty->mangle_type(); };
     [[nodiscard]] std::string debug_str() const override { return "<lit> iter"; }
+    [[nodiscard]] std::string mangle_type() const override { return "iter_" + resolved_ty->mangle_type(); }
     [[nodiscard]] EPrimType get_type() const override { return EPrimType::Iterator; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 }

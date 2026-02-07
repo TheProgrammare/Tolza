@@ -76,8 +76,8 @@ enum class ETokenType {
     TILDE,
     // memory keyword
     PTR, SPTR,  UPTR, WPTR,
-    ADDRESS, TICK, SELF,
-    NEW, DEL,
+    TICK, SELF,
+    NEW, DEL, DROP,
     // structure
     OPEN_PAREN, CLOSE_PAREN, OPEN_BRACKETS, CLOSE_BRACKETS, OPEN_BRACE, CLOSE_BRACE, OPEN_SQUARE, CLOSE_SQUARE,
     COLON, SEMICOLON, COMMA, INJECT, 
@@ -108,7 +108,6 @@ enum class ETokenType {
     SHIFT_LEFT_1, SHIFT_RIGHT_1,
     SHIFT_LEFT_A, SHIFT_RIGHT_A,
     ROTATE_LEFT, ROTATE_RIGHT,
-    ROTATE_LEFT_CARRY, ROTATE_RIGHT_CARRY,
     // control flow
     IF, ELSE, ELIF, FOR, IN, NIN, IS, NIS, STEP, LOOP, WHILE, DO_WHILE, MATCH, 
     BREAK, CONTINUE, RETURN, END, 
@@ -191,7 +190,7 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"ptr", ETokenType::PTR}, {"std::shared_ptr", ETokenType::SPTR}, {"std::unique_ptr", ETokenType::UPTR}, {"std::weak_ptr", ETokenType::WPTR},
     {"new", ETokenType::NEW},
     {"del", ETokenType::DEL},
-    {"&", ETokenType::ADDRESS}, 
+    {"drop", ETokenType::DROP},
     // exception keys
     {"try", ETokenType::TRY}, {"catch", ETokenType::CATCH}, {"throw", ETokenType::THROW},
     // section keys
@@ -270,7 +269,6 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"<<[1]", ETokenType::SHIFT_LEFT_1}, {"[1]>>", ETokenType::SHIFT_RIGHT_1},
     {"<<[a]", ETokenType::SHIFT_LEFT_A}, {"[a]>>", ETokenType::SHIFT_RIGHT_A},
     {"<<[r]", ETokenType::ROTATE_LEFT},  {"[r]>>", ETokenType::ROTATE_RIGHT},
-    {"<<[rc]", ETokenType::ROTATE_LEFT_CARRY},  {"[rc]>>", ETokenType::ROTATE_RIGHT_CARRY},
     {"++", ETokenType::OP_INCREMENT }, {"--", ETokenType::OP_DECREMENT},
     {"+-", ETokenType::SIGNATOR},
     // statement keys
@@ -335,8 +333,16 @@ const std::initializer_list<ETokenType> kOperatorTokens = {
     ETokenType::SHIFT_LEFT_1, ETokenType::SHIFT_RIGHT_1,
     ETokenType::SHIFT_LEFT_A, ETokenType::SHIFT_RIGHT_A,
     ETokenType::ROTATE_LEFT, ETokenType::ROTATE_RIGHT,
-    ETokenType::ROTATE_LEFT_CARRY, ETokenType::ROTATE_RIGHT_CARRY,
 };
+
+const std::initializer_list<ETokenType> kBitwiseTokens = {
+    ETokenType::B_AND, ETokenType::B_NAND, ETokenType::B_OR, ETokenType::B_XOR, ETokenType::B_NOR, ETokenType::B_XNOR, ETokenType::B_NOT,
+    ETokenType::SHIFT_LEFT_0, ETokenType::SHIFT_RIGHT_0,
+    ETokenType::SHIFT_LEFT_1, ETokenType::SHIFT_RIGHT_1,
+    ETokenType::SHIFT_LEFT_A, ETokenType::SHIFT_RIGHT_A,
+    ETokenType::ROTATE_LEFT, ETokenType::ROTATE_RIGHT,
+};
+
 const std::initializer_list<ETokenType> kComparatorTokens = {
     ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_EQUAL, ETokenType::OP_NOT_EQUAL, ETokenType::OP_EQUAL_STRICTLY, ETokenType::OP_NOT_EQUAL_STRICTLY, ETokenType::OP_LOWER_EQUAL, ETokenType::OP_GREATER_EQUAL
 };
@@ -432,9 +438,6 @@ const std::initializer_list<ETokenType> kHybridKeyNamespace = {
 };
 const std::initializer_list<ETokenType> kLogicalTokens = {
     ETokenType::AND, ETokenType::NAND, ETokenType::OR, ETokenType::XOR, ETokenType::NOR, ETokenType::XNOR, ETokenType::NOT
-};
-const std::initializer_list<ETokenType> kBitwiseTokens = {
-    ETokenType::B_AND, ETokenType::B_NAND, ETokenType::B_OR, ETokenType::B_XOR, ETokenType::B_NOR, ETokenType::B_XNOR, ETokenType::B_NOT
 };
 
 const std::initializer_list<ETokenType> kEndArgsListokens = {

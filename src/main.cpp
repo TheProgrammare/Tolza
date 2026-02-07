@@ -22,18 +22,25 @@
 #include "Pipeline/Pipeline.hpp"
 
 
-int main(int argc, char** argv) {
-	argc += 8;
-	argv[1] = "--arch=amd64";
-	argv[2] = "--bits=64";
-	argv[3] = "--os=linux";
-	argv[4] = "--abi=LP64";
-	argv[5] = "--debug";
-	argv[6] = "--debug-postprocessor-output";
-	argv[7] = "--debug-dot";
-	argv[8] = "--debug-dot-exposer";
+int main(int argc, char* argv[]) {
+	argc += 10;
+	argv[1] = const_cast<char*>("--arch=amd64");
+	argv[2] = const_cast<char*>("--bits=64");
+	argv[3] = const_cast<char*>("--os=linux");
+	argv[4] = const_cast<char*>("--abi=LP64");
+	argv[5] = const_cast<char*>("--debug");
+	argv[6] = const_cast<char*>("--debug-pp");
+	argv[7] = const_cast<char*>("--debug-dot");
+	argv[8] = const_cast<char*>("--debug-exposer");
+	std::string src_file = "--src=" + PROJECT_DIR + "/source"; 
+	argv[9] = const_cast<char*>(src_file.c_str());
+	std::string dest_file = "--dest=" + PROJECT_DIR + "/dest";
+	argv[10] = const_cast<char*>(dest_file.c_str());
+
+	for(int i = 0; i < argc; i++) {
+        printf("Argument %d : %s\n", i, argv[i]);
+    }
 	
 	parseArgs(argc, argv);
-	std::string src_dir = PROJECT_DIR + "/source";
-	start_compilation(src_dir);
+	start_compilation(COMP_CTX.src_file);
 }

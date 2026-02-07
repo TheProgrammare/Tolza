@@ -7,7 +7,7 @@ struct Visitor_Base;
 namespace AST {
 namespace Type {
 
-struct Ptr final : public Node, AType {
+struct Ptr final : public AType {
     EPtrType pointer_type = EPtrType::raw_ptr;
 
     std::unique_ptr<AType> inner;
@@ -20,18 +20,13 @@ struct Ptr final : public Node, AType {
     }
 
     [[nodiscard]] std::string mangle_type() const override { return EPtrType_to_mangle(pointer_type); }
-    [[nodiscard]] std::string debug_str() const override {
-        switch (pointer_type) {
-        case EPtrType::raw_ptr:		 return "ptr";
-        case EPtrType::unique_ptr:	 return "std::unique_ptr";
-        case EPtrType::shared_ptr:	 return "std::shared_ptr";
-        }
-        return "cptr";
-    }
+    [[nodiscard]] std::string debug_str() const override { return EPtrType_to_str(pointer_type); }
+    [[nodiscard]] EPrimType get_type() const override { return inner->get_type(); }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Table final : public Node, AType {
+struct Table final : public AType {
     std::optional<size_t> tableSize; // nullopt = dynamic
     std::unique_ptr<Node> sizeSymbol;
 
@@ -49,10 +44,12 @@ struct Table final : public Node, AType {
         else return "list_" + inner->mangle_type();
     }
     [[nodiscard]] std::string debug_str() const override { return "<ty> table"; }
+    [[nodiscard]] EPrimType get_type() const override { return inner->get_type(); }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Primitive final : public Node, AType {
+struct Primitive final : public AType {
     EPrimType _type = EPrimType::u8;
 
     bool operator==(const AType& other) const override {
@@ -65,10 +62,11 @@ struct Primitive final : public Node, AType {
     [[nodiscard]] std::string mangle_type() const override { return EPrimTy_to_mangle(_type); }
     [[nodiscard]] std::string debug_str() const override { return EPrimTy_to_str(_type); }
     [[nodiscard]] EPrimType get_type() const override { return _type; }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Tuple final : public Node, AType {
+struct Tuple final : public AType {
     std::vector<std::unique_ptr<AType>> types;
     std::vector<std::string> name_fields;
 
@@ -100,10 +98,12 @@ struct Tuple final : public Node, AType {
         if (name_fields.empty()) return "<ty> tuple(" + std::to_string(types.size()) + ")";
         return "<ty> named tuple(" + std::to_string(types.size()) + ")";
     }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::tuple; }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Function_Proto final : public Node, AType {
+struct Function_Proto final : public AType {
     std::vector<std::shared_ptr<Declaration::Local::Parameter>> parameters;
     std::vector<std::unique_ptr<Declaration::Local::Generic_Parameter>> gen_parameters;
     std::unique_ptr<Tuple> returnType;
@@ -116,22 +116,25 @@ struct Function_Proto final : public Node, AType {
 
     [[nodiscard]] std::string mangle_type() const override;
     [[nodiscard]] std::string debug_str() const override { return "<ty> fn"; }
+    [[nodiscard]] EPrimType get_type() const override { return EPrimType::Fn_Proto; }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Get_Expr_Type final : public Node, AType {
+struct Get_Expr_Type final : public AType {
     std::unique_ptr<Node> target;
 
     std::shared_ptr<AType> resolved_ty;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-
     bool operator==(const AType& other) const override {
         return AType::operator==(other) && *resolved_ty == other;
     }
-
+    
     [[nodiscard]] std::string mangle_type() const override { return resolved_ty->mangle_type(); };
     [[nodiscard]] std::string debug_str() const override { return "<ty> comptime"; };
+    [[nodiscard]] EPrimType get_type() const override { return resolved_ty->get_type(); }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 }

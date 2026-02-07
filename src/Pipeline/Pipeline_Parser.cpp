@@ -55,7 +55,7 @@ bool pipeline_start_parser(const PipelineScripts *pipe_scripts) {
 		// sum of errors
 		size_t err_count = 0;
 		for	(auto& [name, fileError] : parErrors) { err_count += fileError.size(); }
-		std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET;
+		std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
 		
 		for (auto& [name, fileError] : parErrors) {
 			if (fileError.empty()) continue;
@@ -76,7 +76,7 @@ bool pipeline_start_parser(const PipelineScripts *pipe_scripts) {
 		// sum of errors
 		size_t err_count = 0;
 		for	(auto& p_err : declErrors) { err_count += std::get<1>(p_err).size(); }
-		std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET;
+		std::cerr << color_YELLOW "[parse] [summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
 
 		for (auto& [name, fileError] : declErrors) {
 			if (fileError.empty()) continue;

@@ -107,7 +107,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
     switch (kind) {
         case CXCursor_StructDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (ty_names.count(name) == 0) break;
+            if (!ty_names.contains(name)) break;
 
             if (!clang_isCursorDefinition(cursor)) break; // ignorer forward declaration
             CVeloxComp comp = c_struct_to_velox_comp(cursor);
@@ -117,7 +117,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_UnionDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.count(name) == 0) break;
+            if (!ty_names.contains(name)) break;
 
             if (!clang_isCursorDefinition(cursor)) break;
             CVeloxUnion u = c_union_to_velox_union(cursor);
@@ -127,7 +127,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_EnumDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.count(name) == 0) break;
+            if (!ty_names.contains(name)) break;
 
             if (!clang_isCursorDefinition(cursor)) break;
             CVeloxFlag e = c_enum_to_velox_flag(cursor);
@@ -137,7 +137,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_FunctionDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!fn_names.count(name) == 0) break;
+            if (!fn_names.contains(name)) break;
 
             CVeloxFunc f = c_function_to_velox_function(cursor);
             ast->funcs.push_back(std::move(f));
@@ -146,7 +146,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 
         case CXCursor_VarDecl: {
             std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (fn_names.count(name) == 0) break;
+            if (!fn_names.contains(name)) break;
 
             CVeloxGlobal g = c_global_to_velox_global(cursor);
             ast->globals.push_back(std::move(g));
@@ -196,36 +196,35 @@ CVeloxAST parse_translation_unit(const std::string& filename, const std::vector<
 
 EVeloxTypeFromC c_type_base_to_velox_type_base(CXType cType, CXType &out_base_cType) {
     switch (cType.kind) {
-        case CXType_SChar:              out_base_cType = cType; return EVeloxTypeFromC::_schar;
-        case CXType_Short:              out_base_cType = cType; return EVeloxTypeFromC::_short;
-        case CXType_Int:                out_base_cType = cType; return EVeloxTypeFromC::_int;
-        case CXType_LongLong:           out_base_cType = cType; return EVeloxTypeFromC::_longlong;
-        case CXType_Long:               out_base_cType = cType; return EVeloxTypeFromC::_long; // target dependant
-        case CXType_UChar:              out_base_cType = cType; return EVeloxTypeFromC::_uchar;
-        case CXType_UShort:             out_base_cType = cType; return EVeloxTypeFromC::_ushort;
-        case CXType_UInt:               out_base_cType = cType; return EVeloxTypeFromC::_uint;
-        case CXType_ULong:              out_base_cType = cType; return EVeloxTypeFromC::_ulong; // target dependant
-        case CXType_ULongLong:          out_base_cType = cType; return EVeloxTypeFromC::_ulonglong;
-        case CXType_Float:              out_base_cType = cType; return EVeloxTypeFromC::_float;
-        case CXType_Double:             out_base_cType = cType; return EVeloxTypeFromC::_double;
-        case CXType_LongDouble:         out_base_cType = cType; return EVeloxTypeFromC::_longdouble;
-        case CXType_Bool:               out_base_cType = cType; return EVeloxTypeFromC::_bool;
-        case CXType_Void:               out_base_cType = cType; return EVeloxTypeFromC::_void;
-        case CXType_Pointer: {
-            CXType pointee_type = clang_getPointeeType(cType);
-
-            return c_type_base_to_velox_type_base(pointee_type, out_base_cType);
-        }
-        case CXType_Record:             out_base_cType = cType; return EVeloxTypeFromC::struct_comp;
-        case CXType_Enum:               out_base_cType = cType; return EVeloxTypeFromC::enum_flag;
-        case CXType_IncompleteArray:
-        case CXType_ConstantArray: {
-            CXType pointee_type = clang_getPointeeType(cType);
-            return c_type_base_to_velox_type_base(pointee_type, out_base_cType);
-        }
-        case CXType_FunctionProto:
-        case CXType_FunctionNoProto:    out_base_cType = cType; return EVeloxTypeFromC::func;
-        default:                        out_base_cType = cType; return EVeloxTypeFromC::alias; // typedef / inconnu
+    case CXType_SChar:              out_base_cType = cType; return EVeloxTypeFromC::_schar;
+    case CXType_Short:              out_base_cType = cType; return EVeloxTypeFromC::_short;
+    case CXType_Int:                out_base_cType = cType; return EVeloxTypeFromC::_int;
+    case CXType_LongLong:           out_base_cType = cType; return EVeloxTypeFromC::_longlong;
+    case CXType_Long:               out_base_cType = cType; return EVeloxTypeFromC::_long; // target dependant
+    case CXType_UChar:              out_base_cType = cType; return EVeloxTypeFromC::_uchar;
+    case CXType_UShort:             out_base_cType = cType; return EVeloxTypeFromC::_ushort;
+    case CXType_UInt:               out_base_cType = cType; return EVeloxTypeFromC::_uint;
+    case CXType_ULong:              out_base_cType = cType; return EVeloxTypeFromC::_ulong; // target dependant
+    case CXType_ULongLong:          out_base_cType = cType; return EVeloxTypeFromC::_ulonglong;
+    case CXType_Float:              out_base_cType = cType; return EVeloxTypeFromC::_float;
+    case CXType_Double:             out_base_cType = cType; return EVeloxTypeFromC::_double;
+    case CXType_LongDouble:         out_base_cType = cType; return EVeloxTypeFromC::_longdouble;
+    case CXType_Bool:               out_base_cType = cType; return EVeloxTypeFromC::_bool;
+    case CXType_Void:               out_base_cType = cType; return EVeloxTypeFromC::_void;
+    case CXType_Pointer: {
+        CXType pointee_type = clang_getPointeeType(cType);
+        return c_type_base_to_velox_type_base(pointee_type, out_base_cType);
+    }
+    case CXType_Record:             out_base_cType = cType; return EVeloxTypeFromC::struct_comp;
+    case CXType_Enum:               out_base_cType = cType; return EVeloxTypeFromC::enum_flag;
+    case CXType_IncompleteArray:
+    case CXType_ConstantArray: {
+        CXType pointee_type = clang_getPointeeType(cType);
+        return c_type_base_to_velox_type_base(pointee_type, out_base_cType);
+    }
+    case CXType_FunctionProto:
+    case CXType_FunctionNoProto:    out_base_cType = cType; return EVeloxTypeFromC::func;
+    default:                        out_base_cType = cType; return EVeloxTypeFromC::alias; // typedef / inconnu
     }
 }
 
@@ -305,15 +304,15 @@ CVeloxType c_type_to_velox_type(CXType cType) {
         CXCursor decl = clang_getTypeDeclaration(cType);
         
         if (clang_getCursorKind(decl) == CXCursor_StructDecl) {
-            vt.val_type == EVeloxTypeFromC::struct_comp;
+            vt.val_type = EVeloxTypeFromC::struct_comp;
             vt.comp_type = std::make_unique<CVeloxComp>(c_struct_to_velox_comp(decl));
         }
         else if (clang_getCursorKind(decl) == CXCursor_UnionDecl) { 
-            vt.val_type == EVeloxTypeFromC::_union;
+            vt.val_type = EVeloxTypeFromC::_union;
             vt.union_type = std::make_unique<CVeloxUnion>(c_union_to_velox_union(decl));
         }
         else if (clang_getCursorKind(decl) == CXCursor_EnumDecl) {
-            vt.val_type == EVeloxTypeFromC::enum_flag;
+            vt.val_type = EVeloxTypeFromC::enum_flag;
             vt.flag_type = std::make_unique<CVeloxFlag>(c_enum_to_velox_flag(decl));
         }
         
@@ -342,16 +341,19 @@ EVeloxParamPassMode type_to_passMode(CVeloxType &cVel)
     
     if (cVel.is_pointer_double)
         return EVeloxParamPassMode::addr;
+
+    return EVeloxParamPassMode::NONE;
 }
 
 std::string EVeloxParamPassMode_to_str(EVeloxParamPassMode pm)
 {
     switch (pm) {
-        case EVeloxParamPassMode::copy: return "copy";
-        case EVeloxParamPassMode::ref: return "ref";
-        case EVeloxParamPassMode::mut: return "mut";
-        case EVeloxParamPassMode::move: return "move";
-        case EVeloxParamPassMode::addr: return "addr";
+    case EVeloxParamPassMode::copy: return "copy";
+    case EVeloxParamPassMode::ref: return "ref";
+    case EVeloxParamPassMode::mut: return "mut";
+    case EVeloxParamPassMode::move: return "move";
+    case EVeloxParamPassMode::addr: return "addr";
+    case EVeloxParamPassMode::NONE: return "NO PARAM PASS MODE";
     }
 }
 
@@ -481,58 +483,59 @@ std::string type_to_str(CVeloxType &cVel) {
     
     // base types
     switch (cVel.val_type) {
-        case EVeloxTypeFromC::_schar:           type = "C::_schar"; break;
-        case EVeloxTypeFromC::_short:           type = "C::_short"; break;
-        case EVeloxTypeFromC::_long:            type = "C::_long"; break;
-        case EVeloxTypeFromC::_longlong:        type = "C::_longlong"; break;
-        case EVeloxTypeFromC::_int:             type = "C::_int"; break;
+    case EVeloxTypeFromC::INVALID:          type = "INVALID VELOX TYPE FROM C"; break;
+    case EVeloxTypeFromC::_schar:           type = "C::_schar"; break;
+    case EVeloxTypeFromC::_short:           type = "C::_short"; break;
+    case EVeloxTypeFromC::_long:            type = "C::_long"; break;
+    case EVeloxTypeFromC::_longlong:        type = "C::_longlong"; break;
+    case EVeloxTypeFromC::_int:             type = "C::_int"; break;
 
-        case EVeloxTypeFromC::_uchar:           type = "C::_uchar"; break;
-        case EVeloxTypeFromC::_ushort:          type = "C::_ushort"; break;
-        case EVeloxTypeFromC::_ulong:           type = "C::_ulong"; break;
-        case EVeloxTypeFromC::_ulonglong:       type = "C::_ulonglong"; break;
-        case EVeloxTypeFromC::_uint:            type = "C::_uint"; break;
+    case EVeloxTypeFromC::_uchar:           type = "C::_uchar"; break;
+    case EVeloxTypeFromC::_ushort:          type = "C::_ushort"; break;
+    case EVeloxTypeFromC::_ulong:           type = "C::_ulong"; break;
+    case EVeloxTypeFromC::_ulonglong:       type = "C::_ulonglong"; break;
+    case EVeloxTypeFromC::_uint:            type = "C::_uint"; break;
 
-        case EVeloxTypeFromC::_size_t:          type = "C::_size"; break;
-        case EVeloxTypeFromC::_ptr_diff:        type = "C::_ptr_diff"; break;
+    case EVeloxTypeFromC::_size_t:          type = "C::_size"; break;
+    case EVeloxTypeFromC::_ptr_diff:        type = "C::_ptr_diff"; break;
 
 
-        case EVeloxTypeFromC::_float:           type = "C::_float"; break;
-        case EVeloxTypeFromC::_double:          type = "C::_double"; break;
-        case EVeloxTypeFromC::_longdouble:      type = "C::_longdouble"; break;
+    case EVeloxTypeFromC::_float:           type = "C::_float"; break;
+    case EVeloxTypeFromC::_double:          type = "C::_double"; break;
+    case EVeloxTypeFromC::_longdouble:      type = "C::_longdouble"; break;
 
-        case EVeloxTypeFromC::_bool:            type = "bool"; break;
-        case EVeloxTypeFromC::_void:            type = "void"; break;
+    case EVeloxTypeFromC::_bool:            type = "bool"; break;
+    case EVeloxTypeFromC::_void:            type = "void"; break;
 
-        case EVeloxTypeFromC::struct_comp:
-        case EVeloxTypeFromC::_union:
-        case EVeloxTypeFromC::enum_flag:            
-        case EVeloxTypeFromC::alias:
-            type = cVel.complex_type_name;
-            break;
+    case EVeloxTypeFromC::struct_comp:
+    case EVeloxTypeFromC::_union:
+    case EVeloxTypeFromC::enum_flag:            
+    case EVeloxTypeFromC::alias:
+        type = cVel.complex_type_name;
+        break;
 
-        case EVeloxTypeFromC::func: {
-            if (cVel.func_type.get()) {
-                std::string str_params;
-                
-                for (size_t i = 0; i < cVel.func_type->params.size(); i++) {
-                    auto &[type, _] = cVel.func_type->params[i]; 
-                    str_params += type_to_str(type);
-                    if (i != cVel.func_type->params.size() - 1)
-                        str_params += ", ";
-                }
-
-                std::string str_return = type_to_str(cVel.func_type->return_type);
-
-                std::string fn = EMBINDER_FN_TYPE_TEMPLATE;
-                fmt_template(fn, { str_params, str_return });
-                type = fn;
+    case EVeloxTypeFromC::func: {
+        if (cVel.func_type.get()) {
+            std::string str_params;
+            
+            for (size_t i = 0; i < cVel.func_type->params.size(); i++) {
+                auto &[type, _] = cVel.func_type->params[i]; 
+                str_params += type_to_str(type);
+                if (i != cVel.func_type->params.size() - 1)
+                    str_params += ", ";
             }
-            else {
-                std::runtime_error("Undefined function type");
-            }
-            break;
-        }            
+
+            std::string str_return = type_to_str(cVel.func_type->return_type);
+
+            std::string fn = EMBINDER_FN_TYPE_TEMPLATE;
+            fmt_template(fn, { str_params, str_return });
+            type = fn;
+        }
+        else {
+            std::runtime_error("Undefined function type");
+        }
+        break;
+    }            
     }
 
     if (cVel.is_val_type_const)     type = "$" + type;

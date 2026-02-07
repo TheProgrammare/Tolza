@@ -16,7 +16,7 @@ namespace PAR {
 
 		[[nodiscard]] std::shared_ptr<AST::ALocal>										parse_local(bool silent_error = false);
 
-        [[nodiscrad]] AST::Declaration::Local::Pattern_Element                          pattern_mapping(ECapability capa);
+        [[nodiscard]] AST::Declaration::Local::Pattern_Element                          pattern_mapping(ECapability capa);
 
         [[nodiscard]] AST::Evaluator										            parse_evaluator(std::shared_ptr<AST::AReference> comparison_ref);
         [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern>                 parse_pattern(std::shared_ptr<AST::AReference> comparison_ref);

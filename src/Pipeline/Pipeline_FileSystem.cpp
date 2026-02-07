@@ -9,7 +9,8 @@
 
 namespace {
 
-bool hasTargetExtension(const std::filesystem::path& filePath) {
+bool hasTargetExtension(const std::filesystem::path& filePath) 
+{
 	auto ext = filePath.extension().string();
 	return
 		ext == ".vel" || ext == ".vlx" || ext == ".velox" ||
@@ -17,8 +18,12 @@ bool hasTargetExtension(const std::filesystem::path& filePath) {
 }
 
 
-std::optional<std::vector<std::filesystem::path>> find_files(const std::string& target_path) {
+std::optional<std::vector<std::filesystem::path>> find_files(const std::string& target_path) 
+{
 	std::vector<std::filesystem::path> filesFounds;
+
+	if (in_binding_compilation) std::cout << "[EMBinder] ";
+	std::cout << color_CYAN "[file] search scripts at source: " color_MAGENTA "\"" + target_path + "\"" color_RESET << std::endl;
 
 	bool error = false;
 
@@ -39,16 +44,18 @@ std::optional<std::vector<std::filesystem::path>> find_files(const std::string& 
 
 	}
 	catch (const std::filesystem::filesystem_error& e) {
+		if (in_binding_compilation) std::cout << "[EMBinder] ";
+        std::cout << "[file]";
 		std::cerr << color_RED << "ERR reading " << e.what() << color_RESET << "\n";
 		error = true;
 	}
-	std::cout << std::endl;
 	if (error) return std::nullopt;
 	return filesFounds;
 }
 
 
-std::vector<std::string> str_files(const std::vector<std::filesystem::path>& fPaths) {
+std::vector<std::string> str_files(const std::vector<std::filesystem::path>& fPaths) 
+{
 	std::vector<std::string> filesStr;
 
 	size_t i = 0;
@@ -67,7 +74,8 @@ std::vector<std::string> str_files(const std::vector<std::filesystem::path>& fPa
 	return filesStr;
 }
 
-std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>& strFiles) {
+std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>& strFiles)
+{
 	std::vector<std::vector<std::string>> lineFiles;
 	lineFiles.reserve(strFiles.size());
 
@@ -94,6 +102,8 @@ std::optional<FileSystemOut> pipeline_start_filesystem(const std::string &target
     auto filesResult = find_files(target_file);
     if (!filesResult.has_value()) return std::nullopt;
     auto filesFounds = filesResult.value();
+
+	std::cout << color_YELLOW "[file] [summary] " color_CYAN "files found: " color_YELLOW + std::to_string(filesFounds.size()) + color_RESET "\n" << std::endl;
 
     // build file into string and lines (for better debug)
     std::vector<std::string> strFiles = str_files(filesFounds);

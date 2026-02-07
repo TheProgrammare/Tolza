@@ -42,6 +42,7 @@ std::optional<std::unique_ptr<AST::ALiteral>> PAR::Parser_Literal::try_literal(b
 			ctx.tok_v.peek(2).ty == TokTy::COLON) {
 										return literal_tuple();
 		}
+	default: break;
 	}
 
 	if (!is_silent_error) {
@@ -265,10 +266,11 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 		format->fill = tok1.val[0];
 		switch (tok2.ty)
 		{
-		case TokTy::OPEN_BRACKETS:		format->align = AST::Literal::Format_Specifier::EAlign::Left; break;
-		case TokTy::CLOSE_BRACKETS:		format->align = AST::Literal::Format_Specifier::EAlign::Right; break;
-		case TokTy::OP_CIRCUMFLEX:		format->align = AST::Literal::Format_Specifier::EAlign::Center; break;
-		case TokTy::TILDE:				format->align = AST::Literal::Format_Specifier::EAlign::Justify; break;
+		case TokTy::OPEN_BRACKETS:		{ format->align = AST::Literal::Format_Specifier::EAlign::Left; break; }
+		case TokTy::CLOSE_BRACKETS:		{ format->align = AST::Literal::Format_Specifier::EAlign::Right; break; }
+		case TokTy::OP_CIRCUMFLEX:		{ format->align = AST::Literal::Format_Specifier::EAlign::Center; break; }
+		case TokTy::TILDE:				{ format->align = AST::Literal::Format_Specifier::EAlign::Justify; break; }
+		default: break;
 		}
 
 		ctx.tok_v.next();
@@ -279,9 +281,10 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 	if (ctx.tok_v.match_any({ TokTy::OP_PLUS, TokTy::OP_MINUS, TokTy::SPACE })) {
 		switch (ctx.tok_v.peek(-1).ty)
 		{
-		case TokTy::OP_PLUS:	format->sign = AST::Literal::Format_Specifier::ESign::Pos; break;
-		case TokTy::OP_MINUS:	format->sign = AST::Literal::Format_Specifier::ESign::Neg; break;
-		case TokTy::SPACE:		format->sign = AST::Literal::Format_Specifier::ESign::Space; break;
+		case TokTy::OP_PLUS:	{ format->sign = AST::Literal::Format_Specifier::ESign::Pos; break; }
+		case TokTy::OP_MINUS:	{ format->sign = AST::Literal::Format_Specifier::ESign::Neg; break; }
+		case TokTy::SPACE:		{ format->sign = AST::Literal::Format_Specifier::ESign::Space; break; }
+		default: break;
 		}
 	}
 
@@ -403,7 +406,7 @@ std::unique_ptr<AST::ALiteral> PAR::Parser_Literal::literal_table() {
 		"\n  - matrix {{ 1, 2 },{ 3, 4 }}"
 		"\n  - matrix population { [0..4] => @i + 1 }*3"
 		"\n  - matrix population { [0..4, 0..4] => @i + 1 + @j }"
-		"\n  - map table { a: 1, b: 2, c: 3 }";
+		"\n  - map table { a: 1, b: 2, c: 3 }"
 		"\n  - map table population { [0..4] => text_number[@i] : @i }";
 
 	ctx.tok_v.match(TokTy::OPEN_BRACE);

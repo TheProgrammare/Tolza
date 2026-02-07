@@ -64,7 +64,7 @@ std::optional<std::vector<std::vector<Token>>> lexer_pass(const FileSystemOut &f
 	double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
 	if (in_binding_compilation) std::cout << color_YELLOW "[EMBinder] ";
-	std::cout << color_YELLOW  "[summary] " << color_RESET << 
+	std::cout << color_YELLOW  "[lex] [summary] " << color_RESET << 
 		"duration: " << color_YELLOW << milli << " ms" << color_RESET <<
 		" | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
 	std::cout << std::endl;

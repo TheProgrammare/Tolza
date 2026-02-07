@@ -101,7 +101,7 @@ std::unique_ptr<AST::Type_Reference> PAR::Parser_Type::reference(bool isConst, b
 }
 
 std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::tuple(bool isConst, bool isOptional, bool isVolatile) {
-	auto tu = ctx.p_type->tuple();
+	auto tu = explicit_tuple();
 	tu->type_isConst = isConst;
 	tu->type_isOptional = isOptional;
 	tu->type_isVolatile = isVolatile;
@@ -110,6 +110,18 @@ std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::tuple(bool isConst, bool isO
 	tu->type_isOptional = isOptional ? true : isOptionalP;
 	tu->type_isVolatile = isVolatile ? true : isVolatileP;
 	return tu;
+}
+
+std::unique_ptr<AST::Type::Function_Proto> PAR::Parser_Type::function_proto(bool isConst, bool isOptional, bool isVolatile) {
+	auto proto = explicit_function_proto();
+	proto->type_isConst = isConst;
+	proto->type_isOptional = isOptional;
+	proto->type_isVolatile = isVolatile;
+	auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+	proto->type_isConst = isConst ? true : isConstP;
+	proto->type_isOptional = isOptional ? true : isOptionalP;
+	proto->type_isVolatile = isVolatile ? true : isVolatileP;
+	return std::unique_ptr<AST::Type::Function_Proto>(proto.get());
 }
 
 std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type() {
@@ -146,7 +158,7 @@ std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type() {
 	return nullptr;
 };
 
-std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::tuple() {
+std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::explicit_tuple() {
 	auto tuple = ctx.Create_Node<AST::Type::Tuple>(ctx.tok_v.peek());
 	bool endByParen = ctx.tok_v.match(TokTy::OPEN_PAREN);
 	bool isNamedTuple = ctx.tok_v.peek(1).ty == TokTy::COLON; // (name: type, ...) or (type, ...)
@@ -184,7 +196,7 @@ std::unique_ptr<AST::Type::Get_Expr_Type> PAR::Parser_Type::expr_get_expr_type()
 	return node;
 }
 
-std::shared_ptr<AST::Type::Function_Proto> PAR::Parser_Type::function_proto(bool isLam) {
+std::shared_ptr<AST::Type::Function_Proto> PAR::Parser_Type::explicit_function_proto(bool isLam) {
 	static const std::string hint =
 		"define function like:"
 		"\n  - `fn myName() { ... }`"
@@ -204,7 +216,7 @@ std::shared_ptr<AST::Type::Function_Proto> PAR::Parser_Type::function_proto(bool
 
 	// check return 
 	if (ctx.tok_v.match(TokTy::ARROW)) {
-		ty->returnType = ctx.p_type->tuple();
+		ty->returnType = ctx.p_type->explicit_tuple();
 	}
 
 	return ty;
@@ -231,7 +243,7 @@ std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> PAR::Parser_Typ
 	while (!ctx.tok_v.is_end()) {
 		auto param = ctx.Create_Decl<AST::Declaration::Local::Parameter>(ctx.tok_v.peek());
 		param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().ty);
-		if (param->passMode == EPassMode::None) 
+		if (param->passMode == EPassMode::NONE) 
 			ctx.tok_v.add_error("PAR1415", "Expected parameter pass mode before the parameter name.", hint);
 
 		param->id = ctx.p_ref->identifier(true);

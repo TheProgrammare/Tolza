@@ -26,7 +26,7 @@
 #include "Lexer/Token.hpp"
 #include "AST/AST_Base.hpp"
 
-constexpr size_t k_metacode_flag = 18446744073709551615;
+constexpr size_t k_metacode_flag = 18446744073709551614ULL;
 
 struct ScriptInfo;
 
@@ -599,7 +599,6 @@ namespace META {
             return result;
         }
 
-        [[nodiscard]]
         void filter_metablocks_parent_cascade(std::vector<const MetaBlock*> &input) const {
             const std::vector<const MetaBlock*> &tmp = input;
 

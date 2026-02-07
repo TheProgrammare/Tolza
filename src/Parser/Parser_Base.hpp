@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "AST/AST_Forward.hpp"
 #include "AST/AST_CodeBlock_Instruction.hpp"
@@ -39,7 +40,7 @@ namespace PAR {
         [[nodiscard]] ModuleImportation*  								parse_import();
         [[nodiscard]] std::shared_ptr<AST::Declaration::Export>   		parse_export();
 
-		[[nodiscard]] AST::CodeBlock_instruction 						parse_instruction();
+		[[nodiscard]] std::optional<AST::CodeBlock_instruction> 		parse_instruction();
 
         Parser_Context *ctx;
 

@@ -37,6 +37,7 @@ std::unique_ptr<AST::Node> PAR::Parser_Statement::parse_statement(bool is_silent
 	case TokTy::RETURN:					return return_flow();
 	case TokTy::GOTO:					return goto_statement();
 	case TokTy::GOTO_LABEL:				return goto_label_statement();
+	default: break;
 	}
 
 	if (!is_silent_error)
@@ -85,9 +86,9 @@ std::unique_ptr<AST::Statement::For> PAR::Parser_Statement::for_statement() {
 		"\n  - for index : `for i in start..end { ... }`"
 		"\n  - for array : `for mut/ref/copy item in array` { ... }"
 		"\n  - for array with index : `for i, mut/ref/copy item in array { ... }`"
-		"\n  - for map : `for mut/ref/copy (item, key) in map { ... }`";
-		"\n  - for map with index : `for i, mut/ref/copy (item, key) in map { ... }`";
-		"\n  - for unpack : `for mut/ref/copy (a, b, ...) in array_tuple { ... }`";
+		"\n  - for map : `for mut/ref/copy (item, key) in map { ... }`"
+		"\n  - for map with index : `for i, mut/ref/copy (item, key) in map { ... }`"
+		"\n  - for unpack : `for mut/ref/copy (a, b, ...) in array_tuple { ... }`"
 		"\n  - for unpack with index : `for i, mut/ref/copy (a, b, ...) in array_tuple { ... }`";
 
 	auto forState = ctx.Create_Node<AST::Statement::For>(ctx.tok_v.peek());
@@ -290,9 +291,10 @@ std::unique_ptr<AST::Statement::Return> PAR::Parser_Statement::return_flow() {
 std::unique_ptr<AST::Statement::GoTo_Label> PAR::Parser_Statement::goto_label_statement()
 {
 	ctx.tok_v.match(TokTy::GOTO_LABEL);
- 	auto goto_label =  ctx.Create_Node<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
+ 	auto goto_label =  ctx.Create_Decl<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
 	goto_label->id = ctx.p_ref->identifier(true);
 	ctx.tok_v.expect(TokTy::COLON, "PAR1978", "Expected colon ':' after label name.", 
 		"define goto label like: `label my_label:`");
-	return goto_label;
+	ctx.m_sym->add_decl(goto_label);
+	return std::unique_ptr<AST::Statement::GoTo_Label>(goto_label.get());
 }
