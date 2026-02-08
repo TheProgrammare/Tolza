@@ -112,7 +112,7 @@ bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
 	// according to the imported module name
 	size_t count = 1;
 	for (auto& sInfo : pipe_scripts->scripts_infos) {
-		std::cout << "[EMBinder] [";
+		std::cout << "[EMBinder]";
         std::cout << color_CYAN " [" << count++ << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
         std::cout << color_MAGENTA << sInfo->file_path << color_RESET "... " << std::flush;
 

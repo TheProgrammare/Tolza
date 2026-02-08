@@ -83,4 +83,3 @@ Ensure LLVM include paths and libraries are visible to the IDE
 - GitHub Actions (GitHub)
 - LLDB DAP (LLVM) : Debugging
 - Clang-Format (Xaver Hellauer) : Code formatation for clang
-
