@@ -1,4 +1,4 @@
-# Getting Started
+# 🏁 Getting Started
 
 To contribute to the Velox programming language, clone this repository and follow the instructions below.
 
