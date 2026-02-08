@@ -19,9 +19,9 @@ Types : entity, component, role, system, enum, type, union, generic, named metac
 
 | type | format | e.g. |
 |-|-|-|
-| namespace | PascalCase | `CityEurope` |
+| module | snake_case | `city_europe` |
 | type alias | PascalCase | `Map3Array` |
-| entity | PascalCase, prefix `T` | `TAnimal` |                              
+| entity | PascalCase, prefix `T` (optional) | `TAnimal` `Animal` |                              
 | component | PascalCase, prefix `C`<br> suffix `able` | `CMovable` |
 | component member | snake_case | `max_health` |
 | role | PascalCase<br> prefix `R` | `REnnemy` |
