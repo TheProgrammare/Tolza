@@ -1,7 +1,7 @@
 #include "Parser_Expression.hpp"
 
 #include "Parser_Context.hpp"
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 #include "Parser_Declaration.hpp"
 #include "Parser_Expression.hpp"
 #include "Parser_Literal.hpp"

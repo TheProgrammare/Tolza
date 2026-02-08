@@ -7,7 +7,7 @@
 #include "AST/AST_Base.hpp"
 #include "AST/AST_CodeBlock_Instruction.hpp"
 #include "AST/AST_Data.hpp"
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 #include "AST/AST_Declaration_Local.hpp"
 #include "AST/AST_Declaration.hpp"
 #include "AST/AST_Evaluator.hpp"

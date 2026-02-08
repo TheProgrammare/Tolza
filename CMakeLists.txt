@@ -25,6 +25,8 @@ file(GLOB_RECURSE VELOX_SOURCES
 
 add_executable(velox ${VELOX_SOURCES})
 
+add_compile_definitions(PROJECT_DIR="${CMAKE_SOURCE_DIR}")
+
 # ----------------------------
 # Include directories
 # ----------------------------

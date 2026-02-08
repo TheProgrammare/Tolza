@@ -2,7 +2,7 @@
 #include "Parser_Statement.hpp"
 
 #include "Parser_Context.hpp"
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 #include "Parser_Declaration_Local.hpp"
 #include "Parser_Declaration.hpp"
 #include "Parser_Expression.hpp"

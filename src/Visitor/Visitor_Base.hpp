@@ -94,19 +94,19 @@ struct Visitor_Base {
 
 	virtual void visit(AST::Declaration::Local::Capability &n) = 0;	
 
-	// ============ ECS ============
-	virtual void visit(AST::Declaration::ECS::Component &n) = 0;			
-	virtual void visit(AST::Declaration::ECS::Component_Field &n) = 0;		
+	// ============ COP ============
+	virtual void visit(AST::Declaration::COP::Component &n) = 0;			
+	virtual void visit(AST::Declaration::COP::Component_Field &n) = 0;		
 
-	virtual void visit(AST::Declaration::ECS::Role &n) = 0;				
+	virtual void visit(AST::Declaration::COP::Role &n) = 0;				
 
-	virtual void visit(AST::Declaration::ECS::Entity &n) = 0;				
-	virtual void visit(AST::Declaration::ECS::Entity_Cast &n) = 0;			
-	virtual void visit(AST::Declaration::ECS::Entity_Op &n) = 0;			
-	virtual void visit(AST::Declaration::ECS::Entity_OpIndex &n) = 0;		
+	virtual void visit(AST::Declaration::COP::Entity &n) = 0;				
+	virtual void visit(AST::Declaration::COP::Entity_Cast &n) = 0;			
+	virtual void visit(AST::Declaration::COP::Entity_Op &n) = 0;			
+	virtual void visit(AST::Declaration::COP::Entity_OpIndex &n) = 0;		
 	
-	virtual void visit(AST::Declaration::ECS::System &n) = 0;				
-	virtual void visit(AST::Declaration::ECS::System_Case &n) = 0;	
+	virtual void visit(AST::Declaration::COP::System &n) = 0;				
+	virtual void visit(AST::Declaration::COP::System_Case &n) = 0;	
 
 	// ============ GENERIC ============
 	virtual void visit(AST::Generic::Is_Type &n) = 0;

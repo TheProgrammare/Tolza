@@ -19,7 +19,7 @@ struct If : public Node {
     bool isInline = false;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "IF"; }
+    std::string debug_str() const override { return "IF"; }
 };
 
 struct If_Ternary : public Node {
@@ -29,7 +29,7 @@ struct If_Ternary : public Node {
     std::unique_ptr<Node> false_line;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "TER IF"; }
+    std::string debug_str() const override { return "TER IF"; }
 };
 
 
@@ -45,11 +45,11 @@ struct For : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
     bool isReverse = false;
 
-    std::shared_ptr<AType> resolved_item_ty;
-    std::shared_ptr<AType> resolved_key_ty;
+    SYM_TYPE<AType> resolved_item_ty;
+    SYM_TYPE<AType> resolved_key_ty;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override;
+    std::string debug_str() const override;
 };
 
 // loop {...}
@@ -57,7 +57,7 @@ struct Loop : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "LOOP"; }
+    std::string debug_str() const override { return "LOOP"; }
 };
 
 // while condition {...}
@@ -67,7 +67,7 @@ struct While : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "WHILE"; }
+    std::string debug_str() const override { return "WHILE"; }
 };
 
 // goto azerty
@@ -76,14 +76,14 @@ struct GoTo : public AReference {
 
     std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "GOTO[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "GOTO[" + id.debug_str() + "]"; }
 };
 
 // label azerty:
 struct GoTo_Label : public ADeclaration {
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "LABEL[" + id.debug_str() + "]"; }
-    [[nodiscard]] ESymbolType get_symbol_type() const override { return ESymbolType::Goto_Label; }
+    std::string debug_str() const override { return "LABEL[" + id.debug_str() + "]"; }
+    ESymbolType get_symbol_type() const override { return ESymbolType::Goto_Label; }
 };
 
 
@@ -93,20 +93,20 @@ struct Return : public Node {
     std::unique_ptr<Node> value;
 
     // resolved by superior node
-    std::shared_ptr<Type::Function_Proto> resolved_sym;
+    SYM_TYPE<Type::Function_Proto> resolved_sym;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "<inst> return"; }
+    std::string debug_str() const override { return "<inst> return"; }
 };
 
 struct Break : public Node {
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "break"; }
+    std::string debug_str() const override { return "break"; }
 };
 
 struct Continue : public Node {
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "continue"; }
+    std::string debug_str() const override { return "continue"; }
 };
 
 
@@ -116,7 +116,7 @@ struct Match_Case : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "CASE"; }
+    std::string debug_str() const override { return "CASE"; }
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
@@ -127,7 +127,7 @@ struct Match : public Node {
     std::unique_ptr<Match_Case> other_case;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "MATCH"; }
+    std::string debug_str() const override { return "MATCH"; }
 };
 
 

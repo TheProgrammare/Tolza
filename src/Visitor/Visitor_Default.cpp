@@ -6,7 +6,7 @@
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 #include "AST/AST_Generic.hpp"
 #include "AST/AST_Literal.hpp"
 #include "AST/AST_Memory.hpp"
@@ -239,25 +239,25 @@ void Visitor_Default::visit(AST::Declaration::Local::Capability &n)
 	n.reference->accept(*this);
 }	
 
-// ============ ECS ============
-void Visitor_Default::visit(AST::Declaration::ECS::Component &n)
+// ============ COP ============
+void Visitor_Default::visit(AST::Declaration::COP::Component &n)
 {
 	if (n.gen_where) n.gen_where->accept(*this);
 	for (auto &elem : n.fields) elem->accept(*this);
 
 }			
-void Visitor_Default::visit(AST::Declaration::ECS::Component_Field &n)
+void Visitor_Default::visit(AST::Declaration::COP::Component_Field &n)
 {
 	n.ty->accept(*this);
 	if (n.default_value) n.default_value->accept(*this);
 }		
 
-void Visitor_Default::visit(AST::Declaration::ECS::Role &n)
+void Visitor_Default::visit(AST::Declaration::COP::Role &n)
 {
 	for (auto &elem : n.components) elem->accept(*this);
 }				
 
-void Visitor_Default::visit(AST::Declaration::ECS::Entity &n)
+void Visitor_Default::visit(AST::Declaration::COP::Entity &n)
 {
 	for (auto &elem : n.comps) elem->accept(*this);
 	for (auto &[proto, elem] : n.constructors) {
@@ -268,27 +268,27 @@ void Visitor_Default::visit(AST::Declaration::ECS::Entity &n)
 	for (auto &elem : n.operators) elem->accept(*this);
 	for (auto &elem : n.casts) elem->accept(*this);
 }				
-void Visitor_Default::visit(AST::Declaration::ECS::Entity_Cast &n)
+void Visitor_Default::visit(AST::Declaration::COP::Entity_Cast &n)
 {
 	n.source->accept(*this);
 	n.target->accept(*this);
 }			
-void Visitor_Default::visit(AST::Declaration::ECS::Entity_Op &n)
+void Visitor_Default::visit(AST::Declaration::COP::Entity_Op &n)
 {
 	n.codeblock->accept(*this);
 }			
-void Visitor_Default::visit(AST::Declaration::ECS::Entity_OpIndex &n)
+void Visitor_Default::visit(AST::Declaration::COP::Entity_OpIndex &n)
 {
 	n.codeblock->accept(*this);
 	n.return_type->accept(*this);
 }		
 
-void Visitor_Default::visit(AST::Declaration::ECS::System &n)
+void Visitor_Default::visit(AST::Declaration::COP::System &n)
 {
 	n.prototype->accept(*this);
 	for (auto &elem : n.cases) elem->accept(*this); 
 }				
-void Visitor_Default::visit(AST::Declaration::ECS::System_Case &n)
+void Visitor_Default::visit(AST::Declaration::COP::System_Case &n)
 {
 	for (auto &elem : n.bindings) elem->accept(*this);
 	n.codeblock->accept(*this);

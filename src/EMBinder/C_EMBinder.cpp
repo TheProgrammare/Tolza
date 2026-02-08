@@ -6,6 +6,7 @@
 #include <iostream>
 #include <assert.h>
 #include <set>
+#include <filesystem>
 
 #include "Globals.hpp"
 #include "ScriptInfo.hpp"
@@ -88,6 +89,8 @@ int EMBinder_LibC::c_lib_to_velox_lib()
         }
     }
 
+    std::filesystem::remove(tmp_file);
+
     return 0;
 }
 
@@ -105,56 +108,56 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
     std::set<std::string> &gl_names = current_bind->global_to_generate;
 
     switch (kind) {
-        case CXCursor_StructDecl: {
-            std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+    case CXCursor_StructDecl: {
+        std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+        if (!ty_names.contains(name)) break;
 
-            if (!clang_isCursorDefinition(cursor)) break; // ignorer forward declaration
-            CVeloxComp comp = c_struct_to_velox_comp(cursor);
-            ast->comps.push_back(std::move(comp));
-            break;
-        }
+        if (!clang_isCursorDefinition(cursor)) break; // ignorer forward declaration
+        CVeloxComp comp = c_struct_to_velox_comp(cursor);
+        ast->comps.push_back(std::move(comp));
+        break;
+    }
 
-        case CXCursor_UnionDecl: {
-            std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+    case CXCursor_UnionDecl: {
+        std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+        if (!ty_names.contains(name)) break;
 
-            if (!clang_isCursorDefinition(cursor)) break;
-            CVeloxUnion u = c_union_to_velox_union(cursor);
-            ast->unions.push_back(std::move(u));
-            break;
-        }
+        if (!clang_isCursorDefinition(cursor)) break;
+        CVeloxUnion u = c_union_to_velox_union(cursor);
+        ast->unions.push_back(std::move(u));
+        break;
+    }
 
-        case CXCursor_EnumDecl: {
-            std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!ty_names.contains(name)) break;
+    case CXCursor_EnumDecl: {
+        std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+        if (!ty_names.contains(name)) break;
 
-            if (!clang_isCursorDefinition(cursor)) break;
-            CVeloxFlag e = c_enum_to_velox_flag(cursor);
-            ast->enums.push_back(std::move(e));
-            break;
-        }
+        if (!clang_isCursorDefinition(cursor)) break;
+        CVeloxFlag e = c_enum_to_velox_flag(cursor);
+        ast->enums.push_back(std::move(e));
+        break;
+    }
 
-        case CXCursor_FunctionDecl: {
-            std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!fn_names.contains(name)) break;
+    case CXCursor_FunctionDecl: {
+        std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+        if (!fn_names.contains(name)) break;
 
-            CVeloxFunc f = c_function_to_velox_function(cursor);
-            ast->funcs.push_back(std::move(f));
-            break;
-        }
+        CVeloxFunc f = c_function_to_velox_function(cursor);
+        ast->funcs.push_back(std::move(f));
+        break;
+    }
 
-        case CXCursor_VarDecl: {
-            std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-            if (!fn_names.contains(name)) break;
+    case CXCursor_VarDecl: {
+        std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+        if (!fn_names.contains(name)) break;
 
-            CVeloxGlobal g = c_global_to_velox_global(cursor);
-            ast->globals.push_back(std::move(g));
-            break;
-        }
+        CVeloxGlobal g = c_global_to_velox_global(cursor);
+        ast->globals.push_back(std::move(g));
+        break;
+    }
 
-        default:
-            break;
+    default:
+        break;
     }
 
     return CXChildVisit_Recurse; // continuer récursivement

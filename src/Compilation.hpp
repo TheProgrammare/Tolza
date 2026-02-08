@@ -21,7 +21,6 @@
 #include <vector>
 #include <string>
 
-extern const std::string PROJECT_DIR;
 extern const std::string POSTPROCESS_OUT_DIR;
 extern const std::string BINDING_DIR;
 extern const std::string LLVM_IR_DIR;
@@ -42,7 +41,7 @@ struct CompCtx {
     bool is_size_opt = false;
     std::map<std::string, std::string> defines = {};
     std::vector<std::string> undefines = {};
-    std::string output = PROJECT_DIR + "/a.out";
+    std::string output = PROJECT_DIR "/a.out";
     bool LLVM_info_debug = true;
     EEmitMode emit_mode = EEmitMode::OBJ;
     std::string src_file = PROJECT_DIR;

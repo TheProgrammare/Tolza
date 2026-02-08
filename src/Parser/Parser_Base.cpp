@@ -2,7 +2,7 @@
 #include "Parser_Base.hpp"
 
 #include "Parser_Context.hpp"
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 #include "Parser_Declaration_Local.hpp"
 #include "Parser_Declaration.hpp"
 #include "Parser_Expression.hpp"
@@ -21,7 +21,7 @@
 PAR::Parser_Base::Parser_Base(std::shared_ptr<ScriptInfo> &infoFile) {
 	ctx = new Parser_Context(infoFile);
 
-	Parser_Declaration_ECS *p_ecs	= new Parser_Declaration_ECS(*ctx);
+	Parser_Declaration_COP *p_cop	= new Parser_Declaration_COP(*ctx);
 	Parser_Declaration *p_decl		= new Parser_Declaration(*ctx);
 	Parser_Expression *p_expr		= new Parser_Expression(*ctx);
 	Parser_Literal *p_lit			= new Parser_Literal(*ctx);
@@ -32,7 +32,7 @@ PAR::Parser_Base::Parser_Base(std::shared_ptr<ScriptInfo> &infoFile) {
 	Parser_Statement *p_state		= new Parser_Statement(*ctx);
 	Parser_Type *p_type				= new Parser_Type(*ctx);
 
-	ctx->p_ecs 	 	= p_ecs;
+	ctx->p_cop 	 	= p_cop;
 	ctx->p_decl 	= p_decl;
 	ctx->p_expr 	= p_expr;
 	ctx->p_lit 	 	= p_lit;

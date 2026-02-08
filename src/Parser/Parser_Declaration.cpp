@@ -11,14 +11,14 @@
 #include "Parser_Reference.hpp"
 #include "Parser_Type.hpp"
 #include "Parser_Statement.hpp"
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 #include "Parser_Declaration_Local.hpp"
 #include "Parser_Expression.hpp"
 
 #include "Metacode.hpp"
 
 #include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 
 #include "Visitor/Symbol_Manager.hpp"
 
@@ -35,9 +35,9 @@ std::shared_ptr<AST::ADeclaration> PAR::Parser_Declaration::parse_declaration()
 	case TokTy::FUNCTION:		return function();
 	case TokTy::GENERIC:		return generic();
 	case TokTy::TYPE:			return type_alias();
-	case TokTy::COMPONENT:		return ctx.p_ecs->component();
-	case TokTy::SYSTEM:			return ctx.p_ecs->system();
-	case TokTy::ENTITY:			return ctx.p_ecs->entity();
+	case TokTy::COMPONENT:		return ctx.p_cop->component();
+	case TokTy::SYSTEM:			return ctx.p_cop->system();
+	case TokTy::ENTITY:			return ctx.p_cop->entity();
 	case TokTy::EXPORT:			return ctx.p_base->parse_export();
 	case TokTy::IMPORT: {
 		auto ignore = ctx.p_base->parse_import(); 

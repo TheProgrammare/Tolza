@@ -20,7 +20,7 @@ struct Is_Type : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override {
+    bool type_isValid(const AType& ty) const override {
         for (auto &_ty : inType) {
             if (auto ptr = dynamic_cast<AST::AType*>(_ty.get())) {
                 if (*ptr == ty) return true;
@@ -28,7 +28,7 @@ struct Is_Type : IGenCond {
         }
         return false;
     }
-    [[nodiscard]] std::string debug_str() const override { return "gen is"; }
+    std::string debug_str() const override { return "gen is"; }
 };
 
 struct Can_Cast : IGenCond {
@@ -38,10 +38,10 @@ struct Can_Cast : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override {
+    bool type_isValid(const AType& ty) const override {
         return *target == ty;
     }
-    [[nodiscard]] std::string debug_str() const override { return std::string("gen cast ") + (isCastFrom ? "from" : "to"); }
+    std::string debug_str() const override { return std::string("gen cast ") + (isCastFrom ? "from" : "to"); }
 };
 
 struct Have_Op : IGenCond {
@@ -51,8 +51,8 @@ struct Have_Op : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override;
-    [[nodiscard]] std::string debug_str() const override { return "gen op"; }
+    bool type_isValid(const AType& ty) const override;
+    std::string debug_str() const override { return "gen op"; }
 };
 
 struct Have_Role : IGenCond {
@@ -61,10 +61,10 @@ struct Have_Role : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    std::shared_ptr<Declaration::ECS::Role> resolved_role_sym;
+    std::shared_ptr<Declaration::COP::Role> resolved_role_sym;
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override;
-    [[nodiscard]] std::string debug_str() const override { return "gen role"; }
+    bool type_isValid(const AType& ty) const override;
+    std::string debug_str() const override { return "gen role"; }
 };
 
 struct Use_Component : IGenCond {
@@ -73,10 +73,10 @@ struct Use_Component : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    std::shared_ptr<Declaration::ECS::Component> resolved_comp_sym;
+    std::shared_ptr<Declaration::COP::Component> resolved_comp_sym;
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override;
-    [[nodiscard]] std::string debug_str() const override { return "gen component"; }
+    bool type_isValid(const AType& ty) const override;
+    std::string debug_str() const override { return "gen component"; }
 };
 
 struct Compatible_System : IGenCond {
@@ -85,10 +85,10 @@ struct Compatible_System : IGenCond {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 
-    std::shared_ptr<Declaration::ECS::System> resolved_system_sym;
+    std::shared_ptr<Declaration::COP::System> resolved_system_sym;
 
-    [[nodiscard]] bool type_isValid(const AType& ty) const override;
-    [[nodiscard]] std::string debug_str() const override { return "gen system"; }
+    bool type_isValid(const AType& ty) const override;
+    std::string debug_str() const override { return "gen system"; }
 };
 
 }

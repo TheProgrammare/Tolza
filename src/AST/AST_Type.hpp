@@ -19,9 +19,9 @@ struct Ptr final : public AType {
         return false;
     }
 
-    [[nodiscard]] std::string mangle_type() const override { return EPtrType_to_mangle(pointer_type); }
-    [[nodiscard]] std::string debug_str() const override { return EPtrType_to_str(pointer_type); }
-    [[nodiscard]] EPrimType get_type() const override { return inner->get_type(); }
+    std::string mangle_type() const override { return EPtrType_to_mangle(pointer_type); }
+    std::string debug_str() const override { return EPtrType_to_str(pointer_type); }
+    EPrimType get_type() const override { return inner->get_type(); }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -39,12 +39,12 @@ struct Table final : public AType {
         return false;
     }
 
-    [[nodiscard]] std::string mangle_type() const override {
+    std::string mangle_type() const override {
         if (tableSize.has_value()) return "arr" + std::to_string(tableSize.value()) + "_" + inner->mangle_type();
         else return "list_" + inner->mangle_type();
     }
-    [[nodiscard]] std::string debug_str() const override { return "<ty> table"; }
-    [[nodiscard]] EPrimType get_type() const override { return inner->get_type(); }
+    std::string debug_str() const override { return "<ty> table"; }
+    EPrimType get_type() const override { return inner->get_type(); }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -59,9 +59,9 @@ struct Primitive final : public AType {
         return false;
     }
 
-    [[nodiscard]] std::string mangle_type() const override { return EPrimTy_to_mangle(_type); }
-    [[nodiscard]] std::string debug_str() const override { return EPrimTy_to_str(_type); }
-    [[nodiscard]] EPrimType get_type() const override { return _type; }
+    std::string mangle_type() const override { return EPrimTy_to_mangle(_type); }
+    std::string debug_str() const override { return EPrimTy_to_str(_type); }
+    EPrimType get_type() const override { return _type; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -87,18 +87,18 @@ struct Tuple final : public AType {
         return !(*this == other);
     }
 
-    [[nodiscard]] std::string mangle_type() const override {
+    std::string mangle_type() const override {
         std::string retStr = "tu" + std::to_string(types.size());
         for (auto& ty : types) {
             retStr += "_" + ty->mangle_type();
         }
         return retStr;
     }
-    [[nodiscard]] std::string debug_str() const override { 
+    std::string debug_str() const override { 
         if (name_fields.empty()) return "<ty> tuple(" + std::to_string(types.size()) + ")";
         return "<ty> named tuple(" + std::to_string(types.size()) + ")";
     }
-    [[nodiscard]] EPrimType get_type() const override { return EPrimType::tuple; }
+    EPrimType get_type() const override { return EPrimType::tuple; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -114,9 +114,9 @@ struct Function_Proto final : public AType {
 
     bool operator==(const AType& other) const override;
 
-    [[nodiscard]] std::string mangle_type() const override;
-    [[nodiscard]] std::string debug_str() const override { return "<ty> fn"; }
-    [[nodiscard]] EPrimType get_type() const override { return EPrimType::Fn_Proto; }
+    std::string mangle_type() const override;
+    std::string debug_str() const override { return "<ty> fn"; }
+    EPrimType get_type() const override { return EPrimType::Fn_Proto; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -124,15 +124,16 @@ struct Function_Proto final : public AType {
 struct Get_Expr_Type final : public AType {
     std::unique_ptr<Node> target;
 
-    std::shared_ptr<AType> resolved_ty;
+    SYM_TYPE<AType> resolved_ty;
 
     bool operator==(const AType& other) const override {
-        return AType::operator==(other) && *resolved_ty == other;
+        if (!resolved_ty.resolved) return false;
+        return AType::operator==(other) && *resolved_ty.ptr == other;
     }
     
-    [[nodiscard]] std::string mangle_type() const override { return resolved_ty->mangle_type(); };
-    [[nodiscard]] std::string debug_str() const override { return "<ty> comptime"; };
-    [[nodiscard]] EPrimType get_type() const override { return resolved_ty->get_type(); }
+    std::string mangle_type() const override { return resolved_ty.resolved ? resolved_ty.ptr->mangle_type() : ""; };
+    std::string debug_str() const override { return "<ty> comptime"; };
+    EPrimType get_type() const override { return resolved_ty.resolved ? resolved_ty.ptr->get_type() : EPrimType::NONE; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };

@@ -5,14 +5,12 @@
 #include <iostream>
 
 #include "Globals.hpp"
-#include "Compilation.hpp"
 
 #include "Pipeline.hpp"
-#include "ScriptInfo.hpp"
 #include "Visitor/ASTViewer.hpp"
 
 void generate_AST_View(const PipelineScripts *pipe_scripts) {
-	auto basePath = PROJECT_DIR + "/dot";
+	auto basePath = PROJECT_DIR "/dot";
 	std::filesystem::create_directories(basePath);
 	for (size_t i = 0; i < pipe_scripts->scripts_infos.size(); i++) {
 		auto scrInfo = pipe_scripts->scripts_infos[i].get();

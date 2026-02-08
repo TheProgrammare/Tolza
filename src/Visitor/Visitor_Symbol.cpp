@@ -9,7 +9,7 @@
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 #include "AST/AST_Generic.hpp"
 #include "AST/AST_Literal.hpp"
 #include "AST/AST_Memory.hpp"
@@ -64,30 +64,30 @@ void Visitor_Symbol::visit(AST::AReference &n)
 void Visitor_Symbol::visit(AST::Literal::Component &n)
 {
 	Visitor_Default::visit(n);
-	if (!n.resolved_sym) return;
+	if (!n.resolved_sym.resolved) return;
 
 	size_t count = 0;
 	for (auto &field_arg : n.field_args) {
 		if (!field_arg->name.empty()) {
-			for (auto &comp_field : n.resolved_sym->fields) {
+			for (auto &comp_field : n.resolved_sym.ptr->fields) {
 				if (comp_field->id.name == field_arg->name) {
-					field_arg->resolved_symbol = comp_field;
+					field_arg->resolved_symbol.ptr = comp_field;
 					break;
 				}
 			}
 		}
 		else if (count < n.field_args.size()) {
-			field_arg->resolved_symbol = n.resolved_sym->fields[count++];
+			field_arg->resolved_symbol.ptr = n.resolved_sym.ptr->fields[count++];
 		}
 		else {
-			this->error_two_lines(n, scrInfo.file_path, *n.resolved_sym, scrInfo.file_path, "SYM1120", "Too much symbols to resolve", "");
+			this->error_two_lines(n, scrInfo.file_path, *n.resolved_sym.ptr, scrInfo.file_path, "SYM1120", "Too much symbols to resolve", "");
 		}
 
 		count++;
 	}
 }
 
-void Visitor_Symbol::visit(AST::Declaration::ECS::Entity &n)
+void Visitor_Symbol::visit(AST::Declaration::COP::Entity &n)
 {
 	current_entity = &n;
   Visitor_Default::visit(n);
@@ -103,6 +103,6 @@ void Visitor_Symbol::visit(AST::Reference::Self &n)
 	if (!current_entity)
 		error_add(n, "SYM1001", "No entity found the his context.", SYM_HINT);
 	
-	n.source_sym = std::shared_ptr<AST::Declaration::ECS::Entity>(current_entity);
+	n.source_sym = std::shared_ptr<AST::Declaration::COP::Entity>(current_entity);
 }
 

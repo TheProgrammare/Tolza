@@ -9,7 +9,7 @@ namespace PAR {
 	struct Parser_Operator {
 		Parser_Operator(Parser_Context& ctx) : ctx(ctx) {}
 
-		bool no_literal_ecs_mode = false;
+		bool no_literal_cop_mode = false;
 
         [[nodiscard]] std::unique_ptr<AST::Node> 						try_operation();
 		[[nodiscard]] std::unique_ptr<AST::Operation::Assignment>		assignment(std::unique_ptr<AST::AReference> left);

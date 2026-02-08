@@ -13,6 +13,7 @@ The project is designed to be built with **Clang**.
 
 Velox generates LLVM IR and uses Clang for C language inspection during automatic binding generation.
 
+
 ## Install dependencies
 This project depends on:
 - `llvm` **version 19**
@@ -67,12 +68,19 @@ clang --version
 ```
 > It's must returns `19.*` version for both
 
-### III. Configure your IDE
+## Configure your IDE
 VS Code is recommended
 
 Configure the compiler to use `clang++-19` (or the equivalent on your system)
 
 Ensure LLVM include paths and libraries are visible to the IDE
 
-Enable `compile_commands.json` for proper IntelliSense support
+### For VS Code IDE
+
+**Install plugins:**
+- clangd (LLVM) : C/C++ completion, navigation, and insights
+- CMake Tools (Microsoft)
+- GitHub Actions (GitHub)
+- LLDB DAP (LLVM) : Debugging
+- Clang-Format (Xaver Hellauer) : Code formatation for clang
 

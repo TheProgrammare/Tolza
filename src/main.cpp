@@ -18,7 +18,6 @@
 #include <string>
 
 #include "Compilation.hpp"
-#include "Globals.hpp"
 #include "Pipeline/Pipeline.hpp"
 
 
@@ -32,9 +31,9 @@ int main(int argc, char* argv[]) {
 	argv[6] = const_cast<char*>("--debug-pp");
 	argv[7] = const_cast<char*>("--debug-dot");
 	argv[8] = const_cast<char*>("--debug-exposer");
-	std::string src_file = "--src=" + PROJECT_DIR + "/source"; 
+	std::string src_file = "--src=" PROJECT_DIR "/source"; 
 	argv[9] = const_cast<char*>(src_file.c_str());
-	std::string dest_file = "--dest=" + PROJECT_DIR + "/dest";
+	std::string dest_file = "--dest=" PROJECT_DIR "/dest";
 	argv[10] = const_cast<char*>(dest_file.c_str());
 
 	for(int i = 0; i < argc; i++) {

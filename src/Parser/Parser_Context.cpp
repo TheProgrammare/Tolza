@@ -10,7 +10,7 @@
 #include "Parser_Reference.hpp"
 #include "Parser_Operator.hpp"
 #include "Parser_Declaration.hpp"
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 #include "Parser_Declaration_Local.hpp"
 #include "Parser_Literal.hpp"
 #include "Parser_Memory.hpp"
@@ -32,7 +32,7 @@ PAR::Parser_Context::Parser_Context(std::shared_ptr<ScriptInfo> infoFile)
 
 PAR::Parser_Context::~Parser_Context() {
 	
-	delete p_ecs;		p_ecs	 	= nullptr;
+	delete p_cop;		p_cop	 	= nullptr;
 	delete p_decl;		p_decl	 	= nullptr;
 	delete p_expr;		p_expr	 	= nullptr;
 	delete p_lit;		p_lit	 	= nullptr;

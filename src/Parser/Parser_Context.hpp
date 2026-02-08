@@ -16,7 +16,7 @@
 #include "AST/AST_Statement.hpp"
 #include "AST/AST_Type.hpp"
 #include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 #include "AST/AST_Declaration_Local.hpp"
 
 
@@ -53,7 +53,7 @@ namespace PAR {
 	struct Parser_Operator;
 	struct Parser_Memory;
 	struct Parser_Declaration;
-	struct Parser_Declaration_ECS;
+	struct Parser_Declaration_COP;
 	struct Parser_Statement;
 
 	struct Parser_Context {
@@ -116,7 +116,7 @@ namespace PAR {
 		Parser_Operator 			*p_op;
 		Parser_Memory 				*p_mem;
 		Parser_Declaration 			*p_decl;
-		Parser_Declaration_ECS 		*p_ecs;
+		Parser_Declaration_COP 		*p_cop;
 		Parser_Statement 			*p_state;
 		Parser_Base 				*p_base;
 	};

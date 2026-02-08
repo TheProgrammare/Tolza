@@ -1,8 +1,8 @@
-#include "Parser_Declaration_ECS.hpp"
+#include "Parser_Declaration_COP.hpp"
 
 #include <vector>
 
-#include "AST/AST_Declaration_ECS.hpp"
+#include "AST/AST_Declaration_COP.hpp"
 #include "AST/AST_Statement.hpp"
 #include "AST/AST_Declaration_Local.hpp"
 #include "AST/AST_Type.hpp"
@@ -14,7 +14,7 @@
 #include "Parser_Expression.hpp"
 #include "Parser_Declaration_Local.hpp"
 
-std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::component() {
+std::shared_ptr<AST::Declaration::COP::Component> PAR::Parser_Declaration_COP::component() {
 	static const std::string hint =
 		"define component declaration like:"
 		"\n  - multi filed `comp name { var field_name: type = value, ... }`"
@@ -22,7 +22,7 @@ std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::c
 
 	ctx.tok_v.match(TokTy::COMPONENT);
 
-	auto comp = ctx.Create_Decl<AST::Declaration::ECS::Component>(ctx.tok_v.peek());
+	auto comp = ctx.Create_Decl<AST::Declaration::COP::Component>(ctx.tok_v.peek());
 
 	// not handled if (auto where = ctx.p_meta->metacode_where()) comp->gen_where;
 
@@ -33,7 +33,7 @@ std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::c
 	if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
 
 	while (!ctx.tok_v.is_end()) {
-		auto field = ctx.Create_Decl<AST::Declaration::ECS::Component_Field>(ctx.tok_v.peek());
+		auto field = ctx.Create_Decl<AST::Declaration::COP::Component_Field>(ctx.tok_v.peek());
 		field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
 
 		field->id = ctx.p_ref->identifier(field.get(), true);
@@ -57,14 +57,14 @@ std::shared_ptr<AST::Declaration::ECS::Component> PAR::Parser_Declaration_ECS::c
 	return comp;
 }
 
-std::shared_ptr<AST::Declaration::ECS::Role> PAR::Parser_Declaration_ECS::role() {
+std::shared_ptr<AST::Declaration::COP::Role> PAR::Parser_Declaration_COP::role() {
 	static const std::string hint = "define role like: `role name { comp1, comp2, ... }`";
 
 	ctx.tok_v.match(TokTy::ROLE);
 
 	Token tok = ctx.tok_v.peek();
 
-	auto role = ctx.Create_Decl<AST::Declaration::ECS::Role>(tok);
+	auto role = ctx.Create_Decl<AST::Declaration::COP::Role>(tok);
 	role->id = ctx.p_ref->identifier(role.get());
 	ctx.m_sym->add_decl(role);
 	ctx.m_sym->enter_scope(role->id.name, EScopeType::Role);
@@ -91,7 +91,7 @@ std::shared_ptr<AST::Declaration::ECS::Role> PAR::Parser_Declaration_ECS::role()
 	return role;
 }
 
-std::shared_ptr<AST::Declaration::ECS::Entity> PAR::Parser_Declaration_ECS::entity() {
+std::shared_ptr<AST::Declaration::COP::Entity> PAR::Parser_Declaration_COP::entity() {
 	static const std::string hint =
 		"define entity like:"
 		"\n  - `entity MyName { ... }`"
@@ -99,7 +99,7 @@ std::shared_ptr<AST::Declaration::ECS::Entity> PAR::Parser_Declaration_ECS::enti
 
 	ctx.tok_v.match(TokTy::ENTITY);
 
-	auto def_entity = ctx.Create_Decl<AST::Declaration::ECS::Entity>(ctx.tok_v.peek());
+	auto def_entity = ctx.Create_Decl<AST::Declaration::COP::Entity>(ctx.tok_v.peek());
 
 	// metacode
 	def_entity->isCastable = !ctx.metablock_contains(*def_entity, "nocast");
@@ -126,7 +126,7 @@ std::shared_ptr<AST::Declaration::ECS::Entity> PAR::Parser_Declaration_ECS::enti
 	return def_entity;
 }
 
-void PAR::Parser_Declaration_ECS::parse_entity_declaration(std::shared_ptr<AST::Declaration::ECS::Entity> inEntity) {
+void PAR::Parser_Declaration_COP::parse_entity_declaration(std::shared_ptr<AST::Declaration::COP::Entity> inEntity) {
 	static const std::string hint =
 		"define comp usage like:\n"
 		"\n  - `use name { field1: val1, field2: val2 }`\n"
@@ -181,18 +181,18 @@ void PAR::Parser_Declaration_ECS::parse_entity_declaration(std::shared_ptr<AST::
 	ctx.tok_v.add_error("PAR1453", "Unexpected '" + ctx.tok_v.peek().val + "' keyword not allowed in entity code block.", "you can define in functions: atribute, method, typealias, operator overloading, trait implementation.");
 }
 
-std::shared_ptr<AST::Declaration::ECS::Entity_Op> PAR::Parser_Declaration_ECS::_entity_op(std::shared_ptr<AST::Declaration::ECS::Entity> inEntity) {
+std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_entity_op(std::shared_ptr<AST::Declaration::COP::Entity> inEntity) {
 	static const std::string hint = "define entity operator overloading like `op + { ... }`.";
 	static const std::string hint_index = "define entity index overloading like:\n  - index `op [a] -> T {...}`\n  - range `op [r..] -> Slice<T> {...}`.";
 	auto tok = ctx.tok_v.peek();
 
 	ctx.m_sym->enter_scope("op", EScopeType::Entity_Op);
 
-	std::shared_ptr<AST::Declaration::ECS::Entity_Op> entity_op;
+	std::shared_ptr<AST::Declaration::COP::Entity_Op> entity_op;
 
 	// if index operator case op [] -> T { ... }
 	if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
-		auto _op_index = ctx.Create_Decl<AST::Declaration::ECS::Entity_OpIndex>(tok);
+		auto _op_index = ctx.Create_Decl<AST::Declaration::COP::Entity_OpIndex>(tok);
 		_op_index->operatorType = EBinOpType::Index;
 		_op_index->parameter_name = ctx.tok_v.expect_id("PAR1331", "Expected index name binding", hint_index);
 		
@@ -217,7 +217,7 @@ std::shared_ptr<AST::Declaration::ECS::Entity_Op> PAR::Parser_Declaration_ECS::_
 	}
 	// other operator case op + - / * ...
 	else {
-		auto _op = ctx.Create_Decl<AST::Declaration::ECS::Entity_Op>(tok);
+		auto _op = ctx.Create_Decl<AST::Declaration::COP::Entity_Op>(tok);
 		auto op_tok = ctx.tok_v.expect_any(kOperatorTokens, "PAR1333", "Expected operator in entity operator overloading.", hint);
 		_op->operatorType = TokTy_to_EBinOpType(op_tok.ty);
 
@@ -238,13 +238,13 @@ std::shared_ptr<AST::Declaration::ECS::Entity_Op> PAR::Parser_Declaration_ECS::_
 	return entity_op;
 }
 
-std::shared_ptr<AST::Declaration::ECS::Entity_Cast> PAR::Parser_Declaration_ECS::_entity_cast(std::shared_ptr<AST::Declaration::ECS::Entity> inEntity) {
+std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP::_entity_cast(std::shared_ptr<AST::Declaration::COP::Entity> inEntity) {
 	static const std::string hint =
 		"define entity cast overloading like:"
 		"\n  - `cast self as T { ... }`."
 		"\n  - `cast T as self { ... }`.";
 
-	auto cast = ctx.Create_Decl<AST::Declaration::ECS::Entity_Cast>(ctx.tok_v.peek());
+	auto cast = ctx.Create_Decl<AST::Declaration::COP::Entity_Cast>(ctx.tok_v.peek());
 
 	ctx.m_sym->enter_scope("cast", EScopeType::Entity_Cast);
 
@@ -301,7 +301,7 @@ std::shared_ptr<AST::Declaration::ECS::Entity_Cast> PAR::Parser_Declaration_ECS:
 	return cast;
 }
 
-std::shared_ptr<AST::Declaration::ECS::System> PAR::Parser_Declaration_ECS::system() {
+std::shared_ptr<AST::Declaration::COP::System> PAR::Parser_Declaration_COP::system() {
 	static const std::string hint =
 		"define system like:"
 		"\n  - single behaviour "
@@ -319,7 +319,7 @@ std::shared_ptr<AST::Declaration::ECS::System> PAR::Parser_Declaration_ECS::syst
 
 	ctx.tok_v.match(TokTy::SYSTEM);
 
-	auto system = ctx.Create_Decl<AST::Declaration::ECS::System>(ctx.tok_v.peek());
+	auto system = ctx.Create_Decl<AST::Declaration::COP::System>(ctx.tok_v.peek());
 
 	// not handled if (auto where = ctx.p_meta->metacode_where()) system->generic = where.value();
 
@@ -355,7 +355,7 @@ std::shared_ptr<AST::Declaration::ECS::System> PAR::Parser_Declaration_ECS::syst
 	return system;
 }
 
-std::shared_ptr<AST::Declaration::ECS::System_Case> PAR::Parser_Declaration_ECS::_system_case() {
+std::shared_ptr<AST::Declaration::COP::System_Case> PAR::Parser_Declaration_COP::_system_case() {
 	static const std::string hint =
 		"define system case like:"
 		"\n  - no component (for universal/last/default behaviour)"
@@ -365,12 +365,12 @@ std::shared_ptr<AST::Declaration::ECS::System_Case> PAR::Parser_Declaration_ECS:
 		"\n  - multiple components (for interaction between components most of the time)"
 		"\n   `CPosition(pos) + CVelocity(vel) => update_move(pos, vel)";
 
-	auto sys_case = ctx.Create_Decl<AST::Declaration::ECS::System_Case>(ctx.tok_v.peek());
+	auto sys_case = ctx.Create_Decl<AST::Declaration::COP::System_Case>(ctx.tok_v.peek());
 	ctx.tok_v.match(TokTy::WITH);
 
 	while (!ctx.tok_v.is_end()) {
 		auto bind = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek());
-		bind->resolved_ty = ctx.p_type->parse_type();
+		bind->resolved_ty = std::shared_ptr<AST::AType>(ctx.p_type->parse_type().release());
 		ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1150", "Expected start binding '(' after component name pattern.", hint);
 		bind->id = ctx.p_ref->identifier();
 		ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1150", "Expected end binding ')' after component name pattern.", hint);

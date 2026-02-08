@@ -10,39 +10,37 @@ struct Enum : public AReference {
     using AReference::AReference;
     std::vector<std::unique_ptr<Node>> member_values;
 
-    std::shared_ptr<Declaration::Enum> resolved_sym;
+    SYM_DECL<Declaration::Enum> resolved_sym;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "<Lit> enum[" + id.debug_str() + "]"; }
-    [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override;
+    std::string debug_str() const override { return "<Lit> enum[" + id.debug_str() + "]"; }
+    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return std::static_pointer_cast<ADeclaration>(resolved_sym.ptr); }
 };
 
 struct Member_Access : public AReference {
-    std::shared_ptr<ADeclaration> resolved_sym;
+    SYM_DECL<ADeclaration> resolved_sym;
 
     std::unique_ptr<AReference> left;
     std::unique_ptr<AReference> right;
 
-    [[nodiscard]] std::shared_ptr<ADeclaration> get_symbol_resolution() override {
-        return resolved_sym;
-    }
+    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override;
+    std::string debug_str() const override;
 };
 
 struct Self : public Node {
-    std::shared_ptr<Declaration::ECS::Entity> source_sym;
+    SYM_DECL<Declaration::COP::Entity> source_sym;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "self"; }
+    std::string debug_str() const override { return "self"; }
 };
 
 struct Other : public Node {
     // can be primitive or other entity
-    std::shared_ptr<AType> resolved_type;
+    SYM_TYPE<AType> resolved_type;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "other"; }
+    std::string debug_str() const override { return "other"; }
 };
 
 
@@ -51,10 +49,10 @@ struct Call_Argument : public Node {
     std::string name;
     std::unique_ptr<Node> val;
     // resolved by superior node
-    std::shared_ptr<Node> resolved_symbol;
+    SYM_DECL<ADeclaration> resolved_symbol;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return name; }
+    std::string debug_str() const override { return name; }
 };
 
 
@@ -65,11 +63,11 @@ struct Call : public AReference {
 
     // symbol resolution
     // function/lambda/system/enum
-    std::shared_ptr<ADeclaration> resolved_sym;
+    SYM_DECL<ADeclaration> resolved_sym;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "call[" + id.debug_str() + "]"; }
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
+    std::string debug_str() const override { return "call[" + id.debug_str() + "]"; }
+    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
 
     bool to_lit_enum(Enum& lit_enum) {
         lit_enum.id = ID(id.path, id.name);
@@ -85,7 +83,7 @@ struct Call_System : public Call {
     std::unique_ptr<AReference> target_entity;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "run"; }
+    std::string debug_str() const override { return "run"; }
 };
 
 struct Call_Pipe : public AReference {
@@ -96,24 +94,24 @@ struct Call_Pipe : public AReference {
     std::vector<EBinOpType> mutableOperators;
 
     // symbol resolution
-    std::shared_ptr<ADeclaration> resolved_sym;
+    SYM_DECL<ADeclaration> resolved_sym;
 
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
+    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "pipecall[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "pipecall[" + id.debug_str() + "]"; }
 };
 
 struct Table_Access : public AReference {
     // most of time only one arg
     std::unique_ptr<Node> selector;
 
-    std::shared_ptr<AType> result_type_resolution;
+    SYM_TYPE<AType> result_type_resolution;
 
-    std::shared_ptr<ADeclaration> resolved_sym;
+    SYM_DECL<ADeclaration> resolved_sym;
 
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
+    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    [[nodiscard]] std::string debug_str() const override { return "table access"; }
+    std::string debug_str() const override { return "table access"; }
 };
 
 }

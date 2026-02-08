@@ -9,11 +9,11 @@ struct Visitor_Symbol : public Visitor_Default {
 	// keep parent constructor
 	using Visitor_Default::Visitor_Default;
 
-	AST::Declaration::ECS::Entity *current_entity;
+	AST::Declaration::COP::Entity *current_entity;
 	
-	std::shared_ptr<AST::Declaration::ECS::Component> current_component;
+	std::shared_ptr<AST::Declaration::COP::Component> current_component;
 	std::shared_ptr<AST::Declaration::Function> current_function;
-	std::shared_ptr<AST::Declaration::ECS::System> current_system;
+	std::shared_ptr<AST::Declaration::COP::System> current_system;
 	std::shared_ptr<AST::Declaration::Local::Lambda> current_lambda;
 
 	//void resolve_arguments(std::vector<std::unique_ptr<AST::Declaration::Call_Arg>>& args, AST::Type::FunctionProto& fn);
@@ -78,19 +78,19 @@ struct Visitor_Symbol : public Visitor_Default {
 //
 //	void visit(AST::Declaration::Local::Capability &n) override;	
 //
-//	// ============ ECS ============
-//	void visit(AST::Declaration::ECS::Component &n) override;			
-//	void visit(AST::Declaration::ECS::Component_Field &n) override;		
+//	// ============ COP ============
+//	void visit(AST::Declaration::COP::Component &n) override;			
+//	void visit(AST::Declaration::COP::Component_Field &n) override;		
 //
-//	void visit(AST::Declaration::ECS::Role &n) override;				
+//	void visit(AST::Declaration::COP::Role &n) override;				
 //
-	void visit(AST::Declaration::ECS::Entity &n) override;				
-//	void visit(AST::Declaration::ECS::Entity_Cast &n) override;			
-//	void visit(AST::Declaration::ECS::Entity_Op &n) override;			
-//	void visit(AST::Declaration::ECS::Entity_OpIndex &n) override;		
+	void visit(AST::Declaration::COP::Entity &n) override;				
+//	void visit(AST::Declaration::COP::Entity_Cast &n) override;			
+//	void visit(AST::Declaration::COP::Entity_Op &n) override;			
+//	void visit(AST::Declaration::COP::Entity_OpIndex &n) override;		
 //	
-//	void visit(AST::Declaration::ECS::System &n) override;				
-//	void visit(AST::Declaration::ECS::System_Case &n) override;	
+//	void visit(AST::Declaration::COP::System &n) override;				
+//	void visit(AST::Declaration::COP::System_Case &n) override;	
 //
 //	// ============ GENERIC ============
 //	void visit(AST::Generic::Is_Type &n) override;

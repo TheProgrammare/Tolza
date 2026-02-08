@@ -42,7 +42,7 @@ std::unique_ptr<AST::Memory::GetBits> PAR::Parser_Memory::getbits()
 	get_bit->range = ctx.p_expr->parse_expression();
 	ctx.tok_v.expect(TokTy::CLOSE_SQUARE, "PAR1056", "Expected end slice block ']' after range expression", hint);
 	if (auto ptr = dynamic_cast<AST::AType*>(get_bit->range.release())) {
-		get_bit->resolved_range_ty = std::unique_ptr<AST::AType>(ptr);
+		get_bit->resolved_range_ty = std::shared_ptr<AST::AType>(ptr);
 	}
 	return get_bit;
 }

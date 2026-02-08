@@ -55,7 +55,7 @@ namespace AST {
             struct Capability;          // ref a = origin // mut a = origin 
         }
 
-        namespace ECS {
+        namespace COP {
             struct Component;			// comp CPosition { x: f32 = 0, y: f32 = 0, z: f32 = 0 }
             struct Component_Field;		// x: f32 = 0
 

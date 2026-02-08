@@ -4,8 +4,6 @@
 #include <iostream>
 
 #include "Globals.hpp"
-#include <algorithm>
-
 
 namespace {
 
@@ -45,7 +43,7 @@ std::optional<std::vector<std::filesystem::path>> find_files(const std::string& 
 	}
 	catch (const std::filesystem::filesystem_error& e) {
 		if (in_binding_compilation) std::cout << "[EMBinder] ";
-        std::cout << "[file]";
+        std::cout << "[file] ";
 		std::cerr << color_RED << "ERR reading " << e.what() << color_RESET << "\n";
 		error = true;
 	}

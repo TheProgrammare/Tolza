@@ -2,6 +2,7 @@
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Declaration.hpp"
+#include "ScriptInfo.hpp"
 
 std::string Symbols_Manager::get_current_export_name() const
 {
@@ -17,7 +18,7 @@ void Symbols_Manager::add_decl(std::shared_ptr<AST::ADeclaration> declaration)
 {
     declaration->_scope = get_current_path();
 
-	SymbolData sym;
+	Declaration_Data sym;
 	sym.symbol = declaration;
 	sym.mangling = declaration->id.mangle_local_name();
 	sym.is_exported = !get_current_export_name().empty();
@@ -29,7 +30,21 @@ void Symbols_Manager::add_decl(std::shared_ptr<AST::ADeclaration> declaration)
 	else if (auto ptr = std::dynamic_pointer_cast<AST::Declaration::Function>(declaration))
 		sym.is_external = ptr->isExtern;
 
-	symbols.push_back(sym);
+	declarations.push_back(sym);
+}
+
+void Symbols_Manager::add_ref(AST::SYM_REF<AST::AReference> &reference)
+{
+	if (reference.resolved) reference.ptr->_scope = get_current_path();
+
+	Reference_Data sym;
+	sym.symbol = &reference;
+	sym.manging = reference.resolved ? reference.ptr->id.mangle_local_name() : "";
+	if (reference.resolved && reference.ptr->id.is_qualified_id()) {
+		sym.is_external = scrInfo->get_extern_languages().contains(reference.ptr->id.path[0]);
+	}
+
+	references.push_back(sym);
 }
 
 void Symbols_Manager::enter_scope(const std::string& name, EScopeType ty, size_t depth) {
@@ -53,7 +68,7 @@ std::vector<std::string> Symbols_Manager::get_current_path() const
 
 std::optional<std::shared_ptr<AST::ADeclaration>> Symbols_Manager::find_symbol(const std::string &full_name)
 {
-	for (auto sym : symbols) {
+	for (auto sym : declarations) {
 		if (sym.mangling == full_name) return sym.symbol;
 	}
 	return std::nullopt;

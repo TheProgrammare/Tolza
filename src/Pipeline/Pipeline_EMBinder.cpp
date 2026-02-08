@@ -25,7 +25,6 @@ bool generate_script(
 	const std::string &lang,
 	const std::string &lib)
 {
-
 	std::cout << color_MAGENTA << bind_info->name << color_RESET " generation... " << std::flush;
 	std::ofstream f(bind_info->file_path.c_str());
 
