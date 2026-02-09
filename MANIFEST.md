@@ -1111,7 +1111,7 @@ entity name {
 entity can contains:
 
 | entity members | syntax | info | method | return |
-|-|-|-|
+|-|-|-|-|-|
 | component | `use name { field: value }` | with default value | | |
 | component | `use name` | default value from component | | |
 | cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | `const` | `T` |
@@ -1124,8 +1124,8 @@ entity can contains:
 | comparison operator | `op == { ... }` | all operators handled `self` `other` are same type | `const` | `bool` |
 | logical operator | `op and { ... }` | all operators handled `self` `other` are same type | `const` | `bool` |
 
->* Without copier, the compiler will copy each components fileds, if ref/ptr/sptr fields -> call copy on type, copy ptr address, share pointer
->** Without cloner, the compiler will clone each components fields, if ref/ptr/sptr fields -> call clone on type, new ptr address then call clone on type, share pointer
+>\* Without copier, the compiler will copy each components fileds, if ref/ptr/sptr fields -> call copy on type, copy ptr address, share pointer</br>
+>** Without cloner, the compiler will clone each components fields, if ref/ptr/sptr fields -> call clone on type, new ptr address then call clone on type, share pointer</br>
 >*** Without deleter, the compiler will delete each components fields, if ref/ptr/sptr fields -> call del on type, free ptr, decrement share pointer
 
 
@@ -1160,7 +1160,7 @@ entity Human {
 
 | meber type | usage syntax | note |
 |-|-|-|
-| call native constructor | `var cat = Cat{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended |
+| call native constructor | `var cat = Cat::{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended, the syntax `name::{` is mandatory to specify an entity native constructor |
 | call custom constructor | `var cat = Cat::new("Ted", 2)` | clean constructor |
 
 ### Entity Operator Overloading
@@ -1185,7 +1185,7 @@ sys name<gen_args>(<params>) {...}
 
 Systems are callable only by an entity instance by the instruction `my_entity::>my_system()`
 ```
-var my_player = Player{CId.name = "Marc"}
+var my_player = Player::{CId.name = "Marc"}
 my_player::>Jump(100)
 ```
 
