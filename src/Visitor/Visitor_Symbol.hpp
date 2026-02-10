@@ -1,13 +1,14 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include "Visitor_Default.hpp"
 
 struct Visitor_Symbol : public Visitor_Default {
 	// keep parent constructor
 	using Visitor_Default::Visitor_Default;
+
+	virtual ~Visitor_Symbol();
 
 	AST::Declaration::COP::Entity *current_entity;
 	
@@ -31,10 +32,8 @@ struct Visitor_Symbol : public Visitor_Default {
 //	void visit(AST::ALiteral &n) override;				
 //	void visit(AST::ADeclaration &n) override;			
 //	void visit(AST::ALocal&n) override;			
-	void visit(AST::AReference &n) override;				
-//	void visit(AST::Type_Reference &n) override;			
-//	void visit(AST::Identifier_Reference &n) override;			
-//	void visit(AST::Type_Arguments &n) override;			
+//	void visit(AST::AReference &n) override;				
+//	void visit(AST::AType_Reference &n) override;			
 //
 //	void visit(AST::Root &n) override;
 //
@@ -84,7 +83,7 @@ struct Visitor_Symbol : public Visitor_Default {
 //
 //	void visit(AST::Declaration::COP::Role &n) override;				
 //
-	void visit(AST::Declaration::COP::Entity &n) override;				
+//	void visit(AST::Declaration::COP::Entity &n) override;				
 //	void visit(AST::Declaration::COP::Entity_Cast &n) override;			
 //	void visit(AST::Declaration::COP::Entity_Op &n) override;			
 //	void visit(AST::Declaration::COP::Entity_OpIndex &n) override;		
@@ -133,7 +132,7 @@ struct Visitor_Symbol : public Visitor_Default {
 //
 //	void visit(AST::Literal::Range &n) override;
 //
-	void visit(AST::Literal::Component &n) override;
+//	void visit(AST::Literal::Component &n) override;
 //	  void visit(AST::Literal::Entity &n) override;
 //
 //	// ============ REFERENCE ============
@@ -141,7 +140,7 @@ struct Visitor_Symbol : public Visitor_Default {
 //
 //	void visit(AST::Reference::Member_Access &n) override;		
 //
-	void visit(AST::Reference::Self &n) override;
+//	void visit(AST::Reference::Self &n) override;
 //	void visit(AST::Reference::Other &n) override;
 //
 //	void visit(AST::Reference::Call &n) override;

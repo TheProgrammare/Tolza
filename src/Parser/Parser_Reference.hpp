@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "AST/AST_Forward.hpp"
+#include "ScriptInfo.hpp"
 
 struct ModuleImportation;
 
@@ -15,9 +16,11 @@ namespace PAR {
 
 		[[nodiscard]] std::unique_ptr<AST::AReference>									parse_reference();
 
+		void 																			check_reference_external(const AST::ID &_id, Extern_Item::Kind kind);
+
 
 		[[nodiscard]] AST::ID															identifier(bool no_qualified_id = false, bool keyword_allowed = false);
-		[[nodiscard]] std::optional<std::unique_ptr<AST::Type_Reference>>				try_identifier_typed(AST::ID &id);
+		[[nodiscard]] std::optional<std::unique_ptr<AST::AType_Reference>>				try_identifier_typed(AST::ID &id);
         [[nodiscard]] std::optional<std::unique_ptr<AST::Reference::Member_Access>>		try_member_access(AST::ID &id);
         [[nodiscard]] std::optional<std::unique_ptr<AST::Reference::Table_Access>> 		try_table_access();
         [[nodiscard]] std::optional<std::unique_ptr<AST::Reference::Call>> 				try_function_call(const AST::ID &id);

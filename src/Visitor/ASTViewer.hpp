@@ -48,7 +48,7 @@ private:
 		id_[&n] = id;
 		return id;
 	}
-	int get_id_ty(const AST::AType& n) {
+	int get_id_type(const AST::AType& n) {
 		auto it = id_ty_.find(&n);
 		if (it != id_ty_.end()) return it->second;
 		int id = next_++;

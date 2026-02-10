@@ -42,9 +42,9 @@ namespace META {
         [[nodiscard]]
         bool is_alternative() const { return tokens.size() > 1; }
         [[nodiscard]]
-        bool contains(TokTy ty) const { 
+        bool contains(TokTy type) const { 
             for (auto& tok : tokens) { 
-                if (tok.ty == ty) return true; 
+                if (tok.type == type) return true; 
             }    
                 return false; 
         }
@@ -155,10 +155,10 @@ namespace META {
         [[nodiscard]]
         // returns the first occurence index
         // -1 = not found
-        int8_t contains(TokTy ty) const {
+        int8_t contains(TokTy type) const {
             int8_t count = 0;
             for (auto& word : words) {
-                if (word.contains(ty)) return count;
+                if (word.contains(type)) return count;
                 count++;
             }
             return -1;
@@ -254,9 +254,9 @@ namespace META {
             return false;
         }
         [[nodiscard]]
-        bool contains(TokTy ty) const {
+        bool contains(TokTy type) const {
             for (auto& elem : _instructions) {
-                if (elem.contains(ty)) return true;
+                if (elem.contains(type)) return true;
             }
             return false;
         }
@@ -304,13 +304,13 @@ namespace META {
         enum struct EPassMode { Any, Mut, Ref, Copy, Move, Comptime, Addr };
 
 		EPassMode pass_mode = EPassMode::Copy;
-		std::unique_ptr<AST::AType> ty;
+		std::unique_ptr<AST::AType> type;
 		[[maybe_unused]] std::unique_ptr<AST::Node> defaultValue;
 		bool is_variadic = false;
 
 		bool operator==(const MetaBlock_Reuse_Param& other) const {
 			return pass_mode == other.pass_mode &&
-				ty == other.ty && is_variadic == other.is_variadic;
+				type == other.type && is_variadic == other.is_variadic;
 		}
 	};
 

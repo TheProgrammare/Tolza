@@ -1,14 +1,8 @@
 #include "Parser_Reference.hpp"
 
-#include "Globals.hpp"
+#include "Parser_Headers.hpp"
+#include "AST/AST_Headers.hpp"
 #include "ScriptInfo.hpp"
-#include "Parser_Context.hpp"
-
-#include "Parser_Expression.hpp"
-#include "Parser_Operator.hpp"
-#include "Parser_Memory.hpp"
-#include "Parser_Type.hpp"
-#include "Parser_Literal.hpp"
 
 std::vector<std::unique_ptr<AST::Reference::Call_Argument>> PAR::Parser_Reference::call_arguments() {
 	static const std::string hint =
@@ -25,7 +19,7 @@ std::vector<std::unique_ptr<AST::Reference::Call_Argument>> PAR::Parser_Referenc
 		auto param = ctx.Create_Node<AST::Reference::Call_Argument>(ctx.tok_v.peek());
 
 		// if parameter invocation
-		if (ctx.tok_v.check(TokTy::IDENTIFIER) && ctx.tok_v.peek(1).ty == TokTy::ASSIGN) {
+		if (ctx.tok_v.check(TokTy::IDENTIFIER) && ctx.tok_v.peek(1).type == TokTy::ASSIGN) {
 			param->name = ctx.tok_v.next().val;
 
 			ctx.tok_v.expect(TokTy::COLON, "PAR1120",
@@ -70,7 +64,7 @@ std::optional<std::unique_ptr<AST::Reference::Call_Pipe>> PAR::Parser_Reference:
 	if (!ctx.tok_v.match_any({ TokTy::PIPE, TokTy::PIPE_MUT })) return std::nullopt;
 
 	auto pipe_call = ctx.Create_Node<AST::Reference::Call_Pipe>(ctx.tok_v.peek());
-	pipe_call->isMutable = ctx.tok_v.peek(-1).ty == TokTy::PIPE_MUT;
+	pipe_call->isMutable = ctx.tok_v.peek(-1).type == TokTy::PIPE_MUT;
 	pipe_call->id = id;
 /*
 	static const std::string hint = "define pipe-call like:"
@@ -87,7 +81,7 @@ std::optional<std::unique_ptr<AST::Reference::Call_Pipe>> PAR::Parser_Reference:
 		if (pipe_call->isMutable) {
 			auto op = ctx.tok_v.expect_any(kOperatorTokens, "PAR1975", "Expected an operator keyword after pipe operation in mutable pipe call.", hint);
 
-			arg-> = TokTy_to_EOpType(op.ty);
+			arg-> = TokTy_to_EOpType(op.type);
 		}
 		else {
 			std::get<0>(elem) = EOpType::COUNT;
@@ -125,54 +119,59 @@ ModuleImportation *PAR::Parser_Reference::get_external_source(AST::ID &id)
 	return ctx.scr_info->get_import_module(base);
 }
 
-std::unique_ptr<AST::AReference> PAR::Parser_Reference::parse_reference()
+std::unique_ptr<AST::AReference> PAR::Parser_Reference::parse_reference() 
 {
 	AST::ID id = identifier();
 	std::unique_ptr<AST::AReference> target_ref;
-	std::unique_ptr<AST::Type_Arguments> gen_args;
+	std::vector<std::unique_ptr<AST::AType>> gen_args;
 
 	if (auto id_typed = try_identifier_typed(id)) {
 		// only identifier typed
 		// no value accessible
 		if (!ctx.tok_v.check_any({TokTy::OPEN_PAREN, TokTy::OPEN_BRACE})) {
+			check_reference_external(id, Extern_Item::Kind::Global);
+
 			return std::unique_ptr<AST::AReference>(id_typed.value().release());
 		}
 		gen_args = std::move(id_typed.value()->gen_args);
+
+		check_reference_external(id, Extern_Item::Kind::Type);
 	}
 
 	// call e.g. add(a, b)
 	if (auto call = try_function_call(id)) {
 		call.value()->gen_args = std::move(gen_args);
 		target_ref = std::move(call.value());
+
+		check_reference_external(id, Extern_Item::Kind::Function);
 	}
 	// literal entity / component
 	else if (ctx.tok_v.match(TokTy::OPEN_BRACKETS) && lit_comp_entity_allowed) {
 		Token base_tok = ctx.tok_v.peek();
 		auto id = identifier();
 
-		// it's a literal entity e.g. Player{ CId.name: "Enoch", CId.age: 365 }
-		//									          ^ found at
-		// OR
-		// 							  Player{ CId{ name: "Enoch", age: 365 } }
-		//										 ^ found at
-		if ((id.is_qualified_id() && ctx.tok_v.check(TokTy::COLON))
-			|| ctx.tok_v.check(TokTy::OPEN_BRACE)) {
+		// it's a literal component (field access dot)
+		if (ctx.tok_v.match(TokTy::DOT)) {
+			check_reference_external(id, Extern_Item::Kind::Component);
+
+			return ctx.p_lit->literal_component(id, gen_args);
+		}
+		else {
 			// reset the moving to correctly parse the literal entity
 			ctx.tok_v.jump(base_tok.span.pos);
-			return ctx.p_lit->literal_entity(id, std::move(gen_args));
-		}
-		// it's a literal component e.g. CId{ name: "Enoch", age: 365 }
-		else {
-			return ctx.p_lit->literal_component(id, std::move(gen_args));
+
+			check_reference_external(id, Extern_Item::Kind::Entity);
+
+			return ctx.p_lit->literal_entity(id, gen_args);
 		}
 	}
 	else {
-		auto id_ref = ctx.Create_Node<AST::Identifier_Reference>(ctx.tok_v.peek());
+		auto id_ref = ctx.Create_Node<AST::AReference>(ctx.tok_v.peek());
 		id_ref->id = id;
 		target_ref = std::move(id_ref);
 	}
 
-	if (!gen_args) {
+	if (!gen_args.empty()) {
 		if (auto table_access = try_table_access()) {
 			table_access.value()->id = id;
 			target_ref = std::move(table_access.value());
@@ -186,13 +185,25 @@ std::unique_ptr<AST::AReference> PAR::Parser_Reference::parse_reference()
 	return target_ref;
 }
 
+void PAR::Parser_Reference::check_reference_external(const AST::ID &_id, Extern_Item::Kind _kind) 
+{
+	if (!_id.is_qualified_id()) return;
+
+	if (auto imp_mod = ctx.scr_info->get_import_module(_id.path[0])) {
+		Extern_Item ext(_id, _kind);
+		imp_mod->add_extern_reference(ext);
+	}
+}
+
+
+
 AST::ID PAR::Parser_Reference::identifier(bool no_qualified_id, bool keyword_allowed)
 {
     static const std::string hint =
 		"define identifier like:"
 		"\n  - classic `name` -> name"
-		"\n  - with scope path `namespace A { name }` -> A_name"
-		"\n  - with explicit path `A::B::C` -> A_B_C";
+		"\n  - with scope path `mod A { name }` -> A_name"
+		"\n  - with qualified id `A::B::C` -> A_B_C";
 		//"\n  - if exported : `# export module A\n # scope\nname\n# end\n -> A_name`;
 
 	AST::ID id("");
@@ -207,7 +218,7 @@ AST::ID PAR::Parser_Reference::identifier(bool no_qualified_id, bool keyword_all
 		id.qualification_at_current_scope = true;
 	}
 	// it's a simple id with no path
-	else if (ctx.tok_v.peek(1).ty != TokTy::STATIC_ACCESS) {
+	else if (ctx.tok_v.peek(1).type != TokTy::STATIC_ACCESS) {
 		if (!keyword_allowed)
 			id.name =  ctx.tok_v.expect_id("PAR1500", "Expected identifier name.", hint);
 		else 
@@ -224,12 +235,17 @@ AST::ID PAR::Parser_Reference::identifier(bool no_qualified_id, bool keyword_all
 	while (!ctx.tok_v.is_end()) {
 		id.path.push_back(ctx.tok_v.next().val);
 
-		// no more path
-		if (!ctx.tok_v.match(TokTy::STATIC_ACCESS)) break;
+		ctx.tok_v.match(TokTy::STATIC_ACCESS);
+
+		// no more path : the last element is the name
+		if (ctx.tok_v.peek(1).type != TokTy::STATIC_ACCESS) {
+			id.name = ctx.tok_v.next().val;
+			break;
+		}
 
 		count++;
-		if (count > MAX_PATH_SEG_SIZE) {
-			ctx.tok_v.add_error("PAR1501", "Explicit path for identifier is too long (> " + std::to_string(MAX_PATH_SEG_SIZE) + ")", hint);
+		if (count > 12) {
+			ctx.tok_v.add_error("PAR1501", "Explicit path for identifier is too long (> " + std::to_string(12) + ")", hint);
 			break;
 		}
 	}
@@ -237,18 +253,17 @@ AST::ID PAR::Parser_Reference::identifier(bool no_qualified_id, bool keyword_all
 	return id;
 }
 
-std::optional<std::unique_ptr<AST::Type_Reference>> PAR::Parser_Reference::try_identifier_typed(AST::ID &id)
+std::optional<std::unique_ptr<AST::AType_Reference>> PAR::Parser_Reference::try_identifier_typed(AST::ID &id)
 {
 	if (!ctx.tok_v.match(TokTy::TURBO_FISH)) return std::nullopt;
 
-	auto id_type = ctx.Create_Node<AST::Type_Reference>(ctx.tok_v.peek(-2)); 
+	auto id_type = ctx.Create_Node<AST::AType_Reference>(ctx.tok_v.peek(-2)); 
 	id_type->id = id;
-	id_type->gen_args = ctx.Create_Node<AST::Type_Arguments>(ctx.tok_v.peek(-1));
 
 	if (ctx.tok_v.match(TokTy::CLOSE_BRACKETS)) return id_type;
 
 	while (!ctx.tok_v.is_end()) {
-		id_type->gen_args->arguments.push_back(ctx.p_type->parse_type());
+		id_type->gen_args.push_back(ctx.p_type->parse_type());
 
 		if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACKETS)) break;
 	}

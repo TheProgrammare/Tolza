@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AST_Base.hpp"
+#include <memory>
 
 namespace AST {
 namespace Memory {
@@ -25,7 +26,7 @@ struct New : public Node {
 
 // del var
 struct Del : public Node {
-    std::unique_ptr<Node> element;
+    std::unique_ptr<AReference> target;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "delete"; }
@@ -79,7 +80,7 @@ struct GetBits : public Node {
     std::unique_ptr<AReference> target;
     std::unique_ptr<Node> range;
 
-    SYM_TYPE<AType> resolved_range_ty;
+    std::shared_ptr<AType> resolved_range_type;
     // 8, 16, 32, 64, 128
     enum EBitSize { _8, _16, _32, _64, _128 };
     EBitSize bit_size = _8;

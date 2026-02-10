@@ -1,22 +1,11 @@
 #include "Visitor_Symbol.hpp"
 
 #include <string>
-#include <unordered_set>
-#include <iostream>
 
 #include "ScriptInfo.hpp"
 #include "Symbol_Manager.hpp"
 
-#include "AST/AST_Base.hpp"
-#include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_COP.hpp"
-#include "AST/AST_Generic.hpp"
-#include "AST/AST_Literal.hpp"
-#include "AST/AST_Memory.hpp"
-#include "AST/AST_Operation.hpp"
-#include "AST/AST_Reference.hpp"
-#include "AST/AST_Statement.hpp"
-#include "AST/AST_Type.hpp"
+Visitor_Symbol::~Visitor_Symbol() = default;
 
 
 std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& ref, std::shared_ptr<AST::ADeclaration> target_resolution, bool silentError) {
@@ -53,56 +42,3 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	
 	return nullptr;
 }
-
-// Handle any AST::AReference node children
-void Visitor_Symbol::visit(AST::AReference &n)
-{
-	Visitor_Default::visit(n);
-	resolve_def(n, n.get_symbol_resolution());
-}
-
-void Visitor_Symbol::visit(AST::Literal::Component &n)
-{
-	Visitor_Default::visit(n);
-	if (!n.resolved_sym.resolved) return;
-
-	size_t count = 0;
-	for (auto &field_arg : n.field_args) {
-		if (!field_arg->name.empty()) {
-			for (auto &comp_field : n.resolved_sym.ptr->fields) {
-				if (comp_field->id.name == field_arg->name) {
-					field_arg->resolved_symbol.ptr = comp_field;
-					break;
-				}
-			}
-		}
-		else if (count < n.field_args.size()) {
-			field_arg->resolved_symbol.ptr = n.resolved_sym.ptr->fields[count++];
-		}
-		else {
-			this->error_two_lines(n, scrInfo.file_path, *n.resolved_sym.ptr, scrInfo.file_path, "SYM1120", "Too much symbols to resolve", "");
-		}
-
-		count++;
-	}
-}
-
-void Visitor_Symbol::visit(AST::Declaration::COP::Entity &n)
-{
-	current_entity = &n;
-  Visitor_Default::visit(n);
-	current_entity = nullptr;
-}
-
-
-// all AST::Reference handled by AST::AReference 
-
-void Visitor_Symbol::visit(AST::Reference::Self &n)
-{
-	Visitor_Default::visit(n);
-	if (!current_entity)
-		error_add(n, "SYM1001", "No entity found the his context.", SYM_HINT);
-	
-	n.source_sym = std::shared_ptr<AST::Declaration::COP::Entity>(current_entity);
-}
-

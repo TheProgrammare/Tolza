@@ -62,9 +62,9 @@ bool PAR::is_gen_args(TokenViewer& tok_v) {
 
 		auto tok = tok_v.peek(count);
 		for (auto tok_valid : kGenArgsValidTokens) {
-			if (tok.ty == tok_valid) {
-				if (tok.ty == TokTy::OPEN_BRACKETS) ++nestedBrackets;
-				if (tok.ty == TokTy::CLOSE_BRACKETS) --nestedBrackets;
+			if (tok.type == tok_valid) {
+				if (tok.type == TokTy::OPEN_BRACKETS) ++nestedBrackets;
+				if (tok.type == TokTy::CLOSE_BRACKETS) --nestedBrackets;
 				tokValid = true;
 				break;
 			}
@@ -86,7 +86,7 @@ bool PAR::is_gen_args(TokenViewer& tok_v) {
 	if (isGenArgsValid && nestedBrackets == 0) {
 		auto tokAfterGenArgs = tok_v.peek(count + 1);
 
-		if (tokAfterGenArgs.ty == TokTy::OPEN_PAREN) isAfterGenArgsValid = true;
+		if (tokAfterGenArgs.type == TokTy::OPEN_PAREN) isAfterGenArgsValid = true;
 		else {
 			isAfterGenArgsValid = !(
 				tok_v.check_any(kLiteralTokens) ||
@@ -146,7 +146,7 @@ void PAR::Parser_Context::attempt_recovery()
 /*
 	static size_t tryCatchCount = 0;
 	try {
-		switch (m_scope->current_scope.top()->ty)
+		switch (m_scope->current_scope.top()->type)
 		{
 		case EScopeType::MOD:
 		case EScopeType::GLOBAL: {

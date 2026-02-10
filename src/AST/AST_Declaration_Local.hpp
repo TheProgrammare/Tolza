@@ -30,11 +30,13 @@ struct CodeBlock : public Node {
 struct Variable_Binding : public ALocal {
     std::string name;
     ECapability capability = ECapability::NONE;
-    SYM_TYPE<AType> resolved_ty;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
+    std::shared_ptr<AReference> reference;
+
     std::string debug_str() const override { return "bind[" + name + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Bind; };
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Pattern_Element {
@@ -64,6 +66,8 @@ struct Pattern_Element {
 
 struct Pattern : public Node {
     ECapability capability = ECapability::Ref;
+    // shared because can be from a match case base reference (so a reference mirror)
+    std::shared_ptr<AReference> reference;
 
     [[maybe_unused]]
     std::shared_ptr<Node> additive_evaluator;
@@ -74,8 +78,6 @@ struct Pattern_Enum : public Pattern {
     ID enum_id;
     std::vector<Pattern_Element> mapping;
 
-    std::shared_ptr<AReference> enum_reference;
-
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "enum pattern[" + enum_id.debug_str() + "]"; }
 };
@@ -83,7 +85,6 @@ struct Pattern_Enum : public Pattern {
 // e.g. [if/while/for] let (a, b, 10) in triple_collection {...}
 struct Pattern_Tuple : public Pattern {
     std::vector<Pattern_Element> mapping;
-    std::shared_ptr<AReference> tuple_reference;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "tuple pattern"; }
@@ -96,7 +97,6 @@ struct Pattern_Entity : public Pattern {
 
     // component identifier, field_name, pattern_element
     std::vector<std::tuple<ID, std::string, Pattern_Element>> mapping;
-    std::shared_ptr<AReference> entity_reference;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "entity pattern"; }
@@ -108,7 +108,6 @@ struct Pattern_Component : public Pattern {
 
     // field_name, pattern_element
     std::vector<std::tuple<std::string, Pattern_Element>> mapping;
-    std::shared_ptr<AReference> component_reference;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "component pattern"; }
@@ -147,13 +146,10 @@ struct Lambda : public ALocal, ICallable {
 
 // let/var a: ptr'type?$ = expression;
 struct Variable : public ALocal {
-    [[maybe_unused]] std::shared_ptr<AType> ty;							// infered if nullptr
+    [[maybe_unused]] std::shared_ptr<AType> type;				// infered if nullptr
     EAssignmentType assignment = EAssignmentType::Copy;		// assign type
-    std::unique_ptr<Node> expression;									// affectation
+    [[maybe_unused]] std::optional<std::unique_ptr<Node>> expression;		// affectation
     EVariableKind kind = EVariableKind::Const;
-
-    // reserved for unpackvar
-    SYM_TYPE<AType> resolved_ty;
 
     bool isStatic = false;
 
@@ -193,11 +189,9 @@ struct Capability : public ALocal {
 struct Capture_Member : public AReference {
     ECapability capability;
 
-    SYM_DECL<ADeclaration> resolved_sym;
+    std::string debug_str() const override { return "capture " + id.debug_str(); }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "capture " + id.debug_str(); }
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
 };
 
 struct Lambda_Capture : public Node {
@@ -211,14 +205,11 @@ struct Lambda_Capture : public Node {
 // (a: str, copy b: i32 = 10, mut c: f32 = nullptr, args: ...)
 struct Parameter : public ALocal {
     EPassMode passMode = EPassMode::Copy;
-    std::shared_ptr<AType> ty;
+    std::shared_ptr<AType> type;
     [[maybe_unused]] std::unique_ptr<Node> defaultValue;
     bool isVariadic = false;
 
-    bool operator==(const Parameter& other) const {
-        return passMode == other.passMode && id == other.id &&
-            *ty == *other.ty && isVariadic == other.isVariadic;
-    }
+    SYM_DEFINITION parent_function;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { 

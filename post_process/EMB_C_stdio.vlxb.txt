@@ -1,3 +1,4 @@
 export C {
+fn printf ( ref __format : c_str , __args : ptr ' void ... ) -> C :: _int ;
 }
  

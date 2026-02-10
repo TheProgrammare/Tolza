@@ -21,6 +21,8 @@ struct Enum_Element : public Node {
     std::vector<std::unique_ptr<AType>> types;
     size_t position = 0;
 
+    SYM_DEFINITION parent_enum;
+
     std::string debug_str() const override { return "::" + name; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -31,9 +33,9 @@ struct Enum : public ADeclaration {
 
     bool isGlobal = true;
     size_t discriminant_max = 0;
-    [[maybe_unused]] EPrimType discriminant_int_ty = EPrimType::u8;
+    [[maybe_unused]] EPrimType discriminant_int_type = EPrimType::u8;
 
-    std::string debug_str() const override { return "<ty> enum[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "<type> enum[" + id.debug_str() + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Enum; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -42,7 +44,7 @@ struct Enum : public ADeclaration {
 struct Flag : public ADeclaration {
     std::vector<std::string> fields;
 
-    std::string debug_str() const override { return "<ty> flag[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "<type> flag[" + id.debug_str() + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Flag; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -88,7 +90,7 @@ struct Function : public ADeclaration, ICallable {
 
 
 struct Type_Alias : public ADeclaration {
-    std::unique_ptr<AType> ty;
+    std::unique_ptr<AType> type;
 
     std::string debug_str() const override { return "alias[" + id.debug_str() + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Typealias; }
@@ -98,11 +100,11 @@ struct Type_Alias : public ADeclaration {
 
 // gen name<T, U,...> { condition }
 struct Generic : public ADeclaration {
-    std::unique_ptr<Type_Arguments> gen_args;
+    std::vector<std::unique_ptr<AType>> gen_args;
     std::set<std::string> targetGenericSymbols;		// generic typenames
     std::vector<std::unique_ptr<AST::Generic::IGenCond>> conditions;			// generic conditions
 
-    std::string debug_str() const override { return "<ty> gen[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "<type> gen[" + id.debug_str() + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Generic; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -112,7 +114,7 @@ struct Generic : public ADeclaration {
 
 // let/var a: ptr'type#tableSize = expression;
 struct Global : public ADeclaration {
-    std::unique_ptr<AType> ty;											// infered if nullptr
+    std::unique_ptr<AType> type;											// infered if nullptr
     EAssignmentType assignment = EAssignmentType::MoveSemantic;		// assign type
     std::unique_ptr<Node> expression;									// affectation
     EVariableKind kind = EVariableKind::Const;

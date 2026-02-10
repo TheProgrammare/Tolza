@@ -9,10 +9,10 @@ const size_t META::MetaBlock_Expand::k_expand_if_flag = k_metacode_flag - 2;
 
 bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param &a, const MetaBlock_Reuse_Param &b) {
     const bool same_pass_mode = a.pass_mode == b.pass_mode;
-    const bool same_ty = a.ty.get() == b.ty.get();
+    const bool same_type = a.type.get() == b.type.get();
     const bool same_variadic = a.is_variadic == b.is_variadic;
     
-    return same_pass_mode && same_ty && same_variadic;
+    return same_pass_mode && same_type && same_variadic;
 }
 
 std::vector<Token> META::MetaBlock::generate_tokens(const ScriptInfo *scr_info) const
@@ -123,7 +123,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(const Script
 
         for (const auto &tok : model) {
             // expand if encounted
-            if (tok.ty == TokTy::S_METACODE_EXPAND_IF) {
+            if (tok.type == TokTy::S_METACODE_EXPAND_IF) {
                 Expand_If *exp_if = expand_conditions[expand_if_count++].get();
 
                 if (exp_if->eval(combo)) {
@@ -132,12 +132,12 @@ std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(const Script
                     std::vector<Token> exp_if_model_placeholded;
                     exp_if_model_placeholded.reserve(exp_if_model.size());
                     for (auto &exp_if_tok : exp_if_model) {
-                        if (exp_if_tok.ty == ETokenType::S_METACODE_PLACEHOLDER) {
+                        if (exp_if_tok.type == ETokenType::S_METACODE_PLACEHOLDER) {
                             // find placeholder symbol by identifier
                             if (auto it = combo.find(exp_if_tok.val); it != combo.end()) {
                                 auto placeholder_tok = it->second;
                                 // replace placeholder by the symbol combination case
-                                exp_if_tok.ty = placeholder_tok.ty;
+                                exp_if_tok.type = placeholder_tok.type;
                                 exp_if_tok.val = placeholder_tok.val;
                                 exp_if_tok.span.size = placeholder_tok.val.size();
                             }
@@ -155,7 +155,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(const Script
                 }
             }
             // placeholder encounted
-            else if (tok.ty == TokTy::S_METACODE_PLACEHOLDER) {
+            else if (tok.type == TokTy::S_METACODE_PLACEHOLDER) {
                 // find placeholder symbol by identifier
                 if (auto it = combo.find(tok.val); it != combo.end()) {
                     auto placeholder_tok = it->second;

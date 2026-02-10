@@ -14,13 +14,13 @@
 #include "Parser_Declaration_Local.hpp"
 
 std::shared_ptr<AST::ALocal> PAR::Parser_Declaration_Local::parse_local(bool silent_error) {
-	auto ty = ctx.tok_v.peek().ty;
-	switch (ty)
+	auto type = ctx.tok_v.peek().type;
+	switch (type)
 	{
 	case TokTy::VAR:
 	case TokTy::LET:
 	case TokTy::CONST: {
-		if (ctx.tok_v.peek(1).ty == TokTy::OPEN_PAREN)
+		if (ctx.tok_v.peek(1).type == TokTy::OPEN_PAREN)
 			return variable_unpack();
 		return variable();
 	}
@@ -47,7 +47,7 @@ AST::Declaration::Local::Pattern_Element PAR::Parser_Declaration_Local::pattern_
 		bind->capability = capa;
 		
 		if (ctx.tok_v.match_any(kCapabilityKind)) {
-			bind->capability = TokTy_to_ECapability(ctx.tok_v.peek(-1).ty);
+			bind->capability = TokTy_to_ECapability(ctx.tok_v.peek(-1).type);
 		}
 
 		bind->id = ctx.p_ref->identifier(true);
@@ -68,11 +68,9 @@ AST::Evaluator PAR::Parser_Declaration_Local::parse_evaluator(std::shared_ptr<AS
 	ctx.p_ref->lit_comp_entity_allowed = true;
 }
 
-#include <llvm/ADT/APInt.h>
-
 std::unique_ptr<AST::Declaration::Local::Pattern> PAR::Parser_Declaration_Local::parse_pattern(std::shared_ptr<AST::AReference> comparison_ref)
 {
-	ECapability capa = TokTy_to_ECapability(ctx.tok_v.peek(-1).ty);
+	ECapability capa = TokTy_to_ECapability(ctx.tok_v.peek(-1).type);
 
 	if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
 		return tuple_pattern(capa, comparison_ref);
@@ -100,7 +98,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern> PAR::Parser_Declaration_Local:
 
 std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local::variable() {
 	auto var = ctx.Create_Decl<AST::Declaration::Local::Variable>(ctx.tok_v.peek());
-	var->kind = TokTy_to_EVariableKind(ctx.tok_v.next().ty);
+	var->kind = TokTy_to_EVariableKind(ctx.tok_v.next().type);
 
 	var->id = ctx.p_ref->identifier(var.get(), true);
 
@@ -112,14 +110,14 @@ std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local
 
 	// explicit type case
 	if (ctx.tok_v.match(TokTy::COLON))
-		var->ty = ctx.p_type->parse_type();
+		var->type = ctx.p_type->parse_type();
 	// auto deduce type case
 	else
 		isAutoTy = true;
 
 	// check affectation
 	Token assign_tok = ctx.tok_v.next();
-	var->assignment = TokTy_to_EAssignmentType(assign_tok.ty);
+	var->assignment = TokTy_to_EAssignmentType(assign_tok.type);
 
 	if (var->assignment == EAssignmentType::NONE && isAutoTy) 
 		ctx.tok_v.add_error("PAR1171",
@@ -141,9 +139,9 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
 		"\n  - `var (a, b, c) = myFunction()`"
 		"\n  - with ignored values `var (a, _, c) = myFunction()`";
 
-	const auto varKind = ctx.tok_v.next().ty;
+	const auto varKind = ctx.tok_v.next().type;
 	auto unpack = ctx.Create_Decl<AST::Declaration::Local::Variable_Unpack>(ctx.tok_v.peek());
-	unpack->kind = TokTy_to_EVariableKind(ctx.tok_v.next().ty);
+	unpack->kind = TokTy_to_EVariableKind(ctx.tok_v.next().type);
 
 	unpack->isStatic = ctx.metablock_contains(*unpack, "static");
 
@@ -176,13 +174,13 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
 	auto capture = ctx.Create_Node<AST::Declaration::Local::Lambda_Capture>(ctx.tok_v.peek());
 
 	// all by ref
-	if (ctx.tok_v.check_val("mut") && ctx.tok_v.peek(1).ty == TokTy::CLOSE_SQUARE) {
+	if (ctx.tok_v.check_val("mut") && ctx.tok_v.peek(1).type == TokTy::CLOSE_SQUARE) {
 		capture->isAllRef = true;
 		ctx.tok_v.next();
 		return capture;
 	}
 	// all by copy
-	else if (ctx.tok_v.check_val("copy" ) && ctx.tok_v.peek(1).ty == TokTy::CLOSE_SQUARE) {
+	else if (ctx.tok_v.check_val("copy" ) && ctx.tok_v.peek(1).type == TokTy::CLOSE_SQUARE) {
 		capture->isAllRef = false;
 		ctx.tok_v.next();
 		return capture;
@@ -196,7 +194,7 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
 		auto elem = ctx.Create_Node<AST::Declaration::Local::Capture_Member>(ctx.tok_v.peek());
 
 		auto tok_capa = ctx.tok_v.expect_any(kCapabilityKind, "PAR1782", "Expected capture capability kind.", hint);
-		elem->capability = TokTy_to_ECapability(tok_capa.ty);
+		elem->capability = TokTy_to_ECapability(tok_capa.type);
 
 		elem->id = ctx.p_ref->identifier(true);
 		capture->elements.push_back(std::move(elem));
@@ -243,7 +241,7 @@ std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Loca
 {
 	ctx.tok_v.expect_any({ TokTy::OPEN_BRACE, TokTy::INJECT }, "PAR1199", "Expected start code block '{' or linecode '=>'.", "");
 
-	bool inline_code = ctx.tok_v.peek(-1).ty == TokTy::INJECT;
+	bool inline_code = ctx.tok_v.peek(-1).type == TokTy::INJECT;
 	auto cb = ctx.Create_Node<AST::Declaration::Local::CodeBlock>(ctx.tok_v.peek(-1));
 	
 	while (!ctx.tok_v.is_end()) {
@@ -261,7 +259,7 @@ std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Loca
 {
 	ctx.tok_v.expect_any({ TokTy::OPEN_BRACE, TokTy::INJECT }, "PAR1199", "Expected start code block '{' or linecode '=>'.", "");
 
-	bool inline_code = ctx.tok_v.peek(-1).ty == TokTy::INJECT;
+	bool inline_code = ctx.tok_v.peek(-1).type == TokTy::INJECT;
 	auto cb = ctx.Create_Node<AST::Declaration::Local::CodeBlock>(ctx.tok_v.peek(-1));
 	
 	while (!ctx.tok_v.is_end()) {
@@ -284,7 +282,7 @@ std::shared_ptr<AST::Declaration::Local::Capability> PAR::Parser_Declaration_Loc
 	
 	Token capa_tok_kind = ctx.tok_v.expect_any(kCapabilityKind, "PAR1207", "Expected capability kind.", hint);
 	auto capa = ctx.Create_Decl<AST::Declaration::Local::Capability>(ctx.tok_v.peek(-1));
-	capa->kind = TokTy_to_ECapability(capa_tok_kind.ty);	
+	capa->kind = TokTy_to_ECapability(capa_tok_kind.type);	
 
 	capa->id = ctx.p_ref->identifier(true);
 
@@ -321,10 +319,10 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Component> PAR::Parser_Declarat
 
 	if (!comparison_ref) {
 		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
-		comp_pat->component_reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+		comp_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
 	}
 	else {
-		comp_pat->component_reference = comparison_ref;
+		comp_pat->reference = comparison_ref;
 	}
 
 	if (ctx.tok_v.match(TokTy::IF))
@@ -377,10 +375,10 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Entity> PAR::Parser_Declaration
 
 	if (!comparison_ref) {
 		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
-		entity_pat->entity_reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+		entity_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {
-		entity_pat->entity_reference = comparison_ref;
+		entity_pat->reference = comparison_ref;
 	}
 
 	if (ctx.tok_v.match(TokTy::IF))
@@ -413,10 +411,10 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Tuple> PAR::Parser_Declaration_
 
 	if (!comparison_ref) {
 		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
-		pat->tuple_reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+		pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {
-		pat->tuple_reference = comparison_ref;
+		pat->reference = comparison_ref;
 	}
 
 	if (ctx.tok_v.match(TokTy::IF))
@@ -444,7 +442,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 	if (ctx.tok_v.check(TokTy::CLOSE_PAREN))
 		ctx.tok_v.add_error("PAR1206", "Unexpected end of binding on enum types ')'. A enum pattern on condition must have at least one binding. Else, use a check indexation.", hint);
 
-	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().ty);
+	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().type);
 	if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
 	while (!ctx.tok_v.is_end()) {
@@ -454,10 +452,10 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 
 	if (!comparison_ref) {
 		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
-		pat->enum_reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+		pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {
-		pat->enum_reference = comparison_ref;
+		pat->reference = comparison_ref;
 	}
 
 	if (ctx.tok_v.match(TokTy::IF))

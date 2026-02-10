@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AST_Base.hpp"
+#include <memory>
 
 namespace AST {
 namespace Operation {
@@ -66,7 +67,7 @@ struct Binary : public Node {
     std::unique_ptr<Node> right;
     EBinOpType op = EBinOpType::Add;
 
-    SYM_TYPE<AType> result_type_resolution;
+    SYM_DEFINITION type_definition;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "<op> bin(" + EBinOpType_to_str(op) + ")"; }

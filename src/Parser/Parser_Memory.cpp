@@ -14,7 +14,7 @@
 
 std::optional<std::unique_ptr<AST::Node>> PAR::Parser_Memory::try_memory(bool is_silent_error) 
 {
-	switch (ctx.tok_v.peek().ty) {
+	switch (ctx.tok_v.peek().type) {
 		case TokTy::TILDE:						return getbits();
 		case TokTy::NEW:						return _new();
 		case TokTy::DEL:						return del();
@@ -41,8 +41,8 @@ std::unique_ptr<AST::Memory::GetBits> PAR::Parser_Memory::getbits()
 	auto get_bit = ctx.Create_Node<AST::Memory::GetBits>(ctx.tok_v.peek(-2));
 	get_bit->range = ctx.p_expr->parse_expression();
 	ctx.tok_v.expect(TokTy::CLOSE_SQUARE, "PAR1056", "Expected end slice block ']' after range expression", hint);
-	if (auto ptr = dynamic_cast<AST::AType*>(get_bit->range.release())) {
-		get_bit->resolved_range_ty = std::shared_ptr<AST::AType>(ptr);
+	if (auto range_ptr = dynamic_cast<AST::AType*>(get_bit->range.get())) {
+		get_bit->resolved_range_type = std::shared_ptr<AST::AType>(dynamic_cast<AST::AType*>(get_bit->range.release()));
 	}
 	return get_bit;
 }
@@ -60,7 +60,7 @@ std::unique_ptr<AST::Memory::New> PAR::Parser_Memory::_new()
 
 	auto node = ctx.Create_Node<AST::Memory::New>(ctx.tok_v.peek());
 	ctx.tok_v.expect_any(kPointerTokens, "PAR1065", "Expected pointer specification after 'new' token.", hint);
-	node->pointer = TokTy_to_EPtrType(ctx.tok_v.peek(-1).ty);
+	node->pointer = TokTy_to_EPtrType(ctx.tok_v.peek(-1).type);
 
 	ctx.tok_v.expect(TokTy::TICK, "PAR1066", "Expected tick ' between pointer and type", hint);
 
@@ -109,7 +109,7 @@ std::unique_ptr<AST::Memory::Del> PAR::Parser_Memory::del()
 {
 	auto node = ctx.Create_Node<AST::Memory::Del>(ctx.tok_v.peek());
 	ctx.tok_v.match(TokTy::DEL);
-	node->element = ctx.p_ref->parse_reference();
+	node->target = ctx.p_ref->parse_reference();
 
 	return node;
 }

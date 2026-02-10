@@ -441,7 +441,7 @@ std::unique_ptr<META::Cond_Base> Preprocessor::_cond_atom() {
 	std::string right;
 
     if (tok_v->check_any({ TokTy::OP_EQUAL, TokTy::OP_NOT_EQUAL }))
-		isNot = tok_v->next().ty == TokTy::OP_NOT_EQUAL;
+		isNot = tok_v->next().type == TokTy::OP_NOT_EQUAL;
 	else if (tok_v->check(TokTy::S_METACODE_END)) {
 		return std::make_unique<META::Cond_Eq>(placeholder, "1", isNot);
 	}
@@ -459,7 +459,7 @@ std::unique_ptr<META::Cond_Base> Preprocessor::process_condition() {
 
     while (true) {
         if (tok_v->check_any({ TokTy::AND, TokTy::OR })) {
-			TokTy op = tok_v->next().ty;
+			TokTy op = tok_v->next().type;
             auto rhs = _cond_atom();
 
             if (op == TokTy::AND)
@@ -487,7 +487,7 @@ bool Preprocessor::check_metacode(std::initializer_list<std::string> pattern) {
 	if (*pattern.begin() == "#")
 		throw std::runtime_error("Illegal pattern start symbole");
 
-	if (tok_v->peek().ty != TokTy::METACODE) return false;
+	if (tok_v->peek().type != TokTy::METACODE) return false;
 
 	size_t i = 1;	// first token already checked
 	for (const auto &elem : pattern) {
@@ -517,11 +517,11 @@ bool Preprocessor::is_tok_in_pattern(const Token &tok, const std::string &patter
 
 	if (pattern == "<*>") 
 		return true;	// any token valid
-	else if (pattern == "<a>" && tok.ty == TokTy::IDENTIFIER) 
+	else if (pattern == "<a>" && tok.type == TokTy::IDENTIFIER) 
 		return true;	// identifier token valid
-	else if (pattern == "<0>" && std::find(kNumericTypeTokens.begin(), kNumericTypeTokens.end(), tok.ty) != kNumericTypeTokens.end()) 
+	else if (pattern == "<0>" && std::find(kNumericTypeTokens.begin(), kNumericTypeTokens.end(), tok.type) != kNumericTypeTokens.end()) 
 		return true;	// numeric token valid
-	else if (pattern == "<!>" && tok.ty == TokTy::S_METACODE_END) 
+	else if (pattern == "<!>" && tok.type == TokTy::S_METACODE_END) 
 		return true;	// end metacode instruction valid
 	else if (tok.val == pattern) 
 		return true;	// token string value valid 
@@ -550,7 +550,7 @@ size_t Preprocessor::get_line_last_tok_pos(size_t line)
 	auto tok = tok_v->peek();
 	size_t last_pos = tok.span.anteprocess_pos; 
 	size_t offset = 0;
-	while (tok.ty != TokTy::S_END_OF_FILE) {
+	while (tok.type != TokTy::S_END_OF_FILE) {
 		tok = tok_v->peek(++offset);
 		
 		if (tok.span.line != line) break;

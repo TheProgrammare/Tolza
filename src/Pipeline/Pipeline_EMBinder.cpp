@@ -1,8 +1,6 @@
 #include "Pipeline_EMBinder.hpp"
 
 #include <vector>
-#include <unordered_map>
-#include <set>
 #include <string>
 #include <chrono>
 #include <filesystem>
@@ -15,30 +13,24 @@
 
 #include "ScriptInfo.hpp"
 #include "Pipeline.hpp"
-#include "AST/AST_Forward.hpp"
-#include "AST/AST_Base.hpp"
 #include "EMBinder/C_EMBinder.hpp"
 
-bool generate_script(
-	ScriptInfo* &bind_info,
-	std::unordered_map<std::string, EExternItem> &items_to_generate,
-	const std::string &lang,
-	const std::string &lib)
+bool generate_script(const Bind_Package &bind)
 {
-	std::cout << color_MAGENTA << bind_info->name << color_RESET " generation... " << std::flush;
-	std::ofstream f(bind_info->file_path.c_str());
+	std::cout << color_MAGENTA << "\"" << BINDING_DIR << "/" << bind.bind_name << color_RESET " generation... " << std::flush;
+	std::ofstream f(BINDING_DIR + "/" + bind.bind_name);
 
-	if (!f) throw std::runtime_error("Impossible to open \"" + bind_info->file_path + "\"");
+	if (!f) throw std::runtime_error("Impossible to open \"" + bind.scr_info->file_path + "\"");
 	f.clear();
 
-	std::string _lang = lang + std::string(labs(static_cast<long>(29 - lang.size())), ' '); 
-	std::string _lib = lib + std::string(labs(static_cast<long>(29 - lib.size())), ' '); 
+	std::string _lang = bind.lang + std::string(labs(static_cast<long>(29 - bind.lang.size())), ' '); 
+	std::string _lib = bind.lib + std::string(labs(static_cast<long>(29 - bind.lib.size())), ' '); 
 	std::string header = EMBINDER_FILE_HEADER;
-	fmt_template(header, { _lang, _lib, lang });
+	fmt_template(header, { _lang, _lib, bind.lang });
 	f << header << std::flush;
 
-	EMBinder_LibC bind(lang, lib, f, items_to_generate);
-	auto ignore = bind.c_lib_to_velox_lib();
+	EMBinder_LibC em_binder(bind, f);
+	auto ignore = em_binder.c_lib_to_velox_lib();
 
 	// end of export lang
 	f << "\n}" << std::endl;
@@ -46,20 +38,16 @@ bool generate_script(
 	return true;
 }
 
-bool generate_binds(
-	std::unordered_map<std::string, ScriptInfo*> &bind_scrInfo,
-	std::unordered_map<std::string, std::unordered_map<std::string, EExternItem>> &items_to_generate,
-	std::unordered_map<std::string, std::tuple<std::string, std::string>> &bind_context_generated) 
+bool generate_binds(const std::vector<Bind_Package> &binds) 
 {
 	auto start = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> final_duration;
 	
 	size_t count = 0;
-	for (auto& [bind_name, bindInfo] : bind_scrInfo) {
-		auto& [lang, lib] = bind_context_generated[bind_name];
-		std::cout << "[EMBinder]" color_CYAN " [" << ++count << "/" << bind_scrInfo.size() << "] " color_RESET;
+	for (const auto& bind: binds) {
+		std::cout << "[EMBinder]" color_CYAN " [" << ++count << "/" << binds.size() << "] " color_RESET;
         
-		bool success = generate_script(bindInfo, items_to_generate[bind_name], lang, lib);
+		bool success = generate_script(bind);
 
 		auto end = std::chrono::high_resolution_clock::now();
 
@@ -74,7 +62,7 @@ bool generate_binds(
 
 	std::cout << color_YELLOW "[EMBinder] [summary] " color_RESET << 
 		"duration: " color_YELLOW << milli << " ms" << color_RESET <<
-		" | bind files: " color_YELLOW << bind_scrInfo.size() << color_RESET << "\n";
+		" | bind files: " color_YELLOW << binds.size() << color_RESET << "\n";
 	std::cout << std::endl;
 
 	in_binding_compilation = true;
@@ -97,12 +85,8 @@ bool generate_binds(
 
 
 bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
-	// file name, info
-	std::unordered_map<std::string, ScriptInfo*> bind_scrInfo;
-	// file name, fn to generate
-	std::unordered_map<std::string, std::unordered_map<std::string, EExternItem>> items_to_generate;
-	// file name, (lang, lib)
-	std::unordered_map<std::string, std::tuple<std::string, std::string>> bind_context_generated;
+	std::vector<Bind_Package> binds;
+	binds.reserve(pipe_scripts->scripts_infos.size());
 
 	auto start = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> final_duration;
@@ -111,31 +95,29 @@ bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
 	// affect all symbols imported
 	// according to the imported module name
 	size_t count = 1;
-	for (auto& sInfo : pipe_scripts->scripts_infos) {
+	for (auto& scr_info : pipe_scripts->scripts_infos) {
 		std::cout << "[EMBinder]";
         std::cout << color_CYAN " [" << count++ << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
-        std::cout << color_MAGENTA << sInfo->file_path << color_RESET "... " << std::flush;
+        std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 		std::filesystem::create_directories(BINDING_DIR);
 		size_t bind_count = 0;
 
-		for (auto& extern_imp : sInfo->get_externs()) {
+		for (const auto& extern_imp : scr_info->get_externs()) {
+			Bind_Package bind;
 			std::string f_name = "EMB_" + extern_imp->name + "_" + extern_imp->extern_lib + ".vlxb";
 			std::string path = BINDING_DIR + "/" + f_name; // same as .velox but for wrapper/headers
 			std::ofstream f(path); f.clear(); f.close();
-			
-			if (!bind_scrInfo.count(f_name))
-				bind_scrInfo[f_name] = new ScriptInfo(f_name);
-			ScriptInfo* bind = bind_scrInfo[f_name];
-			bind->name = f_name;
-			bind->file_path = path;
-			bind_context_generated[f_name] = { extern_imp->name, extern_imp->extern_lib };
 
-			// load all lib symbols used
-			for (auto& [id_ref, type] : extern_imp->id_references) {
-				items_to_generate[f_name].insert({ id_ref->id.name, type });
-				bind_count++;
-			}
+			bind.bind_name = f_name;
+			bind.scr_info = scr_info;
+			bind.lang = extern_imp->name;
+			bind.lib = extern_imp->extern_lib;
+			bind.items = extern_imp->extern_references;
+
+			bind_count += bind.items.size();
+
+			binds.push_back(bind);
 		}
 
 		auto end = std::chrono::high_resolution_clock::now();
@@ -152,5 +134,5 @@ bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
 		" | binds: " << color_YELLOW << final_binds << color_RESET << "\n";
 	std::cout << std::endl;
 
-	return generate_binds(bind_scrInfo, items_to_generate, bind_context_generated);
+	return generate_binds(binds);
 }

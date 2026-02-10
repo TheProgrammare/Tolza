@@ -73,8 +73,8 @@ void Lexer::tokenize(const std::set<char>& exit_char) {
             // no prefix possible: can be a keyword or identifier
             if (std::iscntrl(stream.peek()) || std::isspace(stream.peek())) {
                 // it's a keyword
-                if (TokTy ty = Str_to_ETokenType(buffer); ty != TokTy::UNKNOWN) {
-                    addToken(ty);
+                if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
+                    addToken(type);
                 }
                 // it's a identifier
                 else addToken(TokTy::IDENTIFIER);
@@ -84,8 +84,8 @@ void Lexer::tokenize(const std::set<char>& exit_char) {
                 tokenize_keyword();
             }
             // it's a keyword
-            else if (TokTy ty = Str_to_ETokenType(buffer); ty != TokTy::UNKNOWN) {
-                addToken(ty);
+            else if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
+                addToken(type);
             }
             // it's a identifier
             else {
@@ -196,7 +196,6 @@ void Lexer::process_escape() {
 
 
 void Lexer::tokenize_textual() {
-    eat(); // consume "
     while (eat()) {
         if (ch == '{') {
             if (!buffer.empty()) addToken(TokTy::L_TEXTUAL);
@@ -326,7 +325,7 @@ void Lexer::tokenize_numeric() {
 
     if (ch == '0' && stream.peek() != EOF) {
         char nt = stream.peek();
-             if (nt == 'b' || nt == 'B') { isBin = true; eat(); buffer += ch; }
+        if (nt == 'b' || nt == 'B') { isBin = true; eat(); buffer += ch; }
         else if (nt == 'o' || nt == 'O') { isOct = true; eat(); buffer += ch; }
         else if (nt == 'x' || nt == 'X') { isHex = true; eat(); buffer += ch; }
     }
@@ -338,7 +337,7 @@ void Lexer::tokenize_numeric() {
         else if (ch == '.') {
             // member access : a.b
 
-            if (!tokens.empty() && tokens.back().ty == TokTy::IDENTIFIER && std::isalpha(stream.peek())) {
+            if (!tokens.empty() && tokens.back().type == TokTy::IDENTIFIER && std::isalpha(stream.peek())) {
                 buffer = ".";
                 addToken(TokTy::DOT);
                 return;
@@ -411,7 +410,7 @@ void Lexer::tokenize_numeric() {
 }
 
 
-Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _ty, const std::string& _key, const std::string& _search) {
+Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search) {
     if (_key == _search) return EPrefixFound::All;
     if (_search.size() < _key.size() && _key.rfind(_search, 0) == 0)
         return EPrefixFound::Prefix;
@@ -419,7 +418,7 @@ Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _ty, const std::string& _key
 }
 
 bool Lexer::is_valid_prefix(char prefix, const std::string& _current) {
-    for (auto& [val, ty] : kSortedKeywords()) {
+    for (auto& [val, type] : kSortedKeywords()) {
         if (val.size() <= _current.size()) continue;
         if (val.rfind(_current, 0) != 0) continue;
         if (val[_current.size()] == prefix) return true; 
@@ -435,18 +434,18 @@ void Lexer::tokenize_keyword() {
     while (keep_searching) {
         keep_searching = false;
 
-        for (auto& [val, ty] : kSortedKeywords()) {
+        for (auto& [val, type] : kSortedKeywords()) {
             // Ignore keywords that can't possibly match the first character
             if (val.empty() || val[0] != buffer[0]) continue;
             if (buffer.size() > val.size()) continue;
-            switch (get_prefix_keyword(ty, val, buffer))
+            switch (get_prefix_keyword(type, val, buffer))
             {
             case EPrefixFound::None: {
                     continue;
                 }
             case EPrefixFound::All: {
                     buffer = val;
-                    addToken(ty);
+                    addToken(type);
                     return;
                 }
             case EPrefixFound::Prefix: {
@@ -466,8 +465,8 @@ void Lexer::tokenize_keyword() {
                     else {
                         while (buffer.size() > 0) {
                             if (str_is_identifier(buffer)) return;
-                            if (TokTy ty = Str_to_ETokenType(buffer); ty != TokTy::UNKNOWN) {
-                                addToken(ty); return;
+                            if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
+                                addToken(type); return;
                             }
                             char last = buffer.back();
                             buffer.pop_back();
@@ -524,10 +523,10 @@ void Lexer::tokenize_identifier() {
 }
 
 
-void Lexer::addToken(TokTy ty) {
+void Lexer::addToken(TokTy type) {
     Span span(0, stream.get_line(), stream.get_column(), buffer.size());
     span.anteprocess_pos = tokens.size();
-    tokens.emplace_back(Token(buffer, ty, span));
+    tokens.emplace_back(Token(buffer, type, span));
     buffer.clear();
 }
 

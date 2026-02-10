@@ -15,15 +15,14 @@
 
 #include "Visitor/Symbol_Manager.hpp"
 
-#include "Metacode.hpp"
-
-#include "AST/AST_Reference.hpp"
+#include "AST/AST_Statement.hpp"
+#include "AST/AST_Type.hpp"
 
 
 std::unique_ptr<AST::Node> PAR::Parser_Statement::parse_statement(bool is_silent_error) {
 	ctx.tok_v.match(TokTy::SEMICOLON); // consume because the parser use only for explicit end instruction
 
-	switch (ctx.tok_v.peek().ty)
+	switch (ctx.tok_v.peek().type)
 	{
 	case TokTy::IF:						return if_statement();
 	case TokTy::FOR:					return for_statement();
@@ -102,16 +101,16 @@ std::unique_ptr<AST::Statement::For> PAR::Parser_Statement::for_statement() {
 		auto index = ctx.Create_Decl<AST::Declaration::Local::Parameter>(ctx.tok_v.peek());
 		index->id = ctx.p_ref->identifier(true);
 		index->passMode = EPassMode::Mut;
-		auto ty = ctx.Create_Node<AST::Type::Primitive>(index.get()->_token);
-		ty->_type = EPrimType::iSize;
-		index->ty = std::shared_ptr<AST::Type::Primitive>(ty.release());
+		auto type = ctx.Create_Node<AST::Type::Primitive>(index.get()->_token);
+		type->_type = EPrimType::iSize;
+		index->type = std::shared_ptr<AST::Type::Primitive>(type.release());
 		
 		ctx.m_sym->add_decl(index);
 		forState->index = std::move(index);
 	}
 	// items 
 	if (ctx.tok_v.check_any(kParameterPassMode)) {
-		EPassMode pass_mode = TokTy_to_EPassMode(ctx.tok_v.next().ty);
+		EPassMode pass_mode = TokTy_to_EPassMode(ctx.tok_v.next().type);
 
 		if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
 			while (!ctx.tok_v.is_end()) {
@@ -242,7 +241,16 @@ std::unique_ptr<AST::Statement::Match> PAR::Parser_Statement::match_statement() 
 		}
 
 		auto ncase = ctx.Create_Node<AST::Statement::Match_Case>(ctx.tok_v.peek());
-		ncase->evaluator = ctx.p_loc->parse_evaluator(match->base);
+
+		if (ctx.tok_v.match_any({ TokTy::CAPA_MUT, TokTy::CAPA_REF })) {
+			ncase->evaluator = ctx.p_loc->parse_pattern(match->base); 
+		}
+		else {
+			ctx.p_ref->lit_comp_entity_allowed = false;
+			ncase->evaluator = ctx.p_expr->parse_expression();
+			ctx.p_ref->lit_comp_entity_allowed = true;
+		}
+
 		ncase->codeblock = ctx.p_loc->code_block_instruction();
 
 		if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;

@@ -44,7 +44,7 @@ public:
 
 	enum class EPrefixFound { None, Prefix, All };
 
-	EPrefixFound get_prefix_keyword(TokTy _ty, const std::string& _key, const std::string& _search);
+	EPrefixFound get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search);
 	bool is_valid_prefix(char prefix, const std::string& _current);
 
 	void tokenize(const std::set<char>& exit_char);
@@ -60,7 +60,7 @@ public:
 	void tokenize_identifier();
 	void tokenize_keyword();
 	std::pair<TokTy, std::string> getToken();
-	void addToken(TokTy ty);
+	void addToken(TokTy type);
 	bool eat();
 
 	void add_error(const std::string &code, const std::string &err, const std::string &hint);

@@ -207,9 +207,9 @@ EExprPassMode TokTy_to_EExprPassMode(TokTy tok)
 	}
 }
 
-std::string EPrimTy_to_str(EPrimType ty)
+std::string EPrimTy_to_str(EPrimType type)
 {
-	switch (ty) {
+	switch (type) {
 	case EPrimType::boolean:		return "boolean";
 	case EPrimType::ASCII:			return "ASCII";
 	case EPrimType::UTF32:			return "UTF32";
@@ -264,9 +264,9 @@ std::string EPrimTy_to_str(EPrimType ty)
 	}
 }
 
-std::string EPrimTy_to_mangle(EPrimType ty)
+std::string EPrimTy_to_mangle(EPrimType type)
 {
-	switch (ty) {
+	switch (type) {
 	case EPrimType::boolean:		return "b";
 	case EPrimType::ASCII:			return "aii";
 	case EPrimType::UTF32:			return "utf";
@@ -379,9 +379,9 @@ EPtrType TokTy_to_EPtrType(TokTy tok)
 	}
 }
 
-std::string EPtrType_to_str(EPtrType ty)
+std::string EPtrType_to_str(EPtrType type)
 {
-    switch (ty) {
+    switch (type) {
 	case EPtrType::raw_ptr:				return "ptr";
 	case EPtrType::unique_ptr:			return "uptr";
 	case EPtrType::shared_ptr:			return "sptr";
@@ -389,9 +389,9 @@ std::string EPtrType_to_str(EPtrType ty)
 	}
 }
 
-std::string EPtrType_to_mangle(EPtrType ty)
+std::string EPtrType_to_mangle(EPtrType type)
 {
-	switch (ty) {
+	switch (type) {
 	case EPtrType::raw_ptr:				return "p";
 	case EPtrType::unique_ptr:			return "up";
 	case EPtrType::shared_ptr:			return "sp";

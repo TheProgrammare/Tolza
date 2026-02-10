@@ -2,18 +2,14 @@
 
 #include <llvm/ADT/APFloat.h>
 
-#include "Parser_Context.hpp"
-
-#include "Parser_Expression.hpp"
-#include "Parser_Reference.hpp"
-#include "Parser_Declaration.hpp"
-#include "Parser_Operator.hpp"
-
 #include "AST/AST_Literal.hpp"
+#include "AST/AST_Reference.hpp"
+#include "Parser_Headers.hpp"
+#include "AST/AST_Headers.hpp"
 
 std::optional<std::unique_ptr<AST::ALiteral>> PAR::Parser_Literal::try_literal(bool is_silent_error)
 {
-	switch (ctx.tok_v.peek().ty)
+	switch (ctx.tok_v.peek().type)
 	{
 	case TokTy::TRUE:
 	case TokTy::FALSE:					return literal_boolean();
@@ -38,8 +34,8 @@ std::optional<std::unique_ptr<AST::ALiteral>> PAR::Parser_Literal::try_literal(b
 		// literal collection
 	case TokTy::OPEN_BRACE:				return literal_table();
 	case TokTy::OPEN_PAREN:
-		if (ctx.tok_v.peek(2).ty == TokTy::COMMA ||
-			ctx.tok_v.peek(2).ty == TokTy::COLON) {
+		if (ctx.tok_v.peek(2).type == TokTy::COMMA ||
+			ctx.tok_v.peek(2).type == TokTy::COLON) {
 										return literal_tuple();
 		}
 	default: break;
@@ -78,7 +74,7 @@ std::unique_ptr<AST::Literal::Decimal> PAR::Parser_Literal::literal_decimal() {
 
 	literal->integral_num = before_comma.length();
 	literal->decimal_num = after_comma.length();
-	literal->is_unsigned = literal->_token.ty == TokTy::L_UDECIMAL;
+	literal->is_unsigned = literal->_token.type == TokTy::L_UDECIMAL;
 
 	ctx.tok_v.next(); // consume literal
 
@@ -86,9 +82,9 @@ std::unique_ptr<AST::Literal::Decimal> PAR::Parser_Literal::literal_decimal() {
 
 	// post literal type like 99.999udeci or 99.999deci
 	if (ctx.tok_v.check_any(kDecimalTypeTokens))
-		deciKind = ctx.tok_v.next().ty;
+		deciKind = ctx.tok_v.next().type;
 	else
-		deciKind = ctx.tok_v.peek().ty == TokTy::L_DECIMAL ? TokTy::T_DECIMAL : TokTy::T_UDECIMAL;
+		deciKind = ctx.tok_v.peek().type == TokTy::L_DECIMAL ? TokTy::T_DECIMAL : TokTy::T_UDECIMAL;
 
 	return literal;
 }
@@ -101,7 +97,7 @@ std::unique_ptr<AST::Literal::Floating> PAR::Parser_Literal::literal_floating_po
 
 	// post literal type like 9.99f32 9.99f64
 	if (ctx.tok_v.check_any(kFloatingTypeTokens)) {
-		floatKind = ctx.tok_v.next().ty;
+		floatKind = ctx.tok_v.next().type;
 	}
 	else {
 		ctx.tok_v.next();
@@ -150,7 +146,7 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral() 
 	unsigned bitWidth = 64;
 
 	try {
-		switch (literalTok.ty) {
+		switch (literalTok.type) {
 			case TokTy::L_BIN:
 				api = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
 				literal->type = EPrimType::b64;
@@ -178,9 +174,9 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral() 
 		// Si la valeur dépasse 64 bits, on passe à 128 bits
 		if (api.getBitWidth() > 64) {
 			api = llvm::APInt(128, literalTok.val, 
-							(literalTok.ty == TokTy::L_BIN ? 2 :
-							literalTok.ty == TokTy::L_OCT ? 8 :
-							literalTok.ty == TokTy::L_HEX ? 16 : 10));
+							(literalTok.type == TokTy::L_BIN ? 2 :
+							literalTok.type == TokTy::L_OCT ? 8 :
+							literalTok.type == TokTy::L_HEX ? 16 : 10));
 			literal->type = EPrimType::i128;
 		}
 	}
@@ -198,7 +194,7 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral() 
 
 	// post literal type like 10i8 0u32
 	if (ctx.tok_v.check_any(kIntegerTypeTokens)) {
-		literal->type = TokTy_to_EPrimType(ctx.tok_v.peek().ty);
+		literal->type = TokTy_to_EPrimType(ctx.tok_v.peek().type);
 		ctx.tok_v.next(); // consume type
 	}
 
@@ -259,12 +255,12 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 	auto format = ctx.Create_Node<AST::Literal::Format_Specifier>(ctx.tok_v.peek());
 
 	// fill + align
-	if (std::find(kFormatSpecAlign.begin(), kFormatSpecAlign.end(), ctx.tok_v.peek(1).ty) != kFormatSpecAlign.end()) {
+	if (std::find(kFormatSpecAlign.begin(), kFormatSpecAlign.end(), ctx.tok_v.peek(1).type) != kFormatSpecAlign.end()) {
 		auto tok1 = ctx.tok_v.peek(0);
 		auto tok2 = ctx.tok_v.peek(1);
 
 		format->fill = tok1.val[0];
-		switch (tok2.ty)
+		switch (tok2.type)
 		{
 		case TokTy::OPEN_BRACKETS:		{ format->align = AST::Literal::Format_Specifier::EAlign::Left; break; }
 		case TokTy::CLOSE_BRACKETS:		{ format->align = AST::Literal::Format_Specifier::EAlign::Right; break; }
@@ -279,7 +275,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 
 	// sign
 	if (ctx.tok_v.match_any({ TokTy::OP_PLUS, TokTy::OP_MINUS, TokTy::SPACE })) {
-		switch (ctx.tok_v.peek(-1).ty)
+		switch (ctx.tok_v.peek(-1).type)
 		{
 		case TokTy::OP_PLUS:	{ format->sign = AST::Literal::Format_Specifier::ESign::Pos; break; }
 		case TokTy::OP_MINUS:	{ format->sign = AST::Literal::Format_Specifier::ESign::Neg; break; }
@@ -386,7 +382,7 @@ std::unique_ptr<AST::Literal::Range> PAR::Parser_Literal::literal_range(std::uni
 
 	auto range_tok = ctx.tok_v.expect_any({ TokTy::RANGE, TokTy::RANGE_INCLUSIVE }, "PAR1807", "Expected range kind '..' or '..='", hint);
 
-	range->endInclude = range_tok.ty == TokTy::RANGE_INCLUSIVE;
+	range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
 
 	range->start = ctx.Create_Node<AST::Literal::Integral>(ctx.tok_v.peek());
 	range->endInclude = ctx.tok_v.match(TokTy::RANGE_INCLUSIVE);
@@ -432,7 +428,7 @@ std::unique_ptr<AST::ALiteral> PAR::Parser_Literal::literal_table() {
 	if (values.size() == 1) {
 		if (auto pop_ptr = dynamic_cast<AST::Literal::Table_Population*>(values[0].get())) {
 			values[0].release();
-
+		
 			// is a map population
 			if (pop_ptr->map_expression_value) {
 				auto map = ctx.Create_Node<AST::Literal::Map>(ctx.tok_v.peek());
@@ -481,21 +477,32 @@ std::unique_ptr<AST::Literal::Table_Population> PAR::Parser_Literal::literal_tab
 	return pop;
 }
 
-std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(const AST::ID& id, std::unique_ptr<AST::Type_Arguments> gen_args) {
+std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(const AST::ID& id, std::vector<std::unique_ptr<AST::AType>> &gen_args) {
 	auto lit_entity = ctx.Create_Node<AST::Literal::Entity>(ctx.tok_v.peek());
 	
 	lit_entity->id = id;
-	if (gen_args.get() != nullptr) 
-		lit_entity->gen_args = std::move(gen_args);
+	lit_entity->gen_args = std::move(gen_args);
 
 	ctx.tok_v.match(TokTy::OPEN_BRACE);
 	if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return lit_entity;
 
 	while (!ctx.tok_v.is_end()) {
 		auto ref = ctx.p_ref->parse_reference();
+
 		if (auto comp = dynamic_cast<AST::Literal::Component*>(ref.get())) {
-			lit_entity->comp_args.push_back(std::unique_ptr<AST::Literal::Component>(comp));
-			ref.release();
+			lit_entity->comp_args.push_back(
+				std::unique_ptr<AST::Literal::Component>(
+					static_cast<AST::Literal::Component*>(ref.release())
+				)
+			);
+		}
+		else if (auto comp_member = dynamic_cast<AST::Reference::Member_Access*>(ref.get())) {
+			ctx.tok_v.expect(TokTy::ASSIGN, "PAR1287", 
+				"Expected component field initialisation '='.", 
+				"define literal component member like: `CPosition.x= 10, CPosition.y = 15`");
+
+			auto lit_comp = ctx.Create_Node<AST::Literal::Component>(ref->_token);
+			lit_comp->id = ref->id;
 		}
 		else {
 			ctx.tok_v.add_error_tok(ref->_token, "PAR1286", 
@@ -503,29 +510,31 @@ std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(const 
 				"define literal components only in literal entity");
 		}
 
+
 		if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
 	}
 
 	return lit_entity;
 }
 
-std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(const AST::ID& id, std::unique_ptr<AST::Type_Arguments> gen_args) {
+std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(const AST::ID& id, std::vector<std::unique_ptr<AST::AType>> &gen_args) {
 	static const std::string hint = "define literal component like:"
-		"\n  - no fields `name{}`"
-		"\n  - normal `name{ field1: val1, field2: val2 }`"
-		"\n  - generic `name<gen_args>{ field1: val1, field2: val2 }`";
+		"\n  - no fields `name{.}`"
+		"\n  - normal `name{ .field1: val1, .field2: val2 }`"
+		"\n  - generic `name<gen_args>{ .field1: val1, .field2: val2 }`";
 
 	auto comp = ctx.Create_Node<AST::Literal::Component>(ctx.tok_v.peek());
 
 	comp->id = id;
-	if (gen_args != nullptr)
-		comp->gen_args = std::move(gen_args);
+	comp->gen_args = std::move(gen_args);
 
 	ctx.tok_v.match(TokTy::OPEN_BRACE);
 	if (!ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
 
 	while (!ctx.tok_v.is_end()) {
 		if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
+
+		ctx.tok_v.expect(TokTy::DOT, "PAR1115", "Expected contextual field access '.' in literal component", hint);
 
 		auto field_arg = ctx.Create_Node<AST::Reference::Call_Argument>(ctx.tok_v.peek());
 		field_arg->name = ctx.tok_v.expect_id("PAR1113", "Expected field name (identifier)", hint);

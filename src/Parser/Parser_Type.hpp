@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "AST/AST_Forward.hpp"
-#include "AST/AST_Base.hpp"
 
 namespace PAR {
 	struct Parser_Context;
@@ -14,7 +16,7 @@ private:
 		[[nodiscard]] std::unique_ptr<AST::Type::Table>					table(bool isConst, bool isOptional, bool isVolatile);
 		[[nodiscard]] std::unique_ptr<AST::Type::Ptr>					pointer(bool isConst, bool isOptional, bool isVolatile);
 		[[nodiscard]] std::unique_ptr<AST::Type::Primitive>				primitive(bool isConst, bool isOptional, bool isVolatile);
-		[[nodiscard]] std::unique_ptr<AST::Type_Reference>				reference(bool isConst, bool isOptional, bool isVolatile);
+		[[nodiscard]] std::unique_ptr<AST::AType_Reference>				reference(bool isConst, bool isOptional, bool isVolatile);
 		[[nodiscard]] std::unique_ptr<AST::Type::Tuple>					tuple(bool isConst, bool isOptional, bool isVolatile);
 		[[nodiscard]] std::unique_ptr<AST::Type::Function_Proto>		function_proto(bool isConst, bool isOptional, bool isVolatile);
 		// isRef, isConst, isOptional

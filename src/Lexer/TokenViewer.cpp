@@ -14,7 +14,7 @@ void TokenViewer::jump(size_t newPosition) {
     }
 
     currentTokStr = tokens[current].val;
-    currentTokTy = tokens[current].ty;
+    currentTokTy = tokens[current].type;
     currentLine = tokens[current].span.line;
     if (currentLine - 1 >= lines.size()) currentLine = lines.size();
     currentLineStr = lines[currentLine - 1];
@@ -30,7 +30,7 @@ Token TokenViewer::next()
 		current++;
         auto post_tok = tokens[current];
         currentTokStr = post_tok.val;
-        currentTokTy = post_tok.ty;
+        currentTokTy = post_tok.type;
         currentLine = post_tok.span.line;
         if (currentLine - 1 >= lines.size()) currentLine = lines.size();
         currentLineStr = lines[currentLine - 1];
@@ -55,38 +55,38 @@ Token TokenViewer::prev() {
 }
 
 bool TokenViewer::is_end() const {
-	return current == tokens.size() - 1 || tokens[current].ty == ETokenType::S_END_OF_FILE;
+	return current == tokens.size() - 1 || tokens[current].type == ETokenType::S_END_OF_FILE;
 }
 
 bool TokenViewer::look_ahead(TokTy check, TokTy terminaison)
 {
 	for (size_t offset = 0; ; offset++) {
-		TokTy ty = peek(offset).ty;
-		if (ty == check) return true;
-		if (ty == terminaison) return false;
-		if (ty == TokTy::S_END_OF_FILE) return false;
+		TokTy type = peek(offset).type;
+		if (type == check) return true;
+		if (type == terminaison) return false;
+		if (type == TokTy::S_END_OF_FILE) return false;
 		offset++;
 	}
 }
 
 // will ignore new line if not specified
-bool TokenViewer::check(TokTy ty) {
+bool TokenViewer::check(TokTy type) {
 	if (!is_end()) {
-		return peek().ty == ty;
+		return peek().type == type;
 	}
 	return false;
 }
 
 bool TokenViewer::check_any(const std::initializer_list<ETokenType>& types) {
-	for (ETokenType ty : types) {
-		if (check(ty)) 
+	for (ETokenType type : types) {
+		if (check(type)) 
 			return true;
 	}
 	return false;
 }
 
-bool TokenViewer::match(TokTy ty) {
-	if (check(ty)) {
+bool TokenViewer::match(TokTy type) {
+	if (check(type)) {
 		next();
 		return true;
 	}
@@ -133,8 +133,8 @@ bool TokenViewer::match_id_val(const std::string& val) {
 }
 
 bool TokenViewer::match_any(const std::initializer_list<ETokenType>& types) {
-	for (ETokenType ty : types) {
-		if (check(ty)) {
+	for (ETokenType type : types) {
+		if (check(type)) {
 			next();
 			return true;
 		}
@@ -142,16 +142,16 @@ bool TokenViewer::match_any(const std::initializer_list<ETokenType>& types) {
 	return false;
 }
 
-Token TokenViewer::expect(TokTy ty, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-	if (!check(ty)) {
+Token TokenViewer::expect(TokTy type, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
+	if (!check(type)) {
 		add_error(errCode, errMsg, hintMsg);
 	}
 	return next();
 }
 
 Token TokenViewer::expect_any(const std::initializer_list<ETokenType>& types, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-	for (ETokenType ty : types) {
-		if (check(ty)) {
+	for (ETokenType type : types) {
+		if (check(type)) {
 			return next();
 		}
 	}
@@ -177,7 +177,7 @@ void TokenViewer::rewind(size_t pos) {
     if (pos >= tokens.size()) pos = tokens.size() - 1;
 	current = pos;
     currentTokStr = tokens[pos].val;
-    currentTokTy = tokens[pos].ty;
+    currentTokTy = tokens[pos].type;
     currentLine = tokens[pos].span.line;
     if (currentLine >= lines.size()) currentLine = lines.size() - 1;
     currentLineStr = lines[currentLine - 1];
@@ -197,9 +197,9 @@ void TokenViewer::add_error_tok(const Token& tok, const std::string& errCode, co
 
 void TokenViewer::synchronize() {
 	while (!is_end()) {
-		if (peek(-1).ty == TokTy::SEMICOLON) return;
+		if (peek(-1).type == TokTy::SEMICOLON) return;
 
-		switch (peek().ty)
+		switch (peek().type)
 		{
 		case TokTy::LET: case TokTy::VAR: case TokTy::ENTITY: case TokTy::METACODE:
 		case TokTy::ENUM: case TokTy::IF: case TokTy::ELSE: case TokTy::WHILE:

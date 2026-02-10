@@ -12,7 +12,7 @@ bool AST::Declaration::COP::System_Case::manage_component(const Component &comp)
     return false;
 }
 
-bool AST::Declaration::COP::Entity::contains_op(EBinOpType op, const AType* return_ty) const {
+bool AST::Declaration::COP::Entity::contains_op(EBinOpType op, const AType* return_type) const {
     for (auto& elem : operators) {
         if (elem->operatorType == op) {
             return true;
@@ -21,7 +21,7 @@ bool AST::Declaration::COP::Entity::contains_op(EBinOpType op, const AType* retu
     return false;
 }
 
-bool AST::Declaration::COP::Entity::contains_cast(const AType& target_ty, bool isCastFrom) const {
+bool AST::Declaration::COP::Entity::contains_cast(const AType& target_type, bool isCastFrom) const {
     // difficult resolution:
     // entity have 2 cast way: cast self as T / cast T as self
     // generic have 2 cast way check: T cast to U / T cast from U
@@ -30,9 +30,7 @@ bool AST::Declaration::COP::Entity::contains_cast(const AType& target_ty, bool i
         for (auto& elem : casts) {
             if (!elem->isSourceSelf) {
                 if (auto id_ty_ptr = dynamic_cast<const AType*>(elem->source.get())) {
-                    if (target_ty == *id_ty_ptr) {
-                        return true;
-                    }
+                    //if (target_type == *id_ty_ptr) return true;
                 }
             }
         }
@@ -40,7 +38,7 @@ bool AST::Declaration::COP::Entity::contains_cast(const AType& target_ty, bool i
     }
     else {
         for (auto& elem : casts) {
-            if (elem->isSourceSelf && *elem->target == target_ty) return true;
+            //if (elem->isSourceSelf && *elem->target == target_type) return true;
         }
         return false;
     }
@@ -48,8 +46,8 @@ bool AST::Declaration::COP::Entity::contains_cast(const AType& target_ty, bool i
 
 bool AST::Declaration::COP::Entity::contains_comp(const AST::Declaration::COP::Component& target_comp) const {
     for (auto& comp : comps) {
-        if (!comp->resolved_sym.resolved) return false;
-        if (comp->resolved_sym.ptr->id == target_comp.id) return true;
+        if (!comp) return false;
+        if (comp->id == target_comp.id) return true;
     }
     return false;
 }

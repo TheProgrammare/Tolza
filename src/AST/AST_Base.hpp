@@ -26,7 +26,13 @@
 #include "Lexer/Token.hpp"
 #include "Visitor/Visitor_Base.hpp"
 
+struct Visitor_Base;
+
 struct ScriptInfo;
+struct Symbol_Data;
+
+using SYM_DEFINITION = 
+    std::weak_ptr<Symbol_Data>;
 
 
 inline std::string mangle_id(const std::string& inId) {
@@ -47,42 +53,37 @@ struct Node {
     std::vector<std::string> _scope;
 
     Node() = default;
-    virtual void accept(Visitor_Base& v) = 0;
-    [[nodiscard]] virtual std::string debug_str() const = 0;
+    virtual ~Node() = default;
+    
     [[nodiscard]] size_t get_tok_line() const { return _token.span.line; }
     [[nodiscard]] size_t get_tok_column() const { return _token.span.col; }
     [[nodiscard]] size_t get_tok_size() const { return _token.span.size; }
     [[nodiscard]] size_t get_tok_antepos() const { return _token.span.anteprocess_pos; }
     [[nodiscard]] size_t get_tok_pos() const { return _token.span.pos; }
     [[nodiscard]] std::string mangle_scope() const;
-
-    virtual ~Node() = default;
+    
+    [[nodiscard]] virtual std::string debug_str() const = 0;
+    virtual void accept(Visitor_Base& v) = 0;
+    
 };
 
 std::string make_error(const Node& n, const ScriptInfo& script, const std::string& code, const std::string& err, const std::string& hint);
-
-
-// for every node with a type
-struct AType : virtual Node {
-    virtual ~AType() = default;
-    bool type_isOptional = false;
-    bool type_isConst = false;
-    bool type_isVolatile = false;
-
-    virtual bool operator==(const AType& other) const;
-
-    [[nodiscard]] virtual std::string mangle_type() const = 0;
-    [[nodiscard]] virtual EPrimType get_type() const = 0;
-};
 
 inline EPassMode get_defaultParamPassmode(AST::AType &node);
 
 
 // for every node who contains a value coded
-struct ALiteral : virtual AType {
+struct ALiteral : virtual Node {
     virtual ~ALiteral() = default;
 };
 
+struct AType : virtual Node {
+    bool type_isOptional = false;
+    bool type_isConst = false;
+    bool type_isVolatile = false;
+
+    virtual ~AType() = default;
+};
 
 struct ID {
 
@@ -148,127 +149,49 @@ protected:
 struct ALocal : ADeclaration {
 };
 
-template <typename T>
-struct SYM_DECL {
-    std::shared_ptr<T> ptr;
-    bool resolved = false;
-
-    SYM_DECL() = default;
-    SYM_DECL(std::shared_ptr<T> _ptr)
-        : ptr(_ptr)
-        , resolved(_ptr != nullptr) {}
-};
-
-template <typename T>
-struct SYM_TYPE {
-    std::shared_ptr<T> ptr;
-    bool resolved = false;
-
-    SYM_TYPE() = default;
-    SYM_TYPE(std::shared_ptr<T> _ptr)
-        : ptr(_ptr)
-        , resolved(_ptr != nullptr) {}
-};
-
 // for every node who need a symbolic resolution
 struct AReference : virtual Node {
     ID id;
+    SYM_DEFINITION definition;
 
     AReference() : id("") {}
     explicit AReference(const std::string& name) : id(name) {}
     AReference(const std::vector<std::string>& path, const std::string& name) :
             id(path, name) {}
-    [[nodiscard]] virtual std::shared_ptr<ADeclaration> get_symbol_resolution() = 0;
+
+    std::string debug_str() const override { return "<ref> id[" + id.debug_str() + "]"; };
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
+// for every node who need a type resolution
+struct AType_Reference : public AReference, AType {
+    [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
-template <typename T>
-struct SYM_REF {
-    std::shared_ptr<T> ptr;
-    bool resolved = false;
-
-    SYM_REF() = default;
-    SYM_REF(std::shared_ptr<T> _ptr)
-        : ptr(_ptr)
-        , resolved(_ptr != nullptr) {}
-};
-
-struct Type_Arguments : public Node {
-    std::vector<std::unique_ptr<AType>> arguments;
-
-    bool operator==(const Type_Arguments& other) const {
-        if (arguments.size() != other.arguments.size()) return false;
-        for (size_t i = 0; i < arguments.size(); i++) {
-            const AType& _local_gen = *arguments[i];
-            const AType& _other_gen = *other.arguments[i];
-            if (&_local_gen != &_other_gen) return false;
-        }
-        return true;
-    }
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { 
-        if (arguments.empty()) return "";
-        std::string outStr;
-        for (size_t i = 0; i < arguments.size(); i++) {
-            outStr += arguments[i]->debug_str();
-            if (i < arguments.size() - 1) outStr += ", ";
-        }
-
-        return "<" + outStr + ">";
-    }
-    [[nodiscard]] std::string ty_mangling() const {
-        if (arguments.empty()) return "";
-        std::string outStr = "_G" + std::to_string(arguments.size()) + "_";
-        for (auto& arg : arguments) {
-            outStr += arg->mangle_type() + "_";
-        }
-        return outStr;
-    }
-};
-
-struct Identifier_Reference final : public AReference {
-    Identifier_Reference() : AReference("") {}
-    explicit Identifier_Reference(const std::string& name) : AReference(name) {}
-    Identifier_Reference(const std::vector<std::string>& path, const std::string& name) :
+    AType_Reference() : AReference("") {}
+    explicit AType_Reference(const std::string& name) : AReference(name) {}
+    AType_Reference(const std::vector<std::string>& path, const std::string& name) :
         AReference(path, name) {}
 
-    SYM_DECL<ADeclaration> resolved_sym;
-
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
-    std::string debug_str() const override { return id.debug_str(); }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-};
-
-struct Type_Reference final : public AReference, AType {
-    [[maybe_unused]] std::unique_ptr<Type_Arguments> gen_args;
-
-    SYM_DECL<ADeclaration> resolved_sym;
-
-    Type_Reference() : AReference("") {}
-    explicit Type_Reference(const std::string& name) : AReference(name) {}
-    Type_Reference(const std::vector<std::string>& path, const std::string& name) :
-        AReference(path, name) {}
-
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym.ptr; }
     std::string debug_str() const override {
-        if (gen_args) {
-            return "<ty> id[" + id.debug_str() + "]<" + gen_args->debug_str() + ">";
+        if (!gen_args.empty()) {
+            std::string out = "<type> id[" + id.debug_str() + "]<";
+            for (auto &arg : gen_args)
+                out += id.debug_str() + ", ";
+            return out + ">";
         }
-        return "<ty> id[" + id.debug_str() + "]";
+        return "<type> id[" + id.debug_str() + "]";
     }
-    std::string mangle_type() const override { return debug_str(); }
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    EPrimType get_type() const override { return EPrimType::NONE; };
 };
 
 
 struct Root : public Node {
     std::vector<std::shared_ptr<Node>> global_nodes;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "root"; }
+  
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 

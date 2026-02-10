@@ -1,0 +1,464 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Velox",
+	"scopeName": "source.velox",
+	"patterns": [
+		{ "include": "#global" }
+	],
+	"repository": {
+		"global": {
+			"patterns": [
+				{ "include": "#metacode" },
+				{ "include": "#comment" },
+				{ "include": "#declarations" },
+				{ "include": "#expressions" },
+				{ "include": "#types" },
+				{ "include": "#identifiers" },
+				{ "include": "#operators" }
+			]	
+		},
+		"metacode": {
+			"name": "keyword.control.directive.velox",
+			"begin": "^\\s*#",
+			"end": "$",
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#string" },
+				{ "include": "#literals" },
+				{ "include": "#operators" },
+				{ "include": "#type_primitive" }
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.velox",
+					"match": "//.*$"
+				},
+				{ "include": "#block_comment" }
+			]
+		},
+		"block_comment": {
+			"name": "comment.block.velox",
+			"begin": "/\\*",
+			"beginCaptures": {
+				"0": { "name": "punctuation.definition.comment.begin.velox" }
+			},
+			"end": "\\*/",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.comment.end.velox" }
+			},
+			"patterns": [
+				{
+				"begin": "/\\*",
+				"beginCaptures": {
+					"0": { "name": "punctuation.definition.comment.begin.velox" }
+				},
+				"end": "\\*/",
+				"endCaptures": {
+					"0": { "name": "punctuation.definition.comment.end.velox" }
+				},
+				"patterns": [
+					{ "include": "#block_comment" } 
+				]
+				}
+			]
+		},
+		"declarations": {
+			"patterns": [
+				{ "include": "#mod_declaration" },
+				{ "include": "#export_declaration" },
+				{ "include": "#function_declaration" },
+				{ "include": "#function_return" },
+				{ "include": "#function_message" },
+				{ "include": "#entity_declaration" },
+				{ "include": "#component_declaration" },
+				{ "include": "#role_declaration" },
+				{ "include": "#system_declaration" },
+				{ "include": "#typealias_declaration" },
+				{ "include": "#variable_declaration" }
+			]
+		},
+		"mod_declaration": {
+			"match": "\\bmod\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.module.velox" },
+				"1": { "name": "entity.name.module.velox" }
+			}
+		},
+		"export_declaration": {
+			"match": "\\bexport\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.export.velox" },
+				"1": { "name": "entity.name.export.velox" }
+			}
+		},
+		"function_declaration": {
+			"begin": "\\bfn\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+			"beginCaptures": {
+				"0": { "name": "keyword.declaration.function.velox" },
+				"1": { "name": "entity.name.function.velox" }
+			},
+			"end": "\\)",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.parameters.end.velox" }
+			},
+			"patterns": [
+				{ "include": "#parameter_declaration" }
+			]
+		},
+		"function_return": {
+			"begin": "\\s*->\\s*",
+			"beginCaptures": {
+				"0": { "name": "keyword.operator.return.velox" }
+			},
+			"end": "(?=\\s*\\{|;)",
+			"patterns": [
+				{ "include": "#types" }
+			]
+		},
+		"function_message": {
+			"begin": "\\s*->\\s*msg\\(\\s*",
+			"beginCaptures": {
+				"0": { "name": "keyword.operator.message.velox" }
+			},
+			"end": "\\)",
+			"patterns": [
+				{ "include": "#parameter_declaration" }
+			]
+		},
+		"entity_declaration": {
+			"match": "\\bentity\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.entity.velox" },
+				"1": { "name": "entity.name.entity.velox" }
+			}
+		},
+		"component_declaration": {
+			"match": "\\bcomp\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.component.velox" },
+				"1": { "name": "entity.name.component.velox" }
+			}
+		},
+		"role_declaration": {
+			"match": "\\brole\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.role.velox" },
+				"1": { "name": "entity.name.role.velox" }
+			}
+		},
+		"system_declaration": {
+			"begin": "\\bsys\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"beginCaptures": {
+				"0": { "name": "keyword.declaration.system.velox" },
+				"1": { "name": "entity.name.system.velox" }
+			},
+			"end": "\\)",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.parameters.end.velox" }
+			},
+			"patterns": [
+				{ "include": "#parameter_declaration" }
+			]
+		},
+		"entity_component_use": {
+			"match": "\\buse\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+			"captures": {
+				"0": { "name": "keyword.declaration.role.velox" },
+				"1": { "name": "entity.name.role.velox" }
+			}
+		},
+		"parameter_declaration": {
+			"begin": "(ref|mut|move|copy|clone|addr)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*:",
+			"beginCaptures": {
+				"1": { "name": "keyword.declaration.pass-mode.velox" },
+				"2": { "name": "variable.parameter.name.velox" }
+			},
+			"end": "(?=\\s*[),])",
+			"patterns": [
+				{ "include": "#types" },
+				{
+					"name": "meta.variadic.velox",
+					"match": "\\.\\.\\."
+				},
+				{
+					"begin": "\\s*=\\s*",
+					"beginCaptures": {
+						"0": { "name": "keyword.operator.assignment.velox" }
+					},
+					"end": "(?=\\s*[),])",
+					"patterns": [
+						{ "include": "#expressions" }
+					]
+				}
+			]
+		},
+		"typealias_declaration": {
+			"match": "\\b(type)\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+			"captures": {
+				"1": { "name": "keyword.declaration.type.velox" },
+				"2": { "name": "entity.name.type.velox" }
+			}
+		},
+		"variable_declaration": {
+			"match": "\\b(var|let|const|mut|ref)\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+			"captures": {
+				"1": { "name": "keyword.declaration.variable.velox" },
+				"2": { "name": "entity.name.variable.velox" },
+				"3": { "name": "keyword.operator.colon.velox" }
+			}
+		},
+		"expressions": {
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#function_call" },
+				{ "include": "#identifiers" },
+				{ "include": "#literals" }
+			]
+		},
+		"function_call": {
+			"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*\\(",
+			"captures": {
+				"1": { "name": "entity.name.function.velox" }
+			}
+		},
+		"generic_arguments": {
+			"begin": "<",
+			"beginCaptures": { "0": { "name": "punctuation.definition.generic.begin.velox" } },
+			"end": ">",
+			"endCaptures": { "0": { "name": "punctuation.definition.generic.end.velox" } },
+			"patterns": [
+				{ "include": "#types" },
+				{ "name": "punctuation.separator.generic.velox", "match": "," }
+			]
+		},
+		"identifiers": {
+			"patterns": [
+				{
+					"name": "variable.language.scope.velox", 
+					"match": "\\b(self|super)?::"
+				},
+				{ "include": "#qualified_identifier" },
+				{ "include": "#identifier" }
+			]
+		},
+		"identifier": {
+			"name": "variable.other.velox",
+			"match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+		},
+		"qualified_identifier": {
+			"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(::)",
+      		"captures": {
+        		"1": { "name": "entity.name.namespace.velox" },
+        		"2": { "name": "punctuation.separator.namespace.velox" }
+			}
+		},
+		"types": {
+			"patterns": [
+				{ "include": "#type_modifier" },		
+				{ "include": "#type_primitive" },
+				{ "include": "#type_generic" },
+				{ "include": "#type_identifier" },
+				{ "include": "#type_arg" },
+				{ "include": "#type_tuple" }
+			]
+		},
+		"type_modifier": {
+			"name": "storage.modifier.velox",
+			"match": "(?:[!?$]?\\s*(?:ptr'|uptr'|sptr')\\s*[!?$]?|[!?$])"
+		},
+		"type_generic": {
+			"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=<)",
+			"captures": {
+				"1": { "name": "storage.type.name.velox" }
+			}
+		},
+		"type_identifier": {
+			"begin": "(?<!:)\\:\\s*(?:(?:[A-Za-z_][A-Za-z0-9_]*::)*)([A-Za-z_][A-Za-z0-9_]*)",
+			"beginCaptures": {
+				"0": { "name": "punctuation.separator.type.velox" },
+				"1": { "name": "storage.type.name.velox" }
+			},
+			"end": "(?<=\\b)",
+			"patterns": []
+		},
+		"type_arg": {
+			"begin": "<",
+			"beginCaptures": { "0": { "name": "punctuation.definition.generic.begin.velox" } },
+			"end": ">",
+			"endCaptures": { "0": { "name": "punctuation.definition.generic.end.velox" } },
+			"patterns": [
+				{ "include": "#types" },
+				{ "name": "punctuation.separator.generic.velox", "match": "," }
+			]
+		},
+		"type_tuple": {
+			"begin": "\\(",
+			"beginCaptures": {
+				"0": { "name": "punctuation.section.tuple.begin.velox" }
+			},
+			"end": "\\)",
+			"endCaptures": {
+				"0": { "name": "punctuation.section.tuple.end.velox" }
+			},
+			"patterns": [
+				{ "include": "#global" },
+				{
+					"name": "punctuation.separator.tuple.velox",
+					"match": ","
+				}
+			]
+		},
+		"type_primitive": {
+			"patterns": [
+				{
+					"name": "storage.type.integer.signed.velox",
+					"match": "\\b(i8|i16|i32|i64|i128|isize)\\b"
+				},
+				{
+					"name": "storage.type.integer.unsigned.velox",
+					"match": "\\b(u8|u16|u32|u64|u128|usize)\\b"
+				},
+				{
+					"name": "storage.type.integer.bit.velox",
+					"match": "\\b(b8|b16|b32|b64|b128|bsize)\\b"
+				},
+				{
+					"name": "storage.type.float.velox",
+					"match": "\\b(f32|f64|f128|fsize)\\b"
+				},
+				{
+					"name": "storage.type.pointer.velox",
+					"match": "\\bptrdiff\\b"
+				},
+				{
+					"name": "storage.type.boolean.velox",
+					"match": "\\bbool\\b"
+				},
+				{
+					"name": "storage.type.string.velox",
+					"match": "\\b(ascii|str)\\b"
+				},
+				{
+					"name": "storage.type.unicode.velox",
+					"match": "\\b(utf32|text)\\b"
+				},
+				{
+					"name": "storage.type.decimal.velox",
+					"match": "\\b(deci|udeci)\\b"
+				},
+				{
+					"name": "storage.type.void.velox",
+					"match": "\\b(u0|void)\\b"
+				}
+			]
+		},
+		"operators": {
+			"patterns": [
+				{
+					"name": "keyword.operator.arithmetic.velox",
+					"match": "(%mod%|%rem%|%quo%|\\*\\*|\\+\\+|--|\\+|-|\\*|/|@)"
+				},
+				{
+					"name": "keyword.operator.comparison.velox",
+					"match": "(===|!==|==|!=|>=|<=|>|<)"
+				},
+				{
+					"name": "keyword.operator.logical.velox",
+					"match": "\\b(and|nand|!and|or|xor|nor|!or|xnor|!xor)\\b"
+				},
+				{
+					"name": "keyword.operator.bitwise.velox",
+					"match": "\\b(and\\.b|nand\\.b|!and\\.b|or\\.b|xor\\.b|nor\\.b|!or\\.b|xnor\\.b|!xor\\.b)\\b"
+				},
+				{
+					"name": "keyword.operator.shift.velox",
+					"match": "(<<|>>|<<\\[[a-z0-9]\\]\\s\\[[a-z0-9]\\]>>)"
+				},
+				{
+					"name": "keyword.operator.shift.velox",
+					"match": "\\b(ls0\\.b|ls\\.b|rs0\\.b|rs\\.b|ls1\\.b|rs1\\.b|lsa\\.b|rsa\\.b|lr\\.b|rr\\.b)\\b"
+				}
+			]
+		},
+		"literals": {
+			"patterns": [
+				{ "include": "#literal_numeric" },
+				{ "include": "#literal_string" }
+			]
+		},
+		"literal_numeric": {
+			"patterns": [
+				{
+					"name": "constant.numeric.integer.velox",
+					"match": "\\b[+-]?[0-9]+(?:(?:i|u|b)(?:8|16|32|64|128|size))?\\b"
+				},
+				{
+					"name": "constant.numeric.float.velox",
+					"match": "\\b[+-]?[0-9]+\\.[0-9]+(?:f32|f64|f128|fsize)?\\b"
+				},
+				{
+					"name": "constant.numeric.hex.velox",
+					"match": "\\b[+-]?0[xX][0-9a-fA-F]+\\b"
+				},
+				{
+					"name": "constant.numeric.octal.velox",
+					"match": "\\b[+-]?0[oO][0-7]+\\b"
+				},
+				{
+					"name": "constant.numeric.binary.velox",
+					"match": "\\b[+-]?0[bB][01]+\\b"
+				}
+			]
+		},
+		"literal_string": {
+			"begin": "\"",
+			"beginCaptures": {
+				"0": { "name": "punctuation.definition.string.begin.velox" }
+			},
+			"end": "\"",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.string.end.velox" }
+			},
+			"name": "string.quoted.double.velox",
+			"patterns": [
+				{
+				"name": "constant.character.escape.velox",
+				"match": "\\\\[\\\\\"{}ntr]"
+				},
+				{ "include": "#string_interpolation" }
+			]
+		},
+		"string_interpolation": {
+			"begin": "\\{",
+			"beginCaptures": {
+				"0": { "name": "punctuation.section.interpolation.begin.velox" }
+			},
+			"end": "\\}",
+			"endCaptures": {
+				"0": { "name": "punctuation.section.interpolation.end.velox" }
+			},
+			"name": "meta.interpolation.velox",
+			"patterns": [
+				{
+					"name": "keyword.format.align.velox",
+					"match": "[<>^]"
+				},
+				{
+					"name": "constant.numeric.format.velox",
+					"match": "[0-9]+"
+				},
+				{
+					"name": "keyword.format.type.velox",
+					"match": "[bcdeEfFgGoxX%]"
+				},
+				{
+					"name": "punctuation.separator.format.velox",
+					"match": "[,.]"
+				},
+				{ "include": "#expressions" }
+			]
+		}
+	}
+}

@@ -1,31 +1,16 @@
 
 #include "Parser_Declaration.hpp"
 
-#include <iostream>
-
-#include "Parser_Base.hpp"
-
-#include "Parser_Context.hpp"
-
-#include "Parser_Base.hpp"
-#include "Parser_Reference.hpp"
-#include "Parser_Type.hpp"
-#include "Parser_Statement.hpp"
-#include "Parser_Declaration_COP.hpp"
-#include "Parser_Declaration_Local.hpp"
-#include "Parser_Expression.hpp"
+#include "Parser_Headers.hpp"
+#include "AST/AST_Headers.hpp"
 
 #include "Metacode.hpp"
-
-#include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_COP.hpp"
-
 #include "Visitor/Symbol_Manager.hpp"
 
 std::shared_ptr<AST::ADeclaration> PAR::Parser_Declaration::parse_declaration()
 {
 	auto tok = ctx.tok_v.peek();
-	switch (tok.ty)
+	switch (tok.type)
 	{
 	case TokTy::MOD: 			return module();
 	case TokTy::ENUM: 			return enumeration();
@@ -35,9 +20,9 @@ std::shared_ptr<AST::ADeclaration> PAR::Parser_Declaration::parse_declaration()
 	case TokTy::FUNCTION:		return function();
 	case TokTy::GENERIC:		return generic();
 	case TokTy::TYPE:			return type_alias();
-	case TokTy::COMPONENT:		return ctx.p_cop->component();
-	case TokTy::SYSTEM:			return ctx.p_cop->system();
-	case TokTy::ENTITY:			return ctx.p_cop->entity();
+	case TokTy::COMPONENT:		return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->component());
+	case TokTy::SYSTEM:			return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->system());
+	case TokTy::ENTITY:			return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->entity());
 	case TokTy::EXPORT:			return ctx.p_base->parse_export();
 	case TokTy::IMPORT: {
 		auto ignore = ctx.p_base->parse_import(); 
@@ -127,7 +112,7 @@ std::shared_ptr<AST::Declaration::Global> PAR::Parser_Declaration::global_variab
 	
 
 	auto kind_tok = ctx.tok_v.expect_any({ TokTy::LET, TokTy::VAR, TokTy::CONST }, "PAR1587", "Expected global variable declaration token", hint); 
-	EVariableKind kind = TokTy_to_EVariableKind(kind_tok.ty);
+	EVariableKind kind = TokTy_to_EVariableKind(kind_tok.type);
 
 	auto var = ctx.Create_Decl<AST::Declaration::Global>(ctx.tok_v.peek());
 	var->kind = kind;
@@ -145,7 +130,7 @@ std::shared_ptr<AST::Declaration::Global> PAR::Parser_Declaration::global_variab
 	// no expression
 	if (var->isExtern) {
 		ctx.tok_v.expect(TokTy::COLON, "PAR1589", "Expected type definition for an global variable marked external.", hint);
-		var->ty = ctx.p_type->parse_type();
+		var->type = ctx.p_type->parse_type();
 		ctx.tok_v.match(TokTy::SEMICOLON);
 		return var;
 	}
@@ -154,14 +139,14 @@ std::shared_ptr<AST::Declaration::Global> PAR::Parser_Declaration::global_variab
 
 	// explicit type case
 	if (ctx.tok_v.match(TokTy::COLON))
-		var->ty = ctx.p_type->parse_type();
+		var->type = ctx.p_type->parse_type();
 	// auto deduce type case
 	else
 		isAutoTy = true;
 
 	// check affectation
 	Token assign_tok = ctx.tok_v.next();
-	var->assignment = TokTy_to_EAssignmentType(assign_tok.ty);
+	var->assignment = TokTy_to_EAssignmentType(assign_tok.type);
 
 	if (var->assignment == EAssignmentType::NONE && isAutoTy) 
 		ctx.tok_v.add_error("PAR1161",
@@ -251,7 +236,7 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic() {
 			auto gen_op = ctx.Create_Node<AST::Generic::Have_Op>(ctx.tok_v.peek());
 			gen_op->targetGenSym = firstok;
 			auto tok_op = ctx.tok_v.expect_any(kOperatorTokens, "PAR1375", "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
-			gen_op->operatorType = TokTy_to_EBinOpType(tok_op.ty);
+			gen_op->operatorType = TokTy_to_EBinOpType(tok_op.type);
 			
 			gen->conditions.push_back(std::move(gen_op));
 			ctx.tok_v.match(TokTy::SEMICOLON);
@@ -260,21 +245,21 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic() {
 		else if (ctx.tok_v.match(TokTy::COMPONENT)) {
 			auto comp = ctx.Create_Node<AST::Generic::Use_Component>(ctx.tok_v.peek());
 			comp->targetGenSym = firstok;
-			comp->component = ctx.p_ref->parse_reference();
+			comp->component_reference = ctx.p_ref->parse_reference();
 			gen->conditions.push_back(std::move(comp));
 		}
 		// case: T role ...
 		else if (ctx.tok_v.match(TokTy::ROLE)) {
 			auto role = ctx.Create_Node<AST::Generic::Have_Role>(ctx.tok_v.peek());
 			role->targetGenSym = firstok;
-			role->role = ctx.p_ref->parse_reference();
+			role->role_reference = ctx.p_ref->parse_reference();
 			gen->conditions.push_back(std::move(role));
 		}
 		// case: T sys ...
 		else if (ctx.tok_v.match(TokTy::SYSTEM)) {
 			auto sys = ctx.Create_Node<AST::Generic::Compatible_System>(ctx.tok_v.peek());
 			sys->targetGenSym = firstok;
-			sys->system = ctx.p_ref->parse_reference();
+			sys->system_reference = ctx.p_ref->parse_reference();
 			gen->conditions.push_back(std::move(sys));
 		}
 		// case: T is i32 | type::floating | ...
@@ -324,7 +309,7 @@ std::shared_ptr<AST::Declaration::Type_Alias> PAR::Parser_Declaration::type_alia
 		"Expected assignation '=' after typealias name.",
 		"define typealias like `type myAlias = i32;`.");
 
-	tyAlias->ty = ctx.p_type->parse_type();
+	tyAlias->type = ctx.p_type->parse_type();
 
 	ctx.m_sym->add_decl(tyAlias);
 	return tyAlias;

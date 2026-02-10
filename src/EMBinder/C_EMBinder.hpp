@@ -20,14 +20,12 @@
 
 #include <string>
 #include <vector>
-#include <set>
-#include <sstream>
 #include <memory>
-#include <unordered_map>
 
 #include <clang-c/Index.h>
 
-enum class EExternItem;
+#include "ScriptInfo.hpp"
+#include "Pipeline/Pipeline_EMBinder.hpp"
 
 enum class EVeloxParamPassMode {
     NONE,
@@ -162,6 +160,7 @@ struct CVeloxGlobal {
 };
 
 struct CVeloxAST {
+    Bind_Package bind;
     std::vector<CVeloxComp> comps;
     std::vector<CVeloxUnion> unions;
     std::vector<CVeloxFlag> enums;
@@ -187,24 +186,19 @@ std::string             type_to_str(CVeloxType &cVel);
 
 class EMBinder_LibC {
 public:
-    EMBinder_LibC(const std::string& lang, const std::string& lib, std::ofstream& os, std::unordered_map<std::string, EExternItem> &items_to_generate);
+    EMBinder_LibC(const Bind_Package &_bind, std::ofstream &_os)
+        : bind(_bind)
+        , os(_os) 
+    {}
 
-    // C, Cpp, Rust, Kotlin, Swift, Fortran, Cobol, D, B, Python, ...
-    std::string target_language;
-    // stdio, stdlib, math, ...
-    std::string target_lib;
+    Bind_Package bind;
 
-    std::set<std::string> global_to_generate;
-    std::set<std::string> types_to_generate;
-    std::set<std::string> functions_to_generate;
-
-    std::ofstream& os_;
+    std::ofstream& os;
 
     [[nodiscard]] int c_lib_to_velox_lib();
 };
 
-inline EMBinder_LibC* current_bind = nullptr;
 CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data);
-CVeloxAST parse_translation_unit(const std::string &filename, const std::vector<std::string> &args);
+CVeloxAST parse_translation_unit(const Bind_Package &_bind, const std::string &filename, const std::vector<std::string> &args);
 
 

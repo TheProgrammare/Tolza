@@ -1,4 +1,7 @@
 #include "ScriptInfo.hpp"
+#include "AST/AST_Base.hpp"
+#include "AST/AST_Literal.hpp"
+#include "AST/AST_Reference.hpp"
 
 void ScriptInfo::add_export(const ModuleExportation &exp)
 {
@@ -48,4 +51,19 @@ std::set<std::string> ScriptInfo::get_extern_languages()
         }
     }
     return result;
+}
+
+
+Extern_Item::Kind AST_AReference_to_Extern_Item_Kind(const AST::AReference &n) 
+{
+    if (dynamic_cast<const AST::Reference::Enum*>(&n))          return Extern_Item::Kind::Enum;
+    if (dynamic_cast<const AST::Reference::Call*>(&n))          return Extern_Item::Kind::Function;
+    if (dynamic_cast<const AST::Reference::Call_Pipe*>(&n))     return Extern_Item::Kind::Function;
+    if (dynamic_cast<const AST::AType_Reference*>(&n)) {
+        if (dynamic_cast<const AST::Literal::Component*>(&n))   return Extern_Item::Kind::Component;
+        if (dynamic_cast<const AST::Literal::Entity*>(&n))      return Extern_Item::Kind::Entity;
+        return Extern_Item::Kind::Type;
+    }
+
+    return Extern_Item::Kind::Global;
 }

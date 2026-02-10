@@ -4,19 +4,36 @@
 #include <vector>
 #include <set>
 #include <memory>
-#include <unordered_map>
 
+#include "AST/AST_Base.hpp"
 #include "Lexer/Token.hpp"
 #include "AST/AST_Forward.hpp"
 
 struct ScriptInfo;
 
-enum class EExternItem {
-	Function,
-	Type,
-	Global,
-	Enum,
+struct Extern_Item {
+	enum class Kind {
+		Function,
+		Type,
+		Global,
+		Enum,
+		Union,
+		Component,
+		System,
+		Entity,
+		Generic,
+		Metacode,
+	};
+	Kind kind;
+	AST::ID id;
+
+	Extern_Item(const AST::ID &_id, Kind _kind)
+		: id(_id)
+		, kind(_kind)
+	{}
 };
+
+Extern_Item::Kind AST_AReference_to_Extern_Item_Kind(const AST::AReference &n);
 
 struct Symbols_Manager;
 
@@ -40,12 +57,12 @@ struct ModuleImportation {
 
 	std::vector<ScriptInfo*> target_modules;
 
-	std::vector<std::tuple<AST::AReference*, EExternItem>> id_references;
+	std::vector<Extern_Item> extern_references;
 
 	bool is_external() const { return !extern_lib.empty(); }
 
-	void add_id_reference(AST::AReference &node, EExternItem type) {
-		id_references.push_back({ &node, type });
+	void add_extern_reference(const Extern_Item &ext_item) {
+		extern_references.push_back(ext_item);
 	}
 };
 

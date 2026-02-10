@@ -3,91 +3,63 @@
 
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <assert.h>
+#include <ostream>
 #include <set>
 #include <filesystem>
 
 #include "Globals.hpp"
-#include "ScriptInfo.hpp"
-#include "Compilation.hpp"
+#include "Pipeline/Pipeline_EMBinder.hpp"
+#include "clang-c/Index.h"
 
-
-EMBinder_LibC::EMBinder_LibC(
-    const std::string &lang
-    , const std::string &lib
-    , std::ofstream &os
-    , std::unordered_map<std::string, EExternItem> &items_to_generate)
-    : target_language(lang)
-    , target_lib(lib)
-    , os_(os) 
-{
-    for (auto& [name, type] : items_to_generate) {
-        switch (type)
-        {
-        case EExternItem::Function:
-            functions_to_generate.insert(name);
-            break;
-        case EExternItem::Global:
-            global_to_generate.insert(name);
-            break;
-        case EExternItem::Type:
-            types_to_generate.insert(name);
-            break;
-        default:
-            // ignore, no C compatible
-            break;
-        }
-    }
-}
 
 int EMBinder_LibC::c_lib_to_velox_lib()
 {
-    current_bind = this;
-
     std::string tmp_file = "tmp_include.c";
     {
         std::ofstream ofs(tmp_file);
-        ofs << "#include <" << target_lib << ".h>\n";
+        ofs << "#include <" << bind.lib << ".h>\n";
     }
 
-    CVeloxAST ast = parse_translation_unit(tmp_file, {});
+    CVeloxAST ast = parse_translation_unit(bind, tmp_file, {});
 
     if (!ast.enums.empty()) {
-        os_ << EMBINDER_ENUM_HEADER;
+        os << EMBINDER_ENUM_HEADER;
 
         for (auto& elem : ast.enums) {
-            os_ << flag_to_str(elem);
+            os << flag_to_str(elem);
         }
     }
     if (!ast.comps.empty()) {
-        os_ << EMBINDER_COMP_HEADER;
+        os << EMBINDER_COMP_HEADER;
 
         for (auto& elem : ast.comps) {
-            os_ << comp_to_str(elem);
+            os << comp_to_str(elem);
         }
     }
     if (!ast.unions.empty()) {
-        os_ << EMBINDER_UNION_HEADER;
+        os << EMBINDER_UNION_HEADER;
 
         for (auto& elem : ast.unions) {
-            os_ << union_to_str(elem);
+            os << union_to_str(elem);
         }
     }
     if (!ast.globals.empty()) {
-        os_ << EMBINDER_GLOBAL_HEADER;
+        os << EMBINDER_GLOBAL_HEADER;
 
         for (auto& elem : ast.globals) {
-            os_ << global_to_str(elem);
+            os << global_to_str(elem);
         }
     }
     if (!ast.funcs.empty()) {
-        os_ << EMBINDER_FUNCTION_HEADER;
+        os << EMBINDER_FUNCTION_HEADER;
 
         for (auto& elem : ast.funcs) {
-            os_ << func_to_str(elem);
+            os << func_to_str(elem);
         }
     }
+
+    os << std::flush;
 
     std::filesystem::remove(tmp_file);
 
@@ -103,9 +75,15 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
     if (linkage == CXLinkage_Internal)
         return CXChildVisit_Recurse;
 
-    std::set<std::string> &ty_names = current_bind->types_to_generate;
-    std::set<std::string> &fn_names = current_bind->functions_to_generate;
-    std::set<std::string> &gl_names = current_bind->global_to_generate;
+    std::set<std::string> ty_names;
+    std::set<std::string> fn_names;
+    std::set<std::string> gl_names;
+    
+    for (auto &item : ast->bind.items) {
+        if (item.kind == Extern_Item::Kind::Function) fn_names.insert(item.id.name);
+        else if (item.kind == Extern_Item::Kind::Global) gl_names.insert(item.id.name);
+        else if (item.kind == Extern_Item::Kind::Type) ty_names.insert(item.id.name);
+    }
 
     switch (kind) {
     case CXCursor_StructDecl: {
@@ -164,7 +142,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 }
 
 // --- Fonction principale pour parser un fichier C ---
-CVeloxAST parse_translation_unit(const std::string& filename, const std::vector<std::string>& args = {}) {
+CVeloxAST parse_translation_unit(const Bind_Package &_bind, const std::string& filename, const std::vector<std::string>& args = {}) {
     CXIndex index = clang_createIndex(0, 0);
 
     // Convertir args en format char*[]
@@ -188,6 +166,7 @@ CVeloxAST parse_translation_unit(const std::string& filename, const std::vector<
     CXCursor rootCursor = clang_getTranslationUnitCursor(tu);
 
     CVeloxAST ast;
+    ast.bind = _bind;
     clang_visitChildren(rootCursor, universal_visitor, &ast);
 
     clang_disposeTranslationUnit(tu);
@@ -199,11 +178,13 @@ CVeloxAST parse_translation_unit(const std::string& filename, const std::vector<
 
 EVeloxTypeFromC c_type_base_to_velox_type_base(CXType cType, CXType &out_base_cType) {
     switch (cType.kind) {
+    case CXType_Char_S:
     case CXType_SChar:              out_base_cType = cType; return EVeloxTypeFromC::_schar;
     case CXType_Short:              out_base_cType = cType; return EVeloxTypeFromC::_short;
     case CXType_Int:                out_base_cType = cType; return EVeloxTypeFromC::_int;
     case CXType_LongLong:           out_base_cType = cType; return EVeloxTypeFromC::_longlong;
     case CXType_Long:               out_base_cType = cType; return EVeloxTypeFromC::_long; // target dependant
+    case CXType_Char_U:
     case CXType_UChar:              out_base_cType = cType; return EVeloxTypeFromC::_uchar;
     case CXType_UShort:             out_base_cType = cType; return EVeloxTypeFromC::_ushort;
     case CXType_UInt:               out_base_cType = cType; return EVeloxTypeFromC::_uint;
@@ -446,6 +427,7 @@ CVeloxFunc c_function_to_velox_function(CXCursor cCur) {
         std::string name = clang_getCString(clang_getCursorSpelling(paramCur));
         bool is_restrict = clang_isRestrictQualifiedType(clang_getCursorType(paramCur));
         f.type.params.emplace_back(std::move(t), is_restrict);
+        f.param_names.push_back(name);
     }
 
     f.type.is_variadic = clang_isFunctionTypeVariadic(cType);
@@ -609,8 +591,11 @@ std::string func_to_str(CVeloxFunc &cVel) {
         if (i != cVel.param_names.size() - 1) params += ", ";
     }
 
-    if (cVel.type.is_variadic)
-        params += "p_args: ptr'void...";
+    if (cVel.type.is_variadic) {
+        if (cVel.param_names.size() > 0)
+            params += ", ";
+        params += "__args: ptr'void...";
+    }
 
     std::string out = EMBINDER_EXTERN_FN_TEMPALTE;
     fmt_template(out, { cVel.name, params, type_to_str(cVel.type.return_type) });

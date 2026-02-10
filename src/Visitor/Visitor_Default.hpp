@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AST/AST_Base.hpp"
 #include "Visitor_Base.hpp"
 
 struct Visitor_Default : public Visitor_Base {
@@ -16,9 +17,7 @@ struct Visitor_Default : public Visitor_Base {
 	void visit(AST::ADeclaration &n) override;			
 	void visit(AST::ALocal&n) override;			
 	void visit(AST::AReference &n) override;				
-	void visit(AST::Identifier_Reference &n) override;			
-	void visit(AST::Type_Reference &n) override;			
-	void visit(AST::Type_Arguments &n) override;			
+	void visit(AST::AType_Reference &n) override;			
 
 	void visit(AST::Root &n) override;
 

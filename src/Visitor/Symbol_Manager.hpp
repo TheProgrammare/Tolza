@@ -24,7 +24,7 @@ struct ScopeData {
 	size_t depth = 0;
 };
 
-struct Declaration_Data {
+struct Symbol_Data {
 	ESymbolType type;
 
 	std::string mangling;
@@ -34,17 +34,7 @@ struct Declaration_Data {
 
 	bool is_exported = false;
 	bool is_external = false;
-};
-
-struct Reference_Data {
-	ESymbolType type;
-
-	std::string manging;
-	std::string mangling_convention_name = "Velox";
-
-	AST::SYM_REF<AST::AReference> *symbol;
-
-	bool is_external = false;
+	bool is_ex_nihilo = false;
 };
 
 struct Symbols_Manager {
@@ -52,8 +42,7 @@ struct Symbols_Manager {
 
 	ScriptInfo *scrInfo = nullptr;
 	
-	std::vector<Declaration_Data> declarations;
-	std::vector<Reference_Data> references;
+	std::vector<std::shared_ptr<Symbol_Data>> declarations;
 
 	std::vector<ScopeData> current_scope_path;
 
@@ -61,9 +50,10 @@ struct Symbols_Manager {
 
 	std::string get_current_export_name() const;
 
-	void add_decl(std::shared_ptr<AST::ADeclaration> declaration);
-	void add_ref(AST::SYM_REF<AST::AReference> &reference);
-	void enter_scope(const std::string& name, EScopeType ty, size_t depth = 0);
+	std::shared_ptr<Symbol_Data> add_decl(std::shared_ptr<AST::ADeclaration> declaration);
+	std::shared_ptr<Symbol_Data> add_decl_ex_nihilo(std::shared_ptr<AST::ADeclaration> declaration);
+
+	void enter_scope(const std::string& name, EScopeType type, size_t depth = 0);
 	void exit_scope();
 	[[nodiscard]] std::vector<std::string> get_current_path() const;
 

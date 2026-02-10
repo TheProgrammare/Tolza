@@ -2,22 +2,13 @@
 
 #include <memory>
 
+#include "AST/AST_Declaration_COP.hpp"
 #include "Visitor/Symbol_Manager.hpp"
 
 #include "Lexer/Token.hpp"
 #include "Lexer/TokenViewer.hpp"
 
 #include "AST/AST_Base.hpp"
-#include "AST/AST_Generic.hpp"
-#include "AST/AST_Literal.hpp"
-#include "AST/AST_Memory.hpp"
-#include "AST/AST_Operation.hpp"
-#include "AST/AST_Reference.hpp"
-#include "AST/AST_Statement.hpp"
-#include "AST/AST_Type.hpp"
-#include "AST/AST_Declaration.hpp"
-#include "AST/AST_Declaration_COP.hpp"
-#include "AST/AST_Declaration_Local.hpp"
 
 
 struct ScriptInfo;
@@ -65,6 +56,9 @@ namespace PAR {
 		META::MetablockManager* m_meta = nullptr;
 		TokenViewer tok_v;
 		size_t node_count = 0;
+
+		std::shared_ptr<AST::Declaration::COP::Entity>		current_entity;
+		std::shared_ptr<AST::Node>							current_other;
 
 		// debug purpose on error
 		void												attempt_recovery();

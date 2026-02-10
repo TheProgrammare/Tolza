@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <optional>
 
 #include "AST/AST_Forward.hpp"
@@ -25,8 +26,8 @@ namespace PAR {
 		[[nodiscard]] std::unique_ptr<AST::Literal::Table_Population>			literal_table_population();
         [[nodiscard]] std::unique_ptr<AST::Literal::Tuple> 						literal_tuple();
 	public:
-		[[nodiscard]] std::unique_ptr<AST::Literal::Entity> 					literal_entity(const AST::ID& id, std::unique_ptr<AST::Type_Arguments> gen_args);
-        [[nodiscard]] std::unique_ptr<AST::Literal::Component> 					literal_component(const AST::ID& id, std::unique_ptr<AST::Type_Arguments> gen_args);
+		[[nodiscard]] std::unique_ptr<AST::Literal::Entity> 					literal_entity(const AST::ID& id, std::vector<std::unique_ptr<AST::AType>> &gen_args);
+        [[nodiscard]] std::unique_ptr<AST::Literal::Component> 					literal_component(const AST::ID& id, std::vector<std::unique_ptr<AST::AType>> &gen_args);
 	private:
         Parser_Context& ctx;
 	};

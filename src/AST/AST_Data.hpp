@@ -125,9 +125,9 @@ enum class EPrimType {
 	Slice,
 };
 
-[[nodiscard]] std::string EPrimTy_to_str(EPrimType ty);
+[[nodiscard]] std::string EPrimTy_to_str(EPrimType type);
 
-[[nodiscard]] std::string EPrimTy_to_mangle(EPrimType ty);
+[[nodiscard]] std::string EPrimTy_to_mangle(EPrimType type);
 
 [[nodiscard]] EPrimType TokTy_to_EPrimType(TokTy tok);
 
@@ -140,9 +140,9 @@ enum class EPtrType {
 
 [[nodiscard]] EPtrType TokTy_to_EPtrType(TokTy tok);
 
-[[nodiscard]] std::string EPtrType_to_str(EPtrType ty);
+[[nodiscard]] std::string EPtrType_to_str(EPtrType type);
 
-[[nodiscard]] std::string EPtrType_to_mangle(EPtrType ty);
+[[nodiscard]] std::string EPtrType_to_mangle(EPtrType type);
 
 
 enum class EVariableKind { NONE, Const, Let, Var };
@@ -206,8 +206,8 @@ enum class EScopeType {
 	Match, Match_Case,
 };
 
-[[nodiscard]] size_t EPrimType_to_bits(EPrimType ty);
-[[nodiscard]] size_t EPrimType_to_bytes(EPrimType ty);
+[[nodiscard]] size_t EPrimType_to_bits(EPrimType type);
+[[nodiscard]] size_t EPrimType_to_bytes(EPrimType type);
 
 // [isUnsigned][num of digit]
 constexpr size_t size_byte_udeci[2][30] = {

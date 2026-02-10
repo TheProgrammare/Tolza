@@ -1,87 +1,18 @@
 #pragma once
 
-// for float128
-#include <sstream>
-#include <iomanip>
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallVector.h"
+#include <memory>
 
 #include "AST_Base.hpp"
+#include "AST_Numeric_128_bits.hpp"
 
 namespace AST {
 namespace Literal {
-
-class Float128 {
-public:
-    llvm::APFloat val;
-
-    // Initialise à zéro
-    Float128()
-      : val(llvm::APFloatBase::IEEEquad(), llvm::StringRef("0.0"))
-    {}
-
-    // Conversion string → APFloat
-    void string_to_f128(const std::string &s) {
-        llvm::StringRef sr(s);
-        llvm::APFloat tmp(llvm::APFloatBase::IEEEquad(), sr);
-        val = tmp;
-    }
-
-    // Conversion APFloat → string
-    std::string float128_to_string(int precision = 36) const {
-        llvm::SmallVector<char, 128> buf;
-        val.toString(buf, precision);
-        return std::string(buf.begin(), buf.end());
-    }
-};
-
-
-class Int128 {
-public:
-    llvm::APInt val;
-
-    Int128() : val(128, 0, true) {} // 128 bits signed, valeur 0
-
-    // Conversion string → APInt
-    void string_to_i128(const std::string& s, int base = 10) {
-        llvm::APInt tmp(128, 0, true); // 128 bits signed
-        bool ok = false;
-
-        try {
-            tmp = llvm::APInt(128, llvm::StringRef(s), base); // base 10 ou 16
-            ok = true;
-        } catch (...) {
-            ok = false;
-        }
-
-        if (!ok) {
-            throw std::invalid_argument("String contains invalid characters for int128");
-        }
-
-        val = tmp;
-    }
-
-    // Conversion APInt → string
-    std::string i128_to_string(int base = 10) const {
-        if (base != 10 && base != 16) {
-            throw std::invalid_argument("Base must be 10 or 16");
-        }
-        llvm::SmallVector<char, 128> buf;
-		val.toString(buf, base, true);
-		return std::string(buf.begin(), buf.end());
-
-    }
-};
-
 
 struct Boolean : public ALiteral {
     bool val = false;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "bool(" + std::to_string(val) + ")"; }
-    EPrimType get_type() const override { return EPrimType::boolean; }
-    std::string mangle_type() const override { return "b"; }
 };
 
 struct Integral : public ALiteral {
@@ -90,8 +21,6 @@ struct Integral : public ALiteral {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")"; }
-    EPrimType get_type() const override { return type; }
-    std::string mangle_type() const override { return EPrimTy_to_str(type); }
 
 };
 
@@ -109,15 +38,8 @@ struct Decimal : public ALiteral {
     }
 
     std::string debug_str() const override { 
-        if (is_unsigned) 
-        return "udeci(" + val.i128_to_string() + ")";
+        if (is_unsigned) return "udeci(" + val.i128_to_string() + ")";
         return "deci(" + val.i128_to_string() + ")";
-    }
-    EPrimType get_type() const override { return is_unsigned ? EPrimType::udeci : EPrimType::deci; }
-    std::string mangle_type() const override
-    {
-        std::string out = is_unsigned ? "ud" : "d";
-        return out + "_" + std::to_string(integral_num) + "_" + std::to_string(decimal_num);
     }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -127,29 +49,26 @@ struct Floating : public ALiteral {
     Float128 val;
     EPrimType type = EPrimType::f64;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")"; }
-    EPrimType get_type() const override { return type; }
-    std::string mangle_type() const override { return EPrimTy_to_str(type); }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // Latin-1 encoding
 struct ASCII : public ALiteral {
     char val = 0x0;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "ascii('" + std::to_string(val) + "')"; }
-    EPrimType get_type() const override { return EPrimType::ASCII; }
-    std::string mangle_type() const override { return "aii"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
     
 struct UTF32 : public ALiteral {
     std::string codePoints;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "utf32('" + codePoints + "')"; }
-    EPrimType get_type() const override { return EPrimType::UTF32; }
-    std::string mangle_type() const override { return "utf"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Text : public ALiteral {
@@ -157,10 +76,9 @@ struct Text : public ALiteral {
     size_t length = 1;
     bool is_ascii = false;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "text(\"" + std::string(val.begin(), val.end()) + "\")"; }
-    EPrimType get_type() const override { return EPrimType::text; }
-    std::string mangle_type() const override { return "txt"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -196,8 +114,9 @@ struct Format_Specifier : public Node {
     enum class EDisplayFormat { String, Binary, Character, Decimal, Octal, Hex, HEX, Number, e, E, Fixed, FIXED, g, G, Percentage  };
     EDisplayFormat display_format = EDisplayFormat::String;     // 's', 'b', 'c', 'd', 'o', 'x', 'X', 'n', 'e', 'E', 'f', 'F', 'g', 'G', '%'
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "<format> specifier \":" + src_Str + "\""; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // "{expression}" "{expression:spec}"
@@ -205,8 +124,9 @@ struct Text_Lerp : public Node {
     std::unique_ptr<AST::Node> expression;
     std::unique_ptr<Format_Specifier> spec;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "text_lerp"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Textual_Element {
@@ -227,10 +147,9 @@ struct Textual_Element {
 struct Textual_Format : public ALiteral {
     std::vector<Textual_Element> values;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "format_text"; }
-    EPrimType get_type() const override { return EPrimType::text; }
-    std::string mangle_type() const override { return "ftxt"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 
@@ -239,12 +158,12 @@ struct Table_Population : public ALiteral {
     std::unique_ptr<Node> expression;
     std::unique_ptr<Node> map_expression_value;
 
-    SYM_TYPE<AType> resolved_elem_ty;
+    // can be a ex nihilo node (for primitive types)
+    SYM_DEFINITION element_definition;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "<table population>"; }
-    EPrimType get_type() const override { return EPrimType::Array; }
-    std::string mangle_type() const override { return "tpop"; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Table : public ALiteral {
@@ -255,51 +174,17 @@ struct Table : public ALiteral {
     [[maybe_unused]]
     std::unique_ptr<Table_Population> population;
 
-    SYM_TYPE<AType> resolved_elem_ty;
+    // can be a ex nihilo node (for primitive types)
+    SYM_DEFINITION element_definition;
 
     std::vector<size_t> resolved_size;
-
-    bool operator==(const ALiteral& other) const {
-        if (auto ptr = dynamic_cast<const Table*>(&other)) {
-            if (!ptr->resolved_elem_ty.resolved || !ptr->resolved_elem_ty.resolved) return false;
-            if (ptr->resolved_elem_ty.ptr.get() != resolved_elem_ty.ptr.get()) return false;
-            if (ptr->resolved_size.size() != resolved_size.size()) return false;
-
-            for (size_t i = 0; i < resolved_size.size(); i++) {
-                const size_t dim = resolved_size[i];
-                const size_t other_dim = ptr->resolved_size[i];
-                if (dim != other_dim) return false;
-            }
-            return true;
-        }
-        return false;
-    }
 
     bool is_matrix() const { return resolved_size.size() > 1; }
     bool is_table_population() const { return population.get(); }
 
+    std::string debug_str() const override;
+    
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string mangle_type() const override { 
-        if (!resolved_elem_ty.resolved) return "";
-        std::string out;
-        out = "t" + std::to_string(resolved_size.size()) + "_";
-        for (size_t i = 0; i < resolved_size.size(); i++) {
-            out += std::to_string(resolved_size[i]) + "_";
-        }
-        out += "_" + resolved_elem_ty.ptr->mangle_type();
-        return out;
-    }
-    std::string debug_str() const override { 
-        if (!resolved_elem_ty.resolved) return "";
-        std::string out;
-        out = "table[" + std::to_string(resolved_size.size()) + ":";
-        for (size_t i = 0; i < resolved_size.size(); i++) {
-            out += std::to_string(resolved_size[i]) + "x";
-        }
-        out += " -> " + resolved_elem_ty.ptr->mangle_type() + "]";
-        return out;
-    }
-    EPrimType get_type() const override { return EPrimType::Array; }
 };
 
 
@@ -312,26 +197,14 @@ struct Map : public ALiteral {
 
     size_t size = 1;
 
-    SYM_TYPE<AType> resolved_key_ty;
-    SYM_TYPE<AType> resolved_value_ty;
+    SYM_DEFINITION key_definition;
+    SYM_DEFINITION value_definition;
 
     // key + value (no alignment need because it's translated to 2 arrays)
     size_t ty_sizeByte = 0;
 
-    bool operator==(const ALiteral& other) const {
-        if (auto ptr = dynamic_cast<const Map*>(&other)) {
-            if (!resolved_key_ty.resolved || !resolved_value_ty.resolved) return false;
-            return size == ptr->size 
-                && resolved_key_ty.ptr != ptr->resolved_key_ty.ptr 
-                && resolved_value_ty.ptr != ptr->resolved_value_ty.ptr;
-        }
-        return false;
-    }
-
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "map[" + std::to_string(keys.size()) + "]"; }
-    EPrimType get_type() const override { return EPrimType::map; }
-    std::string mangle_type() const override { return "map"; }
 };
 
 
@@ -339,32 +212,14 @@ struct Tuple : public ALiteral {
     std::vector<std::unique_ptr<Node>> values;
     std::vector<std::string> name_fields;
 
-    std::vector<std::shared_ptr<AType>>	tys;		// size for each element type
+    std::vector<std::shared_ptr<AType_Reference>>	tys;		// size for each element type
 
-    bool operator==(const ALiteral& other) const {
-        if (auto ptr = dynamic_cast<const Tuple*>(&other)) {
-            if (tys.size() != ptr->tys.size()) return false;
-            for (size_t i = 0; i < tys.size(); i++) {
-                if (tys[i] != ptr->tys[i]) return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string mangle_type() const override {
-        std::string outStr = "tu" + std::to_string(tys.size()); 
-        for (auto& elem : tys) {
-            outStr += "_" + elem->mangle_type();
-        }
-        return outStr;
-    }
     std::string debug_str() const override {
         if (name_fields.empty()) return "tuple(" + std::to_string(values.size()) + ")";
         return "named tuple(" + std::to_string(values.size()) + ")";
     }
-    EPrimType get_type() const override { return EPrimType::tuple; }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 
@@ -376,75 +231,37 @@ struct Range : public ALiteral {
     std::unique_ptr<Node> step;
     bool endInclude = false;
 
-    SYM_TYPE<AType> resolved_type_start;
-    SYM_TYPE<AType> resolved_type_end;
-    SYM_TYPE<AType> resolved_type;
-
-    bool operator==(const ALiteral& other) const {
-        if (auto ptr = dynamic_cast<const Range*>(&other)) {
-            if (!resolved_type.resolved || !ptr->resolved_type.resolved) return false;
-            return endInclude == ptr->endInclude 
-                && resolved_type.ptr == ptr->resolved_type.ptr;
-        }
-        return false;
-    }
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string mangle_type() const override { return resolved_type.resolved ? "rng_" + resolved_type.ptr->mangle_type() : ""; };
     std::string debug_str() const override { return "<lit> range"; }
-    EPrimType get_type() const override { return EPrimType::Range; }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
-struct Component : public AReference, ALiteral {
-    std::unique_ptr<Type_Arguments> gen_args;
+struct Component : public AType_Reference, ALiteral {
     std::vector<std::unique_ptr<Reference::Call_Argument>> field_args;
 
-    // symbol resolution
-    SYM_DECL<Declaration::COP::Component> resolved_sym;
-
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return std::static_pointer_cast<ADeclaration>(resolved_sym.ptr); }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "<lit> comp[" + id.debug_str() + "]"; }
-    EPrimType get_type() const override { return EPrimType::Component; }
-    std::string mangle_type() const override { return "cp_" + id.debug_str(); };
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
 // not the same as Person("Zagreus", 32) it's a call of constructor
-struct Entity: public AReference, ALiteral {
-    // before callee name
-    std::unique_ptr<Type_Arguments> gen_args;
+struct Entity: public AType_Reference, ALiteral {
     std::vector<std::unique_ptr<Component>> comp_args;
 
-    // symbol resolution
-    SYM_DECL<Declaration::COP::Entity> resolved_sym;
-
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return std::static_pointer_cast<ADeclaration>(resolved_sym.ptr); }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "<lit> entity[" + id.debug_str() + "]"; }
-    EPrimType get_type() const override { return EPrimType::Entity; }
-    std::string mangle_type() const override { return "et_" + id.debug_str(); }
+    
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 
 struct Iterator : public ALiteral {
     std::unique_ptr<Node> collection;
 
-    SYM_TYPE<AType> resolved_ty;
-
-    bool operator==(const ALiteral& other) const {
-        if (!resolved_ty.resolved) return false;
-        if (auto ptr = dynamic_cast<const Iterator*>(&other)) {
-            if (!ptr->resolved_ty.resolved) return false;
-            return resolved_ty.ptr == ptr->resolved_ty.ptr;
-        }
-        return false;
-    }
+    std::shared_ptr<AType_Reference> resolved_type;
 
     std::string debug_str() const override { return "<lit> iter"; }
-    std::string mangle_type() const override { return resolved_ty.resolved ? "iter_" + resolved_ty.ptr->mangle_type() : ""; }
-    EPrimType get_type() const override { return EPrimType::Iterator; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };

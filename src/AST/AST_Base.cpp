@@ -94,11 +94,3 @@ std::string AST::Node::mangle_scope() const
     }
     return out; 
 }
-
-bool AST::AType::operator==(const AType &other) const
-{
-    return
-        type_isOptional == other.type_isOptional &&
-        type_isConst == other.type_isConst &&
-        type_isVolatile == other.type_isVolatile;
-}

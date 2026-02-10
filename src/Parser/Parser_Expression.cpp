@@ -1,19 +1,8 @@
 #include "Parser_Expression.hpp"
 
-#include "Parser_Context.hpp"
-#include "Parser_Declaration_COP.hpp"
-#include "Parser_Declaration.hpp"
-#include "Parser_Expression.hpp"
-#include "Parser_Literal.hpp"
-#include "Parser_Declaration_Local.hpp"
-#include "Parser_Memory.hpp"
-#include "Parser_Operator.hpp"
-#include "Parser_Reference.hpp"
-#include "Parser_Statement.hpp"
-#include "Parser_Type.hpp"
+#include "Parser_Headers.hpp"
+#include "AST/AST_Headers.hpp"
 
-#include "AST/AST_Base.hpp"
-#include "AST/AST_Literal.hpp"
 #include "Lexer/TokenViewer.hpp"
 
 std::unique_ptr<AST::Node> PAR::Parser_Expression::parse_expression() {
@@ -27,7 +16,7 @@ std::unique_ptr<AST::Node> PAR::Parser_Expression::parse_expression_term() {
 
 	std::unique_ptr<AST::Node> term;
 
-	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().ty);
+	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().type);
 	if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
 	if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
@@ -74,7 +63,7 @@ std::optional<std::unique_ptr<AST::Operation::Cast_As>> PAR::Parser_Expression::
 
 	auto asCast = ctx.Create_Node<AST::Operation::Cast_As>(ctx.tok_v.peek());
 
-	switch (ctx.tok_v.peek().ty) {
+	switch (ctx.tok_v.peek().type) {
 		case TokTy::AS: 
 			asCast->cast_type = AST::Operation::Cast_As::ECastType::AS;
 		case TokTy::AS_REINTERPRET: 

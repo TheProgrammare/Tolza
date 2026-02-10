@@ -159,11 +159,11 @@ void applyDefaultAndDetectNative() {
     	
 		if (COMP_CTX.target_arch.find("64") != std::string::npos)	
 			COMP_CTX.target_arch_bits = 64;
-        else if (COMP_CTX.target_arch.find("32") != std::string::npos)	
+		else if (COMP_CTX.target_arch.find("32") != std::string::npos)	
 			COMP_CTX.target_arch_bits = 32;
-        else if (COMP_CTX.target_arch.find("16") != std::string::npos)	
+		else if (COMP_CTX.target_arch.find("16") != std::string::npos)	
 			COMP_CTX.target_arch_bits = 16;
-        else															
+		else															
 			COMP_CTX.target_arch_bits = 8; // fallback
     }
 
@@ -186,7 +186,7 @@ void parseArgs(int argc, char** argv) {
 		if (arg.rfind("--src=", 0) == 0)			{ COMPILATION_ARGS.insert({ "src", 			arg.substr(6) }); 	COMP_CTX.src_file = arg.substr(6); }
 		else if (arg.rfind("--dest=", 0) == 0)		{ COMPILATION_ARGS.insert({ "dest", 		arg.substr(7) }); 	COMP_CTX.dest_file = arg.substr(7); }
 		else if (arg.rfind("--abi=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "abi", 		arg.substr(6) }); 	COMP_CTX.target_abi = arg.substr(6); }
-    	else if (arg.rfind("--arch=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "arch", 		arg.substr(7) }); 	COMP_CTX.target_arch = arg.substr(7); }
+		else if (arg.rfind("--arch=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "arch", 		arg.substr(7) }); 	COMP_CTX.target_arch = arg.substr(7); }
 		else if (arg.rfind("--bits=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "bits", 		arg.substr(7) }); 	COMP_CTX.target_arch_bits = std::stoul(arg.substr(7)); }
 		else if (arg.rfind("--os=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "os", 		arg.substr(5) }); 	COMP_CTX.target_os = arg.substr(5); }
 		else if (arg.rfind("--libc=", 0) == 0) 		{ COMPILATION_ARGS.insert({ "libc", 		arg.substr(7) }); 	COMP_CTX.libc = arg.substr(7); }
@@ -221,7 +221,7 @@ void parseArgs(int argc, char** argv) {
 		else if (arg == "--emit-asm" || arg == "--emit=asm") { 				COMPILATION_ARGS.insert({ "emit", "asm" }); 			COMP_CTX.emit_mode = CompCtx::EEmitMode::ASM; }
 		else if (arg == "--emit-bc"  || arg == "--emit=bc") { 				COMPILATION_ARGS.insert({ "emit", "bc" }); 				COMP_CTX.emit_mode = CompCtx::EEmitMode::BC; }
 		else if (arg == "--emit-bin" || arg == "--emit=bin") { 				COMPILATION_ARGS.insert({ "emit", "bin" }); 			COMP_CTX.emit_mode = CompCtx::EEmitMode::BIN; }
-        else { std::cerr << "Warning: unknown argument '" << arg << "'\n"; }
+		else { std::cerr << "Warning: unknown argument '" << arg << "'\n"; }
     }
 
     applyDefaultAndDetectNative();

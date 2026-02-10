@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <locale>
-#include <codecvt>
 #include <algorithm>
 
 // T_ = Type
@@ -616,17 +614,17 @@ struct Token {
     Token() = default;
 
     std::string val;
-    ETokenType ty = ETokenType::UNKNOWN;
+    ETokenType type = ETokenType::UNKNOWN;
     Span span;
     bool debug_end_of_line = false;
 
-    Token(const std::string& val, ETokenType ty, Span span) : 
-        val(val), ty(ty), span(span) {}
+    Token(const std::string& val, ETokenType type, Span span) : 
+        val(val), type(type), span(span) {}
 
     std::string display() const {
         if (!val.empty()) return val;
 
-        switch (ty)
+        switch (type)
         {
         case ETokenType::METACODE: return "#";
         case ETokenType::S_METACODE_PLACEHOLDER: return "[[" + val + "]]";
@@ -660,8 +658,8 @@ inline std::vector<std::pair<std::string, ETokenType>> kSortedKeywords() {
     static std::vector<std::pair<std::string, ETokenType>> out;
     if (!out.empty()) return out;
 
-    for (auto& [text, ty] : kKeywords) {
-        out.push_back({ text, ty });
+    for (auto& [text, type] : kKeywords) {
+        out.push_back({ text, type });
     } 
 
     std::stable_sort(out.begin(), out.end(), 

@@ -3,6 +3,8 @@
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Declaration.hpp"
 #include "ScriptInfo.hpp"
+#include <memory>
+#include <unistd.h>
 
 std::string Symbols_Manager::get_current_export_name() const
 {
@@ -14,41 +16,38 @@ std::string Symbols_Manager::get_current_export_name() const
 	return "";
 }
 
-void Symbols_Manager::add_decl(std::shared_ptr<AST::ADeclaration> declaration)
+
+std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl(std::shared_ptr<AST::ADeclaration> declaration)
 {
     declaration->_scope = get_current_path();
 
-	Declaration_Data sym;
-	sym.symbol = declaration;
-	sym.mangling = declaration->id.mangle_local_name();
-	sym.is_exported = !get_current_export_name().empty();
-
-	sym.type = declaration->get_symbol_type();
+	auto sym = std::make_shared<Symbol_Data>();
+	sym->symbol = declaration;
+	sym->mangling = declaration->id.mangle_local_name();
+	sym->is_exported = !get_current_export_name().empty();
+	sym->type = declaration->get_symbol_type();
 	
 	if (auto ptr = std::dynamic_pointer_cast<AST::Declaration::Global>(declaration))
-		sym.is_external = ptr->isExtern;
+		sym->is_external = ptr->isExtern;
 	else if (auto ptr = std::dynamic_pointer_cast<AST::Declaration::Function>(declaration))
-		sym.is_external = ptr->isExtern;
+		sym->is_external = ptr->isExtern;
 
 	declarations.push_back(sym);
+	return sym;
 }
 
-void Symbols_Manager::add_ref(AST::SYM_REF<AST::AReference> &reference)
+std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl_ex_nihilo(std::shared_ptr<AST::ADeclaration> declaration) 
 {
-	if (reference.resolved) reference.ptr->_scope = get_current_path();
-
-	Reference_Data sym;
-	sym.symbol = &reference;
-	sym.manging = reference.resolved ? reference.ptr->id.mangle_local_name() : "";
-	if (reference.resolved && reference.ptr->id.is_qualified_id()) {
-		sym.is_external = scrInfo->get_extern_languages().contains(reference.ptr->id.path[0]);
-	}
-
-	references.push_back(sym);
+	auto sym = add_decl(declaration);
+	sym->is_exported = false;
+	sym->is_external = false;
+	sym->is_ex_nihilo = true;
+	return sym;
 }
 
-void Symbols_Manager::enter_scope(const std::string& name, EScopeType ty, size_t depth) {
-	current_scope_path.push_back(ScopeData{ name, ty, depth });
+
+void Symbols_Manager::enter_scope(const std::string& name, EScopeType type, size_t depth) {
+	current_scope_path.push_back(ScopeData{ name, type, depth });
 }
 
 void Symbols_Manager::exit_scope() {
@@ -68,8 +67,8 @@ std::vector<std::string> Symbols_Manager::get_current_path() const
 
 std::optional<std::shared_ptr<AST::ADeclaration>> Symbols_Manager::find_symbol(const std::string &full_name)
 {
-	for (auto sym : declarations) {
-		if (sym.mangling == full_name) return sym.symbol;
+	for (auto &sym : declarations) {
+		if (sym->mangling == full_name) return sym->symbol;
 	}
 	return std::nullopt;
 }

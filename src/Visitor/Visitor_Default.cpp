@@ -79,18 +79,10 @@ void Visitor_Default::visit(AST::AReference &n)
 {
 
 }				
-void Visitor_Default::visit(AST::Identifier_Reference &n)
+void Visitor_Default::visit(AST::AType_Reference &n)
 {
-
-}			
-void Visitor_Default::visit(AST::Type_Reference &n)
-{
-
-}			
-void Visitor_Default::visit(AST::Type_Arguments &n)
-{
-	for (auto &arg : n.arguments) arg->accept(*this);
-}			
+	for (auto &elem : n.gen_args) elem->accept(*this);
+}	
 
 void Visitor_Default::visit(AST::Root &n)
 {
@@ -105,7 +97,7 @@ void Visitor_Default::visit(AST::ID &n)
 // ============ DECLARATION ============
 void Visitor_Default::visit(AST::Declaration::Global &n)
 {
-	n.ty->accept(*this);
+	n.type->accept(*this);
 	n.expression->accept(*this);
 }			
 void Visitor_Default::visit(AST::Declaration::Function &n)
@@ -134,17 +126,17 @@ void Visitor_Default::visit(AST::Declaration::Enum_Element &n)
 
 void Visitor_Default::visit(AST::Declaration::Flag &n)
 {
-
+	
 }
 
 void Visitor_Default::visit(AST::Declaration::Type_Alias &n)
 {
-	n.ty->accept(*this);
+	n.type->accept(*this);
 }				
 
 void Visitor_Default::visit(AST::Declaration::Generic &n)
 {
-	n.gen_args->accept(*this);
+	for (auto &elem : n.gen_args) elem->accept(*this);
 	for (auto &elem : n.conditions) elem->accept(*this);
 }
 
@@ -174,7 +166,7 @@ void Visitor_Default::visit(AST::Declaration::Local::Capture_Member &n)
 
 void Visitor_Default::visit(AST::Declaration::Local::Parameter &n)
 {
-	n.ty->accept(*this);
+	n.type->accept(*this);
 	n.defaultValue->accept(*this);
 }				
 void Visitor_Default::visit(AST::Declaration::Local::Generic_Parameter &n)
@@ -185,13 +177,13 @@ void Visitor_Default::visit(AST::Declaration::Local::Generic_Parameter &n)
 void Visitor_Default::visit(AST::Declaration::Local::Pattern &n)
 {
 	if (n.additive_evaluator) n.additive_evaluator->accept(*this);
+	if (n.reference) n.reference->accept(*this);
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Enum &n)
 {
 	for (auto &elem : n.mapping) {
 		if (auto node = elem.node()) node->accept(*this);
 	}
-	n.enum_reference->accept(*this);
 	visit(static_cast<AST::Declaration::Local::Pattern&>(n));
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Tuple &n)
@@ -199,15 +191,13 @@ void Visitor_Default::visit(AST::Declaration::Local::Pattern_Tuple &n)
 	for (auto &elem : n.mapping) {
 		if (auto node = elem.node()) node->accept(*this);
 	}
-	n.tuple_reference->accept(*this);
 	visit(static_cast<AST::Declaration::Local::Pattern&>(n));
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Entity &n)
 {
-	for (auto &[_, _, elem] : n.mapping) {
+	for (auto &[id, _, elem] : n.mapping) {
 		if (auto node = elem.node()) node->accept(*this);
 	}
-	n.entity_reference->accept(*this);
 	visit(static_cast<AST::Declaration::Local::Pattern&>(n));
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Component &n)
@@ -215,13 +205,12 @@ void Visitor_Default::visit(AST::Declaration::Local::Pattern_Component &n)
 	for (auto &[_, elem] : n.mapping) {
 		if (auto node = elem.node()) node->accept(*this);
 	}
-	n.component_reference->accept(*this);
 	visit(static_cast<AST::Declaration::Local::Pattern&>(n));
 }	
 
 void Visitor_Default::visit(AST::Declaration::Local::Variable_Binding &n)
 {
-
+	n.reference->accept(*this);
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Variable_Unpack &n)
 {
@@ -230,8 +219,8 @@ void Visitor_Default::visit(AST::Declaration::Local::Variable_Unpack &n)
 }	
 void Visitor_Default::visit(AST::Declaration::Local::Variable &n)
 {
-	if (n.ty) n.ty->accept(*this);
-	if (n.expression) n.expression->accept(*this); 
+	if (n.type) n.type->accept(*this);
+	if (n.expression) n.expression.value()->accept(*this); 
 }	
 
 void Visitor_Default::visit(AST::Declaration::Local::Capability &n)
@@ -248,7 +237,7 @@ void Visitor_Default::visit(AST::Declaration::COP::Component &n)
 }			
 void Visitor_Default::visit(AST::Declaration::COP::Component_Field &n)
 {
-	n.ty->accept(*this);
+	n.type->accept(*this);
 	if (n.default_value) n.default_value->accept(*this);
 }		
 
@@ -305,19 +294,19 @@ void Visitor_Default::visit(AST::Generic::Can_Cast &n)
 }				
 void Visitor_Default::visit(AST::Generic::Have_Op &n)
 {
-	if (n.explicit_return_ty) n.explicit_return_ty->accept(*this);
+	if (n.explicit_return_type) n.explicit_return_type->accept(*this);
 }
 void Visitor_Default::visit(AST::Generic::Have_Role &n)
 {
-	n.role->accept(*this);
+	n.role_reference->accept(*this);
 }				
 void Visitor_Default::visit(AST::Generic::Use_Component &n)
 {
-	n.component->accept(*this);
+	n.component_reference->accept(*this);
 }			
 void Visitor_Default::visit(AST::Generic::Compatible_System &n)
 {
-	n.system->accept(*this);
+	n.system_reference->accept(*this);
 }		
 
 // ============ TYPE ============
@@ -343,7 +332,7 @@ void Visitor_Default::visit(AST::Type::Function_Proto &n)
 	for (auto &elem : n.parameters) elem->accept(*this);
 	for (auto &elem : n.gen_parameters) elem->accept(*this);
 	if (n.returnType) n.returnType->accept(*this);
-	if (n.variadic_ty) n.variadic_ty->accept(*this);
+	if (n.variadic_type) n.variadic_type->accept(*this);
 }			
 
 void Visitor_Default::visit(AST::Type::Get_Expr_Type &n)
@@ -437,12 +426,12 @@ void Visitor_Default::visit(AST::Literal::Range &n)
 
 void Visitor_Default::visit(AST::Literal::Component &n)
 {
-	if (n.gen_args) n.gen_args->accept(*this);
+	for (auto &elem : n.gen_args) elem->accept(*this);
 	for (auto &elem : n.field_args) elem->accept(*this);
 }
 void Visitor_Default::visit(AST::Literal::Entity &n)
 {
-	if (n.gen_args) n.gen_args->accept(*this);
+	for (auto &elem : n.gen_args) elem->accept(*this);
 	for (auto &elem : n.comp_args) elem->accept(*this);
 }
 
@@ -469,7 +458,7 @@ void Visitor_Default::visit(AST::Reference::Other &n)
 
 void Visitor_Default::visit(AST::Reference::Call &n)
 {
-	if (n.gen_args) n.gen_args->accept(*this);
+	for (auto &elem : n.gen_args) elem->accept(*this);
 	for (auto &elem : n.param_args) elem->accept(*this);
 }
 void Visitor_Default::visit(AST::Reference::Call_Argument &n)
@@ -482,8 +471,11 @@ void Visitor_Default::visit(AST::Reference::Call_System &n)
 }				
 void Visitor_Default::visit(AST::Reference::Call_Pipe &n)
 {
-	if (n.base_gen_args) n.base_gen_args->accept(*this);
-	for (auto &elem : n.gen_args) elem->accept(*this);
+	for (auto &elem : n.base_gen_args) elem->accept(*this);
+	for (auto &elem : n.gen_args) {
+		for (auto &elem2 : elem) 
+			elem2->accept(*this);
+	}
 	for (auto &args : n.arguments) {
 		for (auto &arg : args) arg->accept(*this);
 	}
@@ -608,7 +600,7 @@ void Visitor_Default::visit(AST::Memory::New &n)
 }
 void Visitor_Default::visit(AST::Memory::Del &n)
 {
-	n.element->accept(*this);
+	n.target->accept(*this);
 }
 void Visitor_Default::visit(AST::Memory::Val_Of_Ptr &n)
 {

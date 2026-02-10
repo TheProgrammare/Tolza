@@ -1,23 +1,23 @@
 #pragma once
 
-#include <map>
-#include <unordered_map>
+#include <memory>
 #include <string>
-#include <tuple>
+#include <vector>
 
-enum class EExternItem;
-struct ScriptInfo;
+#include "ScriptInfo.hpp"
+
 struct PipelineScripts;
 
-bool generate_script(
-    ScriptInfo *&bind_info, 
-    std::unordered_map<std::string, EExternItem> &items_to_generate, 
-    const std::string &lang, 
-    const std::string &lib);
+struct Bind_Package {
+    std::string bind_name;
+    std::shared_ptr<ScriptInfo> scr_info;
+    std::vector<Extern_Item> items;
+    std::string lang;
+    std::string lib;
+};
 
-bool generate_binds(
-    std::unordered_map<std::string, ScriptInfo *> &bind_scrInfo, 
-    std::unordered_map<std::string, std::unordered_map<std::string, EExternItem>> &items_to_generate, 
-    std::unordered_map<std::string, std::tuple<std::string, std::string>> &bind_context_generated);
+bool generate_script(const Bind_Package &bind);
+
+bool generate_binds(const std::vector<Bind_Package> &binds);
 
 bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts);

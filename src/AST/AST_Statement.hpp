@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <variant>
 
 #include "AST_Base.hpp"
@@ -45,8 +46,8 @@ struct For : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
     bool isReverse = false;
 
-    SYM_TYPE<AType> resolved_item_ty;
-    SYM_TYPE<AType> resolved_key_ty;
+    SYM_DEFINITION type_item_definition;
+    SYM_DEFINITION type_key_definition;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override;
@@ -72,11 +73,9 @@ struct While : public Node {
 
 // goto azerty
 struct GoTo : public AReference {
-     std::shared_ptr<ADeclaration> resolved_sym;
-
-    std::shared_ptr<ADeclaration> get_symbol_resolution() override { return resolved_sym; }
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "GOTO[" + id.debug_str() + "]"; }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // label azerty:
@@ -92,21 +91,21 @@ struct Return : public Node {
     [[maybe_unused]]
     std::unique_ptr<Node> value;
 
-    // resolved by superior node
-    SYM_TYPE<Type::Function_Proto> resolved_sym;
+    std::string debug_str() const override { return "<inst> return"; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "<inst> return"; }
 };
 
 struct Break : public Node {
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "break"; }
+ 
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Continue : public Node {
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "continue"; }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 
@@ -115,8 +114,9 @@ struct Match_Case : public Node {
     Evaluator evaluator;
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "CASE"; }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
@@ -126,8 +126,9 @@ struct Match : public Node {
     [[maybe_unused]]
     std::unique_ptr<Match_Case> other_case;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "MATCH"; }
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 

@@ -48,9 +48,7 @@ struct Visitor_Base {
 	virtual void visit(AST::ADeclaration &n) = 0;			
 	virtual void visit(AST::ALocal&n) = 0;			
 	virtual void visit(AST::AReference &n) = 0;				
-	virtual void visit(AST::Identifier_Reference &n) = 0;			
-	virtual void visit(AST::Type_Reference &n) = 0;			
-	virtual void visit(AST::Type_Arguments &n) = 0;			
+	virtual void visit(AST::AType_Reference &n) = 0;			
 
 	virtual void visit(AST::Root &n) = 0;
 

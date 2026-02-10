@@ -1,8 +1,12 @@
 
 #pragma once
 
+#include <memory>
+
 #include "AST/AST_Forward.hpp"
-#include "AST/AST_Base.hpp"
+
+enum class EBinOpType;
+enum class EUnaryOpType;
 
 namespace PAR {
 	struct Parser_Context;

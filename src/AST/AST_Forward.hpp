@@ -8,9 +8,7 @@ namespace AST {
 	struct ADeclaration;				// abstract
 	struct ALocal;				        // abstract : ADeclaration
 	struct AReference;					// abstract
-    struct Identifier_Reference;        // MyType // my_reference // my_function // my_variable
-	struct Type_Reference;				// MyType<T, U>
-	struct Type_Arguments;				// <T, U>
+	struct AType_Reference;				// MyType<T, U>
 
 	struct Root;						// file root
 

@@ -47,9 +47,9 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
 			}
 			// types
 			if (k == 1) {
-				Visitor_Type ty(*scrInfo);
-				scrInfo->rootNode->accept(ty);
-				errs = ty.errors;
+				Visitor_Type type(*scrInfo);
+				scrInfo->rootNode->accept(type);
+				errs = type.errors;
 			}
 			// semantics
 			if (k == 2) {

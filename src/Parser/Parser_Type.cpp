@@ -1,14 +1,8 @@
 
 #include "Parser_Type.hpp"
 
-#include "Parser_Context.hpp"
-
-#include "Parser_Expression.hpp"
-#include "Parser_Reference.hpp"
-
-#include "Visitor/Symbol_Manager.hpp"
-
-#include "AST/AST_Type.hpp"
+#include "Parser_Headers.hpp"
+#include "AST/AST_Headers.hpp"
 
 // const, optional, volatile
 std::tuple<bool, bool, bool> PAR::Parser_Type::get_type_annotation() {
@@ -47,7 +41,7 @@ std::unique_ptr<AST::Type::Table> PAR::Parser_Type::table(bool isConst, bool isO
 
 std::unique_ptr<AST::Type::Ptr> PAR::Parser_Type::pointer(bool isConst, bool isOptional, bool isVolatile) {
 	auto ptr = ctx.Create_Node<AST::Type::Ptr>(ctx.tok_v.peek());
-	ptr->pointer_type = TokTy_to_EPtrType(ctx.tok_v.peek().ty);
+	ptr->pointer_type = TokTy_to_EPtrType(ctx.tok_v.peek().type);
 	ctx.tok_v.next(); // consume ptr
 	ptr->type_isConst = isConst;
 	ptr->type_isOptional = isOptional;
@@ -70,7 +64,7 @@ std::unique_ptr<AST::Type::Primitive> PAR::Parser_Type::primitive(bool isConst, 
 	pri->type_isConst = isConst;
 	pri->type_isOptional = isOptional;
 	pri->type_isVolatile = isVolatile;
-	pri->_type = TokTy_to_EPrimType(tok.ty);
+	pri->_type = TokTy_to_EPrimType(tok.type);
 	auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
 	pri->type_isConst = isConst ? true : isConstP;
 	pri->type_isOptional = isOptional ? true : isOptionalP;
@@ -78,17 +72,17 @@ std::unique_ptr<AST::Type::Primitive> PAR::Parser_Type::primitive(bool isConst, 
 	return pri;
 }
 
-std::unique_ptr<AST::Type_Reference> PAR::Parser_Type::reference(bool isConst, bool isOptional, bool isVolatile) {
-	std::unique_ptr<AST::Type_Reference> result;
+std::unique_ptr<AST::AType_Reference> PAR::Parser_Type::reference(bool isConst, bool isOptional, bool isVolatile) {
+	std::unique_ptr<AST::AType_Reference> result;
 	auto base_tok = ctx.tok_v.peek();
 	auto id = ctx.p_ref->identifier();
-	auto id_ty = ctx.p_ref->try_identifier_typed(id);
+	auto id_type = ctx.p_ref->try_identifier_typed(id);
 	// generic type
-	if (id_ty) 
-		result = std::move(id_ty.value());
+	if (id_type) 
+		result = std::move(id_type.value());
 	// no generic type
 	else 
-		result = ctx.Create_Node<AST::Type_Reference>(base_tok);
+		result = ctx.Create_Node<AST::AType_Reference>(base_tok);
 	
 	result->type_isConst = isConst;
 	result->type_isOptional = isOptional;
@@ -127,7 +121,7 @@ std::unique_ptr<AST::Type::Function_Proto> PAR::Parser_Type::function_proto(bool
 std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type() {
 	auto [isConst, isOptional, isVolatile] = get_type_annotation();
 
-	switch (ctx.tok_v.peek().ty)
+	switch (ctx.tok_v.peek().type)
 	{
 	case TokTy::OPEN_SQUARE:	return table(isConst, isOptional, isVolatile);
 	case TokTy::PTR:
@@ -161,7 +155,7 @@ std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type() {
 std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::explicit_tuple() {
 	auto tuple = ctx.Create_Node<AST::Type::Tuple>(ctx.tok_v.peek());
 	bool endByParen = ctx.tok_v.match(TokTy::OPEN_PAREN);
-	bool isNamedTuple = ctx.tok_v.peek(1).ty == TokTy::COLON; // (name: type, ...) or (type, ...)
+	bool isNamedTuple = ctx.tok_v.peek(1).type == TokTy::COLON; // (name: type, ...) or (type, ...)
 
 	while (!ctx.tok_v.is_end()) {
 		if (isNamedTuple) {
@@ -204,22 +198,22 @@ std::shared_ptr<AST::Type::Function_Proto> PAR::Parser_Type::explicit_function_p
 
 	ctx.tok_v.match_any({ TokTy::FUNCTION, TokTy::LAMBDA });
 
-	auto ty = ctx.Create_Node<AST::Type::Function_Proto>(ctx.tok_v.peek());
+	auto type = ctx.Create_Node<AST::Type::Function_Proto>(ctx.tok_v.peek());
 
 	// check parameters
 	ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1350", "Expected start parameter defintion '(' after function declaration.", hint);
-	ty->parameters = parameters();
-	if (!ty->parameters.empty() && ty->parameters.back()->isVariadic) {
-		ty->isVariadic = true;
-		ty->variadic_ty = ty->parameters.back()->ty;
+	type->parameters = parameters();
+	if (!type->parameters.empty() && type->parameters.back()->isVariadic) {
+		type->isVariadic = true;
+		type->variadic_type = type->parameters.back()->type;
 	}
 
 	// check return 
 	if (ctx.tok_v.match(TokTy::ARROW)) {
-		ty->returnType = ctx.p_type->explicit_tuple();
+		type->returnType = ctx.p_type->explicit_tuple();
 	}
 
-	return ty;
+	return type;
 }
 
 
@@ -242,14 +236,14 @@ std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> PAR::Parser_Typ
 
 	while (!ctx.tok_v.is_end()) {
 		auto param = ctx.Create_Decl<AST::Declaration::Local::Parameter>(ctx.tok_v.peek());
-		param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().ty);
+		param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().type);
 		if (param->passMode == EPassMode::NONE) 
 			ctx.tok_v.add_error("PAR1415", "Expected parameter pass mode before the parameter name.", hint);
 
 		param->id = ctx.p_ref->identifier(true);
 		// check pointer parameter type
 		ctx.tok_v.expect(TokTy::COLON, "PAR1411", "Expected type definition ':' after parameter name.", hint);
-		param->ty = ctx.p_type->parse_type();
+		param->type = ctx.p_type->parse_type();
 
 		param->isVariadic = ctx.tok_v.match(TokTy::VARIADIC);
 
