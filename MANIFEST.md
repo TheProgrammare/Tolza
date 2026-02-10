@@ -1057,32 +1057,31 @@ is a contigous list of variables, default values are required to avoid any undet
 
 Declaration:
 ```
-comp CMathQuery { 
-  name: str = "PI",
-  val: f32 = 3.14f,
-}
-```
-Initialization (in entity and/or in variable declaration): 
-```
-entity MathElement {
-  use CMathQuery { name = "Phi", val = 1.618f } // default for this entity instanciation
-}
-
-fn start() {
-  var math = MathElement { 
-   CMathQuery.name = "e", 
-    CMathQuery.val = 1.0f
-  } // default for this variable declaration
-}
+comp name<gen_args> {...}
 ```
 
-> optional metadata annotation for component members
+Component Field:
+```
+field_name: type = default_value,
+```
 
+Literal:
+```
+comp_name{ .field_name1= init_value, .field_name2= init_value }
+```
+
+Literal void:
+```
+comp_name{.}
+```
+Avoid any type abiguity
+
+> optional metadata annotation for component members</br>
 - no default value requied `# no default` really unsafe
 
 A component used in function parameter is a guarantee of the presence of the values as long as the entity have the component expected.
 
-### Component Field
+### Component Field entity typed
 A field is a primtive type or an entity, no nested component field are accepted. To keep the composition clean
 
 Components can't handle a nested entity for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
@@ -1111,16 +1110,16 @@ role name { components, ... }
 ## Entity
 > Use `entity` to declare a entity
 
-entites have a static composition of components who define his behaviour for systems and the accepted parameter arugment of component/role in fuctions.
+Entites have a static composition of components who define his behaviour for systems and the accepted parameter arugment of component/role in fuctions.
+
+Declaration:
 ```
-entity name { 
-  use component ...
-}
+entity name<gen_args> {...}
 ```
 
-entity can contains:
+ ### Entity Members
 
-| entity members | syntax | info | method | return |
+| member | syntax | info | method | return |
 |-|-|-|-|-|
 | component | `use name { field: value }` | with default value | | |
 | component | `use name` | default value from component | | |
@@ -1149,7 +1148,7 @@ entity Animal {
   use Specie 
   use Position
   cast self to Human {
-    var man = Human {Specie.name= "Human", Position= self.Position}
+    var man = Human{ Specie.name= "Human", Position= self.Position }
     return man
   }
 }
@@ -1159,7 +1158,7 @@ entity Human {
   use Position
   use Job
   cast self to Animal {
-    var animal = Animal {Specie.name= "monkey", Position= self.Position}
+    var animal = Animal{ Specie.name= "monkey", Position= self.Position}
     return animal
   }
 }
@@ -1170,7 +1169,8 @@ entity Human {
 
 | meber type | usage syntax | note |
 |-|-|-|
-| call native constructor | `var cat = Cat::{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended, the syntax `name::{` is mandatory to specify an entity native constructor |
+| call native constructor | `var cat = Cat{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended |
+| call native constructor | `var cat = Cat{ CAnimal.name = "Ted", CAnimal.age = 2 }` |  not recommended |
 | call custom constructor | `var cat = Cat::new("Ted", 2)` | clean constructor |
 
 ### Entity Operator Overloading
