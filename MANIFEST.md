@@ -342,6 +342,16 @@ var b: i32 = val'my_ptr       // get pointer value
 
 > Pointer on `ref` and `mut` are prohibied !
 
+## Pointer Operations
+No standard arithmetic notation is permitted to avoid any ambiguous memory manipulation
+
+| operation | syntax | return type | info |
+|-|-|-|-|
+at | `mut'my_ptr'at(i)`</br>`ref'my_ptr'at(i)` | `mut'T`</br>`ref'T` | get mut/ref at index position |
+get val | `mut'my_ptr`</br>`ref'ptr` | `mut'T`</br>`ref'T` | get mut/ref at 0 |
+offset | `my_ptr'offset(+-i)` | `ptr'T` | add/remove offset of type size * index in the ptr address, moves the pointer position | 
+diff | `my_ptr1 <-> my_ptr2` | `ptrdiff` | distance between two pointers |
+
 
 ## Pointer usage
 Pointers are handled by the language, despite of the capability system.
