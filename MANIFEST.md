@@ -1186,7 +1186,7 @@ there is some restrictions in operator definition:
 | `[..]` range | none | custome slice U | `op [r: ..] -> mut'[U]` |
 
 
-# System
+## System
 A system is a static match case based only on the evaluation of entity components.<br>
 A system guarantees that any entity allowed to execute it will follow at least one valid case path derived from its composition, case path evaluation resolved at compile time.
 ```
