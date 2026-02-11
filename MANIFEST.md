@@ -203,9 +203,10 @@ The standard input and output are managed by a native syntax:
 | instruction | syntax | info
 |-|-|-|
 | output message | `output arg... \| args...` | multiples arguments permitted
-| read file | `read target = my_file \| args...` | read any file or flow stream source
-| input message | `input name: T = "Input message" \| args...` | multiples arguments permitted
-| write file | `write my_file = source \| args...` | write any data in file or flow stream target
+| open file | `open my_file = "path" \| args...` | create variable, open any file with `open` args
+| read file | `target read= my_file \| args...` | read any file or flow stream source and put in variable reference with `read` args
+| input message | `input name: T = "Input message" \| args...` | create variable, read any user input with `input` args
+| write file | `my_file write= source \| args...` | write any data in file or flow stream target with `write` args
 
 ## Literal text message annotation
 Literal text messages can be annotated to specify any useful information to the standard I/O
@@ -223,20 +224,26 @@ Arguments are used to specify some I/O rules, used during the output or input op
 
 | argument | syntax | info
 |-|-|-|
-| reaction message | `\| <argument> "message reaction" \|` | message sended if the argument is not respected
-| input alpha only | `input::alpha` | filter alphabet 
-| input alphanumeric only | `input::alphanumeric` |  filter alphanumeric
-| input uppercase only | `input::uppercase` | upper all 
-| input lowercase only | `input::lowercase` | lower all
-| input numeric only | `input::numeric` | filter numeric
-| input integer only | `input::integer` | filter integer
-| input float only | `input::float` | filter float
-| input boolean only | `input::bool` | filter boolean (`0` `1` `y` `o` `n`)
-| input size | `input::size N` | set the buffer size
-| output by line | `output::line` | read by line
-| output by character | `output::character` | read by character
-| output by word | `output::word` | read by word
-| output by byte | `output::byte` | read by byte
+| reaction message | `<argument> "message reaction"` | message sended if the argument is not respected
+| open read | `io::open::read` | read only 
+| open write | `io::open::write` | write only
+| open add | `io::open::append` | write at the end
+| open create | `io::open::create` | create file if not exists 
+| input alpha only | `io::type::alpha` | filter alphabet 
+| input alphanumeric only | `io::type::alphanumeric` |  filter alphanumeric
+| input uppercase only | `io::case::uppercase` | upper all 
+| input lowercase only | `io::case::lowercase` | lower all
+| input numeric only | `io::type::numeric` | filter numeric
+| input integer only | `io::type::integer` | filter integer
+| input float only | `io::type::float` | filter float
+| input boolean only | `io::type::bool` | filter boolean (`0` `1` `y` `o` `n`)
+| input size | `io::buffer::size N` | set the buffer size
+| output by line | `io::read::line` | read by line
+| output by character | `io::read::character` | read by character
+| output by word | `io::read::word` | read by word
+| output by byte | `io::read::byte` | read by byte
+| output by byte | `io::flush` | read by byte
+| output by byte | `io::endl` | read by byte
 
 
 # Type Alias
