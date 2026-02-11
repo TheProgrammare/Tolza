@@ -197,6 +197,62 @@ Placement e.g. (place possible: `@`)
 | right rotate   | `[r]>>`   | `rr.b` | rotate bits to the right |
 | slice bits     | `~[0..8]` | - | get bits from range     |
 
+## I/O
+The standard input and output are managed by a native syntax:
+
+| instruction | syntax | info
+|-|-|-|
+| output message | `output arg... \| args...` | multiples arguments permitted
+| output flow | `target output= my_file \| args...` | read any file or flow stream source
+| input message | `input name: T = "Input message" \| args...` | multiples arguments permitted
+| input flow | `my_file input= source \| args...` | write any data in file or flow stream target
+
+## literal text message annotation
+Literal text messages can be annotated to specify any useful information to the standard I/O
+
+| literal text annotation | syntax | info |
+|-|-|-|
+| no new line | `""..` | enter a new line
+| flush | `""f` | flush the buffer, only for output, input and `err'` `war'` `inf'` messages are flushed naturally
+| warning msg | `war'""` | out as warning message
+| error msg | `err'""` | out as error message
+| info msg | `inf'""` | out as info message
+
+## arguments
+Arguments are used to specify some I/O rules, used during the output or input operation
+
+| argument | syntax | info
+|-|-|-|
+| write alpha only | `input::alpha` | 
+| write uppercase only | `input::uppercase` | 
+| write lowercase only | `input::lowercase` | 
+| write numeric only | `input::numeric` | 
+| write integer only | `input::integer` | 
+| write float only | `input::float` | 
+||
+
+## Input
+| operation | syntax | info |
+|-|-|-|
+| input | `input name: T = "Enter the value: " \| err'"Error, the {input} is invalid!"` | first literal string is the question, the second is the error case (type not compatible), the type is packed in option `T?`, size free, for any input |
+| input sized | `input name: T = "Enter the value: " \| input::size 10 \| err'"Error, the {input} is invalid!"` | first literal string is the question, the second is the error case, the type is packed in option `T?`, size limited at 10 characters, for any input |
+| input alpha | `input name: T = "Enter the text: " \| input::alpha` | alpha only |
+| input numeric | `input name: T = "Enter the text: " \| input::numeric` | numeric only |
+| input integer | `input name: T = "Enter the text: " \| input::integer` | integer only |
+| input float | `input name: T = "Enter the text: " \| input::float` | float only |
+| input boolean | `input result: bool = "Do you want to continue ? [Y/n]" \| input::bool` | yes no question |
+| input file | `my_file input= "new file text"f` | input text in file |
+
+## Output
+| operation | syntax | info |
+| output | `output "Hello world!"` | standard output |
+| output error | `output err'"Error message!"` | standard error output |
+| output warning | `output war'"Error message!"` | standard warning output |
+| output warning | `output inf'"Error message!"` | standard warning output |
+| output file | `out_file_text output= my_file` | output text of file |
+
+
+
 
 # Type Alias
 designed to reuse parametred type
