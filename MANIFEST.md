@@ -213,7 +213,7 @@ Literal text messages can be annotated to specify any useful information to the 
 
 | literal text annotation | syntax | info |
 |-|-|-|
-| no new line | `""..` | enter a new line
+| no new line | `""..` | 
 | flush | `""f` | flush the buffer, only for output, input and `err'` `war'` `inf'` messages are flushed naturally
 | warning msg | `war'""` | out as warning message
 | error msg | `err'""` | out as error message
@@ -242,8 +242,7 @@ Arguments are used to specify some I/O rules, used during the output or input op
 | output by character | `io::read::character` | read by character
 | output by word | `io::read::word` | read by word
 | output by byte | `io::read::byte` | read by byte
-| output by byte | `io::flush` | read by byte
-| output by byte | `io::endl` | read by byte
+| flush buffer | `io::flush` | flush the flow buffer
 
 
 # Type Alias
