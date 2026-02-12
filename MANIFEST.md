@@ -198,7 +198,7 @@ Placement e.g. (place possible: `@`)
 | right rotate   | `[r]>>`   | `rr.b` | rotate bits to the right |
 | slice bits     | `~[0..8]` | - | get bits from range     |
 
-# I/O
+# I/O (experimental)
 The standard input and output are managed by a native syntax:
 
 standard io error handler : `io::Error`
@@ -1257,9 +1257,11 @@ entity name<gen_args> {...}
 | cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | `const` | `T` |
 | cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used, permit to use `my_val as Type(my_entity)` | `const` | `self` |
 | constructor | `new(params) { ... }` | overloading possible, must returns the same entity type | `const` | `self` | 
-| output | `output(args: io::arguments...) { ... }` | overloading output I/O operation | `const` | `void` |
-| open | `open(ref path: str, args: io::arguments...) { ... }` | overloading open I/O operation |  | `self` |
-| read | `read(ref path: str, args: io::arguments...) { ... }` | overloading open I/O operation |  | `self` |
+| output | `output(ref output_mode: io::output::mode, args: io::arguments...) { ... }` | overloading output I/O operation | `const` | `void` |
+| open | `open(ref path: str, args: io::argument...) { ... }` | overloading open I/O operation |  | `self` |
+| close | `close { ... }` | overloading close I/O operation |  | `self` |
+| read | `read(ref read_mode: io::argument, args: io::argument...) -> T { ... }` | overloading read I/O operation |  | `T` |
+| write | `write(args: io::arguments...) -> T { ... }` | overloading read I/O operation |  | `self` |
 | copier* | `copy { ... }` | must returns the same entity type | `const` | `self` | 
 | cloner** | `clone { ... }` | must returns the same entity type | `const` | `self` | 
 | deleter*** | `del { ... }` | no parameter, reserved key `self` used | | |
