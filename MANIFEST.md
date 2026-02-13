@@ -477,8 +477,9 @@ No standard arithmetic notation is permitted to avoid any ambiguous memory manip
 
 | operation | syntax | return type | info |
 |-|-|-|-|
-at | `mut'my_ptr'at(i)`</br>`ref'my_ptr'at(i)` | `mut'T`</br>`ref'T` | get mut/ref at index position |
-get val | `mut'my_ptr`</br>`ref'ptr` | `mut'T`</br>`ref'T` | get mut/ref at 0 |
+at | `my_ptr'at(i)` | `ptr'T` on the index offset caculated | dangerous on raw ptr, safe on fat ptr (value indexed on pointer, not on the fat ptr) |
+get val | `val'my_ptr` | `T` | get ptr value at 0, can be combined with `val'my_ptr'at(i)` |
+size | `size'my_ptr` | `usize` | only on fat ptr, get the value on the index 1 of the fat ptr |
 offset | `my_ptr'offset(+-i)` | `ptr'T` | add/remove offset of type size * index in the ptr address, moves the pointer position | 
 diff | `my_ptr1 <-> my_ptr2` | `ptrdiff` | distance between two pointers |
 
