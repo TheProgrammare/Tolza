@@ -63,6 +63,24 @@
         ],
         "description": "Anonymous lambda declaration"
     },
+    "LLVM Instruction": {
+        "prefix": "llvm",
+        "body": [
+            "llvm {",
+            "  $0",
+            "}"
+        ],
+        "description": "Literal LLVM instruction"
+    },
+    "ASM Instruction": {
+        "prefix": "asm",
+        "body": [
+            "asm {",
+            "  $0",
+            "}"
+        ],
+        "description": "Literal assembly instruction"
+    },
     "Return Definition": {
         "prefix": "return",
         "body": [

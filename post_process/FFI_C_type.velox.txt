@@ -1,0 +1,38 @@
+export C {
+type _char = i8
+type _schar = i8
+type _uchar = u8
+type _short = i16
+type _ushort = u16
+type _int = i32
+type _uint = u32
+type _long = i64
+type _ulong = u64
+type _size = u64
+type _ptr_diff = i64
+type _longlong = i64
+type _ulonglong = u64
+type _float = f32
+type _double = f64
+type _c = _char
+type _sc = _schar
+type _uc = _uchar
+type _s = _short
+type _us = _ushort
+type _i = _int
+type _ui = _uint
+type _l = _long
+type _ul = _ulong
+type _ll = _longlong
+type _ull = _ulonglong
+type _f = _float
+type _d = _double
+type _str = ptr ' _char
+fn str_to_cstr ( ref a : str ) -> _str
+{
+var out_str : _str = C :: malloc ( len ( a ) + 1 ) as! _str
+for character in a {
+}
+}
+}
+ 
