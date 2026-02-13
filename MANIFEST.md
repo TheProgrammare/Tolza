@@ -228,7 +228,7 @@ Note: add `?` after argument to return directly `io::Error` in function return r
 Note: Majority of arguments can be used directly as instruction e.g. `input::alpha name = "Enter your name: "`
 
 | argument | syntax | info | instruction compatible |
-|-|-|-|
+|-|-|-|-|
 | open read | `open::read` `open::r` | read only | yes
 | open write | `open::write` `open::w` | write only | yes
 | open write | `open::read_write` `open::rw` `open` | read write, default open mode | yes
