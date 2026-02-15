@@ -1,8 +1,6 @@
 
 #include "Lexer.hpp"
 
-#include <iomanip>
-
 #include "Globals.hpp"
 #include "Token.hpp"
 #include "ErrorOutput.hpp"
@@ -58,7 +56,7 @@ void Lexer::tokenize(const std::set<char>& exit_char) {
                 }
             }
             
-            add_error("LEX1050", "Expected end of placeholder end ']]' after placeholder start '[['", "define placeholders in code like: `[[_U]]`");
+            add_error<0>("Expected end of placeholder end ']]' after placeholder start '[['", "define placeholders in code like: `[[_U]]`");
         }
         // can be a numeric value or a range token (.. or ..=) or a variadic (...)
         else if (std::isdigit(ch) || ch == '.') {
@@ -106,7 +104,7 @@ void Lexer::tokenize(const std::set<char>& exit_char) {
 void Lexer::process_escape() {
     // read next chracter after backslash
     if (!stream.get(ch)) {
-        add_error("LEX1060", "Unexpected end of input after escape sequence.", "");
+        add_error<1>("Unexpected end of input after escape sequence.", "");
         return;
     }
 
@@ -129,7 +127,7 @@ void Lexer::process_escape() {
             for (int i = 0; i < 2; ++i) { // On lit 1 ou 2 chiffres hexadécimaux
                 if (!stream.get(ch) || !isxdigit(ch)) {
                     if (hex.empty()) {
-                        add_error("LEX1061", "Invalid hex escape sequence", "define hex escape like: `\\xHH`");
+                        add_error<2>("Invalid hex escape sequence", "define hex escape like: `\\xHH`");
                         return;
                     } else {
                         // return partial char if only one digit is read
@@ -142,7 +140,7 @@ void Lexer::process_escape() {
                 char value = static_cast<char>(std::stoul(hex, nullptr, 16));
                 buffer += value;
             } catch (...) {
-                add_error("LEX1062", "Invalid hex escape value", "define hex escape like: `\\xHH`");
+                add_error<3>("Invalid hex escape value", "define hex escape like: `\\xHH`");
             }
             break;
         }
@@ -154,7 +152,7 @@ void Lexer::process_escape() {
             std::string hex;
             for (int i = 0; i < numDigits; ++i) {
                 if (!stream.get(ch) || !isxdigit(ch)) {
-                    add_error("LEX1063", "Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
+                    add_error<3>("Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
                     return;
                 }
                 hex.push_back(ch);
@@ -177,10 +175,10 @@ void Lexer::process_escape() {
                     buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
                     buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
                 } else {
-                    add_error("LEX1064", "Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
+                    add_error<4>("Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
                 }
             } catch (...) {
-                add_error("LEX1065", "Invalid Unicode escape value", "");
+                add_error<5>("Invalid Unicode escape value", "");
             }
             break;
         }
@@ -188,7 +186,7 @@ void Lexer::process_escape() {
         default:
             // Caractère d’échappement inconnu : on le garde littéralement ou on signale une erreur
             // escape char unknown : keep literally or ring the error
-            add_error("LEX1066", "Unknown escape sequence: \\" + std::to_string(ch), "");
+            add_error<6>("Unknown escape sequence: \\" + std::to_string(ch), "");
             buffer += ch;
             break;
     }
@@ -268,13 +266,19 @@ bool Lexer::tokenize_spec() {
         case '=':   addToken(TokTy::ASSIGN); return true;
         case '%':   addToken(TokTy::OP_MODULO); return true;
         case ' ':   addToken(TokTy::SPACE); return true;
-        case '}': return false;
-        default:
-            errors.push_back(Error_Text(stream.get_line(), stream.get_column(), 1, 
-                "", "LEX1005", "Unexpected format specifier character", 
+        case '}':   return false;
+        default: {
+            auto error = Error_Diagnostic<151>(scr_info, 
+                Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)),
+                {}, 
+                EPhase::lexer, EErrorSeverity::error,
+                {},
+                "Unexpected format specifier character", 
                 "define format specifier like:"
-                "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`", file_path)
-                .print_error());
+                "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
+            
+            errors.push_back(error.print_error());
+        }
     }
     return false;
 }
@@ -337,7 +341,7 @@ void Lexer::tokenize_numeric() {
         else if (ch == '.') {
             // member access : a.b
 
-            if (!tokens.empty() && tokens.back().type == TokTy::IDENTIFIER && std::isalpha(stream.peek())) {
+            if (!scr_info.tokens.empty() && scr_info.tokens.back().type == TokTy::IDENTIFIER && std::isalpha(stream.peek())) {
                 buffer = ".";
                 addToken(TokTy::DOT);
                 return;
@@ -353,26 +357,26 @@ void Lexer::tokenize_numeric() {
     while (eat()) {
         // Only allow 0 1 ' _
         if (isBin) {
-                 if (ch == '0' || ch == '1') buffer += ch;
+            if (ch == '0' || ch == '1') buffer += ch;
             else if (ch == '\'' || ch == '_') continue;
             else { stream.putback(ch); break; }
         }
         // Only allow 0 1 2 3 4 5 6 7 ' _
         else if (isOct) {
-                 if (ch >= '0' && ch <= '7') buffer += ch;
+            if (ch >= '0' && ch <= '7') buffer += ch;
             else if (ch == '\'' || ch == '_') continue;
             else { stream.putback(ch); break; }
         }
         // Only allow 0 1 2 3 4 5 6 7 8 9 A B C D E F ' _
         else if (isHex) {
-                 if (std::isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) buffer += ch;
+            if (std::isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) buffer += ch;
             else if (ch == '\'' || ch == '_') continue;
             else { stream.putback(ch); break; }
         }
         // numeric 
         else {
             // classic numeric
-                 if (std::isdigit(ch)) { buffer += ch; }
+            if (std::isdigit(ch)) { buffer += ch; }
             // prevent range creation : save buffer vals
             else if (ch == '.' && stream.peek() == '.') {
                 if (!buffer.empty()) addToken(TokTy::L_I); // create literal integral
@@ -497,8 +501,7 @@ void Lexer::tokenize_keyword() {
     }
     // not identifier standard : error
     else {
-        add_error(
-            "LEX1002", 
+        add_error<7>(
             "Unexpected token symbol", 
             "define keywords like:"
             "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-Z_][a-Z0-9_]"
@@ -525,21 +528,33 @@ void Lexer::tokenize_identifier() {
 
 void Lexer::addToken(TokTy type) {
     Span span(0, stream.get_line(), stream.get_column(), buffer.size());
-    span.anteprocess_pos = tokens.size();
-    tokens.emplace_back(Token(buffer, type, span));
+    span.anteprocess_pos = scr_info.tokens.size();
+    scr_info.tokens.emplace_back(Token(buffer, type, span));
     buffer.clear();
 }
 
 bool Lexer::eat() {
-    if (stream.peek() == '\n' && !tokens.empty())
-        tokens.back().debug_end_of_line = true;
+    if (stream.peek() == '\n' && !scr_info.tokens.empty())
+        scr_info.tokens.back().debug_end_of_line = true;
     if (stream.get(ch))
         return true;
     return false;
 }
 
-void Lexer::add_error(const std::string& code, const std::string& err, const std::string& hint) {
-    std::string out = Error_Text(stream.get_line(), stream.get_column(), buffer.size(), lines[stream.get_line()], code, err, hint, file_path).print_error();
+template<size_t Code>
+void Lexer::add_error(const std::string& msg, const std::string& hint) {
+    Span span(0, stream.get_line(), stream.get_column(), buffer.size());
+    span.anteprocess_pos = scr_info.tokens.size();
+    auto tok = Token(buffer, ETokenType::NONE, span);
+    // std::shared_ptr<ScriptInfo> _scr_info, 
+	// 	 const Token &_token, const std::vector<Token> &_tokens, 
+	// 	 Phase _phase, Severity _severity, 
+	// 	 const std::vector<std::string> &_context, 
+	// 	 const std::string &_msg, const std::string &_hint)
+    std::string out = Error_Diagnostic<Code>(scr_info, tok, {}, 
+        EPhase::lexer, 
+        EErrorSeverity::error,
+        {}, msg, hint).print_error();
     errors.push_back(out);
 }
 
@@ -566,7 +581,7 @@ TokTy Lexer::classifyNumerals(std::string& outValue) {
     // Check prefix bin/oct/hex
     if (c == '0' & stream.peek() != EOF) {
         char next = stream.peek();
-             if (next == 'b' || next == 'B') { isBin = true; stream.get(c); buffer += c; }
+        if (next == 'b' || next == 'B') { isBin = true; stream.get(c); buffer += c; }
         else if (next == 'o' || next == 'O') { isOct = true; stream.get(c); buffer += c; }
         else if (next == 'x' || next == 'X') { isHex = true; stream.get(c); buffer += c; }
     }

@@ -17,7 +17,7 @@ struct IGenCond : public Node {
 
 struct Is_Type : IGenCond {
     std::string srcTypename;
-    std::vector<std::unique_ptr<AReference>> inType;
+    std::vector<std::unique_ptr<AType>> inType;
 
     SYM_DEFINITION parent_generic;
 
@@ -35,8 +35,8 @@ struct Is_Type : IGenCond {
 };
 
 struct Can_Cast : IGenCond {
-    std::string srcTypename;						// typename
-    std::unique_ptr<AType> target;						// cast target
+    std::string srcTypename;				// typename
+    std::unique_ptr<AType> target;			// cast target
     bool isCastFrom = false;				// false = cast to | true = cast from
 
     SYM_DEFINITION parent_generic;
@@ -65,7 +65,7 @@ struct Have_Op : IGenCond {
 
 struct Have_Role : IGenCond {
     std::string targetGenSym;
-    std::unique_ptr<AReference> role_reference;
+    std::unique_ptr<AExpression> role;
 
     SYM_DEFINITION parent_generic;
 
@@ -79,7 +79,7 @@ struct Have_Role : IGenCond {
 
 struct Use_Component : IGenCond {
     std::string targetGenSym;
-    std::unique_ptr<AReference> component_reference;
+    std::unique_ptr<AExpression> component;
 
     SYM_DEFINITION parent_generic;
 
@@ -93,7 +93,7 @@ struct Use_Component : IGenCond {
 
 struct Compatible_System : IGenCond {
     std::string targetGenSym;
-    std::unique_ptr<AReference> system_reference;
+    std::unique_ptr<AExpression> system;
 
     SYM_DEFINITION parent_generic;
 

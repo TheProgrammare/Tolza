@@ -1,5 +1,8 @@
 #pragma once
 
-struct PipelineScripts;
+#include <vector>
+#include <memory>
 
-void generate_AST_View(const PipelineScripts *pipe_scripts);
+#include "ScriptInfo.hpp"
+
+void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos);

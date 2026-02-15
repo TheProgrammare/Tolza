@@ -1,32 +1,30 @@
 #include "Pipeline_Preprocessor.hpp"
 
 #include <iostream>
-#include <fstream>
 #include <chrono>
+#include <memory>
 #include <vector>
 
-#include "Compilation.hpp"
 #include "Globals.hpp"
-#include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
 #include "Preprocessor.hpp"
 #include "Lexer/TokenViewer.hpp"
 
-bool pipeline_start_preprocessor(const PipelineScripts* pipe_scripts) {
+bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::vector<std::tuple<std::string, std::vector<std::string>>> errs;
 
 	std::chrono::duration<double> final_duration;
 
-    const size_t files_amount = pipe_scripts->scripts_infos.size();
+    const size_t files_amount = scr_infos.size();
 
 	size_t count = 0;
-	for (auto info : pipe_scripts->scripts_infos) {
-		Preprocessor pre(info.get());
+	for (auto scr_info : scr_infos) {
+		Preprocessor pre(*scr_info);
 
 		if (in_binding_compilation) std::cout << "[EMBinder] ";
 		std::cout << "[preprocess]";
         std::cout << color_CYAN " [" << ++count << "/" << files_amount << "] " color_RESET;
-        std::cout << color_MAGENTA << info->file_path << color_RESET "... " << std::flush;
+        std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 		auto start = std::chrono::high_resolution_clock::now();
 		std::vector<Token> final_toks = pre.preprocess();
@@ -37,12 +35,12 @@ bool pipeline_start_preprocessor(const PipelineScripts* pipe_scripts) {
 		double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
 		if (!err.empty()) {
-			errs.push_back({ info->name, err });
+			errs.push_back({ scr_info->name, err });
 			std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
 		}
 		else {
-            info->tokens = final_toks;
-            info->m_meta = meta;
+            scr_info->tokens = final_toks;
+            scr_info->m_meta = meta;
 			std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET;
 			std::cout << color_CYAN " (" << final_toks.size() << " tokens)" color_RESET << std::endl;
 		}

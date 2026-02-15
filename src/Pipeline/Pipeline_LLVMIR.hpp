@@ -1,5 +1,8 @@
 #pragma once
 
-struct PipelineScripts;
+#include <vector>
+#include <memory>
 
-bool pipeline_start_LLVM_IR(const PipelineScripts *pipe_scripts);
+#include "ScriptInfo.hpp"
+
+bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos);

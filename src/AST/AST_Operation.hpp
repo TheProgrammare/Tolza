@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AST/AST_Type.hpp"
 #include "AST_Base.hpp"
 #include <memory>
 
@@ -7,8 +8,8 @@ namespace AST {
 namespace Operation {
 
 
-struct Cast_As : public Node {
-    std::unique_ptr<Node> valueCasted;
+struct Cast_As : public AExpression {
+    std::unique_ptr<AExpression> valueCasted;
     std::unique_ptr<AType> typeCasted;
 
     enum class ECastType { AS, AS_REINTERPRET, AS_SAFE };
@@ -25,17 +26,21 @@ struct Cast_As : public Node {
     }
 };
 
-struct Is : public Node {
-    std::unique_ptr<Node> left;
-    std::unique_ptr<Node> right;
+struct Is : public AExpression {
+    std::unique_ptr<AExpression> left;
+    std::unique_ptr<AExpression> right;
+
+    Is();
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "is"; }
 };
 
-struct In : public Node {
-    std::unique_ptr<Node> left;
-    std::unique_ptr<Node> right;
+struct In : public AExpression {
+    std::unique_ptr<AExpression> left;
+    std::unique_ptr<AExpression> right;
+
+    In();
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "in"; }
@@ -44,8 +49,8 @@ struct In : public Node {
 
 // a copy= b | a clone= b | a move= b | a ref= b | a mut= b 
 struct Assignment : public Node {
-    std::unique_ptr<AReference> left;
-    std::unique_ptr<Node> right;
+    std::unique_ptr<AExpression> left;
+    std::unique_ptr<AExpression> right;
     EAssignmentType assignmentType = EAssignmentType::Copy;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -62,7 +67,7 @@ struct Assignment : public Node {
 
 
 // a op b
-struct Binary : public Node {
+struct Binary : public AExpression {
     std::unique_ptr<Node> left;
     std::unique_ptr<Node> right;
     EBinOpType op = EBinOpType::Add;
@@ -74,7 +79,7 @@ struct Binary : public Node {
 };
 
 // ++a a++ --a a-- !a +a -a
-struct Unary : public Node {
+struct Unary : public AExpression {
     std::unique_ptr<Node> base;
     EUnaryOpType unitaryOp = EUnaryOpType::Incr;
     // for pre increment/decrement or sign
@@ -85,15 +90,26 @@ struct Unary : public Node {
 };
 
 // a </<= b >/>= c
-struct Interval : public Node {
+struct Interval : public AExpression {
     std::unique_ptr<Node> left;
     std::unique_ptr<Node> center;
     std::unique_ptr<Node> right;
     EBinOpType left_comparator = EBinOpType::Low;
     EBinOpType right_comparator = EBinOpType::Low;
 
+    Interval();
+
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "interval left[" + EBinOpType_to_str(left_comparator) + "] right[" + EBinOpType_to_str(right_comparator) + "]"; }
+};
+
+// p1 <-> p2
+struct Ptr_Dist : public AExpression {
+    std::unique_ptr<AExpression> left;
+    std::unique_ptr<AExpression> right;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    std::string debug_str() const override { return "<mem> distance"; }
 };
 
 }

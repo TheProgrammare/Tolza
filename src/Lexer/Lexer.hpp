@@ -18,12 +18,11 @@
 #pragma once
 
 #include <string>
-#include <map>
 #include <set>
 #include <unordered_set>
-#include <sstream>
 #include <vector>
 
+#include "ScriptInfo.hpp"
 #include "StreamTracker.hpp"
 #include "Token.hpp"
 
@@ -39,8 +38,10 @@ const std::unordered_set<std::string> kScriptMeta = {
 
 class Lexer {
 public:
-	Lexer(const std::string& s, const std::string& f, const std::vector<std::string>& lines) : 
-		stream(s), file_path(f), lines(lines) {}
+	Lexer(ScriptInfo &_scr_info) 
+		: scr_info(_scr_info)
+		, stream(scr_info.file_str) 
+	{}
 
 	enum class EPrefixFound { None, Prefix, All };
 
@@ -63,19 +64,17 @@ public:
 	void addToken(TokTy type);
 	bool eat();
 
-	void add_error(const std::string &code, const std::string &err, const std::string &hint);
+	template<size_t Code>
+	void add_error(const std::string &msg, const std::string &hint);
 
 	TokTy classifyNumerals(std::string& outValue);
 	TokTy classifyKeyword(std::string& outWord);
 	TokTy classifyFormatSpec(std::string& outFormat);
 
 
-
+	ScriptInfo &scr_info;
 	StreamTracker stream;
-	const std::string& file_path;
-	const std::vector<std::string>& lines;
 	std::vector<std::string> errors;
-	std::vector<Token> tokens;
 	std::string buffer;
 	char ch = '\0';
 };

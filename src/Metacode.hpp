@@ -225,7 +225,7 @@ namespace META {
         }
 
         [[nodiscard]]
-        virtual std::vector<Token> generate_tokens(const ScriptInfo *scr_info) const;
+        virtual std::vector<Token> generate_tokens(ScriptInfo &scr_info) const;
 
 
         [[nodiscard]]
@@ -432,7 +432,7 @@ namespace META {
 
 
         [[nodiscard]]
-        std::vector<Token> generate_tokens(const ScriptInfo *scr_info) const override;
+        std::vector<Token> generate_tokens(ScriptInfo &scr_info) const override;
 
 
         [[nodiscard]]
@@ -505,9 +505,9 @@ namespace META {
 
         std::vector<Token> tokens_expanded;
 
-        std::vector<Token> generate_tokens(const ScriptInfo *scr_info) const override;
+        std::vector<Token> generate_tokens(ScriptInfo &scr_info) const override;
         // result of generate tokens
-        std::vector<Token> generate_model_expansion(const ScriptInfo *scr_info, std::vector<Token> &model) const;
+        std::vector<Token> generate_model_expansion(ScriptInfo &scr_info, std::vector<Token> &model) const;
 
         void add_expand_condition(std::unique_ptr<Expand_If> exp_cond);
 

@@ -1,24 +1,22 @@
 #include "Pipeline_Exporter.hpp"
 
 #include <iostream>
-#include <tuple>
 #include <chrono>
 
-#include "Pipeline.hpp"
 #include "Globals.hpp"
 
-bool pipeline_start_exporter(const PipelineScripts *pipe_scripts) {
+bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	auto start = std::chrono::high_resolution_clock::now();
 
     std::multimap<std::string, ScriptInfo*> exportations;
     std::multimap<std::string, std::pair<ModuleImportation*, ScriptInfo*>> importations;
 
-    for (auto &script : pipe_scripts->scripts_infos) {
-        for (auto &exp : script->exported_mod) {
-            exportations.insert({ exp->name, script.get() });
+    for (auto &scr_info : scr_infos) {
+        for (auto &exp : scr_info->exported_mod) {
+            exportations.insert({ exp->name, scr_info.get() });
         }
-        for (auto &imp : script->imported_mod) {
-            importations.insert({ imp->name, { imp.get(), script.get() }});
+        for (auto &imp : scr_info->imported_mod) {
+            importations.insert({ imp->name, { imp.get(), scr_info.get() }});
         }
     }
 

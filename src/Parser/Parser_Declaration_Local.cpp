@@ -32,7 +32,7 @@ std::shared_ptr<AST::ALocal> PAR::Parser_Declaration_Local::parse_local(bool sil
 	}
 	
 	if (!silent_error) {
-		ctx.tok_v.add_error("PAR1877", "Illegal instruction '" + ctx.tok_v.peek().val + "' in local.", 
+		ctx.tok_v.add_error<40>("Illegal instruction '" + ctx.tok_v.peek().val + "' in local.", 
 			"you can define in local: variable, lambda, call, operation, assignation, statement");
 	}
 
@@ -91,7 +91,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern> PAR::Parser_Declaration_Local:
 		return component_pattern(capa, id, comparison_ref);
 	}
 
-	ctx.tok_v.add_error("PAR1178",
+	ctx.tok_v.add_error<41>(
 		"Expected pattern.",
 		"define auto inferred variable like `let myName = expression;`");
 	return nullptr;
@@ -121,7 +121,7 @@ std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local
 	
 	if (var->assignment == EAssignmentType::NONE) {
 		if (isAutoTy) 
-			ctx.tok_v.add_error("PAR1171",
+			ctx.tok_v.add_error<42>(
 				"Expected assignation '=' in auto inferred variable type.",
 				"define auto inferred variable like `let myName = expression;`");
 		
@@ -155,7 +155,7 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
 	while (!ctx.tok_v.is_end()) {
 		// ignore variable
 		if (!ctx.tok_v.match(TokTy::UNDERSCORE)) {
-			std::string name = ctx.tok_v.expect_id("PAR1130", "Expected name (identifier) in variable unpack declaration.", hint);
+			std::string name = ctx.tok_v.expect_id<43>("Expected name (identifier) in variable unpack declaration.", hint);
 			auto loc = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek(-1));
 			loc->id.name = name;
 			unpack->elements.push_back(loc);
@@ -200,7 +200,7 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
 	while (!ctx.tok_v.is_end()) {
 		auto elem = ctx.Create_Node<AST::Declaration::Local::Capture_Member>(ctx.tok_v.peek());
 
-		auto tok_capa = ctx.tok_v.expect_any(kCapabilityKind, "PAR1782", "Expected capture capability kind.", hint);
+		auto tok_capa = ctx.tok_v.expect_any<44>(kCapabilityKind, "Expected capture capability kind.", hint);
 		elem->capability = TokTy_to_ECapability(tok_capa.type);
 
 		elem->id = ctx.p_ref->identifier(true);
@@ -246,7 +246,7 @@ std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Loca
 	bool is_silent_error
 	, std::function<AST::CodeBlock_instruction()> in_function)
 {
-	ctx.tok_v.expect_any({ TokTy::OPEN_BRACE, TokTy::INJECT }, "PAR1199", "Expected start code block '{' or linecode '=>'.", "");
+	ctx.tok_v.expect_any<45>({ TokTy::OPEN_BRACE, TokTy::INJECT }, "Expected start code block '{' or linecode '=>'.", "");
 
 	bool inline_code = ctx.tok_v.peek(-1).type == TokTy::INJECT;
 	auto cb = ctx.Create_Node<AST::Declaration::Local::CodeBlock>(ctx.tok_v.peek(-1));
@@ -264,7 +264,7 @@ std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Loca
 
 std::unique_ptr<AST::Declaration::Local::CodeBlock> PAR::Parser_Declaration_Local::code_block_instruction()
 {
-	ctx.tok_v.expect_any({ TokTy::OPEN_BRACE, TokTy::INJECT }, "PAR1199", "Expected start code block '{' or linecode '=>'.", "");
+	ctx.tok_v.expect_any<46>({ TokTy::OPEN_BRACE, TokTy::INJECT }, "Expected start code block '{' or linecode '=>'.", "");
 
 	bool inline_code = ctx.tok_v.peek(-1).type == TokTy::INJECT;
 	auto cb = ctx.Create_Node<AST::Declaration::Local::CodeBlock>(ctx.tok_v.peek(-1));
@@ -287,13 +287,13 @@ std::shared_ptr<AST::Declaration::Local::Capability> PAR::Parser_Declaration_Loc
 		"\n  - reference (read only) `ref a = lvalue`"
 		"\n  - mutable (read/write) `mut a = lvalue`";
 	
-	Token capa_tok_kind = ctx.tok_v.expect_any(kCapabilityKind, "PAR1207", "Expected capability kind.", hint);
+	Token capa_tok_kind = ctx.tok_v.expect_any<47>(kCapabilityKind, "Expected capability kind.", hint);
 	auto capa = ctx.Create_Decl<AST::Declaration::Local::Capability>(ctx.tok_v.peek(-1));
 	capa->kind = TokTy_to_ECapability(capa_tok_kind.type);	
 
 	capa->id = ctx.p_ref->identifier(true);
 
-	ctx.tok_v.expect(TokTy::ASSIGN, "PAR1209", "Expected classic assignation '=' after capability declaration.", hint);
+	ctx.tok_v.expect<48>(TokTy::ASSIGN, "Expected classic assignation '=' after capability declaration.", hint);
 
 	capa->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
 
@@ -317,7 +317,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Component> PAR::Parser_Declarat
 	while (!ctx.tok_v.is_end()) {
 		std::string field_name = ctx.p_ref->identifier(true).name;
 
-		ctx.tok_v.expect(TokTy::COLON, "PAR1228", "Expected field mapping association ':'.", hint);
+		ctx.tok_v.expect<49>(TokTy::COLON, "Expected field mapping association ':'.", hint);
 
 		comp_pat->mapping.push_back({ field_name, pattern_mapping(capa) });
 
@@ -325,7 +325,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Component> PAR::Parser_Declarat
 	}
 
 	if (!comparison_ref) {
-		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
+		ctx.tok_v.expect<50>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
 		comp_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
 	}
 	else {
@@ -360,7 +360,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Entity> PAR::Parser_Declaration
 			while (!ctx.tok_v.is_end()) {
 				std::string name = ctx.p_ref->identifier(true).name;
 
-				ctx.tok_v.expect(TokTy::COLON, "PAR1229", "Expected field mapping association ':'.", hint);
+				ctx.tok_v.expect<51>(TokTy::COLON, "Expected field mapping association ':'.", hint);
 
 				entity_pat->mapping.push_back({ comp_id, name, pattern_mapping(capa) });
 
@@ -368,11 +368,11 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Entity> PAR::Parser_Declaration
 			}
 		}
 		else  {
-			ctx.tok_v.expect(TokTy::DOT, "PAR1336", "Expected component field mapping '.' or start component general mapping '{'.", hint);
+			ctx.tok_v.expect<52>(TokTy::DOT, "Expected component field mapping '.' or start component general mapping '{'.", hint);
 
 			std::string name = ctx.p_ref->identifier(true).name;
 
-			ctx.tok_v.expect(TokTy::COLON, "PAR1229", "Expected field mapping association ':'.", hint);
+			ctx.tok_v.expect<53>(TokTy::COLON, "Expected field mapping association ':'.", hint);
 
 			entity_pat->mapping.push_back({ comp_id, name, pattern_mapping(capa) });
 		}
@@ -381,7 +381,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Entity> PAR::Parser_Declaration
 	}
 
 	if (!comparison_ref) {
-		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
+		ctx.tok_v.expect<54>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
 		entity_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {
@@ -409,7 +409,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Tuple> PAR::Parser_Declaration_
 	pat->capability = capa;
 
 	if (ctx.tok_v.check(TokTy::CLOSE_PAREN))
-		ctx.tok_v.add_error("PAR1634", "Unexpected void tuple.", hint);
+		ctx.tok_v.add_error<55>("Unexpected void tuple.", hint);
 	
 	while (!ctx.tok_v.is_end()) {
 		pat->mapping.push_back(pattern_mapping(capa));
@@ -417,7 +417,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Tuple> PAR::Parser_Declaration_
 	}
 
 	if (!comparison_ref) {
-		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
+		ctx.tok_v.expect<56>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
 		pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {
@@ -444,10 +444,10 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 	auto pat = ctx.Create_Node<AST::Declaration::Local::Pattern_Enum>(ctx.tok_v.peek());
 	pat->enum_id = enum_id;
 
-	ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1205", "Expected start binding on enum types '('.", hint);
+	ctx.tok_v.expect<57>(TokTy::OPEN_PAREN, "Expected start binding on enum types '('.", hint);
 
 	if (ctx.tok_v.check(TokTy::CLOSE_PAREN))
-		ctx.tok_v.add_error("PAR1206", "Unexpected end of binding on enum types ')'. A enum pattern on condition must have at least one binding. Else, use a check indexation.", hint);
+		ctx.tok_v.add_error<58>("Unexpected end of binding on enum types ')'. A enum pattern on condition must have at least one binding. Else, use a check indexation.", hint);
 
 	EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().type);
 	if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
@@ -458,7 +458,7 @@ std::unique_ptr<AST::Declaration::Local::Pattern_Enum> PAR::Parser_Declaration_L
 	}
 
 	if (!comparison_ref) {
-		ctx.tok_v.expect(TokTy::ASSIGN, "PAR1229", "Expected assignation on pattern.", hint);
+		ctx.tok_v.expect<59>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
 		pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
 	}
 	else {

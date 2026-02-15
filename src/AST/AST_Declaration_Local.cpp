@@ -12,7 +12,7 @@ std::string AST::Declaration::Local::Variable_Unpack::debug_str() const
     }
     out += "[";
     for (auto& elem : elements) {
-        out += elem->id.debug_str() + ", ";
+        out += elem->name + ", ";
     }
     return out + "]";
 }

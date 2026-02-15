@@ -1,9 +1,13 @@
 #include "Pipeline_FileSystem.hpp"
 
-#include <fstream>
+#include <filesystem>
 #include <iostream>
+#include <fstream>
+#include <memory>
+#include <vector>
 
 #include "Globals.hpp"
+#include "ScriptInfo.hpp"
 
 namespace {
 
@@ -95,17 +99,28 @@ std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>
 
 }
 
-std::optional<FileSystemOut> pipeline_start_filesystem(const std::string &target_file)
+std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string &target_file)
 {
     auto filesResult = find_files(target_file);
-    if (!filesResult.has_value()) return std::nullopt;
+    if (!filesResult.has_value()) return {};
     auto filesFounds = filesResult.value();
 
 	std::cout << color_YELLOW "[file] [summary] " color_CYAN "files found: " color_YELLOW + std::to_string(filesFounds.size()) + color_RESET "\n" << std::endl;
 
     // build file into string and lines (for better debug)
-    std::vector<std::string> strFiles = str_files(filesFounds);
-    std::vector<std::vector<std::string>> lineFiles = lines_files(strFiles);
+    std::vector<std::string> files_str = str_files(filesFounds);
+    std::vector<std::vector<std::string>> lineFiles = lines_files(files_str);
 
-    return FileSystemOut{filesResult.value(), strFiles, lineFiles};
+	std::vector<std::shared_ptr<ScriptInfo>> scr_infos;
+	scr_infos.reserve(files_str.size());
+
+	for (size_t i = 0; i < files_str.size(); ++i) {
+		ScriptInfo scr_info(filesFounds[i].filename(),
+		filesFounds[i],
+		files_str[i],
+		lineFiles[i]);
+		scr_infos.push_back(std::make_shared<ScriptInfo>(std::move(scr_info)));
+	}
+
+	return scr_infos;
 }

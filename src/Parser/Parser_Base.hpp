@@ -32,7 +32,7 @@ namespace PAR {
 	struct Parser_Context;
 
 	struct Parser_Base {
-		Parser_Base(std::shared_ptr<ScriptInfo>& infoFile);
+		Parser_Base(ScriptInfo &scr_info);
 		~Parser_Base();
 
 		[[nodiscard]] std::vector<std::string> 							start_parsing();
@@ -43,6 +43,5 @@ namespace PAR {
 		[[nodiscard]] std::optional<AST::CodeBlock_instruction> 		parse_instruction();
 
         Parser_Context *ctx;
-
 	};
 }

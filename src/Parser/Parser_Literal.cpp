@@ -44,7 +44,7 @@ std::optional<std::unique_ptr<AST::ALiteral>> PAR::Parser_Literal::try_literal(b
 	}
 
 	if (!is_silent_error) {
-		ctx.tok_v.add_error("PAR1545", "Expected literal value", "");
+		ctx.tok_v.add_error<80>("Expected literal value", "");
 	}
 
 	return std::nullopt;
@@ -70,7 +70,7 @@ std::unique_ptr<AST::Literal::Decimal> PAR::Parser_Literal::literal_decimal() {
 		// Partie after comma (no point)
 		after_comma = ctx.tok_v.peek().val.substr(decimal_pos + 1);
 	}
-	else ctx.tok_v.add_error("PAR1080",
+	else ctx.tok_v.add_error<81>(
 		"Expected an point '.' in lietral decimal.",
 		"define literal decimal like:\n  - `0000.00d`\n  - `520.15d`\n  - `10.544ud`\n  - `10.25deci`\n  - `20.54udeci`");
 
@@ -183,13 +183,13 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral() 
 		}
 	}
 	catch (const std::invalid_argument &) {
-		ctx.tok_v.add_error("PAR1778", 
+		ctx.tok_v.add_error<82>( 
 			"Impossible to parse literal integral", 
 			"define literal integral like:\n  - decimal: 1234\n  - bin: 0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
 		throw std::runtime_error("Impossible to parse APInt literal");
 	}
 	catch (const std::out_of_range &) {
-		ctx.tok_v.add_error("PAR1779", 
+		ctx.tok_v.add_error<83>( 
 			"Integral literal too big for 128 bits", 
 			"define literal integral like:\n  - decimal: 1234\n  - bin: 0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
 	}
@@ -230,7 +230,7 @@ std::unique_ptr<AST::Literal::Textual_Format> PAR::Parser_Literal::literal_textu
 			}
 			ftext->values.push_back(std::move(lerp));
 
-			ctx.tok_v.expect(TokTy::S_TEXTUAL_EXPR_END, "PAR1081",
+			ctx.tok_v.expect<84>(TokTy::S_TEXTUAL_EXPR_END,
 				"Expected end expression '}' in format string.",
 				"define format string like: `f\"you age is {now - birthday} years\"`.");
 			continue;
@@ -288,7 +288,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 
 	// prefix numeric
 	if (ctx.tok_v.match(TokTy::HASHTAG)) {
-		ctx.tok_v.expect(TokTy::L_ASCII, "PAR1801", "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
+		ctx.tok_v.expect<85>(TokTy::L_ASCII, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
 		char prefix = ctx.tok_v.peek(-1).val[0];
 
 		switch (prefix)
@@ -313,7 +313,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 	// width from variable
 	if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
 		format->width = ctx.p_ref->parse_reference();
-		ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1801", "Expected close variable width '}'.", hint);
+		ctx.tok_v.expect<86>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
 	}
 	// width from literal
 	else if (ctx.tok_v.check(TokTy::L_U)) {
@@ -331,7 +331,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 		// precision from variable
 		if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
 			format->precision = ctx.p_ref->parse_reference();
-			ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1802", "Expected close variable width '}'.", hint);
+			ctx.tok_v.expect<87>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
 		}
 		// precision from literal
 		else if (ctx.tok_v.check(TokTy::L_U)) {
@@ -363,7 +363,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 	}
 
 	if (!ctx.tok_v.check(TokTy::S_TEXTUAL_EXPR_END)) {
-		ctx.tok_v.add_error("PAR1803", "Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
+		ctx.tok_v.add_error<88>("Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
 	}
 
 	return format;
@@ -382,7 +382,7 @@ std::unique_ptr<AST::Literal::Range> PAR::Parser_Literal::literal_range(std::uni
 	
 	range->start = std::move(start);
 
-	auto range_tok = ctx.tok_v.expect_any({ TokTy::RANGE, TokTy::RANGE_INCLUSIVE }, "PAR1807", "Expected range kind '..' or '..='", hint);
+	auto range_tok = ctx.tok_v.expect_any<89>({ TokTy::RANGE, TokTy::RANGE_INCLUSIVE }, "Expected range kind '..' or '..='", hint);
 
 	range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
 
@@ -499,7 +499,7 @@ std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(const 
 			);
 		}
 		else if (auto comp_member = dynamic_cast<AST::Reference::Member_Access*>(ref.get())) {
-			ctx.tok_v.expect(TokTy::ASSIGN, "PAR1287", 
+			ctx.tok_v.expect<90>(TokTy::ASSIGN, 
 				"Expected component field initialisation '='.", 
 				"define literal component member like: `CPosition.x= 10, CPosition.y = 15`");
 
@@ -507,7 +507,7 @@ std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(const 
 			lit_comp->id = ref->id;
 		}
 		else {
-			ctx.tok_v.add_error_tok(ref->_token, "PAR1286", 
+			ctx.tok_v.add_error_tok<91>(ref->_token, 
 				"Unexpected literal reference", 
 				"define literal components only in literal entity");
 		}
@@ -536,11 +536,11 @@ std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(
 	while (!ctx.tok_v.is_end()) {
 		if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
 
-		ctx.tok_v.expect(TokTy::DOT, "PAR1115", "Expected contextual field access '.' in literal component", hint);
+		ctx.tok_v.expect<92>(TokTy::DOT, "Expected contextual field access '.' in literal component", hint);
 
 		auto field_arg = ctx.Create_Node<AST::Reference::Call_Argument>(ctx.tok_v.peek());
-		field_arg->name = ctx.tok_v.expect_id("PAR1113", "Expected field name (identifier)", hint);
-		ctx.tok_v.expect(TokTy::COLON, "PAR1114", "Expected field assignation ':' after field name", hint);
+		field_arg->name = ctx.tok_v.expect_id<93>("Expected field name (identifier)", hint);
+		ctx.tok_v.expect<94>(TokTy::COLON, "Expected field assignation ':' after field name", hint);
 
 		field_arg->val = ctx.p_expr->parse_expression();
 		comp->field_args.push_back(std::move(field_arg));
@@ -557,11 +557,11 @@ std::unique_ptr<AST::Literal::Tuple> PAR::Parser_Literal::literal_tuple() {
 
 	while (!ctx.tok_v.is_end()) {
 		if (isNamedTuple) {
-			tuple->name_fields.push_back(ctx.tok_v.expect_id("PAR1050",
+			tuple->name_fields.push_back(ctx.tok_v.expect_id<95>(
                 "Expected field name (identifier) in named tuple instance.",
                 "define named tuple instance like `(filed1: value, ...)`."));
 
-			ctx.tok_v.expect(TokTy::ASSIGN, "PAR1051",
+			ctx.tok_v.expect<96>(TokTy::ASSIGN,
 				"Expected field value assignation ':' after filed name in named tuple instance.",
 				"define named tuple instance like `(filed1: value, ...)`.");
 

@@ -1,14 +1,57 @@
 #pragma once
 
+#include <vector>
+
 #include "AST/AST_Base.hpp"
+#include "AST/AST_Memory.hpp"
+#include "Globals.hpp"
+#include "ErrorOutput.hpp"
 #include "Visitor_Base.hpp"
 
 struct Visitor_Default : public Visitor_Base {
 	using Visitor_Base::Visitor_Base;
 
-	void error_add(const AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint) override;
-	void error_two_lines(const AST::Node &first, const std::string &first_f, const AST::Node &second, const std::string &second_f, const std::string &code, const std::string &msg, const std::string &hint) override;
 	
+	template<size_t Code>
+	void error_add(const AST::Node& n, const std::string& msg, const std::string& hint)
+	{
+		auto error = Error_Diagnostic<Code>(scr_info,
+			n._token, {},
+			current_EPhase(), EErrorSeverity::error,
+			{},
+			msg, hint);	
+		
+		errors.push_back(error.print_error());
+	}
+
+	template<size_t Code>
+	void error_two_lines(const AST::Node &first, const ScriptInfo &first_scr_info, const AST::Node &second, const ScriptInfo &second_scr_info, const std::string &code, const std::string &msg, const std::string &hint)
+	{
+		auto first_error = Error_Diagnostic<Code>(first_scr_info,
+			first._token, {},
+			current_EPhase(), EErrorSeverity::error,
+			{},
+			msg, hint
+		);
+
+		auto second_error = Error_Diagnostic<Code>(second_scr_info,
+			second._token, {},
+			current_EPhase(), EErrorSeverity::error,
+			{},
+			msg, hint
+		);
+		
+		std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
+		out += first_error.print_line() + color_RESET "\n";
+		out +="[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
+		out += second_error.print_line() + color_RESET "\n";
+
+		out += first_error.print_messages();
+		errors.push_back(out);
+	}
+
+	virtual EPhase current_EPhase() { return EPhase::resolver_symbol; }
+
 	// ============ AST ============
 	void visit(AST::Node &n) override;
 
@@ -172,5 +215,7 @@ struct Visitor_Default : public Visitor_Base {
 	void visit(AST::Memory::Align &n) override;
 	void visit(AST::Memory::GetBits &n) override;
 	void visit(AST::Memory::Drop &n) override;
+	void visit(AST::Memory::Ptr_At &n) override;
+	void visit(AST::Memory::Ptr_Offset &n) override;
 };
 

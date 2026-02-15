@@ -11,7 +11,7 @@
 #include <string>
 #include <chrono>
 
-bool pipeline_start_parser(const PipelineScripts *pipe_scripts) {
+bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::vector<std::tuple<std::string, std::vector<std::string>>> parErrors;
 	std::vector<std::tuple<std::string, std::vector<std::string>>> declErrors;
 
@@ -19,14 +19,14 @@ bool pipeline_start_parser(const PipelineScripts *pipe_scripts) {
 	size_t final_node_count = 0;
 
 	size_t count = 0;
-	for (auto info : pipe_scripts->scripts_infos) {
+	for (auto scr_info : scr_infos) {
 
-		PAR::Parser_Base inParser(info);
+		PAR::Parser_Base inParser(*scr_info);
 
 		if (in_binding_compilation) std::cout << "[EMBinder] ";
 		std::cout << "[parse]";
-        std::cout << color_CYAN " [" << ++count << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET; 
-        std::cout << color_MAGENTA << info->file_path << color_CYAN "... " << std::flush;
+        std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET; 
+        std::cout << color_MAGENTA << scr_info->file_path << color_CYAN "... " << std::flush;
 
 		auto start = std::chrono::high_resolution_clock::now();
 		std::vector<std::string> out_par_err = inParser.start_parsing();
@@ -35,8 +35,8 @@ bool pipeline_start_parser(const PipelineScripts *pipe_scripts) {
 		double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
 		if (!out_par_err.empty() || !out_sym_err.empty()) {
-			parErrors.push_back({ info->name, out_par_err });
-			declErrors.push_back({ info->name, out_sym_err });
+			parErrors.push_back({ scr_info->name, out_par_err });
+			declErrors.push_back({ scr_info->name, out_sym_err });
 			std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
 		}
 		else {

@@ -80,9 +80,9 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
     std::set<std::string> gl_names;
     
     for (auto &item : ast->bind.items) {
-        if (item.kind == Extern_Item::Kind::Function) fn_names.insert(item.id.name);
-        else if (item.kind == Extern_Item::Kind::Global) gl_names.insert(item.id.name);
-        else if (item.kind == Extern_Item::Kind::Type) ty_names.insert(item.id.name);
+        if (item.kind == Extern_Item::Kind::Function) fn_names.insert(item.name);
+        else if (item.kind == Extern_Item::Kind::Global) gl_names.insert(item.name);
+        else if (item.kind == Extern_Item::Kind::Type) ty_names.insert(item.name);
     }
 
     switch (kind) {

@@ -6,28 +6,27 @@
 
 #include "Globals.hpp"
 
-#include "Pipeline.hpp"
 #include "Visitor/ASTViewer.hpp"
 
-void generate_AST_View(const PipelineScripts *pipe_scripts) {
+void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	auto basePath = PROJECT_DIR "/dot";
 	std::filesystem::create_directories(basePath);
-	for (size_t i = 0; i < pipe_scripts->scripts_infos.size(); i++) {
-		auto scrInfo = pipe_scripts->scripts_infos[i].get();
-		std::filesystem::path path = basePath; path.append(scrInfo->name + ".dot");
+	for (size_t i = 0; i < scr_infos.size(); i++) {
+		auto scr_info = scr_infos[i].get();
+		std::filesystem::path path = basePath; path.append(scr_info->name + ".dot");
 		std::ofstream f(path);
 		if (!f) throw std::runtime_error("Impossible to open " + path.string());
 		
-		AST_Viewer ast_view(*scrInfo, f);
-		ast_view.visit(*scrInfo->rootNode);
+		AST_Viewer ast_view(*scr_info, f);
+		ast_view.visit(*scr_info->rootNode);
         std::cout << "[debug] [AST]";
-        std::cout << color_CYAN " [" << i + 1 << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
+        std::cout << color_CYAN " [" << i + 1 << "/" << scr_infos.size() << "] " color_RESET;
 		std::cout << "AST View " color_MAGENTA << path << color_RESET "... " << std::flush;
 	}
 
-	for (size_t i = 0; i < pipe_scripts->scripts_infos.size(); i++) {
-		auto scrInfo = pipe_scripts->scripts_infos[i].get();
-		std::filesystem::path pathFile = basePath; pathFile.append(scrInfo->name + ".dot");
+	for (size_t i = 0; i < scr_infos.size(); i++) {
+		auto scr_info = scr_infos[i].get();
+		std::filesystem::path pathFile = basePath; pathFile.append(scr_info->name + ".dot");
 		std::filesystem::path pathGen = pathFile; pathGen.replace_extension(".pdf");
 
 		std::string cmd = "dot -Tpdf \"" + pathFile.string() + "\" -o \"" + pathGen.string() + "\"";

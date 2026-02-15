@@ -421,6 +421,16 @@ EVariableKind TokTy_to_EVariableKind(TokTy tok)
 	}
 }
 
+std::string EVariableKind_to_str(EVariableKind kind) 
+{
+	switch (kind) {
+	case EVariableKind::Const: 	return "const"; 
+    case EVariableKind::Let: 	return "let";
+    case EVariableKind::Var: 	return "var";
+    case EVariableKind::NONE: 	return "NO VAR KIND";
+	}
+}
+
 EAssignmentType TokTy_to_EAssignmentType(TokTy tok)
 {
 	switch (tok) {

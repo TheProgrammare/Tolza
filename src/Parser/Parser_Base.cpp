@@ -10,8 +10,8 @@
 
 #include "Metacode.hpp"
 
-PAR::Parser_Base::Parser_Base(std::shared_ptr<ScriptInfo> &infoFile) {
-	ctx = new Parser_Context(infoFile);
+PAR::Parser_Base::Parser_Base(ScriptInfo &scr_info) {
+	ctx = new Parser_Context(scr_info);
 
 	Parser_Declaration_COP *p_cop	= new Parser_Declaration_COP(*ctx);
 	Parser_Declaration *p_decl		= new Parser_Declaration(*ctx);
@@ -46,13 +46,13 @@ PAR::Parser_Base::~Parser_Base()
 std::vector<std::string> PAR::Parser_Base::start_parsing()
 {
 	// generate and enter in global scope
-	if (!ctx->m_sym) ctx->m_sym = new Symbols_Manager(ctx->scr_info.get());
-	ctx->scr_info->rootNode = new AST::Root;
+	if (!ctx->m_sym) ctx->m_sym = new Symbols_Manager(ctx->scr_info);
+	ctx->scr_info.rootNode = new AST::Root;
 
 	try {
 		while (!ctx->tok_v.is_end()) {
 			auto line = ctx->p_decl->parse_declaration();
-			if (line) ctx->scr_info->rootNode->global_nodes.push_back(line);
+			if (line) ctx->scr_info.rootNode->global_nodes.push_back(line);
 			if (ctx->tok_v.match(TokTy::S_END_OF_FILE)) break;
 		}
 	}
@@ -92,7 +92,7 @@ ModuleImportation *PAR::Parser_Base::parse_import() {
 		// e.g. import extern C::stdio
 		if (ctx->tok_v.match(TokTy::EXTERN)) {
 			mod_imp.name = ctx->tok_v.next().val;
-			ctx->tok_v.expect(TokTy::STATIC_ACCESS, "PAR1895", "Expected static access '::' after extern import source name!", hint);
+			ctx->tok_v.expect<8>(TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
 			mod_imp.extern_lib = ctx->tok_v.next().val;
 		}
 		else {
@@ -102,7 +102,7 @@ ModuleImportation *PAR::Parser_Base::parse_import() {
 
 	auto uptr_imp = std::make_unique<ModuleImportation>(mod_imp);
 	auto ptr_imp = uptr_imp.get();
-	ctx->scr_info->imported_mod.push_back(std::move(uptr_imp));
+	ctx->scr_info.imported_mod.push_back(std::move(uptr_imp));
 
 	return ptr_imp;
 }
@@ -129,7 +129,7 @@ std::shared_ptr<AST::Declaration::Export> PAR::Parser_Base::parse_export() {
 		mod_exp.mirror = parse_import();
 		
 		auto uptr_exp = std::make_unique<ModuleExportation>(mod_exp);
-		ctx->scr_info->exported_mod.push_back(std::move(uptr_exp));
+		ctx->scr_info.exported_mod.push_back(std::move(uptr_exp));
 		return nullptr; 
 	}
 		
@@ -147,15 +147,15 @@ std::shared_ptr<AST::Declaration::Export> PAR::Parser_Base::parse_export() {
 	exp_node->id.name = mod_exp.name;
 	exp_node->mod_exp_sym = uptr_exp;
 
-	ctx->scr_info->exported_mod.push_back(uptr_exp);
+	ctx->scr_info.exported_mod.push_back(uptr_exp);
 
-	ctx->tok_v.expect(TokTy::OPEN_BRACE, "PAR1896", "Expected export begin scope '{' after import instruction.", hint);
+	ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
 	ctx->m_sym->enter_scope(mod_exp.name, EScopeType::Export, 0);
 
 	while (!ctx->tok_v.is_end()) {
 		if (ctx->tok_v.check_any({ TokTy::IMPORT, TokTy::EXPORT })) {
-			ctx->tok_v.add_error_tok(ctx->tok_v.peek(), "PAR1897", "Illegal nested module export/import instruction.", hint);
+			ctx->tok_v.add_error_tok<10>(ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
 		}
 
 		exp_node->elements.push_back(ctx->p_decl->parse_declaration());
@@ -215,6 +215,6 @@ std::optional<AST::CodeBlock_instruction> PAR::Parser_Base::parse_instruction()
 		}
 	}
 
-	ctx->tok_v.add_error_tok(ctx->tok_v.peek(), "PAR1577", "Unexpected instruction", hint);
+	ctx->tok_v.add_error_tok<11>(ctx->tok_v.peek(), "Unexpected instruction", hint);
 	return std::nullopt;
 }

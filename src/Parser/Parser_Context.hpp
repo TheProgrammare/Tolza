@@ -48,10 +48,10 @@ namespace PAR {
 	struct Parser_Statement;
 
 	struct Parser_Context {
-		explicit Parser_Context(std::shared_ptr<ScriptInfo> infoFile);
+		explicit Parser_Context(ScriptInfo &_scr_info);
 		~Parser_Context();
 
-		std::shared_ptr<ScriptInfo> scr_info;
+		ScriptInfo &scr_info;
 		Symbols_Manager *m_sym = nullptr;
 		META::MetablockManager* m_meta = nullptr;
 		TokenViewer tok_v;

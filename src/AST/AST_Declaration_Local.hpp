@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 
+#include "AST/AST_Data.hpp"
 #include "AST_Base.hpp"
 #include "AST_CodeBlock_Instruction.hpp"
 
@@ -28,10 +29,9 @@ struct CodeBlock : public Node {
 // e.g. match val { Some(a) => ... }
 // e.g. sys name() { Component(c) => ... }
 struct Variable_Binding : public ALocal {
-    std::string name;
     ECapability capability = ECapability::NONE;
 
-    std::shared_ptr<AReference> reference;
+    std::shared_ptr<AExpression> expression;
 
     std::string debug_str() const override { return "bind[" + name + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Bind; };
@@ -64,10 +64,10 @@ struct Pattern_Element {
     }
 };
 
-struct Pattern : public Node {
+struct Pattern : public AExpression {
     ECapability capability = ECapability::Ref;
     // shared because can be from a match case base reference (so a reference mirror)
-    std::shared_ptr<AReference> reference;
+    std::shared_ptr<AExpression> expression;
 
     [[maybe_unused]]
     std::shared_ptr<Node> additive_evaluator;
@@ -75,11 +75,11 @@ struct Pattern : public Node {
 
 // e.g. [if/elif/while] let Some(a) = value {...}
 struct Pattern_Enum : public Pattern {
-    ID enum_id;
+    std::unique_ptr<AExpression> enum_expression;
     std::vector<Pattern_Element> mapping;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "enum pattern[" + enum_id.debug_str() + "]"; }
+    std::string debug_str() const override { return "enum pattern[" + enum_expression->debug_str() + "]"; }
 };
 
 // e.g. [if/while/for] let (a, b, 10) in triple_collection {...}
@@ -93,31 +93,31 @@ struct Pattern_Tuple : public Pattern {
 // e.g. [if/while] let Player{ CId.name: name, CId.id: 10 } 
 // e.g. [if/while] let Player{ CId{ name: name, id: 10 } } 
 struct Pattern_Entity : public Pattern {
-    ID entity_id;
+    std::unique_ptr<AExpression> name;
 
     // component identifier, field_name, pattern_element
     std::vector<std::tuple<ID, std::string, Pattern_Element>> mapping;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "entity pattern"; }
+    std::string debug_str() const override { return "entity pattern \"" + name->debug_str() + "\""; }
 };
 
 // e.g. [if/while] let CId{ name: name, id: 10 } 
 struct Pattern_Component : public Pattern {
-    ID component_id;
+    std::unique_ptr<AExpression> name;
 
     // field_name, pattern_element
     std::vector<std::tuple<std::string, Pattern_Element>> mapping;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "component pattern"; }
+    std::string debug_str() const override { return "component pattern \"" + name->debug_str() + "\""; }
 };
 
 // var (a, b, _, d) = call();
 // var (a, _, c, d) = tupleVariable;
 struct Variable_Unpack : public ALocal {
     std::vector<std::shared_ptr<Variable_Binding>> elements;
-    std::unique_ptr<AReference> reference;
+    std::unique_ptr<AExpression> right;
     EVariableKind kind = EVariableKind::Const;
 
     bool isStatic = false;
@@ -137,7 +137,7 @@ struct Lambda : public ALocal, ICallable {
     std::unique_ptr<Lambda_Capture> capture;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "lam[" + id.debug_str() + "]"; };
+    std::string debug_str() const override { return "lam \"" + name + "\""; };
     Type::Function_Proto* get_signature() override { return prototype.get(); };
     ESymbolType get_symbol_type() const override { return ESymbolType::Lambda; };
 };
@@ -155,25 +155,14 @@ struct Variable : public ALocal {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { 
-        std::string out;
-        out += "<def> ";
-        switch (kind) {
-            case EVariableKind::Const: out += "const"; break; 
-            case EVariableKind::Let: out += "let"; break;
-            case EVariableKind::Var: out += "var"; break;
-            case EVariableKind::NONE: return "NO VAR KIND";
-        }
-        out += "[" + id.debug_str() + "]";
-        return out;
+        return EVariableKind_to_str(kind) + " " + name;
     }
     ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
 
+// ref/mut name = expression
 struct Capability : public ALocal {
-    std::string name;
-
-    std::shared_ptr<AReference> reference;
-
+    std::unique_ptr<AExpression> right;
     ECapability kind = ECapability::NONE;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -186,10 +175,11 @@ struct Capability : public ALocal {
 
 
 
-struct Capture_Member : public AReference {
-    ECapability capability;
+struct Capture_Member : public Node {
+    std::unique_ptr<AExpression> name;
+    ECapability capability = ECapability::Ref;
 
-    std::string debug_str() const override { return "capture " + id.debug_str(); }
+    std::string debug_str() const override { return "capture by " + ECapability_to_str(capability) + " \"" + name->debug_str() + "\""; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
@@ -213,8 +203,8 @@ struct Parameter : public ALocal {
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { 
-        if (isVariadic) return EPassMode_to_str(passMode) + " " + id.debug_str() + "...";
-        else			return EPassMode_to_str(passMode) + " " + id.debug_str();
+        if (isVariadic) return EPassMode_to_str(passMode) + " " + name + "...";
+        else			return EPassMode_to_str(passMode) + " " + name;
     }
     ESymbolType get_symbol_type() const override { return ESymbolType::Parameter; } 
 };

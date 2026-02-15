@@ -15,13 +15,13 @@ bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param &a, con
     return same_pass_mode && same_type && same_variadic;
 }
 
-std::vector<Token> META::MetaBlock::generate_tokens(const ScriptInfo *scr_info) const
+std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo &scr_info) const
 {
     std::vector<Token> result;
     if (tokens_to_generate.empty()) return {};
 
     // arbitrary optimization
-    result.reserve(scr_info->tokens.size() / 4);
+    result.reserve(scr_info.tokens.size() / 4);
 
     size_t children_generated_count = 0;
     for (auto pos : tokens_to_generate) {
@@ -40,11 +40,11 @@ std::vector<Token> META::MetaBlock::generate_tokens(const ScriptInfo *scr_info) 
             
             continue;
         }
-        else if (pos >= scr_info->tokens.size()) {
+        else if (pos >= scr_info.tokens.size()) {
 			throw std::runtime_error("Current token source index to generate is out of source tokens bounds !");
 		}
-		else {
-			Token tok = scr_info->tokens[pos]; 
+        else {
+			Token tok = scr_info.tokens[pos]; 
 			result.push_back(tok);
 		}
     }
@@ -52,14 +52,14 @@ std::vector<Token> META::MetaBlock::generate_tokens(const ScriptInfo *scr_info) 
     return result;
 }
 
-std::vector<Token> META::MetaBlock_If::generate_tokens(const ScriptInfo *scr_info) const
+std::vector<Token> META::MetaBlock_If::generate_tokens(ScriptInfo &scr_info) const
 {
     if (!eval(COMPILATION_ARGS) && alternative.get()) return alternative->generate_tokens(scr_info);
     
     return MetaBlock::generate_tokens(scr_info);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_tokens(const ScriptInfo *scr_info) const
+std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo &scr_info) const
 {
     std::vector<Token> model;
     model.reserve(tokens_to_generate.size());
@@ -90,7 +90,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(const ScriptInfo *scr
             // convention: next token is the placeholder identifier !
             // jump + 1 in the loop
             size_t next_pos = tokens_to_generate[++i];
-            Token next_tok = scr_info->tokens[next_pos];
+            Token next_tok = scr_info.tokens[next_pos];
 
             // temporary special token for placeholder
             // value = placeholder name
@@ -98,11 +98,11 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(const ScriptInfo *scr
             // position = placeholder_flag 
             model.push_back(next_tok);
         }
-        else if (pos >= scr_info->tokens.size()) {
+        else if (pos >= scr_info.tokens.size()) {
 			throw std::runtime_error("Current token source index to generate is out of source tokens bounds !");
 		}
         else {
-            Token tok = scr_info->tokens[pos];
+            Token tok = scr_info.tokens[pos];
             model.push_back(tok);
         }
     }
@@ -110,7 +110,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(const ScriptInfo *scr
     return generate_model_expansion(scr_info, model);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(const ScriptInfo *scr_info, std::vector<Token> &model) const
+std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo &scr_info, std::vector<Token> &model) const
 {
     auto combos = generate_all_combinations();
 

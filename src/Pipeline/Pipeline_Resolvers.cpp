@@ -1,5 +1,6 @@
 #include "Pipeline_Resolvers.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <tuple>
@@ -7,7 +8,6 @@
 #include <chrono>
 
 #include "Globals.hpp"
-#include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
 
 #include "Visitor/Symbol_Manager.hpp"
@@ -17,7 +17,7 @@
 #include "AST/AST_Base.hpp"
 
 
-bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
+bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::string passName[3] = { "Symbol", "Type", "Semantic" };
 
 	for (size_t k = 0; k < 3; k++) {
@@ -30,31 +30,31 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
         std::cout << name << " Resolver begins" << std::endl;
 
 		size_t count = 0;
-		for (auto scrInfo : pipe_scripts->scripts_infos) {
+		for (auto scr_info : scr_infos) {
             std::cout << "[resolver]";   
             std::cout << color_CYAN " [" << ++count << "/3] " color_RESET;
-            std::cout << color_CYAN " [" << count << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
-			std::cout << name << " for " color_MAGENTA << scrInfo->file_path << color_RESET "... " << std::flush;
+            std::cout << color_CYAN " [" << count << "/" << scr_infos.size() << "] " color_RESET;
+			std::cout << name << " for " color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 			auto start = std::chrono::high_resolution_clock::now();
 			std::vector<std::string> errs;
 			// symbols
 			if (k == 0) {
-				Visitor_Symbol sym(*scrInfo);
-				scrInfo->rootNode->accept(sym);
-				errs = scrInfo->m_sym->decl_errors;
+				Visitor_Symbol sym(*scr_info);
+				scr_info->rootNode->accept(sym);
+				errs = scr_info->m_sym->decl_errors;
 				errs.insert(errs.begin(), sym.errors.begin(), sym.errors.end());
 			}
 			// types
 			if (k == 1) {
-				Visitor_Type type(*scrInfo);
-				scrInfo->rootNode->accept(type);
+				Visitor_Type type(*scr_info);
+				scr_info->rootNode->accept(type);
 				errs = type.errors;
 			}
 			// semantics
 			if (k == 2) {
-				Visitor_Semantic sem(*scrInfo);
-				scrInfo->rootNode->accept(sem);
+				Visitor_Semantic sem(*scr_info);
+				scr_info->rootNode->accept(sem);
 				errs = sem.errors;
 			}
 
@@ -66,7 +66,7 @@ bool pipeline_start_resolvers(const PipelineScripts *pipe_scripts) {
 				std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET << std::endl;
 			}
 			else {
-				resErrors.push_back({ scrInfo->name, errs });
+				resErrors.push_back({ scr_info->name, errs });
 				std::cerr << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
 			}
 

@@ -1,5 +1,6 @@
 # pragma once
 
+#include "AST/AST_Data.hpp"
 #include "AST_Base.hpp"
 
 struct Visitor_Base;
@@ -30,10 +31,14 @@ struct Table final : public AType {
 struct Primitive final : public AType {
     EPrimType _type = EPrimType::u8;
 
-    std::string debug_str() const override { return EPrimTy_to_str(_type); }
+    Primitive(EPrimType p_type) 
+        : _type(p_type) 
+    {}
 
+    std::string debug_str() const override { return EPrimTy_to_str(_type); }
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
+
 
 struct Tuple final : public AType {
     std::vector<std::unique_ptr<AType>> types;
@@ -62,7 +67,7 @@ struct Function_Proto final : public AType {
 };
 
 struct Get_Expr_Type final : public AType {
-    std::unique_ptr<Node> target;
+    std::unique_ptr<AExpression> target;
 
     std::string debug_str() const override { return "<type> comptime"; };
     

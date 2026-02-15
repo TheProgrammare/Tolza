@@ -22,12 +22,12 @@
 
 #include "Metacode.hpp"
 
-PAR::Parser_Context::Parser_Context(std::shared_ptr<ScriptInfo> infoFile) 
-	: scr_info(infoFile)
-	, m_sym(new Symbols_Manager(infoFile.get()))
-	, m_meta(infoFile->m_meta)
-	, tok_v(TokenViewer(infoFile.get())) {
-	scr_info->m_sym = m_sym;
+PAR::Parser_Context::Parser_Context(ScriptInfo &_scr_info) 
+	: scr_info(_scr_info)
+	, m_sym(new Symbols_Manager(_scr_info))
+	, m_meta(_scr_info.m_meta)
+	, tok_v(TokenViewer(_scr_info)) {
+	scr_info.m_sym = m_sym;
 }
 
 PAR::Parser_Context::~Parser_Context() {
@@ -202,7 +202,7 @@ bool PAR::Parser_Context::match_field_separator(TokTy separator, TokTy end) {
 	if (separator != TokTy::S_END_OF_FILE) {
 		if (tok_v.match(separator)) return false;
 		if (tok_v.match(end)) return true;
-		tok_v.add_error("PAR1322",
+		tok_v.add_error<12>(
 			"Unexpected token '" + tok_v.peek().val + "' in expression.",
 			"expected a separator '" + std::to_string(int(separator)) + "' or a ending '" + std::to_string(int(end)) + "'");
 
@@ -225,7 +225,7 @@ bool PAR::Parser_Context::match_field_any_separator(TokTy separator, std::initia
 			countSym = 0;
 		}
 	}
-	tok_v.add_error("PAR1990",
+	tok_v.add_error<13>(
 		"Unexpected token '" + tok_v.peek().val + "' in expression.",
 		"expected a separator '" + std::to_string(int(separator)) + "' or a ending {" + endSymbols + "}");
 	return false;

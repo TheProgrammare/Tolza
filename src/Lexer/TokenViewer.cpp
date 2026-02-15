@@ -6,56 +6,54 @@
 #include "ScriptInfo.hpp"
 
 void TokenViewer::jump(size_t newPosition) {
-    if (newPosition < tokens.size()) {
+    if (newPosition < scr_info.tokens.size()) {
         current = newPosition;
     }
     else {
-        current = tokens.size() - 1;
+        current = scr_info.tokens.size() - 1;
     }
 
-    currentTokStr = tokens[current].val;
-    currentTokTy = tokens[current].type;
-    currentLine = tokens[current].span.line;
-    if (currentLine - 1 >= lines.size()) currentLine = lines.size();
-    currentLineStr = lines[currentLine - 1];
+    currentTokStr = scr_info.tokens[current].val;
+    currentTokTy = scr_info.tokens[current].type;
+    currentLine = scr_info.tokens[current].span.line;
+    if (currentLine - 1 >= scr_info.get_line_size()) currentLine = scr_info.get_line_size();
+    currentLineStr = scr_info.get_line(currentLine );
 }
 
-TokenViewer::TokenViewer(const ScriptInfo *scr_info) : tokens(scr_info->tokens), lines(scr_info->src_lines), file(scr_info->file_path) {}
-TokenViewer::TokenViewer(ScriptInfo *scr_info) : tokens(scr_info->tokens), lines(scr_info->src_lines), file(scr_info->file_path) {}
 
 Token TokenViewer::next()
 {
     if (!is_end()) {
-        auto pre_tok = tokens[current];
+        auto pre_tok = scr_info.tokens[current];
 		current++;
-        auto post_tok = tokens[current];
+        auto post_tok = scr_info.tokens[current];
         currentTokStr = post_tok.val;
         currentTokTy = post_tok.type;
         currentLine = post_tok.span.line;
-        if (currentLine - 1 >= lines.size()) currentLine = lines.size();
-        currentLineStr = lines[currentLine - 1];
+        if (currentLine - 1 >= scr_info.get_line_size()) currentLine = scr_info.get_line_size();
+        currentLineStr = scr_info.get_line(currentLine);
 		return pre_tok;
 	}
-	return tokens.back();
+	return scr_info.tokens.back();
 }
 
 Token TokenViewer::peek(int offset) const {
 	size_t index = current + offset;
-	if (index < tokens.size())
-		return tokens[index];
-	return tokens.back();
+	if (index < scr_info.tokens.size())
+		return scr_info.tokens[index];
+	return scr_info.tokens.back();
 }
 
 Token TokenViewer::prev() {
     if (current == 0) {
-        return tokens[0];
+        return scr_info.tokens[0];
     }
     current--;
-	return tokens[current];
+	return scr_info.tokens[current];
 }
 
 bool TokenViewer::is_end() const {
-	return current == tokens.size() - 1 || tokens[current].type == ETokenType::S_END_OF_FILE;
+	return current == scr_info.tokens.size() - 1 || scr_info.tokens[current].type == ETokenType::S_END_OF_FILE;
 }
 
 bool TokenViewer::look_ahead(TokTy check, TokTy terminaison)
@@ -142,28 +140,6 @@ bool TokenViewer::match_any(const std::initializer_list<ETokenType>& types) {
 	return false;
 }
 
-Token TokenViewer::expect(TokTy type, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-	if (!check(type)) {
-		add_error(errCode, errMsg, hintMsg);
-	}
-	return next();
-}
-
-Token TokenViewer::expect_any(const std::initializer_list<ETokenType>& types, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-	for (ETokenType type : types) {
-		if (check(type)) {
-			return next();
-		}
-	}
-	add_error(errCode, errMsg, hintMsg);
-    return Token();
-}
-
-std::string TokenViewer::expect_id(const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-	const Token& tok = expect(TokTy::IDENTIFIER, errCode, errMsg, hintMsg);
-	return tok.val;
-}
-
 size_t TokenViewer::position() const {
 	return current;
 }
@@ -174,25 +150,13 @@ size_t TokenViewer::line() const {
 
 // Go back to a know position
 void TokenViewer::rewind(size_t pos) {
-    if (pos >= tokens.size()) pos = tokens.size() - 1;
+    if (pos >= scr_info.tokens.size()) pos = scr_info.tokens.size() - 1;
 	current = pos;
-    currentTokStr = tokens[pos].val;
-    currentTokTy = tokens[pos].type;
-    currentLine = tokens[pos].span.line;
-    if (currentLine >= lines.size()) currentLine = lines.size() - 1;
-    currentLineStr = lines[currentLine - 1];
-}
-
-void TokenViewer::add_error(const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-    errors.push_back(Error_Text(peek().span.line, peek().span.col, peek().span.size, lines[peek().span.line - 1], errCode, errMsg, hintMsg, file).print_error());
-    
-    throw std::runtime_error("");
-}
-
-void TokenViewer::add_error_tok(const Token& tok, const std::string& errCode, const std::string& errMsg, const std::string& hintMsg) {
-    errors.push_back(Error_Text(tok.span.line, peek().span.col, tok.span.size, lines[tok.span.line - 1], errCode, errMsg, hintMsg, file).print_error());
-   
-    throw std::runtime_error("");
+    currentTokStr = scr_info.tokens[pos].val;
+    currentTokTy = scr_info.tokens[pos].type;
+    currentLine = scr_info.tokens[pos].span.line;
+    if (currentLine >= scr_info.get_line_size()) currentLine = scr_info.get_line_size() - 1;
+    currentLineStr = scr_info.get_line(currentLine);
 }
 
 void TokenViewer::synchronize() {
@@ -218,13 +182,13 @@ void TokenViewer::synchronize() {
 std::string TokenViewer::get_line_str_at(size_t line) const
 {
 	int offset = line - 1;
-	if (lines.size() < offset) return "EOF";
-	return lines[offset];
+	if (scr_info.get_line_size() < offset) return "EOF";
+	return scr_info.get_line(offset);
 }
 
 const Token &TokenViewer::get(size_t position)
 {
-    if (tokens.size() < position)
-		auto val = tokens.back();
-	return tokens[position];
+    if (scr_info.tokens.size() < position)
+		auto val = scr_info.tokens.back();
+	return scr_info.tokens[position];
 }

@@ -22,7 +22,7 @@ std::shared_ptr<AST::Declaration::COP::Component> PAR::Parser_Declaration_COP::c
 	// not handled if (auto where = ctx.p_meta->metacode_where()) comp->gen_where;
 
 	comp->id = ctx.p_ref->identifier(comp.get());
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1401", "Expected start code block '{' after '" + comp->debug_str() + "'.", hint);
+	ctx.tok_v.expect<14>(TokTy::OPEN_BRACE, "Expected start code block '{' after '" + comp->debug_str() + "'.", hint);
 
 	// is no typed component
 	if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
@@ -32,14 +32,14 @@ std::shared_ptr<AST::Declaration::COP::Component> PAR::Parser_Declaration_COP::c
 		field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
 
 		field->id = ctx.p_ref->identifier(field.get(), true);
-		ctx.tok_v.expect(TokTy::COLON, "PAR1404", "Expected type defintion symbol ':' after field name", hint);
+		ctx.tok_v.expect<15>(TokTy::COLON, "Expected type defintion symbol ':' after field name", hint);
 
 		field->type = ctx.p_type->parse_type();
 
 		ctx.m_sym->add_decl(field);
 
 		if (!field->isNoDefault) {
-			ctx.tok_v.expect(TokTy::ASSIGN, "PAR1405", "Expected default value assignation '=' after field declaration", hint);
+			ctx.tok_v.expect<16>(TokTy::ASSIGN, "Expected default value assignation '=' after field declaration", hint);
 
 			field->default_value = ctx.p_expr->parse_expression();
 		}
@@ -65,7 +65,7 @@ std::shared_ptr<AST::Declaration::COP::Role> PAR::Parser_Declaration_COP::role()
 	ctx.m_sym->add_decl(role);
 	ctx.m_sym->enter_scope(role->id.name, EScopeType::Role);
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1271", "Expected start definition '{' after role declaration.", hint);
+	ctx.tok_v.expect<17>(TokTy::OPEN_BRACE, "Expected start definition '{' after role declaration.", hint);
 
 	while (!ctx.tok_v.is_end()) {
 		role->components.push_back(ctx.p_ref->parse_reference());
@@ -100,7 +100,7 @@ std::shared_ptr<AST::Declaration::COP::Entity> PAR::Parser_Declaration_COP::enti
 	auto entity_sym = ctx.m_sym->add_decl(def_entity);
 	ctx.m_sym->enter_scope(def_entity->id.name, EScopeType::Entity);
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1391",
+	ctx.tok_v.expect<18>(TokTy::OPEN_BRACE,
 		"Expected start code block '{' after entity declaration.", hint);
 
 	while (!ctx.tok_v.is_end()) {
@@ -142,7 +142,7 @@ void PAR::Parser_Declaration_COP::parse_entity_declaration(SYM_DEFINITION inEnti
 			n_entity->comps.push_back(std::move(lit_comp));
 		}
 		else {
-			ctx.tok_v.add_error("PAR1454", "Expected Literal component after 'use' instruction", hint);
+			ctx.tok_v.add_error<19>("Expected Literal component after 'use' instruction", hint);
 		}
 
 		return;
@@ -150,7 +150,7 @@ void PAR::Parser_Declaration_COP::parse_entity_declaration(SYM_DEFINITION inEnti
 	else if (ctx.tok_v.match(TokTy::NEW)) {
 		ctx.m_sym->enter_scope("new", EScopeType::Entity_New);
 		auto new_fn_type = ctx.p_type->explicit_function_proto();
-		ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1452", "Expected start code '{'.", new_hint);
+		ctx.tok_v.expect<20>(TokTy::OPEN_BRACE, "Expected start code '{'.", new_hint);
 		
 		auto cb = ctx.p_loc->code_block_instruction();
 
@@ -169,7 +169,7 @@ void PAR::Parser_Declaration_COP::parse_entity_declaration(SYM_DEFINITION inEnti
 		return;
 	}
 
-	ctx.tok_v.add_error("PAR1453", "Unexpected '" + ctx.tok_v.peek().val + "' keyword not allowed in entity code block.", "you can define in functions: atribute, method, typealias, operator overloading, trait implementation.");
+	ctx.tok_v.add_error<21>("Unexpected '" + ctx.tok_v.peek().val + "' keyword not allowed in entity code block.", "you can define in functions: atribute, method, typealias, operator overloading, trait implementation.");
 }
 
 std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_entity_op(SYM_DEFINITION inEntity) 
@@ -186,25 +186,25 @@ std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_
 	if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
 		auto _op_index = ctx.Create_Decl<AST::Declaration::COP::Entity_OpIndex>(tok);
 		_op_index->operatorType = EBinOpType::Index;
-		_op_index->parameter_name = ctx.tok_v.expect_id("PAR1331", "Expected index name binding", hint_index);
+		_op_index->parameter_name = ctx.tok_v.expect_id<22>("Expected index name binding", hint_index);
 		
 
 		if (ctx.tok_v.peek().type == TokTy::DOT && ctx.tok_v.peek(1).type == TokTy::DOT) {
 			_op_index->operatorType = EBinOpType::Slice;
 		}
 
-		ctx.tok_v.expect(TokTy::CLOSE_SQUARE, "PAR1332", "Expected closed index operator ']'", hint_index);
-		ctx.tok_v.expect(TokTy::ARROW, "PAR1333", "Expected explicit return type '-> T'", hint_index);
+		ctx.tok_v.expect<23>(TokTy::CLOSE_SQUARE, "Expected closed index operator ']'", hint_index);
+		ctx.tok_v.expect<24>(TokTy::ARROW, "Expected explicit return type '-> T'", hint_index);
 
 		// return type expected for index operator 
-		ctx.tok_v.expect(TokTy::ARROW, "PAR1332", "Expected return definition '-> T' after index operator '[]' overload.", hint_index);
+		ctx.tok_v.expect<25>(TokTy::ARROW, "Expected return definition '-> T' after index operator '[]' overload.", hint_index);
 
 		_op_index->return_type = ctx.p_type->parse_type();
 
 		if (auto ptr = dynamic_cast<AST::AType_Reference*>(_op_index->return_type.get())
 			; _op_index->operatorType == EBinOpType::Slice 
 			&& ptr->id.name == "Slice") {
-			ctx.tok_v.expect_id("PAR1334", "Expected type 'Slice<T>' after a range-based index operator.", hint_index);
+			ctx.tok_v.expect_id<26>("Expected type 'Slice<T>' after a range-based index operator.", hint_index);
 		}
 
 		entity_op = _op_index;
@@ -212,16 +212,16 @@ std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_
 	// other operator case op + - / * ...
 	else {
 		auto _op = ctx.Create_Decl<AST::Declaration::COP::Entity_Op>(tok);
-		auto op_tok = ctx.tok_v.expect_any(kOperatorTokens, "PAR1333", "Expected operator in entity operator overloading.", hint);
+		auto op_tok = ctx.tok_v.expect_any<27>(kOperatorTokens, "Expected operator in entity operator overloading.", hint);
 		_op->operatorType = TokTy_to_EBinOpType(op_tok.type);
 
 		if (ctx.tok_v.check(TokTy::ARROW)) 
-			ctx.tok_v.add_error("PAR1332", "Unexpected retrun type definition '-> T' after a entity operator '" + EBinOpType_to_str(_op->operatorType) + "'.", hint);
+			ctx.tok_v.add_error<28>("Unexpected retrun type definition '-> T' after a entity operator '" + EBinOpType_to_str(_op->operatorType) + "'.", hint);
 
 		entity_op = _op;
 	}
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1334", "Expected start code block '{' after entity operator overloading.", hint);
+	ctx.tok_v.expect<29>(TokTy::OPEN_BRACE, "Expected start code block '{' after entity operator overloading.", hint);
 
 	entity_op->parent_entity = inEntity;
 
@@ -265,11 +265,11 @@ std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP:
 		cast->target = std::move(id);
 	}
 
-	ctx.tok_v.expect(TokTy::AS, "PAR1340", "Expected cast linker 'as' after casting source.", hint);
+	ctx.tok_v.expect<30>(TokTy::AS, "Expected cast linker 'as' after casting source.", hint);
 
 	if (ctx.tok_v.match(TokTy::SELF)) {
 		if (cast->isSourceSelf) {
-			ctx.tok_v.add_error("PAR1341", "Expected other type than 'self' in target cast after 'self' in source cast, cast can't be with himself.", hint);
+			ctx.tok_v.add_error<31>("Expected other type than 'self' in target cast after 'self' in source cast, cast can't be with himself.", hint);
 			return nullptr;
 		}
 
@@ -278,7 +278,7 @@ std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP:
 	}
 	else {
 		if (!cast->isSourceSelf) {
-			ctx.tok_v.add_error("PAR1342", "Expected 'self' in target cast after '" + cast->source->debug_str() + "' in source cast.\n  Cast can't be extern to the concerned entity.", hint);
+			ctx.tok_v.add_error<32>("Expected 'self' in target cast after '" + cast->source->debug_str() + "' in source cast.\n  Cast can't be extern to the concerned entity.", hint);
 			return nullptr;
 		}
 
@@ -286,7 +286,7 @@ std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP:
 		cast->target = std::move(id);
 	}
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1343", "Expected start code block '{' after casting definition.", hint);
+	ctx.tok_v.expect<33>(TokTy::OPEN_BRACE, "Expected start code block '{' after casting definition.", hint);
 
 	cast->codeblock = ctx.p_loc->code_block_instruction();
 
@@ -321,10 +321,10 @@ std::shared_ptr<AST::Declaration::COP::System> PAR::Parser_Declaration_COP::syst
 	auto sys_sym = ctx.m_sym->add_decl(system);
 	bool isNoCompUsed = true;
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1141", "Expected start code block '{' after system declaration.", hint);
+	ctx.tok_v.expect<34>(TokTy::OPEN_BRACE, "Expected start code block '{' after system declaration.", hint);
 
 	while (!ctx.tok_v.is_end()) {
-		ctx.tok_v.expect(TokTy::WITH, "PAR1142", "Expected behaviour block 'with' in system code block.", hint);
+		ctx.tok_v.expect<35>(TokTy::WITH, "Expected behaviour block 'with' in system code block.", hint);
 
 		auto sys_case = _system_case();
 		sys_case->parent = sys_sym;
@@ -333,7 +333,7 @@ std::shared_ptr<AST::Declaration::COP::System> PAR::Parser_Declaration_COP::syst
 
 		if (ctx.tok_v.check(TokTy::WITH)) continue;
 		if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
-		ctx.tok_v.add_error("PAR1143",
+		ctx.tok_v.add_error<36>(
 			"Expected behaviour block 'with' in system code block.",
 			hint);
 	}
@@ -341,7 +341,7 @@ std::shared_ptr<AST::Declaration::COP::System> PAR::Parser_Declaration_COP::syst
 	// pre semantic checking
 	// system form is useful or a function is prefered ? (case of no components specifed)
 	if (isNoCompUsed) {
-		ctx.tok_v.add_error_tok(system->_token, "PAR1144",
+		ctx.tok_v.add_error_tok<37>(system->_token,
 			"Expected function instead of system given the behaviour of the code block: no component specified in any where statement.",
 			hint);
 	}
@@ -367,9 +367,9 @@ std::shared_ptr<AST::Declaration::COP::System_Case> PAR::Parser_Declaration_COP:
 		while (!ctx.tok_v.is_end()) {
 			auto bind = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek());
 			bind->id = ctx.p_ref->identifier();
-			ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1150", "Expected start binding '(' after component name pattern.", hint);
+			ctx.tok_v.expect<38>(TokTy::OPEN_PAREN, "Expected start binding '(' after component name pattern.", hint);
 			bind->id = ctx.p_ref->identifier(true);
-			ctx.tok_v.expect(TokTy::OPEN_PAREN, "PAR1150", "Expected end binding ')' after component name pattern.", hint);
+			ctx.tok_v.expect<39>(TokTy::OPEN_PAREN, "Expected end binding ')' after component name pattern.", hint);
 
 			ctx.m_sym->add_decl(bind);
 			sys_case->bindings.push_back(bind);

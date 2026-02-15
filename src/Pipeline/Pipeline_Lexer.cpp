@@ -1,28 +1,25 @@
 #include "Pipeline_Lexer.hpp"
 
 #include <iostream>
+#include <chrono>
 
-#include "Pipeline.hpp"
 #include "Lexer/Lexer.hpp"
 #include "Globals.hpp"
 
 
-namespace {
-
-std::optional<std::vector<std::vector<Token>>> lexer_pass(const FileSystemOut &fs_out) {
-	std::vector<std::vector<Token>> lexs;
+bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::vector<std::tuple<std::string, std::vector<std::string>>> lexErrors;
 	
 	std::chrono::duration<double> final_duration;
 	size_t final_toks = 0;
 	
 	size_t path_count = 0;
-	for (const auto& str_file: fs_out.files_str) {
-		Lexer lexer(str_file, fs_out.files_paths[path_count], fs_out.files_lines[path_count]);
+	for (auto &scr_info: scr_infos) {
+		Lexer lexer(*scr_info.get());
 		if (in_binding_compilation) std::cout << "[EMBinder] ";
 		std::cout << "[lex]";
-        std::cout << color_CYAN " [" << path_count + 1 << "/" << fs_out.files_str.size() << "] " color_RESET;
-        std::cout << color_MAGENTA << fs_out.files_paths[path_count] << color_RESET << "... " << std::flush;
+        std::cout << color_CYAN " [" << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
+        std::cout << color_MAGENTA << scr_info->file_path << color_RESET << "... " << std::flush;
 
 
 		auto start = std::chrono::high_resolution_clock::now();
@@ -30,20 +27,18 @@ std::optional<std::vector<std::vector<Token>>> lexer_pass(const FileSystemOut &f
 		auto end = std::chrono::high_resolution_clock::now();
 		double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-		lexs.push_back(lexer.tokens);
-
 		if (!lexer.errors.empty()) {
-			lexErrors.push_back({ fs_out.files_paths[path_count].filename().string(), lexer.errors});
+			lexErrors.push_back({ scr_info->name, lexer.errors});
 			std::cout << color_RED << "ERR " << color_YELLOW << milli << " ms" << color_RESET << std::endl;
 		}
 		else {
 			std::cout << color_GREEN << "OK " << color_YELLOW << milli << " ms" << color_RESET;
-			std::cout << color_CYAN " (" << lexer.tokens.size() << " tokens)" color_RESET << std::endl;
+			std::cout << color_CYAN " (" << scr_info->tokens.size() << " tokens)" color_RESET << std::endl;
 		}
 
 		path_count++;
 		final_duration += end - start;
-		final_toks += lexer.tokens.size();
+		final_toks += scr_info->tokens.size();
 	}
 
 
@@ -58,7 +53,7 @@ std::optional<std::vector<std::vector<Token>>> lexer_pass(const FileSystemOut &f
 		}
 
 		std::cerr << COMP_ABORT;
-		return std::nullopt;
+		return false;
 	}
 
 	double milli = std::chrono::duration<double, std::milli>(final_duration).count();
@@ -69,30 +64,5 @@ std::optional<std::vector<std::vector<Token>>> lexer_pass(const FileSystemOut &f
 		" | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
 	std::cout << std::endl;
 
-	return lexs;
-}
-
-}
-
-
-
-std::optional<PipelineScripts*> pipeline_start_lexer(const FileSystemOut &fs_out) {
-    auto tokens_out = lexer_pass(fs_out);
-	if (!tokens_out.has_value()) return std::nullopt;
-	std::vector<std::vector<Token>> lexs = tokens_out.value();
-
-	// build scrInfos to store all necessary data
-	std::vector<std::shared_ptr<ScriptInfo>> scrInfos;
-	scrInfos.reserve(lexs.size());
-	for (size_t i = 0; i < lexs.size(); i++) {
-		std::filesystem::path f(fs_out.files_paths[i]);
-		std::shared_ptr<ScriptInfo> info = std::make_shared<ScriptInfo>(f.filename().string());
-		info->tokens = lexs[i];
-		info->src_lines = fs_out.files_lines[i];
-		info->file_path = fs_out.files_paths[i];
-
-		scrInfos.push_back(info);
-	}
-	
-    return new PipelineScripts{scrInfos};
+	return true;
 }

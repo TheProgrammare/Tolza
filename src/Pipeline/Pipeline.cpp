@@ -55,10 +55,9 @@ bool start_compilation(const std::string& target_file) {
 	if (in_binding_compilation) std::cout << "[EMBinder] ";
 	std::cout << color_BLUE "[build] [1/9] File system begins" color_RESET << std::endl;
 
-	auto out_fs = pipeline_start_filesystem(target_file);
-	if (!out_fs) return false;
+	auto scr_infos = pipeline_start_filesystem(target_file);
 
-	if (out_fs->files_paths.empty()) {
+	if (scr_infos.empty()) {
 		if (in_binding_compilation) {
 			std::cout << color_BLUE "[EMBinder] [build] [info] no files found at the source folder path: " color_RESET << target_file << "\n"; 
 			std::cout << color_BLUE "[EMBinder] [build] [info] no sub-compilation need without any file binding" << "\n";
@@ -74,23 +73,22 @@ bool start_compilation(const std::string& target_file) {
 
 	if (in_binding_compilation) std::cout << "[EMBinder] ";
 	std::cout << color_BLUE "[build] [2/9] Lexer begins" color_RESET << std::endl;
-	auto files_info = pipeline_start_lexer(out_fs.value());
-	if (!files_info) return false;
+	if (!pipeline_start_lexer(scr_infos)) return false;
 	
 
 	if (in_binding_compilation) std::cout << color_BLUE "[EMBinder] ";
 	std::cout << color_BLUE "[build] [3/9] Preprocessor begins" color_RESET << std::endl;
-	if (!pipeline_start_preprocessor(files_info.value())) return false;
+	if (!pipeline_start_preprocessor(scr_infos)) return false;
 
 	if (in_binding_compilation) std::cout << color_BLUE "[EMBinder] ";
 	std::cout << color_BLUE "[build] [4/9] Parser begins" color_RESET << std::endl;
 	// parsing tokens
-	if (!pipeline_start_parser(files_info.value())) return false;
+	if (!pipeline_start_parser(scr_infos)) return false;
 
 	if (DOT_PRINT) {
 		if (in_binding_compilation) std::cout << color_BLUE "[EMBinder] ";
  		std::cout << color_BLUE "[build] [debug] AST viewer begins" color_RESET << std::endl;
-		generate_AST_View(files_info.value());
+		generate_AST_View(scr_infos);
 	}
 	
 	// get binded scripts from bindings compilation
@@ -100,20 +98,20 @@ bool start_compilation(const std::string& target_file) {
 	// generate bindings
 	if (!in_binding_compilation) {
 		std::cout << color_BLUE "[build] [5/9] External Module Binder (EMBinder) begins" color_RESET << std::endl;
-		if (!pipeline_start_EMBinder(files_info.value())) 
+		if (!pipeline_start_EMBinder(scr_infos)) 
 			return false;
 	}
 	else {
-		bind_files_info = files_info.value()->scripts_infos;
+		bind_files_info = scr_infos;
 		// in binding generation
 		// return to the normal compilation with the bindings added
 		return true; // binding generation successful
 	}
 
 	// merge binds with user files
-	files_info.value()->scripts_infos.reserve(files_info.value()->scripts_infos.size() + bind_files_info.size());
+	scr_infos.reserve(scr_infos.size() + bind_files_info.size());
 	for (auto inf : bind_files_info) {
-		files_info.value()->scripts_infos.push_back(inf);
+		scr_infos.push_back(inf);
 	}
 
 	if (!bind_files_info.empty()) {
@@ -123,19 +121,19 @@ bool start_compilation(const std::string& target_file) {
 
 	std::cout << color_BLUE "[build] [6/9] Exportation begins\n" color_RESET;
 	// import and export modules (to have all symbols for the resolution)
-	if (!pipeline_start_exporter(files_info.value())) return false;
+	if (!pipeline_start_exporter(scr_infos)) return false;
 
 	std::cout << color_BLUE "[build] [7/9] Resolver begins\n" color_RESET;
 	// resolve symbols
-	if (!pipeline_start_resolvers(files_info.value())) return false;
+	if (!pipeline_start_resolvers(scr_infos)) return false;
 	
 	std::cout << color_BLUE "[build] [8/9] LLVM IR begins\n" color_RESET;
 	// generate LLVM IR code
-	if (!pipeline_start_LLVM_IR(files_info.value())) return false;
+	if (!pipeline_start_LLVM_IR(scr_infos)) return false;
 	
 	std::cout << color_BLUE "[build] [9/9] Linker begins\n" color_RESET;
 	// link data
-	if (!pipeline_start_linker(files_info.value())) return false;
+	if (!pipeline_start_linker(scr_infos)) return false;
 	
 	std::cout << color_BLUE "[build] Compilation finish successfully !\n" color_RESET;
 

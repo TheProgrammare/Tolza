@@ -44,6 +44,47 @@ inline void fmt_template(std::string& templateStr, const std::vector<std::string
     }
 }
 
+enum class EPhase { 
+	filesystem, lexer, preprosessor, 
+	parser, embinder, 
+	resolver_symbol, resolver_type, resolver_semantic, 
+	llvmir, linker 
+};
+
+[[nodiscard]]
+inline std::string Phase_to_code(EPhase phase)
+{
+    switch (phase) {
+    case EPhase::filesystem:         return "FSYS";
+    case EPhase::lexer:              return "LEXE";
+    case EPhase::preprosessor:       return "PREP";
+    case EPhase::parser:             return "PARS";
+    case EPhase::embinder:           return "EMBI";
+    case EPhase::resolver_symbol:    return "SYMB";
+    case EPhase::resolver_type:      return "TYPE";
+    case EPhase::resolver_semantic:  return "SEMA";
+    case EPhase::llvmir:             return "LLVM";
+    case EPhase::linker:             return "LINK";
+    }
+}
+
+[[nodiscard]]
+inline std::string Phase_to_str(EPhase phase)
+{
+    switch (phase) {
+    case EPhase::filesystem:         return "file system";
+    case EPhase::lexer:              return "lexer";
+    case EPhase::preprosessor:       return "preprocessor";
+    case EPhase::parser:             return "parser";
+    case EPhase::embinder:           return "external module binder";
+    case EPhase::resolver_symbol:    return "resolver symbol";
+    case EPhase::resolver_type:      return "resolver type";
+    case EPhase::resolver_semantic:  return "resolver semantic";
+    case EPhase::llvmir:             return "LLVM IR";
+    case EPhase::linker:             return "linker";
+    }
+}
+
 
 #define color_RESET   "\033[0m"
 #define color_BLACK   "\033[30m"      /* Black */

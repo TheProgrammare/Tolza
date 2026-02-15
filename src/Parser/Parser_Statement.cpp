@@ -40,7 +40,7 @@ std::unique_ptr<AST::Node> PAR::Parser_Statement::parse_statement(bool is_silent
 	}
 
 	if (!is_silent_error)
-		ctx.tok_v.add_error("PAR1444",
+		ctx.tok_v.add_error<116>(
 			"Unexpected '" + ctx.tok_v.peek().val + "' keyword type (" + ctx.tok_v.peek().val + ") not allowed in function statement.",
 			"you can define in functions: variable, entity, enum, safe cast, if, else, do, while, match, break, continue, return");
 	return nullptr;
@@ -134,7 +134,7 @@ std::unique_ptr<AST::Statement::For> PAR::Parser_Statement::for_statement() {
 		}
 	}
 
-	ctx.tok_v.expect(TokTy::IN, "PAR1292", "Expected in keyword 'in' after for identifier.", hint);
+	ctx.tok_v.expect<117>(TokTy::IN, "Expected in keyword 'in' after for identifier.", hint);
 
 	forState->src = ctx.p_expr->parse_expression();
 
@@ -185,14 +185,13 @@ std::unique_ptr<AST::Statement::While> PAR::Parser_Statement::while_statement() 
 
 		flow->codeblock = ctx.p_loc->code_block_instruction();
 
-		ctx.tok_v.expect(TokTy::WHILE, "PAR1312", "Expected while keyword after do statement.", do_while_hint);
+		ctx.tok_v.expect<118>(TokTy::WHILE, "Expected while keyword after do statement.", do_while_hint);
 
 		flow->evaluator = ctx.p_loc->parse_evaluator(nullptr);
 
 		ctx.tok_v.match(TokTy::SEMICOLON);
 	}
-	else ctx.tok_v.add_error(
-		"PAR1313",
+	else ctx.tok_v.add_error<119>(
 		"Expected do or while keyword!",
 		do_while_hint);
 
@@ -219,16 +218,16 @@ std::unique_ptr<AST::Statement::Match> PAR::Parser_Statement::match_statement() 
 
 	match->base = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
 
-	ctx.tok_v.expect(TokTy::OPEN_BRACE, "PAR1320", "Expected start code block '{' after match defintion.", hint);
+	ctx.tok_v.expect<120>(TokTy::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
 	bool otherDefine = false;
 
 	// check all cases
 	while (!ctx.tok_v.is_end()) {
-		if (otherDefine) ctx.tok_v.add_error("PAR1321", "Expected end match '}' after the other '_ =>' case definition.", hint);
+		if (otherDefine) ctx.tok_v.add_error<121>("Expected end match '}' after the other '_ =>' case definition.", hint);
 
 		if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
 			if (match->cases.empty()) { 
-				ctx.tok_v.add_error("PAR1322", "Match case without any case defined", hint);
+				ctx.tok_v.add_error<122>("Match case without any case defined", hint);
 			}
 			break;
 		}
@@ -265,23 +264,11 @@ std::unique_ptr<AST::Statement::GoTo> PAR::Parser_Statement::goto_statement()
 {
 	ctx.tok_v.match(TokTy::GOTO);
 	auto goto_statement = ctx.Create_Node<AST::Statement::GoTo>(ctx.tok_v.peek(-1));
-	goto_statement->id = ctx.p_ref->identifier(true);
+	goto_statement->label = ctx.tok_v.expect_id<153>(
+		"Expected label identifier after 'goto' statement.", 
+		"define goto statement like: `goto name`.");
 	return goto_statement;
 }
-
-std::unique_ptr<AST::Statement::If_Ternary> PAR::Parser_Statement::ternary_if() {
-	auto ternaryIf = ctx.Create_Node<AST::Statement::If_Ternary>(ctx.tok_v.peek());
-
-	ternaryIf->evaluator = ctx.p_loc->parse_evaluator(nullptr);
-	ternaryIf->true_line = ctx.p_loc->code_block_instruction();
-
-	if (ctx.tok_v.match(TokTy::ELSE)) {
-		ternaryIf->false_line = ctx.p_loc->code_block_instruction();
-	}
-
-	return ternaryIf;
-}
-
 
 std::unique_ptr<AST::Statement::Return> PAR::Parser_Statement::return_flow() {
 	auto node = ctx.Create_Node<AST::Statement::Return>(ctx.tok_v.peek());
@@ -301,7 +288,7 @@ std::unique_ptr<AST::Statement::GoTo_Label> PAR::Parser_Statement::goto_label_st
 	ctx.tok_v.match(TokTy::GOTO_LABEL);
  	auto goto_label =  ctx.Create_Decl<AST::Statement::GoTo_Label>(ctx.tok_v.peek(-1));
 	goto_label->id = ctx.p_ref->identifier(true);
-	ctx.tok_v.expect(TokTy::COLON, "PAR1978", "Expected colon ':' after label name.", 
+	ctx.tok_v.expect<123>(TokTy::COLON, "Expected colon ':' after label name.", 
 		"define goto label like: `label my_label:`");
 	ctx.m_sym->add_decl(goto_label);
 	return std::unique_ptr<AST::Statement::GoTo_Label>(goto_label.get());

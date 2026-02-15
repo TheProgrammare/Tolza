@@ -1,7 +1,7 @@
 #include "ScriptInfo.hpp"
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Literal.hpp"
-#include "AST/AST_Reference.hpp"
+#include "AST/AST_Expression.hpp"
 
 void ScriptInfo::add_export(const ModuleExportation &exp)
 {
@@ -54,16 +54,16 @@ std::set<std::string> ScriptInfo::get_extern_languages()
 }
 
 
-Extern_Item::Kind AST_AReference_to_Extern_Item_Kind(const AST::AReference &n) 
+Extern_Item::Kind AST_AExpression_to_Extern_Item_Kind(const AST::AExpression &n) 
 {
-    if (dynamic_cast<const AST::Reference::Enum*>(&n))          return Extern_Item::Kind::Enum;
-    if (dynamic_cast<const AST::Reference::Call*>(&n))          return Extern_Item::Kind::Function;
-    if (dynamic_cast<const AST::Reference::Call_Pipe*>(&n))     return Extern_Item::Kind::Function;
-    if (dynamic_cast<const AST::AType_Reference*>(&n)) {
-        if (dynamic_cast<const AST::Literal::Component*>(&n))   return Extern_Item::Kind::Component;
-        if (dynamic_cast<const AST::Literal::Entity*>(&n))      return Extern_Item::Kind::Entity;
-        return Extern_Item::Kind::Type;
-    }
+    if (dynamic_cast<const AST::Expression::Enum*>(&n))         return Extern_Item::Kind::Enum;
+    if (dynamic_cast<const AST::Expression::Call*>(&n))         return Extern_Item::Kind::Function;
+    if (dynamic_cast<const AST::Expression::Call_Pipe*>(&n))    return Extern_Item::Kind::Function;
+    if (dynamic_cast<const AST::Literal::Component*>(&n))       return Extern_Item::Kind::Component;
+    if (dynamic_cast<const AST::Literal::Entity*>(&n))          return Extern_Item::Kind::Entity;
+    if (dynamic_cast<const AST::Expr_ID*>(&n))                  return Extern_Item::Kind::Global;
+    if (dynamic_cast<const AST::Expr_ID_Qualified*>(&n))        return Extern_Item::Kind::Global;
+    if (dynamic_cast<const AST::Expr_ID_Generic*>(&n))          return Extern_Item::Kind::Type;
 
     return Extern_Item::Kind::Global;
 }

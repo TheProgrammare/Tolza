@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <variant>
 
 #include "AST_Base.hpp"
 #include "AST_Forward.hpp"
@@ -10,7 +9,7 @@
 namespace AST {
 namespace Statement {
     
-struct If : public Node {
+struct If final : public Node {
     Evaluator evaluator;
     
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
@@ -23,20 +22,9 @@ struct If : public Node {
     std::string debug_str() const override { return "IF"; }
 };
 
-struct If_Ternary : public Node {
-    Evaluator evaluator;
-    std::unique_ptr<Node> true_line;
-    [[maybe_unused]]
-    std::unique_ptr<Node> false_line;
-
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "TER IF"; }
-};
-
-
 // for i in range {}
-struct For : public Node {
-    std::unique_ptr<Node> src;
+struct For final : public Node {
+    std::unique_ptr<AExpression> src;
 
     [[maybe_unused]]
     std::shared_ptr<Declaration::Local::Parameter> index;
@@ -54,7 +42,7 @@ struct For : public Node {
 };
 
 // loop {...}
-struct Loop : public Node {
+struct Loop final : public Node {
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -62,7 +50,7 @@ struct Loop : public Node {
 };
 
 // while condition {...}
-struct While : public Node {
+struct While final : public Node {
     bool isDo = false;
     Evaluator evaluator;
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
@@ -72,37 +60,38 @@ struct While : public Node {
 };
 
 // goto azerty
-struct GoTo : public AReference {
-    std::string debug_str() const override { return "GOTO[" + id.debug_str() + "]"; }
+struct GoTo final : public AExpression {
+    std::string label;
+    std::string debug_str() const override { return "GOTO \"" + label + "\""; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // label azerty:
-struct GoTo_Label : public ADeclaration {
+struct GoTo_Label final : public ADeclaration {
     void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "LABEL[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "LABEL[" + name + "]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Goto_Label; }
 };
 
 
 // return a, b, c;
-struct Return : public Node {
+struct Return final : public Node {
     [[maybe_unused]]
-    std::unique_ptr<Node> value;
+    std::unique_ptr<AExpression> value;
 
     std::string debug_str() const override { return "<inst> return"; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Break : public Node {
+struct Break final : public Node {
     std::string debug_str() const override { return "break"; }
  
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
-struct Continue : public Node {
+struct Continue final : public Node {
     std::string debug_str() const override { return "continue"; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -110,7 +99,7 @@ struct Continue : public Node {
 
 
 // constant/comparison then {}
-struct Match_Case : public Node {
+struct Match_Case final : public Node {
     Evaluator evaluator;
     std::unique_ptr<Declaration::Local::CodeBlock> codeblock;
 
@@ -120,8 +109,8 @@ struct Match_Case : public Node {
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
-struct Match : public Node {
-    std::shared_ptr<AReference> base;
+struct Match final : public Node {
+    std::shared_ptr<AExpression> base;
     std::vector<std::unique_ptr<Match_Case>> cases;
     [[maybe_unused]]
     std::unique_ptr<Match_Case> other_case;

@@ -36,11 +36,7 @@ bool AST::Generic::Use_Component::type_isValid(const AType &type) const
 bool AST::Generic::Have_Role::type_isValid(const AType &type) const
 {
     for (auto& comp : resolved_role_sym->components) {
-        if (auto ptr = dynamic_cast<const ID*>(&type)) {
-            if (auto ptr_comp = dynamic_cast<const ID*>(comp.get())) {
-                if (&ptr != &ptr_comp) return false;
-            }
-        }
+        if (comp->inferred_type == &type) return true;
     }
-    return true;
+    return false;
 }

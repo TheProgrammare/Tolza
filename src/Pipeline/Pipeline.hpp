@@ -17,15 +17,8 @@
 
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <string>
 
-#include "ScriptInfo.hpp"
-
-struct PipelineScripts {
-	std::vector<std::shared_ptr<ScriptInfo>> scripts_infos;
-};
 
 bool start_compilation(const std::string &target_file);
 

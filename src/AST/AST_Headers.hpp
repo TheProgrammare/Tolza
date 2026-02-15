@@ -10,6 +10,6 @@
 #include "AST_Literal.hpp"
 #include "AST_Memory.hpp"
 #include "AST_Operation.hpp"
-#include "AST_Reference.hpp"
+#include "AST_Expression.hpp"
 #include "AST_Statement.hpp"
 #include "AST_Type.hpp"

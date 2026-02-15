@@ -10,19 +10,18 @@
 #include "Globals.hpp"
 #include "Compilation.hpp"
 
-#include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
 #include "Visitor/Visitor_Codegen.hpp"
 
-bool pipeline_start_LLVM_IR(const PipelineScripts* pipe_scripts) {
+bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::vector<std::tuple<std::string, std::vector<std::string>>> llvmIRErrors;
 
 	std::filesystem::create_directories(LLVM_IR_DIR);
 
 	size_t count = 0;
-	for (auto &scr_info : pipe_scripts->scripts_infos) {
+	for (auto &scr_info : scr_infos) {
 		std::cout << "[LLVM IR]";
-        std::cout << color_CYAN " [" << ++count << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
+        std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET;
         std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 		auto start = std::chrono::high_resolution_clock::now();

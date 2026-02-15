@@ -47,7 +47,7 @@ bool AST::Declaration::COP::Entity::contains_cast(const AType& target_type, bool
 bool AST::Declaration::COP::Entity::contains_comp(const AST::Declaration::COP::Component& target_comp) const {
     for (auto& comp : comps) {
         if (!comp) return false;
-        if (comp->id == target_comp.id) return true;
+        if (comp->name == target_comp.name) return true;
     }
     return false;
 }

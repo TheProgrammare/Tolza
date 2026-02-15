@@ -1,5 +1,6 @@
 #include "Pipeline_EMBinder.hpp"
 
+#include <memory>
 #include <vector>
 #include <string>
 #include <chrono>
@@ -84,9 +85,9 @@ bool generate_binds(const std::vector<Bind_Package> &binds)
 }
 
 
-bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
+bool pipeline_start_EMBinder(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos) {
 	std::vector<Bind_Package> binds;
-	binds.reserve(pipe_scripts->scripts_infos.size());
+	binds.reserve(scr_infos.size());
 
 	auto start = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> final_duration;
@@ -95,9 +96,9 @@ bool pipeline_start_EMBinder(const PipelineScripts *pipe_scripts) {
 	// affect all symbols imported
 	// according to the imported module name
 	size_t count = 1;
-	for (auto& scr_info : pipe_scripts->scripts_infos) {
+	for (auto& scr_info : scr_infos) {
 		std::cout << "[EMBinder]";
-        std::cout << color_CYAN " [" << count++ << "/" << pipe_scripts->scripts_infos.size() << "] " color_RESET;
+        std::cout << color_CYAN " [" << count++ << "/" << scr_infos.size() << "] " color_RESET;
         std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
 		std::filesystem::create_directories(BINDING_DIR);

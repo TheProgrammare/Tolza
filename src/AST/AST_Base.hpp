@@ -30,9 +30,11 @@ struct Visitor_Base;
 
 struct ScriptInfo;
 struct Symbol_Data;
+struct AType;
 
 using SYM_DEFINITION = 
     std::weak_ptr<Symbol_Data>;
+
 
 
 inline std::string mangle_id(const std::string& inId) {
@@ -67,46 +69,69 @@ struct Node {
     
 };
 
-std::string make_error(const Node& n, const ScriptInfo& script, const std::string& code, const std::string& err, const std::string& hint);
-
 inline EPassMode get_defaultParamPassmode(AST::AType &node);
 
 
-// for every node who contains a value coded
-struct ALiteral : virtual Node {
-    virtual ~ALiteral() = default;
-};
 
 struct AType : virtual Node {
     bool type_isOptional = false;
     bool type_isConst = false;
     bool type_isVolatile = false;
-
+    
     virtual ~AType() = default;
 };
 
-struct ID {
+using INFERRED_TYPE = 
+    AType*;
 
-    explicit ID(const std::string &name) 
-        : name(std::move(name)) {}
-    ID(const std::vector<std::string>& p_path, const std::string &name) 
-        : name(std::move(name)) {
-            path = p_path;
-        }
+struct ADeclaration : virtual Node {
+    std::string name;
 
-    ID() = default;
-    ID(const ID&) = default;
-    ID& operator=(const ID&) = default;
-    ID(ID&&) = default;
-    ID& operator=(ID&&) = default;
-
-    AST::Node *parent = nullptr;
+    SYM_DEFINITION symbol;
     
+    ADeclaration(const ADeclaration&) = delete;
+    ADeclaration& operator=(const ADeclaration&) = delete;
+    ADeclaration(ADeclaration&&) = delete;
+    ADeclaration& operator=(ADeclaration&&) = delete;
+    
+    virtual ESymbolType get_symbol_type() const = 0;
+
+    virtual ~ADeclaration() = default;
+};
+
+struct ALocal : ADeclaration {
+    virtual ~ALocal() = default;
+};
+
+struct AExpression : virtual Node {
+    INFERRED_TYPE inferred_type;
+    virtual ~AExpression() = default;
+};
+
+// for every node who contains a value coded
+struct ALiteral : virtual AExpression {
+    virtual ~ALiteral() = default;
+};
+
+struct Expr_ID final : virtual AExpression {
+    std::string name;
+
+     explicit Expr_ID(const std::string &_name) 
+        : name(_name) 
+    {}
+
+    std::string debug_str() const override { return "identifier \"" + name + "\""; }
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+};
+
+struct Expr_ID_Qualified final : virtual AExpression {
     std::string name;
     std::vector<std::string> path;
 
-    // number of path segment before name
-    [[maybe_unused]] size_t depth = 0;
+    Expr_ID_Qualified(const std::vector<std::string>& p_path, const std::string &_name) 
+        : name(_name) {
+        path = p_path;
+    }
 
     // e.g. ::math::add()
     bool qualification_at_root_scope = false;
@@ -115,78 +140,34 @@ struct ID {
     // e.g. self::math::add()
     bool qualification_at_current_scope = false;
 
-    bool operator==(const ID& other) const noexcept {
+    bool operator==(const Expr_ID_Qualified& other) const noexcept {
         return mangle_local_name() == other.mangle_local_name();
     }
 
     [[nodiscard]]
     bool is_qualified_id() const { return !path.empty(); }
 
-    [[nodiscard]] std::string debug_str() const;
+    [[nodiscard]] std::string debug_str() const override;
     [[nodiscard]] virtual std::string mangle_path() const;
     [[nodiscard]] virtual std::string mangle_local_name() const;
     [[nodiscard]] virtual std::string mangle_absolute_name() const;
     [[nodiscard]] virtual std::string mangle_name() const { return mangle_id(name); }
-};
 
-struct ADeclaration : virtual Node {
-    ID id;
-
-    ADeclaration(const ADeclaration&) = delete;
-    ADeclaration& operator=(const ADeclaration&) = delete;
-    ADeclaration(ADeclaration&&) = delete;
-    ADeclaration& operator=(ADeclaration&&) = delete;
-
-    [[nodiscard]] virtual ESymbolType get_symbol_type() const = 0;
-
-protected:
-    ADeclaration() : id("") {}
-    explicit ADeclaration(const std::string& name) : id(name) {}
-    ADeclaration(const std::vector<std::string>& path, const std::string& name) :
-            id(path, name) {}
-};
-
-struct ALocal : ADeclaration {
-};
-
-// for every node who need a symbolic resolution
-struct AReference : virtual Node {
-    ID id;
-    SYM_DEFINITION definition;
-
-    AReference() : id("") {}
-    explicit AReference(const std::string& name) : id(name) {}
-    AReference(const std::vector<std::string>& path, const std::string& name) :
-            id(path, name) {}
-
-    std::string debug_str() const override { return "<ref> id[" + id.debug_str() + "]"; };
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // for every node who need a type resolution
-struct AType_Reference : public AReference, AType {
+struct Expr_ID_Generic final : public AExpression {
+    std::unique_ptr<AExpression> base_name;
     [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
-    AType_Reference() : AReference("") {}
-    explicit AType_Reference(const std::string& name) : AReference(name) {}
-    AType_Reference(const std::vector<std::string>& path, const std::string& name) :
-        AReference(path, name) {}
-
-    std::string debug_str() const override {
-        if (!gen_args.empty()) {
-            std::string out = "<type> id[" + id.debug_str() + "]<";
-            for (auto &arg : gen_args)
-                out += id.debug_str() + ", ";
-            return out + ">";
-        }
-        return "<type> id[" + id.debug_str() + "]";
-    }
+    std::string debug_str() const override { return "identifier type"; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 
-struct Root : public Node {
+struct Root final : public Node {
     std::vector<std::shared_ptr<Node>> global_nodes;
 
     std::string debug_str() const override { return "root"; }
@@ -195,9 +176,5 @@ struct Root : public Node {
 };
 
 
-
-
 }
-
-
 

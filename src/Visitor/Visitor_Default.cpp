@@ -15,44 +15,6 @@
 #include "AST/AST_Statement.hpp"
 #include "AST/AST_Type.hpp"
 
-
-void Visitor_Default::error_add(const AST::Node& n, const std::string& errCode, const std::string& err, const std::string& hint)
-{
-	auto pos = n._token.span;
-	std::string errStr = Error_Text(pos.line, pos.col, pos.size, scrInfo.src_lines[pos.line - 1], errCode, err, hint, scrInfo.file_path).print_error();
-	errors.push_back(errStr);
-}
-
-void Visitor_Default::error_two_lines(const AST::Node &first, const std::string &first_f, const AST::Node &second, const std::string &second_f, const std::string &code, const std::string &msg, const std::string &hint)
-{
-	Error_Text first_error(
-		first._token.span.line, 
-		first._token.span.col,
-		first._token.span.size,
-		scrInfo.src_lines[first._token.span.line - 1],
-		code,
-		msg,
-		hint,
-		first_f);
-	Error_Text second_error(
-		second._token.span.line, 
-		second._token.span.col,
-		second._token.span.size,
-		scrInfo.src_lines[second._token.span.line - 1],
-		code,
-		msg,
-		hint,
-		second_f);
-	
-	std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
-	out += first_error.print_line() + color_RESET "\n";
-	out +="[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
-	out += second_error.print_line() + color_RESET "\n";
-
-	out += first_error.print_messages();
-	errors.push_back(out);
-}
-
 // ============ AST ============
 void Visitor_Default::visit(AST::Node &n)
 {
@@ -631,4 +593,14 @@ void Visitor_Default::visit(AST::Memory::GetBits &n)
 void Visitor_Default::visit(AST::Memory::Drop &n)
 {
 	n.target->accept(*this);
+}
+void Visitor_Default::visit(AST::Memory::Ptr_At &n)
+{
+	n.target->accept(*this);
+	n.index->accept(*this);
+}
+void Visitor_Default::visit(AST::Memory::Ptr_Offset &n)
+{
+	n.target->accept(*this);
+	n.offset->accept(*this);
 }

@@ -35,7 +35,7 @@ struct Enum : public ADeclaration {
     size_t discriminant_max = 0;
     [[maybe_unused]] EPrimType discriminant_int_type = EPrimType::u8;
 
-    std::string debug_str() const override { return "<type> enum[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration enum \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Enum; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -44,7 +44,7 @@ struct Enum : public ADeclaration {
 struct Flag : public ADeclaration {
     std::vector<std::string> fields;
 
-    std::string debug_str() const override { return "<type> flag[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration flag \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Flag; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -54,7 +54,7 @@ struct Flag : public ADeclaration {
 struct Mod : public ADeclaration {
     std::vector<std::shared_ptr<Node>> elements;
 
-    std::string debug_str() const override { return "<def> mod[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration mod \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Module; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -63,7 +63,7 @@ struct Mod : public ADeclaration {
 struct Export : public Mod {
     std::shared_ptr<ModuleExportation> mod_exp_sym;
 
-    std::string debug_str() const override { return "<def> export[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration export \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Export; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -80,7 +80,7 @@ struct Function : public ADeclaration, ICallable {
     bool isExtern = false;
     std::string extern_call_convention;
 
-    std::string debug_str() const override { return "fn[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration fn \"" + name + "\""; }
     Type::Function_Proto* get_signature() override { return prototype.get(); };
     ESymbolType get_symbol_type() const override { return ESymbolType::Function; }
     
@@ -92,7 +92,7 @@ struct Function : public ADeclaration, ICallable {
 struct Type_Alias : public ADeclaration {
     std::unique_ptr<AType> type;
 
-    std::string debug_str() const override { return "alias[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration typealias \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Typealias; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -104,7 +104,7 @@ struct Generic : public ADeclaration {
     std::set<std::string> targetGenericSymbols;		// generic typenames
     std::vector<std::unique_ptr<AST::Generic::IGenCond>> conditions;			// generic conditions
 
-    std::string debug_str() const override { return "<type> gen[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration generic \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Generic; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -114,23 +114,23 @@ struct Generic : public ADeclaration {
 
 // let/var a: ptr'type#tableSize = expression;
 struct Global : public ADeclaration {
-    std::unique_ptr<AType> type;											// infered if nullptr
+    std::unique_ptr<AType> type;									// infered if nullptr
     EAssignmentType assignment = EAssignmentType::MoveSemantic;		// assign type
-    std::unique_ptr<Node> expression;									// affectation
+    std::unique_ptr<Node> expression;								// affectation
     EVariableKind kind = EVariableKind::Const;
 
     bool isExtern = false;
 
     std::string debug_str() const override { 
         std::string out;
-        out += "<global> ";
+        out += "declaration global ";
         switch (kind) {
             case EVariableKind::Const: out += "const "; break; 
             case EVariableKind::Let: out += "let "; break;
             case EVariableKind::Var: out += "var "; break;
             case EVariableKind::NONE: return "NO VAR KIND";
         }
-        out += id.debug_str();
+        out += name;
         return out;
     }
     ESymbolType get_symbol_type() const override { return ESymbolType::Global; }

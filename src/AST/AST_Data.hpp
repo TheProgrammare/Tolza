@@ -149,6 +149,7 @@ enum class EPtrType {
 enum class EVariableKind { NONE, Const, Let, Var };
 
 [[nodiscard]] EVariableKind TokTy_to_EVariableKind(TokTy tok);
+[[nodiscard]] std::string EVariableKind_to_str(EVariableKind kind);
 
 
 enum class EAssignmentType { NONE, Copy, Clone, MoveSemantic };

@@ -15,11 +15,11 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	const std::string absolue_name = ref.id.mangle_absolute_name();
 
 	// get local symbol
-	if (auto sym = scrInfo.m_sym->find_symbol(name)) {
+	if (auto sym = scr_info.m_sym->find_symbol(name)) {
 		target_resolution = sym.value();
 		return sym.value();
 	}
-	else if (auto sym = scrInfo.m_sym->find_symbol(absolue_name)) {
+	else if (auto sym = scr_info.m_sym->find_symbol(absolue_name)) {
 		target_resolution = sym.value();
 		return sym.value();
 	}
@@ -27,7 +27,7 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	else if (!ref.id.path.empty()) {
 		const std::string supposed_import_name = ref.id.path[0];
 	
-		if (auto imp = scrInfo.get_import_module(supposed_import_name)) {
+		if (auto imp = scr_info.get_import_module(supposed_import_name)) {
 			for (auto &mod : imp->target_modules) {
 				if (auto sym = mod->m_sym->find_symbol(absolue_name)) {
 					target_resolution = sym.value();
@@ -38,7 +38,7 @@ std::shared_ptr<AST::ADeclaration> Visitor_Symbol::resolve_def(AST::AReference& 
 	}
 
 	if (!silentError)
-		error_add(ref, "SYM1000", "Symbol '" + ref.id.debug_str() + "' definition not found!", "");
+		error_add<152>(ref, "Symbol '" + ref.id.debug_str() + "' definition not found!", "");
 	
 	return nullptr;
 }

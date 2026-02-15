@@ -62,6 +62,7 @@ enum class ETokenType {
     // flag
     CAPA_REF, ADDR, CAPA_MOVE, VARIADIC, CAPA_MUT, CAPA_COPY, CAPA_CLONE,
     CAPA_REF_OF, VAL_OF, CAPA_MOVE_OF, CAPA_MUT_OF, CAPA_COPY_OF, CAPA_CLONE_OF,
+    SIZE_OF,
     ADDR_OF,
     MEM_DIST,
     SYSTEM, WITH, ON,
@@ -74,6 +75,7 @@ enum class ETokenType {
     TILDE,
     // memory keyword
     PTR, SPTR,  UPTR, WPTR,
+    PTR_AT, PTR_OFFSET,
     TICK, SELF,
     NEW, DEL, DROP,
     // structure
@@ -186,6 +188,7 @@ const std::map<std::string, ETokenType> kKeywords = {
     
     // pointers
     {"ptr", ETokenType::PTR}, {"std::shared_ptr", ETokenType::SPTR}, {"std::unique_ptr", ETokenType::UPTR}, {"std::weak_ptr", ETokenType::WPTR},
+    {"'at(", ETokenType::PTR_AT}, {"'offset(", ETokenType::PTR_OFFSET},
     {"new", ETokenType::NEW},
     {"del", ETokenType::DEL},
     {"drop", ETokenType::DROP},
@@ -206,6 +209,7 @@ const std::map<std::string, ETokenType> kKeywords = {
     // variable pass mode
     {"mut'", ETokenType::CAPA_MUT_OF},
     {"ref'", ETokenType::CAPA_REF_OF},
+    {"size'", ETokenType::SIZE_OF},
     {"val'", ETokenType::VAL_OF},
     {"addr'", ETokenType::ADDR_OF},
     {"move'", ETokenType::CAPA_MOVE_OF},

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <variant>
 #include <memory>
 
 #include "AST_Base.hpp"
@@ -14,10 +13,10 @@ struct Evaluator {
     EKind kind = EKind::None;
 
     std::unique_ptr<Declaration::Local::Pattern>    pattern;
-    std::unique_ptr<Node>                           condition;
+    std::unique_ptr<AExpression>                    condition;
 
-    Node* node() const {
-        if (kind == EKind::Pattern) return dynamic_cast<Node*>(pattern.get());
+    AExpression* node() const {
+        if (kind == EKind::Pattern) return dynamic_cast<AExpression*>(pattern.get());
         else return condition.get();
     }
 
@@ -27,7 +26,7 @@ struct Evaluator {
         : pattern(std::move(_pattern))
         , kind(EKind::Pattern) {}
     
-    Evaluator(std::unique_ptr<Node> _condition)
+    Evaluator(std::unique_ptr<AExpression> _condition)
         : condition(std::move(_condition))
         , kind(EKind::Condition) {}
 };

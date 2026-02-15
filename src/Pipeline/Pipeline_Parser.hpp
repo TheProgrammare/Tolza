@@ -1,6 +1,9 @@
 #pragma once
 
-struct PipelineScripts;
+#include <vector>
+#include <memory>
 
-bool pipeline_start_parser(const PipelineScripts *pipe_scripts);
+#include "ScriptInfo.hpp"
+
+bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos);
 

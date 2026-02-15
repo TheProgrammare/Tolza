@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include <functional>
-
 #include "Metacode.hpp"
 
 struct Token;
@@ -29,9 +27,9 @@ struct TokenViewer;
 
 struct Preprocessor {
 public:
-    Preprocessor(ScriptInfo *scr_info);
+    Preprocessor(ScriptInfo &scr_info);
 
-    ScriptInfo *scr_info = nullptr;
+    ScriptInfo &scr_info;
     META::MetablockManager* m_meta = nullptr;
     TokenViewer *tok_v = nullptr;
 

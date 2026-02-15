@@ -27,18 +27,11 @@ struct ScriptInfo;
 struct Visitor_Base {
 	virtual ~Visitor_Base() = default;
 	Visitor_Base() = delete;
-	Visitor_Base(ScriptInfo &scrInfo) : scrInfo(scrInfo) {}
+	Visitor_Base(ScriptInfo &_scr_info) : scr_info(_scr_info) {}
 
-	ScriptInfo &scrInfo;
+	ScriptInfo &scr_info;
 
 	std::vector<std::string> errors;
-
-	virtual void error_add(const AST::Node& n, 
-		const std::string& errCode, const std::string& err, const std::string& hint) {};
-	virtual void error_two_lines(
-		const AST::Node &first, const std::string &first_f, 
-		const AST::Node &second, const std::string &second_f, 
-		const std::string &code, const std::string &msg, const std::string &hint) {};
 
 	// ============ AST ============
 	virtual void visit(AST::Node &n) = 0;
@@ -47,8 +40,10 @@ struct Visitor_Base {
 	virtual void visit(AST::ALiteral &n) = 0;				
 	virtual void visit(AST::ADeclaration &n) = 0;			
 	virtual void visit(AST::ALocal&n) = 0;			
-	virtual void visit(AST::AReference &n) = 0;				
-	virtual void visit(AST::AType_Reference &n) = 0;			
+	virtual void visit(AST::AExpression &n) = 0;				
+	virtual void visit(AST::Expr_ID &n) = 0;				
+	virtual void visit(AST::Expr_ID_Qualified &n) = 0;				
+	virtual void visit(AST::Expr_ID_Generic &n) = 0;				
 
 	virtual void visit(AST::Root &n) = 0;
 
@@ -150,24 +145,24 @@ struct Visitor_Base {
 	virtual void visit(AST::Literal::Component &n) = 0;
 	virtual void visit(AST::Literal::Entity &n) = 0;
 
-	// ============ REFERENCE ============
-	virtual void visit(AST::Reference::Enum &n) = 0;
+	// ============ Expression ============
+	virtual void visit(AST::Expression::If_Ternary &n) = 0;				
+	virtual void visit(AST::Expression::Enum &n) = 0;
 
-	virtual void visit(AST::Reference::Member_Access &n) = 0;		
+	virtual void visit(AST::Expression::Member_Access &n) = 0;		
 
-	virtual void visit(AST::Reference::Self &n) = 0;
-	virtual void visit(AST::Reference::Other &n) = 0;
+	virtual void visit(AST::Expression::Self &n) = 0;
+	virtual void visit(AST::Expression::Other &n) = 0;
 
-	virtual void visit(AST::Reference::Call &n) = 0;
-	virtual void visit(AST::Reference::Call_Argument &n) = 0;			
-	virtual void visit(AST::Reference::Call_System &n) = 0;				
-	virtual void visit(AST::Reference::Call_Pipe &n) = 0;				
+	virtual void visit(AST::Expression::Call &n) = 0;
+	virtual void visit(AST::Expression::Call_Argument &n) = 0;			
+	virtual void visit(AST::Expression::Call_System &n) = 0;				
+	virtual void visit(AST::Expression::Call_Pipe &n) = 0;				
 
-	virtual void visit(AST::Reference::Table_Access &n) = 0;				
+	virtual void visit(AST::Expression::Table_Access &n) = 0;				
 
 	// ============ STATEMENT ============
 	virtual void visit(AST::Statement::If &n) = 0;	
-	virtual void visit(AST::Statement::If_Ternary &n) = 0;				
 
 	virtual void visit(AST::Statement::For &n) = 0;	
 	virtual void visit(AST::Statement::Loop &n) = 0;
@@ -203,4 +198,6 @@ struct Visitor_Base {
 	virtual void visit(AST::Memory::Align &n) = 0;
 	virtual void visit(AST::Memory::GetBits &n) = 0;
 	virtual void visit(AST::Memory::Drop &n) = 0;
+	virtual void visit(AST::Memory::Ptr_At &n) = 0;
+	virtual void visit(AST::Memory::Ptr_Offset &n) = 0;
 };

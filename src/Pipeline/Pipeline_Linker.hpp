@@ -1,5 +1,9 @@
 #pragma once
 
-struct PipelineScripts;
+#include <memory>
+#include <vector>
 
-bool pipeline_start_linker(const PipelineScripts *pipe_scripts);
+#include "ScriptInfo.hpp"
+
+
+bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos);

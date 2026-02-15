@@ -18,8 +18,8 @@ namespace PAR {
 
         [[nodiscard]] AST::Declaration::Local::Pattern_Element                          pattern_mapping(ECapability capa);
 
-        [[nodiscard]] AST::Evaluator										            parse_evaluator(std::shared_ptr<AST::AReference> comparison_ref);
-        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern>                 parse_pattern(std::shared_ptr<AST::AReference> comparison_ref);
+        [[nodiscard]] AST::Evaluator										            parse_evaluator(std::shared_ptr<AST::AExpression> comparison_ref);
+        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern>                 parse_pattern(std::shared_ptr<AST::AExpression> comparison_ref);
 
         [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable>				variable();
 		[[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable_Unpack>		    variable_unpack();
@@ -31,10 +31,10 @@ namespace PAR {
         [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>>	parameters();
 
 
-        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Component> 		component_pattern(ECapability capa, AST::ID &comp_id, std::shared_ptr<AST::AReference> comparison_ref);
-        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Entity> 			entity_pattern(ECapability capa, AST::ID &entity_id, std::shared_ptr<AST::AReference> comparison_ref);
-        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Tuple> 			tuple_pattern(ECapability capa, std::shared_ptr<AST::AReference> comparison_ref);
-        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Enum>            enum_pattern(ECapability capa, AST::ID &enum_id, std::shared_ptr<AST::AReference> comparison_ref);
+        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Component> 		component_pattern(ECapability capa, AST::ID &comp_id, std::shared_ptr<AST::AExpression> comparison_ref);
+        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Entity> 			entity_pattern(ECapability capa, AST::ID &entity_id, std::shared_ptr<AST::AExpression> comparison_ref);
+        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Tuple> 			tuple_pattern(ECapability capa, std::shared_ptr<AST::AExpression> comparison_ref);
+        [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Enum>            enum_pattern(ECapability capa, AST::ID &enum_id, std::shared_ptr<AST::AExpression> comparison_ref);
 
 
         PAR::Parser_Context& ctx;

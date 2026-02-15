@@ -9,6 +9,5 @@
 #include "Parser_Literal.hpp"
 #include "Parser_Memory.hpp"
 #include "Parser_Operator.hpp"
-#include "Parser_Reference.hpp"
 #include "Parser_Statement.hpp"
 #include "Parser_Type.hpp"

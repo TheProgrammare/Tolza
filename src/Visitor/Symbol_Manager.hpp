@@ -13,11 +13,6 @@ struct ScriptInfo;
 enum class EScopeType;
 enum class ESymbolType;
 
-namespace AST {
-	struct ADeclaration;
-	struct AReference;
-}
-
 struct ScopeData {
 	std::string name;
 	EScopeType type;
@@ -38,9 +33,9 @@ struct Symbol_Data {
 };
 
 struct Symbols_Manager {
-	Symbols_Manager(ScriptInfo *scrInfo) : scrInfo(scrInfo) {}
+	Symbols_Manager(ScriptInfo &_scr_info) : scr_info(_scr_info) {}
 
-	ScriptInfo *scrInfo = nullptr;
+	ScriptInfo &scr_info;
 	
 	std::vector<std::shared_ptr<Symbol_Data>> declarations;
 

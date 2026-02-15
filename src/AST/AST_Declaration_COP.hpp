@@ -11,23 +11,27 @@ namespace Declaration {
 namespace COP {
 
 struct Component_Field : public ADeclaration {
-    ID id;
+    SYM_DEFINITION parent_component;
+
     std::unique_ptr<AType> type;
-    std::unique_ptr<Node> default_value;
+    std::unique_ptr<AExpression> default_value;
     bool isNoDefault = false;
 
-    std::string debug_str() const override { return "field[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "field \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
     
     void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Component : public ADeclaration {
+    SYM_DEFINITION parent_entity;
+
     [[maybe_unused]]
     std::shared_ptr<Local::Generic_Parameter> gen_where;
     std::vector<std::shared_ptr<Component_Field>> fields;
 
-    std::string debug_str() const override { return "<type> comp[" + id.debug_str() + "]"; }
+
+    std::string debug_str() const override { return "declaration component \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -35,9 +39,9 @@ struct Component : public ADeclaration {
 
 
 struct Role : public ADeclaration {
-    std::vector<std::unique_ptr<AReference>> components;
+    std::vector<std::unique_ptr<AExpression>> components;
 
-    std::string debug_str() const override { return "<type> role[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration role \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Role; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -67,7 +71,7 @@ struct Entity : public ADeclaration {
     [[nodiscard]] bool contains_comp(const Component& target_comp) const;
     
     // faire une injection de nomenclature
-    std::string debug_str() const override { return "<type> entity[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration entity \"" + name + "\""; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Entity; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -83,7 +87,7 @@ struct Entity_Cast : public ADeclaration {
 
     std::unique_ptr<AST::Declaration::Local::CodeBlock> codeblock;
 
-    std::string debug_str() const override { return "<cast> entity"; }
+    std::string debug_str() const override { return "entity cast"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Cast; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -99,7 +103,7 @@ struct Entity_Op : public ADeclaration {
 
     bool resolved_result_type_isRef = false;
 
-    std::string debug_str() const override { return EBinOpType_to_str(operatorType); }
+    std::string debug_str() const override { return "entity op " + EBinOpType_to_str(operatorType); }
     ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Op; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -114,7 +118,7 @@ struct Entity_OpIndex : public Entity_Op {
 
     std::unique_ptr<AType> return_type;
 
-    std::string debug_str() const override { return "[...]"; }
+    std::string debug_str() const override { return "entity op[index]"; }
     ESymbolType get_symbol_type() const override { return ESymbolType::Entity_OpIndex; }
 
     void accept(Visitor_Base& v) override { v.visit(*this); }
@@ -124,7 +128,7 @@ struct System : public ADeclaration, ICallable {
     std::shared_ptr<Type::Function_Proto> prototype;
     std::vector<std::shared_ptr<System_Case>> cases;
 
-    std::string debug_str() const override { return "<def> system[" + id.debug_str() + "]"; }
+    std::string debug_str() const override { return "declaration system \"" + name + "\""; }
     
     bool manage_entity(const Entity& entity) const;
     bool manage_component(const Component& comp) const;
@@ -145,7 +149,7 @@ struct System_Case : public ADeclaration {
     bool isReturn = false;
     bool isDefault = false;
 
-    std::string debug_str() const override { return "<def> with"; }
+    std::string debug_str() const override { return "system case"; }
     
     bool manage_entity(const Entity& entity) const;
     
