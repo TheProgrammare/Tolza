@@ -305,9 +305,9 @@ std::shared_ptr<AST::Declaration::Type_Alias> PAR::Parser_Declaration::type_alia
 
 	tyAlias->id = ctx.p_ref->identifier(tyAlias.get());
 
-	ctx.tok_v.expect(TokTy::ASSIGN, "PAR1041",
-		"Expected assignation '=' after typealias name.",
-		"define typealias like `type myAlias = i32;`.");
+	ctx.tok_v.expect(TokTy::COLON, "PAR1041",
+		"Expected type definition separator ':' after typealias name.",
+		"define typealias like `type myAlias: i32`.");
 
 	tyAlias->type = ctx.p_type->parse_type();
 

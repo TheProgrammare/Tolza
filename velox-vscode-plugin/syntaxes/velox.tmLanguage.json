@@ -142,7 +142,7 @@
 				"0": { "name": "keyword.declaration.function.velox" },
 				"1": { "name": "entity.name.function.velox" }
 			},
-			"end": "(?<=\\{)",
+			"end": "(?<=\\{|;)",
 			"patterns": [
 				{
 					"name": "meta.parameters",
@@ -155,9 +155,11 @@
 				{
 					"name": "meta.return",
 					"begin": "\\-\\>",
-					"end": "(\\{|\\-\\>)",
+					"end": "(\\{|\\-\\>|;)",
 					"patterns": [
-						{ "include": "#types" }
+						{ "include": "#types" },
+						{ "include": "#type_identifier" },
+						{ "include": "#type_safe" }
 					]
 				}
 			]
@@ -169,7 +171,7 @@
 				"1": { "name": "keyword.declaration.enum.velox" },
 				"2": { "name": "entity.name.type.enum.velox" }
 			},
-			"end": "\\}",
+			"end": "(\\}|;)",
 			"patterns": [
 				{
 					"name": "constant.other.enum.velox",
@@ -189,7 +191,7 @@
 				"1": { "name": "keyword.declaration.flag.velox" },
 				"2": { "name": "entity.name.type.flag.velox" }
 			},
-			"end": "\\}",
+			"end": "(\\}|;)",
 			"patterns": [
 				{
 					"name": "constant.other.flag.velox",
@@ -208,7 +210,7 @@
 				"1": { "name": "keyword.declaration.union.velox" },
 				"2": { "name": "entity.name.type.union.velox" }
 			},
-			"end": "(?<=\\})",
+			"end": "(?<=\\}|;)",
 			"patterns": [
 				{ "include": "#types" },
 				{
@@ -853,8 +855,8 @@
 			"name": "string.quoted.double.velox",
 			"patterns": [
 				{
-				"name": "constant.character.escape.velox",
-				"match": "\\\\[\\\\\"{}ntr]"
+					"name": "constant.character.escape.velox",
+					"match": "\\\\(?:u\\{[0-9A-Fa-f]{1,6}\\}|u[0-9A-Fa-f]{4}|x[0-9A-Fa-f]{2}|0|[\\\\\"{}nrtbfv])"
 				},
 				{ "include": "#string_interpolation" }
 			]

@@ -2,6 +2,7 @@
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_CodeBlock_Instruction.hpp"
+#include "AST/AST_Data.hpp"
 #include "Parser_Base.hpp"
 #include "Parser_Type.hpp"
 #include "Parser_Reference.hpp"
@@ -116,14 +117,20 @@ std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local
 		isAutoTy = true;
 
 	// check affectation
-	Token assign_tok = ctx.tok_v.next();
-	var->assignment = TokTy_to_EAssignmentType(assign_tok.type);
-
-	if (var->assignment == EAssignmentType::NONE && isAutoTy) 
-		ctx.tok_v.add_error("PAR1171",
-			"Expected assignation '=' in auto inferred variable type.",
-			"define auto inferred variable like `let myName = expression;`");
+	var->assignment = TokTy_to_EAssignmentType(ctx.tok_v.peek().type);
 	
+	if (var->assignment == EAssignmentType::NONE) {
+		if (isAutoTy) 
+			ctx.tok_v.add_error("PAR1171",
+				"Expected assignation '=' in auto inferred variable type.",
+				"define auto inferred variable like `let myName = expression;`");
+		
+		return var;
+	}
+
+	ctx.tok_v.next();
+
+
 	auto expr = ctx.p_expr->parse_expression();
 
 	//if (isAutoTy) var->type = resolve_type(expr.get());

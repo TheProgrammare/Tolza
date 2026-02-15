@@ -173,5 +173,7 @@ namespace AST {
         struct Align;
         struct GetBits;
         struct Drop;                    // drop a
+        struct Ptr_At;
+        struct Ptr_Offset;
     }
 }

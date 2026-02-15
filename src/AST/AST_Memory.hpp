@@ -1,7 +1,10 @@
 #pragma once
 
+#include "AST/AST_Data.hpp"
 #include "AST_Base.hpp"
+#include "Visitor/Visitor_Base.hpp"
 #include <memory>
+#include <string>
 
 namespace AST {
 namespace Memory {
@@ -95,6 +98,27 @@ struct Drop : public Node {
     void accept(Visitor_Base& v) override { v.visit(*this); }
     std::string debug_str() const override { return "drop"; }
 };
+
+struct Ptr_At : public Node {
+    std::unique_ptr<AReference> target;
+
+    ECapability kind = ECapability::Ref;
+
+    size_t index = 0;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    std::string debug_str() const override { return "ptr " + ECapability_to_str(kind) + " at[" + std::to_string(index)+ "]"; }
+};
+
+struct Ptr_Offset : public Node {
+    std::unique_ptr<AReference> target;
+
+    size_t offset = 0;
+
+    void accept(Visitor_Base& v) override { v.visit(*this); }
+    std::string debug_str() const override { return "ptr offset[" + std::to_string(offset)+ "]"; }
+};
+
 
 }
 }

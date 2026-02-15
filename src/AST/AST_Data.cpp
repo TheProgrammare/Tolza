@@ -120,6 +120,18 @@ ECapability TokTy_to_ECapability(TokTy tok)
 	}
 }
 
+std::string ECapability_to_str(ECapability capa) {
+	switch (capa) {
+	case ECapability::Mut: 				return "mut";
+	case ECapability::Ref: 				return "ref";
+	case ECapability::Clone: 			return "clone";
+	case ECapability::Copy: 			return "copy";
+	case ECapability::Move: 			return "move";
+	case ECapability::NONE: 			return "NO CAPABILITY";
+	}
+}
+
+
 ECapability deduce_type_ECapability(bool is_complex, bool is_mut)
 {
 	if (is_mut) return ECapability::Mut;

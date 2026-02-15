@@ -81,6 +81,7 @@ enum class EBinOpType {
 
 enum class ECapability { NONE, Ref, Mut, Copy, Clone, Move };
 [[nodiscard]] ECapability TokTy_to_ECapability(TokTy tok);
+[[nodiscard]] std::string ECapability_to_str(ECapability capa);
 
 [[nodiscard]] ECapability deduce_type_ECapability(bool is_complex, bool is_mut);
 

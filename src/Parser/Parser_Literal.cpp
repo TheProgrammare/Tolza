@@ -1,6 +1,8 @@
 #include "Parser_Literal.hpp"
 
 #include <llvm/ADT/APFloat.h>
+#include <codecvt>
+#include <stdio.h>
 
 #include "AST/AST_Literal.hpp"
 #include "AST/AST_Reference.hpp"
@@ -426,9 +428,9 @@ std::unique_ptr<AST::ALiteral> PAR::Parser_Literal::literal_table() {
 
 	// is a literal table population
 	if (values.size() == 1) {
-		if (auto pop_ptr = dynamic_cast<AST::Literal::Table_Population*>(values[0].get())) {
-			values[0].release();
-		
+		if (dynamic_cast<AST::Literal::Table_Population*>(values[0].get())) {
+			auto pop_ptr = dynamic_cast<AST::Literal::Table_Population*>(values[0].release());
+			
 			// is a map population
 			if (pop_ptr->map_expression_value) {
 				auto map = ctx.Create_Node<AST::Literal::Map>(ctx.tok_v.peek());
