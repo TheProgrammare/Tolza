@@ -1,0 +1,27 @@
+# .clang-format adapté du style Linux kernel
+BasedOnStyle: LLVM
+Language: Cpp
+
+IndentWidth: 2
+UseTab: Never
+ColumnLimit: 120
+
+BreakBeforeBraces: Linux
+AlwaysBreakBeforeMultilineStrings: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortBlocksOnASingleLine: false
+
+IndentCaseLabels: true
+AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: true
+AlignTrailingComments: true
+
+AlignAfterOpenBracket: true
+SpaceAfterCStyleCast: false
+
+BreakBeforeBinaryOperators: NonAssignment
+SortIncludes: false
+MaxEmptyLinesToKeep: 2
+

@@ -6,35 +6,33 @@
 #include <memory>
 #include <string>
 
-namespace AST {
-namespace Memory {
-
+namespace AST
+{
+namespace Memory
+{
 
 // del var
 struct Del : public Node {
-    std::unique_ptr<AExpression> target;
+  std::unique_ptr<AExpression> target;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "delete"; }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  std::string debug_str() const override { return "delete"; }
 };
 
 struct Align : public Node {
-    std::unique_ptr<AExpression> target;
-    size_t align = 0;
+  std::unique_ptr<AExpression> target;
+  size_t                       align = 0;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "<mem> align(" + std::to_string(align) + ")"; }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  std::string debug_str() const override { return "<mem> align(" + std::to_string(align) + ")"; }
 };
-
 
 struct Drop : public Node {
-    std::unique_ptr<AExpression> target;
+  std::unique_ptr<AExpression> target;
 
-    void accept(Visitor_Base& v) override { v.visit(*this); }
-    std::string debug_str() const override { return "drop"; }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  std::string debug_str() const override { return "drop"; }
 };
 
-
-
-}
-}
+} // namespace Memory
+} // namespace AST

@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0 
+ *	The Velox programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <string>
 #include <set>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -30,51 +30,45 @@ enum class ETokenType;
 using TokTy = ETokenType;
 
 const std::unordered_set<std::string> kScriptMeta = {
-	"author", "title", "version", "description", "created", "updated",
-	"language_version", "encoding", "license", "contributor", "contact", "copyright",
-	"wiki", "doc", "os"
-};
+    "author",   "title",   "version",     "description", "created",   "updated", "language_version",
+    "encoding", "license", "contributor", "contact",     "copyright", "wiki",    "doc",
+    "os"};
 
-
-class Lexer {
+class Lexer
+{
 public:
-	Lexer(ScriptInfo &_scr_info) 
-		: scr_info(_scr_info)
-		, stream(scr_info.file_str) 
-	{}
+  Lexer(ScriptInfo &_scr_info) : scr_info(_scr_info), stream(scr_info.file_str) {}
 
-	enum class EPrefixFound { None, Prefix, All };
+  enum class EPrefixFound { None, Prefix, All };
 
-	EPrefixFound get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search);
-	bool is_valid_prefix(char prefix, const std::string& _current);
+  EPrefixFound get_prefix_keyword(TokTy _type, const std::string &_key, const std::string &_search);
+  bool         is_valid_prefix(char prefix, const std::string &_current);
 
-	void tokenize(const std::set<char>& exit_char);
+  void tokenize(const std::set<char> &exit_char);
 
-	void process_escape();
+  void process_escape();
 
-	void tokenize_textual();
-	bool tokenize_spec();
-	void tokenize_comment();
-	void tokenize_metacode();
-	void tokenize_numeric();
-	// not idependent
-	void tokenize_identifier();
-	void tokenize_keyword();
-	std::pair<TokTy, std::string> getToken();
-	void addToken(TokTy type);
-	bool eat();
+  void tokenize_textual();
+  bool tokenize_spec();
+  void tokenize_comment();
+  void tokenize_metacode();
+  void tokenize_numeric();
+  // not idependent
+  void                          tokenize_identifier();
+  void                          tokenize_keyword();
+  std::pair<TokTy, std::string> getToken();
+  void                          addToken(TokTy type);
+  bool                          eat();
 
-	template<size_t Code>
-	void add_error(const std::string &msg, const std::string &hint);
+  template <size_t Code> void add_error(const std::string &msg, const std::string &hint);
 
-	TokTy classifyNumerals(std::string& outValue);
-	TokTy classifyKeyword(std::string& outWord);
-	TokTy classifyFormatSpec(std::string& outFormat);
+  TokTy classifyNumerals(std::string &outValue);
+  TokTy classifyKeyword(std::string &outWord);
+  TokTy classifyFormatSpec(std::string &outFormat);
 
-
-	ScriptInfo &scr_info;
-	StreamTracker stream;
-	std::vector<std::string> errors;
-	std::string buffer;
-	char ch = '\0';
+  ScriptInfo              &scr_info;
+  StreamTracker            stream;
+  std::vector<std::string> errors;
+  std::string              buffer;
+  char                     ch = '\0';
 };

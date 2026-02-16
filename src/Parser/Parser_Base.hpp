@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0 
+ *	The Velox programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,30 +18,31 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
-#include "AST/AST_Forward.hpp"
 #include "AST/AST_CodeBlock_Instruction.hpp"
+#include "AST/AST_Forward.hpp"
 
 struct ScriptInfo;
 struct ModuleImportation;
 
-namespace PAR {
-	struct Parser_Context;
+namespace PAR
+{
+struct Parser_Context;
 
-	struct Parser_Base {
-		Parser_Base(ScriptInfo &scr_info);
-		~Parser_Base();
+struct Parser_Base {
+  Parser_Base(ScriptInfo &scr_info);
+  ~Parser_Base();
 
-		[[nodiscard]] std::vector<std::string> 							start_parsing();
+  [[nodiscard]] std::vector<std::string> start_parsing();
 
-        [[nodiscard]] ModuleImportation*  								parse_import();
-        [[nodiscard]] std::shared_ptr<AST::Declaration::Export>   		parse_export();
+  [[nodiscard]] ModuleImportation                        *parse_import();
+  [[nodiscard]] std::shared_ptr<AST::Declaration::Export> parse_export();
 
-		[[nodiscard]] std::optional<AST::CodeBlock_instruction> 		parse_instruction();
+  [[nodiscard]] std::optional<AST::CodeBlock_instruction> parse_instruction();
 
-        Parser_Context *ctx;
-	};
-}
+  Parser_Context *ctx;
+};
+} // namespace PAR

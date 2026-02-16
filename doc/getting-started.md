@@ -83,3 +83,11 @@ Ensure LLVM include paths and libraries are visible to the IDE
 - GitHub Actions (GitHub)
 - LLDB DAP (LLVM) : Debugging
 - Clang-Format (Xaver Hellauer) : Code formatation for clang
+- velox-vscode-plugin-1.0.0.vsix (project plugin) : coloration code + snippets only
+
+**Settings**
+Go to File > Preferences > Settings<\br>
+or go to down-left cogwheel > Settings
+
+- "editor.formatOnSave": true
+- "editor.defaultFormatter": "xaver.clang-format"

@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0 
+ *	The Velox programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@
 #pragma once
 
 #include <string>
-
 
 bool start_compilation(const std::string &target_file);
 
