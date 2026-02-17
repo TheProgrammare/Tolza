@@ -29,15 +29,10 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 Install the `.exe` installer and **make sure to check**:
 - Add LLVM to `PATH`
 
+Download Clangd for Windows from:<\br>
+https://clangd.llvm.org/
+
 ### I.B Install on Linux / UNIX
-
-> Note: If LLVM 19 is not available in your distribution repositories, install it from the official LLVM releases.  
-> Using a newer version may work, but the code **must remain compatible with LLVM 19**.
-
-Official release:  
-https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
-
-> Note: search for `clang+llvm`
 
 **Debian-based**
 ```
@@ -51,7 +46,19 @@ sudo dnf install llvm19 llvm19-devel clang19 clangd
 ```
 sudo pacman -S llvm clang clangd
 ```
+
 > Arch Linux provides a single system-wide LLVM version
+
+> Note: If LLVM 19 is not available in your distribution repositories, install it from the official LLVM releases.  
+> Using a newer version may work, but the code **must remain compatible with LLVM 19**.
+
+Official release:  
+https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
+
+> Note: search for `clang+llvm`
+
+Clangd website:<\br>
+https://clangd.llvm.org/
 
 ### I.C Install on macOS (Homebrew)
 
@@ -59,6 +66,9 @@ Download LLVM 19 for macOS from:</br>
 https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 
 > Note: search for `clang+llvm`
+
+Download Clangd for macOS from:<\br>
+https://clangd.llvm.org/
 
 ### II. Verify installation
 Run the following commands:
