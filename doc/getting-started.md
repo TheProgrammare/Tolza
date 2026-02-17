@@ -57,7 +57,7 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 
 > Note: search for `clang+llvm`
 
-Clangd website:<\br>
+Clangd website:</br>
 https://clangd.llvm.org/
 
 ### I.C Install on macOS (Homebrew)
@@ -67,7 +67,7 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 
 > Note: search for `clang+llvm`
 
-Download Clangd for macOS from:<\br>
+Download Clangd for macOS from:</br>
 https://clangd.llvm.org/
 
 ### II. Verify installation
@@ -96,7 +96,7 @@ Ensure LLVM include paths and libraries are visible to the IDE
 - velox-vscode-plugin-1.0.0.vsix (project plugin) : coloration code + snippets only
 
 **Settings**
-Go to File > Preferences > Settings<\br>
+Go to File > Preferences > Settings</br>
 or go to down-left cogwheel > Settings
 
 - "editor.formatOnSave": true
