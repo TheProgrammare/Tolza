@@ -41,15 +41,15 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 
 **Debian-based**
 ```
-sudo apt install llvm-19 llvm-19-dev clang-19
+sudo apt install llvm-19 llvm-19-dev clang-19 clangd
 ```
 **Fedora-based**
 ```
-sudo dnf install llvm19 llvm19-devel clang19
+sudo dnf install llvm19 llvm19-devel clang19 clangd
 ```
 **Arch-based**
 ```
-sudo pacman -S llvm clang
+sudo pacman -S llvm clang clangd
 ```
 > Arch Linux provides a single system-wide LLVM version
 
