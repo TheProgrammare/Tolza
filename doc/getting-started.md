@@ -29,7 +29,7 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 Install the `.exe` installer and **make sure to check**:
 - Add LLVM to `PATH`
 
-Download Clangd for Windows from:<\br>
+Download Clangd for Windows from:</br>
 https://clangd.llvm.org/
 
 ### I.B Install on Linux / UNIX
