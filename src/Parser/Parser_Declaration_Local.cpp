@@ -9,7 +9,6 @@
 #include "Parser_Declaration_Local.hpp"
 #include "Parser_Expression.hpp"
 #include "Parser_Literal.hpp"
-#include "Parser_Reference.hpp"
 #include "Parser_Statement.hpp"
 #include "Parser_Type.hpp"
 #include "Visitor/Symbol_Manager.hpp"
@@ -53,46 +52,41 @@ AST::Declaration::Local::Pattern_Element PAR::Parser_Declaration_Local::pattern_
       bind->capability = TokTy_to_ECapability(ctx.tok_v.peek(-1).type);
     }
 
-    bind->id   = ctx.p_ref->identifier(true);
-    bind->name = bind->id.name;
+    bind->name = ctx.parse_name();
 
     return AST::Declaration::Local::Pattern_Element(bind);
   }
 }
 
-AST::Evaluator PAR::Parser_Declaration_Local::parse_evaluator(std::shared_ptr<AST::AReference> comparison_ref)
+AST::Evaluator PAR::Parser_Declaration_Local::parse_evaluator(std::shared_ptr<AST::AExpression> comparison_expr)
 {
   if (ctx.tok_v.match_any({TokTy::CAPA_MUT, TokTy::CAPA_REF})) {
-    return AST::Evaluator(parse_pattern(comparison_ref));
+    return AST::Evaluator(parse_pattern(comparison_expr));
   }
 
-  // avoid false positive literal component/entity `name {...}` inside a condition
-  // [if/else/elif/while] <evaluator> {<statement>}
-  ctx.p_ref->lit_comp_entity_allowed = false;
   return AST::Evaluator(ctx.p_expr->parse_expression());
-  ctx.p_ref->lit_comp_entity_allowed = true;
 }
 
 std::unique_ptr<AST::Declaration::Local::Pattern>
-PAR::Parser_Declaration_Local::parse_pattern(std::shared_ptr<AST::AReference> comparison_ref)
+PAR::Parser_Declaration_Local::parse_pattern(std::shared_ptr<AST::AExpression> comparison_expr)
 {
   ECapability capa = TokTy_to_ECapability(ctx.tok_v.peek(-1).type);
 
   if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
-    return tuple_pattern(capa, comparison_ref);
+    return tuple_pattern(capa, comparison_expr);
   }
 
-  auto id = ctx.p_ref->identifier();
+  auto id = ctx.p_expr->identifier(false, true);
 
   // enum pattern : if ref Some(a) = val {...}
   if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
-    return enum_pattern(capa, id, comparison_ref);
+    return enum_pattern(capa, std::move(id), comparison_expr);
   }
   // entity pattern / component pattern
   else if (ctx.tok_v.match(TokTy::ENTITY_START_LIT)) {
-    return entity_pattern(capa, id, comparison_ref);
+    return entity_pattern(capa, std::move(id), comparison_expr);
   } else if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
-    return component_pattern(capa, id, comparison_ref);
+    return component_pattern(capa, std::move(id), comparison_expr);
   }
 
   ctx.tok_v.add_error<41>("Expected pattern.", "define auto inferred variable like `let myName = expression;`");
@@ -101,11 +95,9 @@ PAR::Parser_Declaration_Local::parse_pattern(std::shared_ptr<AST::AReference> co
 
 std::shared_ptr<AST::Declaration::Local::Variable> PAR::Parser_Declaration_Local::variable()
 {
-  auto var  = ctx.Create_Decl<AST::Declaration::Local::Variable>(ctx.tok_v.peek());
-  var->kind = TokTy_to_EVariableKind(ctx.tok_v.next().type);
-
-  var->id = ctx.p_ref->identifier(var.get(), true);
-
+  auto var      = ctx.Create_Decl<AST::Declaration::Local::Variable>(ctx.tok_v.peek());
+  var->kind     = TokTy_to_EVariableKind(ctx.tok_v.next().type);
+  var->name     = ctx.parse_name();
   var->isStatic = ctx.metablock_contains(*var, "static");
 
   ctx.m_sym->add_decl(var);
@@ -156,18 +148,18 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
   while (!ctx.tok_v.is_end()) {
     // ignore variable
     if (!ctx.tok_v.match(TokTy::UNDERSCORE)) {
-      std::string name = ctx.tok_v.expect_id<43>("Expected name (identifier) in variable unpack declaration.", hint);
-      auto        loc  = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek(-1));
-      loc->id.name     = name;
+      auto loc  = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek(-1));
+      loc->name = ctx.parse_name("", hint);
       unpack->elements.push_back(loc);
       ctx.m_sym->add_decl(loc);
-    } else
+    } else {
       unpack->elements.push_back(nullptr);
+    }
 
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::ASSIGN)) break;
   }
 
-  unpack->reference = ctx.p_ref->parse_reference();
+  unpack->right = ctx.p_expr->parse_expression();
 
   return unpack;
 }
@@ -205,7 +197,7 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
     auto tok_capa    = ctx.tok_v.expect_any<44>(kCapabilityKind, "Expected capture capability kind.", hint);
     elem->capability = TokTy_to_ECapability(tok_capa.type);
 
-    elem->id = ctx.p_ref->identifier(true);
+    elem->name = ctx.p_ref->identifier(true);
     capture->elements.push_back(std::move(elem));
   }
 
@@ -294,14 +286,14 @@ std::shared_ptr<AST::Declaration::Local::Capability> PAR::Parser_Declaration_Loc
 
   ctx.tok_v.expect<48>(TokTy::ASSIGN, "Expected classic assignation '=' after capability declaration.", hint);
 
-  capa->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+  capa->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference());
 
   return capa;
 }
 
 std::unique_ptr<AST::Declaration::Local::Pattern_Component>
 PAR::Parser_Declaration_Local::component_pattern(ECapability capa, AST::ID &comp_id,
-                                                 std::shared_ptr<AST::AReference> comparison_ref)
+                                                 std::shared_ptr<AST::AExpression> comparison_ref)
 {
   static const std::string hint =
       "define component mapping like:"
@@ -324,7 +316,7 @@ PAR::Parser_Declaration_Local::component_pattern(ECapability capa, AST::ID &comp
 
   if (!comparison_ref) {
     ctx.tok_v.expect<50>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
-    comp_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference());
+    comp_pat->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference());
   } else {
     comp_pat->reference = comparison_ref;
   }
@@ -336,7 +328,7 @@ PAR::Parser_Declaration_Local::component_pattern(ECapability capa, AST::ID &comp
 
 std::unique_ptr<AST::Declaration::Local::Pattern_Entity>
 PAR::Parser_Declaration_Local::entity_pattern(ECapability capa, AST::ID &entity_id,
-                                              std::shared_ptr<AST::AReference> comparison_ref)
+                                              std::shared_ptr<AST::AExpression> comparison_ref)
 {
   static const std::string hint =
       "define entity mapping like:"
@@ -379,7 +371,7 @@ PAR::Parser_Declaration_Local::entity_pattern(ECapability capa, AST::ID &entity_
 
   if (!comparison_ref) {
     ctx.tok_v.expect<54>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
-    entity_pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
+    entity_pat->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference().release());
   } else {
     entity_pat->reference = comparison_ref;
   }
@@ -390,7 +382,7 @@ PAR::Parser_Declaration_Local::entity_pattern(ECapability capa, AST::ID &entity_
 }
 
 std::unique_ptr<AST::Declaration::Local::Pattern_Tuple>
-PAR::Parser_Declaration_Local::tuple_pattern(ECapability capa, std::shared_ptr<AST::AReference> comparison_ref)
+PAR::Parser_Declaration_Local::tuple_pattern(ECapability capa, std::shared_ptr<AST::AExpression> comparison_ref)
 {
   static const std::string hint =
       "define enum pattern on condition like:"
@@ -413,7 +405,7 @@ PAR::Parser_Declaration_Local::tuple_pattern(ECapability capa, std::shared_ptr<A
 
   if (!comparison_ref) {
     ctx.tok_v.expect<56>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
-    pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
+    pat->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference().release());
   } else {
     pat->reference = comparison_ref;
   }
@@ -425,7 +417,7 @@ PAR::Parser_Declaration_Local::tuple_pattern(ECapability capa, std::shared_ptr<A
 
 std::unique_ptr<AST::Declaration::Local::Pattern_Enum>
 PAR::Parser_Declaration_Local::enum_pattern(ECapability capa, AST::ID &enum_id,
-                                            std::shared_ptr<AST::AReference> comparison_ref)
+                                            std::shared_ptr<AST::AExpression> comparison_ref)
 {
   static const std::string hint =
       "define enum pattern on condition like:\n"
@@ -455,7 +447,7 @@ PAR::Parser_Declaration_Local::enum_pattern(ECapability capa, AST::ID &enum_id,
 
   if (!comparison_ref) {
     ctx.tok_v.expect<59>(TokTy::ASSIGN, "Expected assignation on pattern.", hint);
-    pat->reference = std::shared_ptr<AST::AReference>(ctx.p_ref->parse_reference().release());
+    pat->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference().release());
   } else {
     pat->reference = comparison_ref;
   }

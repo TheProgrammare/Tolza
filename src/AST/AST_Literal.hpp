@@ -264,10 +264,10 @@ struct Range : public ALiteral {
 
 // CIdentity{ name: "Zagreus", age: 25 }
 struct Component : public ALiteral {
-  std::string                                             name;
+  std::unique_ptr<AST::AIdentifier>                       name;
   std::vector<std::unique_ptr<Expression::Call_Argument>> field_args;
 
-  std::string debug_str() const override { return "literal component \"" + name + "\""; }
+  std::string debug_str() const override { return "literal component \"" + name->debug_str() + "\""; }
 
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
@@ -275,10 +275,10 @@ struct Component : public ALiteral {
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
 // not the same as Person("Zagreus", 32) it's a call of constructor
 struct Entity : public ALiteral {
-  std::string                             name;
+  std::unique_ptr<AST::AIdentifier>       name;
   std::vector<std::unique_ptr<Component>> comp_args;
 
-  std::string debug_str() const override { return "literal entity \"" + name + "\""; }
+  std::string debug_str() const override { return "literal entity \"" + name->debug_str() + "\""; }
 
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };

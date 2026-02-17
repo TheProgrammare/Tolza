@@ -96,7 +96,7 @@ struct Pattern_Entity : public Pattern {
   std::unique_ptr<AExpression> name;
 
   // component identifier, field_name, pattern_element
-  std::vector<std::tuple<ID, std::string, Pattern_Element>> mapping;
+  std::vector<Pattern_Component> mapping;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return "entity pattern \"" + name->debug_str() + "\""; }
@@ -104,7 +104,7 @@ struct Pattern_Entity : public Pattern {
 
 // e.g. [if/while] let CId{ name: name, id: 10 }
 struct Pattern_Component : public Pattern {
-  std::unique_ptr<AExpression> name;
+  std::unique_ptr<Expr_ID> name;
 
   // field_name, pattern_element
   std::vector<std::tuple<std::string, Pattern_Element>> mapping;

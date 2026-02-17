@@ -67,17 +67,17 @@ struct Call_Argument final : public AExpression {
 };
 
 struct Call : public AExpression {
-  std::string                                 name;
+  std::unique_ptr<AIdentifier>                name;
   std::vector<std::unique_ptr<AType>>         gen_args;
   std::vector<std::unique_ptr<Call_Argument>> param_args;
 
-  std::string debug_str() const override { return "call \"" + name + "\""; }
+  std::string debug_str() const override { return "call \"" + name->debug_str() + "\""; }
 
   void accept(Visitor_Base &v) override { v.visit(*this); }
 
   bool to_lit_enum(Enum &lit_enum)
   {
-    lit_enum.name = name;
+    lit_enum.name = name->get_base_name();
     lit_enum.member_values.reserve(param_args.size());
     for (auto &param : param_args) {
       lit_enum.member_values.push_back(std::move(param->expression));
@@ -94,14 +94,14 @@ struct Call_System : public Call {
 };
 
 struct Call_Pipe : public AExpression {
-  std::string                                              name;
+  std::unique_ptr<AIdentifier>                             name;
   std::vector<std::unique_ptr<AType>>                      base_gen_args;
   std::vector<std::vector<std::unique_ptr<AType>>>         gen_args;
   std::vector<std::vector<std::unique_ptr<Call_Argument>>> arguments;
   bool                                                     isMutable = false;
   std::vector<EBinOpType>                                  mutableOperators;
 
-  std::string debug_str() const override { return "pipecall \"" + name + "\""; }
+  std::string debug_str() const override { return "pipecall \"" + name->debug_str() + "\""; }
   void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 

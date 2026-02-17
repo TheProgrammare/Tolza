@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "AST/AST_Declaration_COP.hpp"
 #include "Visitor/Symbol_Manager.hpp"
@@ -36,7 +37,6 @@ struct Parser_Expression;
 struct Parser_Type;
 struct Parser_Literal;
 struct Parser_Declaration_Local;
-struct Parser_Reference;
 struct Parser_Operator;
 struct Parser_Memory;
 struct Parser_Declaration;
@@ -64,8 +64,9 @@ struct Parser_Context {
   [[nodiscard]] bool match_field_separator(TokTy separator = TokTy::COMMA, TokTy end = TokTy::CLOSE_BRACE);
 
   // return true if end is encounter
-  [[nodiscard]] bool match_field_any_separator(TokTy                        separator = TokTy::COMMA,
-                                               std::initializer_list<TokTy> end       = {TokTy::CLOSE_BRACE});
+  [[nodiscard]] bool        match_field_any_separator(TokTy                        separator = TokTy::COMMA,
+                                                      std::initializer_list<TokTy> end       = {TokTy::CLOSE_BRACE});
+  [[nodiscard]] std::string parse_name(const std::string &msg = "", const std::string &hint = "");
 
   // to create node, set some data, store in resolvers
   template <DerivedFromNode NodeType, typename... Args>
@@ -103,7 +104,6 @@ struct Parser_Context {
   Parser_Type              *p_type;
   Parser_Literal           *p_lit;
   Parser_Declaration_Local *p_loc;
-  Parser_Reference         *p_ref;
   Parser_Operator          *p_op;
   Parser_Memory            *p_mem;
   Parser_Declaration       *p_decl;

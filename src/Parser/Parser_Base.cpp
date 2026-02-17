@@ -1,6 +1,7 @@
 
 #include "Parser_Base.hpp"
 
+#include "AST/AST_Expression.hpp"
 #include "AST/AST_Headers.hpp"
 #include "Parser_Headers.hpp"
 
@@ -20,7 +21,6 @@ PAR::Parser_Base::Parser_Base(ScriptInfo &scr_info)
   Parser_Declaration_Local *p_loc   = new Parser_Declaration_Local(*ctx);
   Parser_Memory            *p_mem   = new Parser_Memory(*ctx);
   Parser_Operator          *p_op    = new Parser_Operator(*ctx);
-  Parser_Reference         *p_ref   = new Parser_Reference(*ctx);
   Parser_Statement         *p_state = new Parser_Statement(*ctx);
   Parser_Type              *p_type  = new Parser_Type(*ctx);
 
@@ -31,7 +31,6 @@ PAR::Parser_Base::Parser_Base(ScriptInfo &scr_info)
   ctx->p_loc   = p_loc;
   ctx->p_mem   = p_mem;
   ctx->p_op    = p_op;
-  ctx->p_ref   = p_ref;
   ctx->p_state = p_state;
   ctx->p_type  = p_type;
 
@@ -142,7 +141,7 @@ std::shared_ptr<AST::Declaration::Export> PAR::Parser_Base::parse_export()
   auto uptr_exp = std::make_shared<ModuleExportation>(mod_exp);
 
   auto exp_node         = ctx->Create_Decl<AST::Declaration::Export>(exp_tok);
-  exp_node->id.name     = mod_exp.name;
+  exp_node->name        = mod_exp.name;
   exp_node->mod_exp_sym = uptr_exp;
 
   ctx->scr_info.exported_mod.push_back(uptr_exp);
@@ -196,18 +195,19 @@ std::optional<AST::CodeBlock_instruction> PAR::Parser_Base::parse_instruction()
     AST::CodeBlock_instruction cb;
     cb.data = std::move(del);
     return cb;
-  } else if (auto ref = ctx->p_ref->parse_reference()) {
+  } else if (auto expr = ctx->p_expr->parse_expression()) {
     // assignation and operator assignment
     if (ctx->tok_v.check_any(kAssignationTokens)) {
-      auto                       assign = ctx->p_op->assignment(std::move(ref));
+      auto assign = ctx->p_op->assignment(std::move(expr));
+
       AST::CodeBlock_instruction cb;
       cb.data = std::move(assign);
       return cb;
     }
     // call and sys_call
-    else if (dynamic_cast<AST::Reference::Call *>(ref.get())) {
+    else if (dynamic_cast<AST::Expression::Call *>(expr.get())) {
       AST::CodeBlock_instruction cb;
-      cb.data = std::move(ref);
+      cb.data = std::move(expr);
       return cb;
     }
   }

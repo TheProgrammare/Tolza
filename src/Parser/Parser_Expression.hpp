@@ -17,23 +17,20 @@ struct Parser_Expression {
   [[nodiscard]] std::unique_ptr<AST::AExpression>        parse_expression();
   [[nodiscard]] std::unique_ptr<AST::AExpression>        parse_expression_term();
   [[nodiscard]] std::unique_ptr<AST::Operation::Cast_As> cast_as(std::unique_ptr<AST::AExpression> expr);
-  [[nodiscard]] std::unique_ptr<AST::AExpression>        try_reference_suffix_operation();
 
   void check_reference_external(const std::string &name, const std::vector<std::string> &path, Extern_Item::Kind kind);
 
-  [[nodiscard]] std::unique_ptr<AST::AExpression>                            identifier(bool no_qualified_id = false,
+  //[[nodiscard]] std::unique_ptr<AST::Expression::Call_Pipe>                  function_call_pipe();
+
+  [[nodiscard]] std::unique_ptr<AST::AIdentifier>                            identifier(bool no_qualified_id = false,
                                                                                         bool keyword_allowed = false);
-  [[nodiscard]] std::unique_ptr<AST::Expr_ID_Generic>                        identifier_typed(const std::string              &name,
-                                                                                              const std::vector<std::string> &path);
-  [[nodiscard]] std::unique_ptr<AST::Expression::Member_Access>              try_member_access(const std::string              &name,
-                                                                                               const std::vector<std::string> &path);
-  [[nodiscard]] std::unique_ptr<AST::Expression::Table_Access>               try_table_access();
-  [[nodiscard]] std::unique_ptr<AST::Expression::Call>                       function_call(const std::string              &name,
-                                                                                           const std::vector<std::string> &path);
-  [[nodiscard]] std::unique_ptr<AST::Expression::Call_Pipe>                  function_call_pipe(const std::string              &name,
-                                                                                                const std::vector<std::string> &path);
+  [[nodiscard]] std::unique_ptr<AST::Expr_ID_Generic>                        identifier_typed();
+  [[nodiscard]] std::unique_ptr<AST::Expression::Member_Access>              member_access();
+  [[nodiscard]] std::unique_ptr<AST::Expression::Table_Access>               table_access();
+  [[nodiscard]] std::unique_ptr<AST::Expression::Call>                       function_call();
   [[nodiscard]] std::vector<std::unique_ptr<AST::Expression::Call_Argument>> call_arguments();
   [[nodiscard]] std::unique_ptr<AST::Expression::If_Ternary>                 if_ternary();
+
   // special memory expression
   [[nodiscard]] std::unique_ptr<AST::Expression::New_Ptr>    new_ptr();
   [[nodiscard]] std::unique_ptr<AST::Expression::Ptr_Val>    ptr_val();

@@ -55,13 +55,12 @@ struct Node {
   Node()          = default;
   virtual ~Node() = default;
 
-  [[nodiscard]] size_t      get_tok_line() const { return _token.span.line; }
-  [[nodiscard]] size_t      get_tok_column() const { return _token.span.col; }
-  [[nodiscard]] size_t      get_tok_size() const { return _token.span.size; }
-  [[nodiscard]] size_t      get_tok_antepos() const { return _token.span.anteprocess_pos; }
-  [[nodiscard]] size_t      get_tok_pos() const { return _token.span.pos; }
-  [[nodiscard]] std::string mangle_scope() const;
-
+  [[nodiscard]] size_t              get_tok_line() const { return _token.span.line; }
+  [[nodiscard]] size_t              get_tok_column() const { return _token.span.col; }
+  [[nodiscard]] size_t              get_tok_size() const { return _token.span.size; }
+  [[nodiscard]] size_t              get_tok_antepos() const { return _token.span.anteprocess_pos; }
+  [[nodiscard]] size_t              get_tok_pos() const { return _token.span.pos; }
+  [[nodiscard]] std::string         mangle_scope() const;
   [[nodiscard]] virtual std::string debug_str() const       = 0;
   virtual void                      accept(Visitor_Base &v) = 0;
 };
@@ -107,64 +106,60 @@ struct ALiteral : virtual AExpression {
   virtual ~ALiteral() = default;
 };
 
-struct Expr_ID final : virtual AExpression {
-  std::string name;
+struct AIdentifier : virtual AExpression {
+  [[nodiscard]] virtual std::string get_base_name() const = 0;
+  virtual ~AIdentifier()                                  = default;
+};
 
+struct Expr_ID final : virtual AIdentifier {
+  std::string name;
   explicit Expr_ID(const std::string &_name) : name(_name) {}
 
+  std::string get_base_name() const override { return name; }
   std::string debug_str() const override { return "identifier \"" + name + "\""; }
   void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Expr_ID_Qualified final : virtual AExpression {
+struct Expr_ID_Qualified final : virtual AIdentifier {
   std::string              name;
   std::vector<std::string> path;
 
   Expr_ID_Qualified(const std::vector<std::string> &p_path, const std::string &_name) : name(_name) { path = p_path; }
 
-  // e.g. ::math::add()
-  bool qualification_at_root_scope = false;
-  // e.g. super::math::add()
-  bool qualification_at_parent_scope = false;
-  // e.g. self::math::add()
-  bool qualification_at_current_scope = false;
+  bool qualification_at_root_scope    = false; // e.g. ::math::add()
+  bool qualification_at_parent_scope  = false; // e.g. super::math::add()
+  bool qualification_at_current_scope = false; // e.g. self::math::add()
 
   bool operator==(const Expr_ID_Qualified &other) const noexcept
   {
     return mangle_local_name() == other.mangle_local_name();
   }
 
-  [[nodiscard]]
-  bool is_qualified_id() const
-  {
-    return !path.empty();
-  }
-
+  std::string                       get_base_name() const override { return name; }
+  [[nodiscard]] bool                is_qualified_id() const { return !path.empty(); }
   [[nodiscard]] std::string         debug_str() const override;
   [[nodiscard]] virtual std::string mangle_path() const;
   [[nodiscard]] virtual std::string mangle_local_name() const;
   [[nodiscard]] virtual std::string mangle_absolute_name() const;
   [[nodiscard]] virtual std::string mangle_name() const { return mangle_id(name); }
-
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void                              accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
 // for every node who need a type resolution
-struct Expr_ID_Generic final : public AExpression {
-  std::unique_ptr<AExpression>                         base_name;
+struct Expr_ID_Generic final : public AIdentifier, AType {
+  std::unique_ptr<AIdentifier>                         name;
   [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
+  std::string get_base_name() const override { return name->get_base_name(); }
   std::string debug_str() const override { return "identifier type"; }
-
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
 struct Root final : public Node {
   std::vector<std::shared_ptr<Node>> global_nodes;
 
   std::string debug_str() const override { return "root"; }
-
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
 } // namespace AST

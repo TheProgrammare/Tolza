@@ -77,13 +77,12 @@ std::shared_ptr<AST::Declaration::Enum> PAR::Parser_Declaration::enumeration()
 {
   static const std::string hint =
       "define enum like:"
-      "\n  - typed enum `enum Option { Valid(T), Invalid }"
-      "\n  - classic enum `enum Cardinal { North, South, East, West }";
+      "\n  - typed enum `enum name { field_name1(T), field_name2 }"
+      "\n  - typed enum `enum Option { Valid(T), Invalid }";
   ctx.tok_v.match(TokTy::ENUM);
 
-  auto enu = ctx.Create_Decl<AST::Declaration::Enum>(ctx.tok_v.peek());
-
-  enu->id = ctx.p_ref->identifier();
+  auto enu  = ctx.Create_Decl<AST::Declaration::Enum>(ctx.tok_v.peek());
+  enu->name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(enu);
   ctx.m_sym->enter_scope(enu->id.name, EScopeType::Enum);
 
@@ -91,7 +90,7 @@ std::shared_ptr<AST::Declaration::Enum> PAR::Parser_Declaration::enumeration()
 
   while (!ctx.tok_v.is_end()) {
     auto elem  = ctx.Create_Node<AST::Declaration::Enum_Element>(ctx.tok_v.peek());
-    elem->name = ctx.tok_v.expect_id<64>("Expected name (identifier) in enum block.", hint);
+    elem->name = ctx.parse_name("", hint);
 
     if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
       while (!ctx.tok_v.is_end()) {
@@ -225,14 +224,13 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic()
 
   ctx.tok_v.match(TokTy::GENERIC);
 
-  gen->id = ctx.p_ref->identifier(gen.get());
+  gen->name = ctx.parse_name("", kHint_gen);
   ctx.m_sym->add_decl(gen);
   ctx.m_sym->enter_scope(gen->id.name, EScopeType::Generic);
   ctx.tok_v.expect<70>(TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {
-    gen->targetGenericSymbols.insert(
-        ctx.tok_v.expect_id<71>("Expected name (identifier) in generic typenames.", kHint_gen));
+    gen->targetGenericSymbols.insert(ctx.parse_name("", kHint_gen));
 
     if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACKETS)) break;
   }
@@ -241,8 +239,7 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic()
 
   while (!ctx.tok_v.is_end()) {
     if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
-    std::string firstok =
-        ctx.tok_v.expect_id<73>("Expected typename (identifier) in start of generic filter.", kHint_filter);
+    std::string firstok = ctx.parse_name("", kHint_filter);
 
     // case: T op ...
     if (ctx.tok_v.match(TokTy::OP)) {
@@ -257,23 +254,23 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic()
     }
     // case: T comp ...
     else if (ctx.tok_v.match(TokTy::COMPONENT)) {
-      auto comp                 = ctx.Create_Node<AST::Generic::Use_Component>(ctx.tok_v.peek());
-      comp->targetGenSym        = firstok;
-      comp->component_reference = ctx.p_ref->parse_reference();
+      auto comp          = ctx.Create_Node<AST::Generic::Use_Component>(ctx.tok_v.peek());
+      comp->targetGenSym = firstok;
+      comp->component    = ctx.p_expr->parse_expression();
       gen->conditions.push_back(std::move(comp));
     }
     // case: T role ...
     else if (ctx.tok_v.match(TokTy::ROLE)) {
-      auto role            = ctx.Create_Node<AST::Generic::Have_Role>(ctx.tok_v.peek());
-      role->targetGenSym   = firstok;
-      role->role_reference = ctx.p_ref->parse_reference();
+      auto role          = ctx.Create_Node<AST::Generic::Have_Role>(ctx.tok_v.peek());
+      role->targetGenSym = firstok;
+      role->role         = ctx.p_expr->parse_expression();
       gen->conditions.push_back(std::move(role));
     }
     // case: T sys ...
     else if (ctx.tok_v.match(TokTy::SYSTEM)) {
-      auto sys              = ctx.Create_Node<AST::Generic::Compatible_System>(ctx.tok_v.peek());
-      sys->targetGenSym     = firstok;
-      sys->system_reference = ctx.p_ref->parse_reference();
+      auto sys          = ctx.Create_Node<AST::Generic::Compatible_System>(ctx.tok_v.peek());
+      sys->targetGenSym = firstok;
+      sys->system       = ctx.p_expr->parse_expression();
       gen->conditions.push_back(std::move(sys));
     }
     // case: T is i32 | type::floating | ...
@@ -282,7 +279,7 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic()
       nested->srcTypename = firstok;
 
       while (!ctx.tok_v.is_end()) {
-        nested->inType.push_back(ctx.p_ref->parse_reference());
+        nested->inType.push_back(ctx.p_type->parse_type());
 
         if (ctx.tok_v.match(TokTy::PIPE)) continue;
         break;
@@ -318,7 +315,7 @@ std::shared_ptr<AST::Declaration::Type_Alias> PAR::Parser_Declaration::type_alia
 
   ctx.tok_v.match(TokTy::TYPE);
 
-  tyAlias->id = ctx.p_ref->identifier(tyAlias.get());
+  tyAlias->name = ctx.parse_name();
 
   ctx.tok_v.expect<77>(TokTy::COLON, "Expected type definition separator ':' after typealias name.",
                        "define typealias like `type myAlias: i32`.");

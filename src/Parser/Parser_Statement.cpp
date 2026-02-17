@@ -276,8 +276,7 @@ std::unique_ptr<AST::Statement::GoTo> PAR::Parser_Statement::goto_statement()
 {
   ctx.tok_v.match(TokTy::GOTO);
   auto goto_statement   = ctx.Create_Node<AST::Statement::GoTo>(ctx.tok_v.peek(-1));
-  goto_statement->label = ctx.tok_v.expect_id<153>("Expected label identifier after 'goto' statement.",
-                                                   "define goto statement like: `goto name`.");
+  goto_statement->label = ctx.parse_name("", "define goto statement like: `goto name`.");
   return goto_statement;
 }
 

@@ -126,165 +126,88 @@ std::vector<std::unique_ptr<AST::Expression::Call_Argument>> PAR::Parser_Express
   return params;
 }
 
-std::optional<std::unique_ptr<AST::Expression::Call>> PAR::Parser_Expression::try_function_call(const AST::ID &id)
+std::unique_ptr<AST::Expression::Call> PAR::Parser_Expression::function_call()
 {
   ctx.tok_v.match(TokTy::OPEN_PAREN);
 
-  auto call  = ctx.Create_Node<AST::Expression::Call>(ctx.tok_v.peek());
-  call->name = id;
-
+  auto call        = ctx.Create_Node<AST::Expression::Call>(ctx.tok_v.peek());
   call->param_args = call_arguments();
 
   return call;
 }
 
-std::optional<std::unique_ptr<AST::Expression::Call_Pipe>>
-PAR::Parser_Expression::try_function_call_pipe(const AST::ID &id)
+/*
+std::unique_ptr<AST::Expression::Call_Pipe> PAR::Parser_Expression::function_call_pipe(const AST::ID &id)
 {
-  if (!ctx.tok_v.match_any({TokTy::PIPE, TokTy::PIPE_MUT})) return std::nullopt;
+  static const std::string hint =
+      "define pipe-call like:"
+      "\n  - pure pipe-call `var result = myFunction | param1 | param2 | param3;`"
+      "\n  - pure pipe-call generic `var result = myFunction<gen_args> | <gen_args> param1 |
+          < gen_args > param2
+      | <gen_args> param3;
+  `"
+   "\n  - mutable pipe-call `var result = myFunction <-| param1 |+ param2 |- param3;`"
+   "\n  - mutable pipe-call generic `var result = myFunction<gen_args> <-| <gen_args> param1 |+
+          < gen_args > param2
+      | -<gen_args> param3;
+  `";
+
+      ctx.tok_v.match_any({TokTy::PIPE, TokTy::PIPE_MUT});
 
   auto pipe_call       = ctx.Create_Node<AST::Expression::Call_Pipe>(ctx.tok_v.peek());
   pipe_call->isMutable = ctx.tok_v.peek(-1).type == TokTy::PIPE_MUT;
-  pipe_call->id        = id;
-  /*
-    static const std::string hint = "define pipe-call like:"
-      "\n  - pure pipe-call `var result = myFunction | param1 | param2 | param3;`"
-      "\n  - pure pipe-call generic `var result = myFunction<gen_args> | <gen_args> param1 |
-    <gen_args> param2 | <gen_args> param3;`"
-      "\n  - mutable pipe-call `var result = myFunction <-| param1 |+ param2 |- param3;`"
-      "\n  - mutable pipe-call generic `var result = myFunction<gen_args> <-| <gen_args> param1 |+
-    <gen_args> param2 |- <gen_args> param3;`";
 
 
-    while (!ctx.tok_v.is_end()) {
-      pipe_call->arguments.push_back(Create_Node<AST::Expression::Call_Argument>(ctx.tok_v.peek()));
+  while (!ctx.tok_v.is_end()) {
+    pipe_call->arguments.push_back(Create_Node<AST::Expression::Call_Argument>(ctx.tok_v.peek()));
 
 
-      if (pipe_call->isMutable) {
+    if (pipe_call->isMutable) {
         auto op = ctx.tok_v.expect_any(kOperatorTokens, "PAR1975", "Expected an operator keyword
     after pipe operation in mutable pipe call.", hint);
 
         arg-> = TokTy_to_EOpType(op.type);
-      }
-      else {
-        std::get<>(elem) = EOpType::COUNT;
-      }
-
-      if (ctx.tok_v.match(TokTy::OPEN_BRACKETS)) {
-        auto gen_arg = make_genArgs();
-        std::get<1>(elem) = std::move(gen_arg);
-      }
-
-      auto params = _call_args();
-      std::get<2>(elem) = std::move(params);
-
-      result.push_back(std::move(elem));
-      if (ctx.tok_v.match(TokTy::PIPE)) continue;
-      break;
+    } else {
+      std::get<>(elem) = EOpType::COUNT;
     }
 
-    return result;
-
-    for (auto& [pipe_op, pipe_gen, pipe_args] : result) {
-      if (pipe_op != EOpType::COUNT) pipe_call->mutableOperators.push_back(pipe_op);
-      if (pipe_gen) pipe_call->gen_args.push_back(std::move(pipe_gen));
-      pipe_call->arguments.push_back(std::move(pipe_args));
+    if (ctx.tok_v.match(TokTy::OPEN_BRACKETS)) {
+      auto gen_arg      = make_genArgs();
+      std::get<1>(elem) = std::move(gen_arg);
     }
-      */
+
+    auto params       = _call_args();
+    std::get<2>(elem) = std::move(params);
+
+    result.push_back(std::move(elem));
+    if (ctx.tok_v.match(TokTy::PIPE)) continue;
+    break;
+  }
+
+  return result;
+
+  for (auto &[pipe_op, pipe_gen, pipe_args] : result) {
+    if (pipe_op != EOpType::COUNT) pipe_call->mutableOperators.push_back(pipe_op);
+    if (pipe_gen) pipe_call->gen_args.push_back(std::move(pipe_gen));
+    pipe_call->arguments.push_back(std::move(pipe_args));
+  }
+
   return pipe_call;
 }
+*/
+
 
 ModuleImportation *PAR::Parser_Expression::get_external_source(const std::string              &name,
                                                                const std::vector<std::string> &path)
 {
-  if (id.path.empty()) return nullptr;
-  const std::string &base = id.path[0];
+  if (path.empty()) return nullptr;
+  const std::string &base = path[0];
   return ctx.scr_info.get_import_module(base);
-}
-
-std::unique_ptr<AST::AExpression> PAR::Parser_Expression::parse_Expression()
-{
-  auto                                     id = identifier();
-  std::unique_ptr<AST::AExpression>        target_ref;
-  std::vector<std::unique_ptr<AST::AType>> gen_args;
-
-  if (ctx.tok_v.check(TokTy::TURBO_FISH)) {
-    auto id_typed = identifier_typed(id);
-
-    // only identifier typed
-    // no value accessible
-    if (!ctx.tok_v.check_any({TokTy::OPEN_PAREN, TokTy::OPEN_BRACE})) {
-      check_Expression_external(id, Extern_Item::Kind::Global);
-
-      return std::unique_ptr<AST::AExpression>(id_typed.value().release());
-    }
-    gen_args = std::move(id_typed.value()->gen_args);
-
-    check_Expression_external(id, Extern_Item::Kind::Type);
-  }
-
-  // call e.g. add(a, b)
-  if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
-    auto call = function_call(id) call.value()->gen_args = std::move(gen_args);
-    target_ref                                           = std::move(call.value());
-
-    check_Expression_external(id, Extern_Item::Kind::Function);
-  }
-  // literal entity / component
-  else if (ctx.tok_v.match(TokTy::OPEN_BRACKETS) && lit_comp_entity_allowed) {
-    Token base_tok = ctx.tok_v.peek();
-    auto  id       = identifier();
-
-    // it's a literal component (field access dot)
-    if (ctx.tok_v.match(TokTy::DOT)) {
-      check_Expression_external(id, Extern_Item::Kind::Component);
-
-      return ctx.p_lit->literal_component(id, gen_args);
-    } else {
-      // reset the moving to correctly parse the literal entity
-      ctx.tok_v.jump(base_tok.span.pos);
-
-      check_Expression_external(id, Extern_Item::Kind::Entity);
-
-      return ctx.p_lit->literal_entity(id, gen_args);
-    }
-  } else {
-    auto id_ref = ctx.Create_Node<AST::AExpression>(ctx.tok_v.peek());
-    id_ref->id  = id;
-    target_ref  = std::move(id_ref);
-  }
-
-  if (!gen_args.empty()) {
-  }
-
-  return target_ref;
-}
-
-std::optional<std::unique_ptr<AST::AExpression>> PAR::Parser_Expression::try_Expression_suffix_operation()
-{
-  if (auto table_access = try_table_access()) {
-    table_access.value()->id = id;
-    target_ref               = std::move(table_access.value());
-  }
-  if (auto member_access = try_member_access(id)) {
-    member_access.value()->left = std::move(target_ref);
-    target_ref                  = std::move(member_access.value());
-  }
-}
-
-void PAR::Parser_Expression::check_Expression_external(const AST::ID &_id, Extern_Item::Kind _kind)
-{
-  if (!_id.is_qualified_id()) return;
-
-  if (auto imp_mod = ctx.scr_info.get_import_module(_id.path[0])) {
-    Extern_Item ext(_id, _kind);
-    imp_mod->add_extern_Expression(ext);
-  }
 }
 
 std::unique_ptr<AST::Expression::If_Ternary> PAR::Parser_Expression::if_ternary()
 {
-  auto ternary = ctx.Create_Node<AST::Statement::If_Ternary>(ctx.tok_v.peek());
+  auto ternary = ctx.Create_Node<AST::Expression::If_Ternary>(ctx.tok_v.peek());
 
   ternary->evaluator = ctx.p_loc->parse_evaluator(nullptr);
   ternary->true_line = ctx.p_loc->code_block_instruction();
@@ -295,8 +218,8 @@ std::unique_ptr<AST::Expression::If_Ternary> PAR::Parser_Expression::if_ternary(
 
   return ternary;
 }
-// NOTE MOI : terminer avec nouvelle logique
-std::unique_ptr<AST::AExpression> PAR::Parser_Expression::identifier(bool no_qualified_id, bool keyword_allowed)
+
+std::unique_ptr<AST::AIdentifier> PAR::Parser_Expression::identifier(bool no_qualified_id, bool keyword_allowed)
 {
   static const std::string hint =
       "define identifier like:"
@@ -305,23 +228,24 @@ std::unique_ptr<AST::AExpression> PAR::Parser_Expression::identifier(bool no_qua
       "\n  - with qualified id `A::B::C` -> A_B_C";
   //"\n  - if exported : `# export module A\n # scope\nname\n# end\n -> A_name`;
 
-  bool qualification_at_root_scope    = false;
-  bool qualification_at_parent_scope  = false;
-  bool qualification_at_current_scope = false;
+  bool root_scope    = false;
+  bool parent_scope  = false;
+  bool current_scope = false;
 
   if (ctx.tok_v.match(TokTy::STATIC_ACCESS)) {
-    id.qualification_at_root_scope = true;
+    root_scope = true;
   } else if (ctx.tok_v.match(TokTy::SUPER_MOD)) {
-    id.qualification_at_parent_scope = true;
+    parent_scope = true;
   } else if (ctx.tok_v.match(TokTy::SELF_MOD)) {
-    id.qualification_at_current_scope = true;
+    current_scope = true;
   }
   // it's a simple id with no path
   else if (ctx.tok_v.peek(1).type != TokTy::STATIC_ACCESS) {
+    auto id = ctx.Create_Node<AST::Expr_ID>(ctx.tok_v.peek());
     if (!keyword_allowed)
-      id.name = ctx.tok_v.expect_id<112>("Expected identifier name.", hint);
+      id->name = ctx.parse_name("", hint);
     else
-      id.name = ctx.tok_v.next().val;
+      id->name = ctx.tok_v.next().val;
 
     return id;
   }
@@ -329,15 +253,16 @@ std::unique_ptr<AST::AExpression> PAR::Parser_Expression::identifier(bool no_qua
   // it's qualified id
   if (no_qualified_id) ctx.tok_v.add_error_tok<113>(ctx.tok_v.peek(-1), "Unexpected qualified id.", hint);
 
+  auto   id    = ctx.Create_Node<AST::Expr_ID_Qualified>(ctx.tok_v.peek());
   size_t count = 0;
   while (!ctx.tok_v.is_end()) {
-    id.path.push_back(ctx.tok_v.next().val);
+    id->path.push_back(ctx.tok_v.next().val);
 
     ctx.tok_v.match(TokTy::STATIC_ACCESS);
 
     // no more path : the last element is the name
     if (ctx.tok_v.peek(1).type != TokTy::STATIC_ACCESS) {
-      id.name = ctx.tok_v.next().val;
+      id->name = ctx.tok_v.next().val;
       break;
     }
 
@@ -351,13 +276,11 @@ std::unique_ptr<AST::AExpression> PAR::Parser_Expression::identifier(bool no_qua
   return id;
 }
 
-std::optional<std::unique_ptr<AST::AType_Expression>>
-PAR::Parser_Expression::try_identifier_typed(const std::string &name, const std::vector<std::string> &path)
+std::unique_ptr<AST::Expr_ID_Generic> PAR::Parser_Expression::identifier_typed()
 {
-  if (!ctx.tok_v.match(TokTy::TURBO_FISH)) return std::nullopt;
+  ctx.tok_v.match_any({TokTy::TURBO_FISH, TokTy::OPEN_BRACE});
 
-  auto id_type = ctx.Create_Node<AST::AType_Expression>(ctx.tok_v.peek(-2));
-  id_type->id  = id;
+  auto id_type = ctx.Create_Node<AST::Expr_ID_Generic>(ctx.tok_v.peek(-2));
 
   if (ctx.tok_v.match(TokTy::CLOSE_BRACKETS)) return id_type;
 
@@ -370,21 +293,19 @@ PAR::Parser_Expression::try_identifier_typed(const std::string &name, const std:
   return id_type;
 }
 
-std::optional<std::unique_ptr<AST::Expression::Member_Access>>
-PAR::Parser_Expression::try_member_access(const std::string &name, const std::vector<std::string> &path)
+std::unique_ptr<AST::Expression::Member_Access> PAR::Parser_Expression::member_access()
 {
-  if (!ctx.tok_v.match(TokTy::DOT)) return std::nullopt;
+  ctx.tok_v.match(TokTy::DOT);
 
-  auto access = ctx.Create_Node<AST::Expression::Member_Access>(ctx.tok_v.peek(-2));
-
-  access->right = parse_Expression();
+  auto access   = ctx.Create_Node<AST::Expression::Member_Access>(ctx.tok_v.peek(-2));
+  access->right = parse_expression();
 
   return access;
 }
 
-std::optional<std::unique_ptr<AST::Expression::Table_Access>> PAR::Parser_Expression::try_table_access()
+std::unique_ptr<AST::Expression::Table_Access> PAR::Parser_Expression::table_access()
 {
-  if (!ctx.tok_v.match(TokTy::OPEN_SQUARE)) return std::nullopt;
+  ctx.tok_v.match(TokTy::OPEN_SQUARE);
 
   auto table_access      = ctx.Create_Node<AST::Expression::Table_Access>(ctx.tok_v.peek(-1));
   table_access->selector = ctx.p_expr->parse_expression();
@@ -422,9 +343,9 @@ std::unique_ptr<AST::Expression::Ptr_Offset> PAR::Parser_Expression::ptr_offset(
 
 std::unique_ptr<AST::Expression::Ptr_Val> PAR::Parser_Expression::ptr_val()
 {
-  auto node = ctx.Create_Node<AST::Expression::Val_Of_Ptr>(ctx.tok_v.peek());
+  auto node = ctx.Create_Node<AST::Expression::Ptr_Val>(ctx.tok_v.peek());
   ctx.tok_v.match(TokTy::VAL_OF);
-  node->target = ctx.p_ref->parse_reference();
+  node->target = ctx.p_expr->parse_expression();
 
   return node;
 }
@@ -433,7 +354,7 @@ std::unique_ptr<AST::Expression::Addr_Of> PAR::Parser_Expression::addr_of()
 {
   auto node = ctx.Create_Node<AST::Expression::Addr_Of>(ctx.tok_v.peek());
   ctx.tok_v.match(TokTy::ADDR_OF);
-  node->target = ctx.p_ref->parse_reference();
+  node->target = ctx.p_expr->parse_expression();
 
   return node;
 }
@@ -460,7 +381,7 @@ std::unique_ptr<AST::Expression::Size_Of> PAR::Parser_Expression::size_of()
   auto                     node = ctx.Create_Node<AST::Expression::Size_Of>(ctx.tok_v.peek(-1));
 
   ctx.tok_v.expect<104>(TokTy::OPEN_PAREN, "Expected start arg '('.", hint);
-  node->target = ctx.p_ref->parse_reference();
+  node->target = ctx.p_expr->parse_expression();
   ctx.tok_v.expect<105>(TokTy::CLOSE_PAREN, "Expected end arg ')'.", hint);
 
   return node;
@@ -470,7 +391,7 @@ std::unique_ptr<AST::Expression::Move> PAR::Parser_Expression::move()
 {
   ctx.tok_v.match(TokTy::CAPA_MOVE_OF);
   auto node    = ctx.Create_Node<AST::Expression::Move>(ctx.tok_v.peek());
-  node->target = ctx.p_ref->parse_reference();
+  node->target = ctx.p_expr->parse_expression();
   return node;
 }
 
@@ -486,7 +407,7 @@ std::unique_ptr<AST::Expression::New_Ptr> PAR::Parser_Expression::new_ptr()
 
   ctx.tok_v.match(TokTy::NEW);
 
-  auto node = ctx.Create_Node<AST::Expression::New>(ctx.tok_v.peek());
+  auto node = ctx.Create_Node<AST::Expression::New_Ptr>(ctx.tok_v.peek());
   ctx.tok_v.expect_any<100>(kPointerTokens, "Expected pointer specification after 'new' token.", hint);
   node->pointer = TokTy_to_EPtrType(ctx.tok_v.peek(-1).type);
 

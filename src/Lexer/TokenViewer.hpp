@@ -55,12 +55,6 @@ public:
     return Token();
   }
 
-  template <size_t Code> std::string expect_id(const std::string &msg, const std::string &hint)
-  {
-    const Token &tok = expect<Code>(TokTy::IDENTIFIER, msg, hint);
-    return tok.val;
-  }
-
   size_t position() const;
   size_t line() const;
   void   rewind(size_t pos);

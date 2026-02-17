@@ -3,7 +3,9 @@
 #include <memory>
 #include <vector>
 
+#include "AST/AST_Base.hpp"
 #include "AST/AST_Headers.hpp"
+#include "AST/AST_Literal.hpp"
 #include "Parser_Headers.hpp"
 #include "Visitor/Symbol_Manager.hpp"
 
@@ -20,7 +22,7 @@ std::shared_ptr<AST::Declaration::COP::Component> PAR::Parser_Declaration_COP::c
 
   // not handled if (auto where = ctx.p_meta->metacode_where()) comp->gen_where;
 
-  comp->name = ctx.p_ref->identifier(comp.get());
+  comp->name = ctx.parse_name("", hint);
   ctx.tok_v.expect<14>(TokTy::OPEN_BRACE, "Expected start code block '{' after '" + comp->debug_str() + "'.", hint);
 
   // is no typed component
@@ -30,7 +32,7 @@ std::shared_ptr<AST::Declaration::COP::Component> PAR::Parser_Declaration_COP::c
     auto field         = ctx.Create_Decl<AST::Declaration::COP::Component_Field>(ctx.tok_v.peek());
     field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
 
-    field->id = ctx.p_ref->identifier(field.get(), true);
+    field->name = ctx.parse_name("", hint);
     ctx.tok_v.expect<15>(TokTy::COLON, "Expected type defintion symbol ':' after field name", hint);
 
     field->type = ctx.p_type->parse_type();
@@ -59,15 +61,15 @@ std::shared_ptr<AST::Declaration::COP::Role> PAR::Parser_Declaration_COP::role()
 
   Token tok = ctx.tok_v.peek();
 
-  auto role = ctx.Create_Decl<AST::Declaration::COP::Role>(tok);
-  role->id  = ctx.p_ref->identifier(role.get());
+  auto role  = ctx.Create_Decl<AST::Declaration::COP::Role>(tok);
+  role->name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(role);
-  ctx.m_sym->enter_scope(role->id.name, EScopeType::Role);
+  ctx.m_sym->enter_scope(role->name, EScopeType::Role);
 
   ctx.tok_v.expect<17>(TokTy::OPEN_BRACE, "Expected start definition '{' after role declaration.", hint);
 
   while (!ctx.tok_v.is_end()) {
-    role->components.push_back(ctx.p_ref->parse_reference());
+    role->components.push_back(ctx.p_expr->parse_expression());
 
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
   }
@@ -89,15 +91,13 @@ std::shared_ptr<AST::Declaration::COP::Entity> PAR::Parser_Declaration_COP::enti
   auto def_entity = ctx.Create_Decl<AST::Declaration::COP::Entity>(ctx.tok_v.peek());
 
   // metacode
-  def_entity->isCastable    = !ctx.metablock_contains(*def_entity, "nocast");
-  def_entity->isExtCastable = !ctx.metablock_contains(*def_entity, "no_extern_cast");
-
+  def_entity->isCastable     = !ctx.metablock_contains(*def_entity, "nocast");
+  def_entity->isExtCastable  = !ctx.metablock_contains(*def_entity, "no_extern_cast");
   def_entity->isMoveable     = !ctx.metablock_contains(*def_entity, "no_move");
   def_entity->isDestructible = !ctx.metablock_contains(*def_entity, "no_destruct");
-
-  def_entity->id  = ctx.p_ref->identifier(def_entity.get());
-  auto entity_sym = ctx.m_sym->add_decl(def_entity);
-  ctx.m_sym->enter_scope(def_entity->id.name, EScopeType::Entity);
+  def_entity->name           = ctx.parse_name("", hint);
+  auto entity_sym            = ctx.m_sym->add_decl(def_entity);
+  ctx.m_sym->enter_scope(def_entity->name, EScopeType::Entity);
 
   ctx.tok_v.expect<18>(TokTy::OPEN_BRACE, "Expected start code block '{' after entity declaration.", hint);
 
@@ -124,18 +124,21 @@ void PAR::Parser_Declaration_COP::parse_entity_declaration(SYM_DEFINITION       
       "\n  - `new(params) { ... }`";
 
   if (ctx.tok_v.match(TokTy::USE)) {
-    auto comp_ref = ctx.p_ref->parse_reference();
+    std::unique_ptr<AST::AIdentifier> comp_id;
 
-    if (auto ptr = dynamic_cast<AST::Literal::Component *>(comp_ref.get())) {
+    auto comp_name = ctx.p_expr->identifier();
+    if (auto ty = ctx.p_expr->identifier_typed()) {
+      ty->name = std::move(comp_name);
+      comp_id  = std::move(ty);
+    } else {
+      comp_id = std::move(comp_name);
+    }
+    auto comp = ctx.p_lit->literal_component(std::move(comp_id));
+
+    if (auto ptr = dynamic_cast<AST::Literal::Component *>(comp.get())) {
       // Transfert ownership directement en downcast
       n_entity->comps.push_back(
-          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(comp_ref.release())));
-    } else if (auto ptr = dynamic_cast<AST::AReference *>(comp_ref.get())) {
-      auto lit_comp    = ctx.Create_Node<AST::Literal::Component>(comp_ref->_token);
-      lit_comp->id     = ptr->id;
-      lit_comp->_token = ptr->_token;
-      lit_comp->_scope = ptr->_scope;
-      n_entity->comps.push_back(std::move(lit_comp));
+          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(comp.release())));
     } else {
       ctx.tok_v.add_error<19>("Expected Literal component after 'use' instruction", hint);
     }
@@ -182,7 +185,7 @@ std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_
   if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
     auto _op_index            = ctx.Create_Decl<AST::Declaration::COP::Entity_OpIndex>(tok);
     _op_index->operatorType   = EBinOpType::Index;
-    _op_index->parameter_name = ctx.tok_v.expect_id<22>("Expected index name binding", hint_index);
+    _op_index->parameter_name = ctx.parse_name("Expected index name binding", hint_index);
 
     if (ctx.tok_v.peek().type == TokTy::DOT && ctx.tok_v.peek(1).type == TokTy::DOT) {
       _op_index->operatorType = EBinOpType::Slice;
@@ -197,9 +200,8 @@ std::shared_ptr<AST::Declaration::COP::Entity_Op> PAR::Parser_Declaration_COP::_
 
     _op_index->return_type = ctx.p_type->parse_type();
 
-    if (auto ptr = dynamic_cast<AST::AType_Reference *>(_op_index->return_type.get());
-        _op_index->operatorType == EBinOpType::Slice && ptr->id.name == "Slice") {
-      ctx.tok_v.expect_id<26>("Expected type 'Slice<T>' after a range-based index operator.", hint_index);
+    if (_op_index->operatorType == EBinOpType::Slice) {
+      // ctx.parse_name("", hint_index);
     }
 
     entity_op = _op_index;
@@ -319,7 +321,7 @@ std::shared_ptr<AST::Declaration::COP::System> PAR::Parser_Declaration_COP::syst
   // not handled if (auto where = ctx.p_meta->metacode_where()) system->generic
   // = where.value();
 
-  system->id        = ctx.p_ref->identifier(system.get());
+  system->name      = ctx.parse_name("", hint);
   system->prototype = ctx.p_type->explicit_function_proto();
   auto sys_sym      = ctx.m_sym->add_decl(system);
   bool isNoCompUsed = true;

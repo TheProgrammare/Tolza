@@ -76,17 +76,17 @@ std::unique_ptr<AST::Type::Primitive> PAR::Parser_Type::primitive(bool isConst, 
   return pri;
 }
 
-std::unique_ptr<AST::Expr_ID_Generic> PAR::Parser_Type::reference(bool isConst, bool isOptional, bool isVolatile)
+std::unique_ptr<AST::Expr_ID_Generic> PAR::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
 {
   std::unique_ptr<AST::Expr_ID_Generic> result;
   auto                                  base_tok = ctx.tok_v.peek();
   auto                                  id       = ctx.p_expr->identifier();
-  auto                                  id_type  = ctx.p_ref->try_identifier_typed(id);
+  auto                                  id_type  = ctx.p_expr->identifier_typed(id);
   // generic type
   if (id_type) result = std::move(id_type.value());
   // no generic type
   else
-    result = ctx.Create_Node<AST::AType_Reference>(base_tok);
+    result = ctx.Create_Node<AST::Type::>(base_tok);
 
   result->type_isConst                      = isConst;
   result->type_isOptional                   = isOptional;
@@ -164,16 +164,16 @@ std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type()
 
 std::unique_ptr<AST::Type::Tuple> PAR::Parser_Type::explicit_tuple()
 {
+  static const std::string hint = "define named tuple like `(filed1: i32, ...)`.";
+
   auto tuple        = ctx.Create_Node<AST::Type::Tuple>(ctx.tok_v.peek());
   bool endByParen   = ctx.tok_v.match(TokTy::OPEN_PAREN);
   bool isNamedTuple = ctx.tok_v.peek(1).type == TokTy::COLON; // (name: type, ...) or (type, ...)
 
   while (!ctx.tok_v.is_end()) {
     if (isNamedTuple) {
-      tuple->name_fields.push_back(ctx.tok_v.expect_id<127>("Expected filed name (identifier) in named tuple.",
-                                                            "define named tuple like `(filed1: i32, ...)`."));
-      ctx.tok_v.expect<128>(TokTy::COLON, "Expected a name type separator ':' after an filed name keyword.",
-                            "define named tuple like `(filed1: i32, ...)`.");
+      tuple->name_fields.push_back(ctx.parse_name("", hint));
+      ctx.tok_v.expect<128>(TokTy::COLON, "Expected a name type separator ':' after an filed name keyword.", hint);
       tuple->types.push_back(ctx.p_type->parse_type());
     } else {
       tuple->types.push_back(ctx.p_type->parse_type());

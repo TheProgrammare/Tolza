@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "AST/AST_Base.hpp"
 #include "AST/AST_CodeBlock_Instruction.hpp"
 #include "AST/AST_Evaluator.hpp"
 #include "AST/AST_Forward.hpp"
@@ -34,13 +35,16 @@ struct Parser_Declaration_Local {
   [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> parameters();
 
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Component>
-  component_pattern(ECapability capa, AST::ID &comp_id, std::shared_ptr<AST::AExpression> comparison_ref);
+  component_pattern(ECapability capa, std::unique_ptr<AST::AIdentifier> comp_id,
+                    std::shared_ptr<AST::AExpression> comparison_ref);
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Entity>
-  entity_pattern(ECapability capa, AST::ID &entity_id, std::shared_ptr<AST::AExpression> comparison_ref);
+  entity_pattern(ECapability capa, std::unique_ptr<AST::AIdentifier> entity_id,
+                 std::shared_ptr<AST::AExpression> comparison_ref);
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Tuple>
   tuple_pattern(ECapability capa, std::shared_ptr<AST::AExpression> comparison_ref);
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern_Enum>
-  enum_pattern(ECapability capa, AST::ID &enum_id, std::shared_ptr<AST::AExpression> comparison_ref);
+  enum_pattern(ECapability capa, std::unique_ptr<AST::AIdentifier> enum_id,
+               std::shared_ptr<AST::AExpression> comparison_ref);
 
   PAR::Parser_Context &ctx;
 };

@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 
+#include "AST/AST_Base.hpp"
 #include "AST/AST_Forward.hpp"
 
 namespace PAR
@@ -28,10 +29,8 @@ private:
   [[nodiscard]] std::unique_ptr<AST::Literal::Tuple>            literal_tuple();
 
 public:
-  [[nodiscard]] std::unique_ptr<AST::Literal::Entity>
-  literal_entity(const AST::ID &id, std::vector<std::unique_ptr<AST::AType>> &gen_args);
-  [[nodiscard]] std::unique_ptr<AST::Literal::Component>
-  literal_component(const AST::ID &id, std::vector<std::unique_ptr<AST::AType>> &gen_args);
+  [[nodiscard]] std::unique_ptr<AST::Literal::Entity>    literal_entity(std::unique_ptr<AST::AIdentifier> id);
+  [[nodiscard]] std::unique_ptr<AST::Literal::Component> literal_component(std::unique_ptr<AST::AIdentifier> id);
 
 private:
   Parser_Context &ctx;

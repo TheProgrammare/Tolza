@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "AST/AST_Data.hpp"
 #include "ScriptInfo.hpp"
 
 #include "Parser_Base.hpp"
@@ -13,7 +14,6 @@
 #include "Parser_Literal.hpp"
 #include "Parser_Memory.hpp"
 #include "Parser_Operator.hpp"
-#include "Parser_Reference.hpp"
 #include "Parser_Statement.hpp"
 #include "Parser_Type.hpp"
 #include "Visitor/Symbol_Manager.hpp"
@@ -46,8 +46,6 @@ PAR::Parser_Context::~Parser_Context()
   p_mem = nullptr;
   delete p_op;
   p_op = nullptr;
-  delete p_ref;
-  p_ref = nullptr;
   delete p_state;
   p_state = nullptr;
   delete p_type;
@@ -242,4 +240,19 @@ bool PAR::Parser_Context::match_field_any_separator(TokTy separator, std::initia
   tok_v.add_error<13>("Unexpected token '" + tok_v.peek().val + "' in expression.",
                       "expected a separator '" + std::to_string(int(separator)) + "' or a ending {" + endSymbols + "}");
   return false;
+}
+
+std::string PAR::Parser_Context::parse_name(const std::string &custom_msg, const std::string &custom_hint)
+{
+  static const std::string _msg = "Expected identifier (classic name).";
+  static const std::string _hint =
+      "define identifier (classic name) like:"
+      "\n  - rule `[a-zA-Z_][a-zA-Z0-9_]*`"
+      "\n  - first character is alphabetical or `_`"
+      "\n  - other character is alphanumeric or `_`";
+
+  const std::string final_msg  = custom_msg.empty() ? _msg : custom_msg;
+  const std::string final_hint = custom_hint.empty() ? _hint : custom_hint;
+
+  return tok_v.expect<777>(TokTy::IDENTIFIER, final_msg, final_hint).val;
 }

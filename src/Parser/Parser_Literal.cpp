@@ -2,6 +2,7 @@
 
 #include <codecvt>
 #include <llvm/ADT/APFloat.h>
+#include <memory>
 #include <stdio.h>
 
 #include "AST/AST_Headers.hpp"
@@ -582,8 +583,7 @@ PAR::Parser_Literal::literal_entity(const AST::ID &id, std::vector<std::unique_p
   return lit_entity;
 }
 
-std::unique_ptr<AST::Literal::Component>
-PAR::Parser_Literal::literal_component(const AST::ID &id, std::vector<std::unique_ptr<AST::AType>> &gen_args)
+std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(std::unique_ptr<AST::AIdentifier> id)
 {
   static const std::string hint =
       "define literal component like:"
@@ -593,8 +593,7 @@ PAR::Parser_Literal::literal_component(const AST::ID &id, std::vector<std::uniqu
 
   auto comp = ctx.Create_Node<AST::Literal::Component>(ctx.tok_v.peek());
 
-  comp->id       = id;
-  comp->gen_args = std::move(gen_args);
+  comp->id = id;
 
   ctx.tok_v.match(TokTy::OPEN_BRACE);
   if (!ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
@@ -605,7 +604,7 @@ PAR::Parser_Literal::literal_component(const AST::ID &id, std::vector<std::uniqu
     ctx.tok_v.expect<92>(TokTy::DOT, "Expected contextual field access '.' in literal component", hint);
 
     auto field_arg  = ctx.Create_Node<AST::Reference::Call_Argument>(ctx.tok_v.peek());
-    field_arg->name = ctx.tok_v.expect_id<93>("Expected field name (identifier)", hint);
+    field_arg->name = ctx.parse_name("", hint);
     ctx.tok_v.expect<94>(TokTy::COLON, "Expected field assignation ':' after field name", hint);
 
     field_arg->val = ctx.p_expr->parse_expression();
@@ -619,17 +618,17 @@ PAR::Parser_Literal::literal_component(const AST::ID &id, std::vector<std::uniqu
 
 std::unique_ptr<AST::Literal::Tuple> PAR::Parser_Literal::literal_tuple()
 {
+  static const std::string hint = "define named tuple instance like `(filed1: value, ...)`.";
+
   auto tuple        = ctx.Create_Node<AST::Literal::Tuple>(ctx.tok_v.peek());
   bool isNamedTuple = ctx.tok_v.check(TokTy::COLON); // (name: type, ...) or (type, ...)
 
   while (!ctx.tok_v.is_end()) {
     if (isNamedTuple) {
-      tuple->name_fields.push_back(ctx.tok_v.expect_id<95>("Expected field name (identifier) in named tuple instance.",
-                                                           "define named tuple instance like `(filed1: value, ...)`."));
+      tuple->name_fields.push_back(ctx.parse_name("", hint));
 
       ctx.tok_v.expect<96>(TokTy::ASSIGN,
-                           "Expected field value assignation ':' after filed name in named tuple instance.",
-                           "define named tuple instance like `(filed1: value, ...)`.");
+                           "Expected field value assignation ':' after filed name in named tuple instance.", hint);
 
       tuple->values.push_back(ctx.p_expr->parse_expression());
     } else {
