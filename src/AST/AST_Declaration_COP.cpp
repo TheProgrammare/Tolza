@@ -43,7 +43,7 @@ bool AST::Declaration::COP::Entity::contains_comp(const AST::Declaration::COP::C
 {
   for (auto &comp : comps) {
     if (!comp) return false;
-    if (comp->name == target_comp.name) return true;
+    if (comp->name->get_base_name() == target_comp.name) return true;
   }
   return false;
 }

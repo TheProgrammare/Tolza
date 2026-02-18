@@ -197,7 +197,7 @@ std::unique_ptr<AST::Declaration::Local::Lambda_Capture> PAR::Parser_Declaration
     auto tok_capa    = ctx.tok_v.expect_any<44>(kCapabilityKind, "Expected capture capability kind.", hint);
     elem->capability = TokTy_to_ECapability(tok_capa.type);
 
-    elem->name = ctx.p_ref->identifier(true);
+    elem->name = ctx.p_expr->identifier();
     capture->elements.push_back(std::move(elem));
   }
 
@@ -209,9 +209,9 @@ std::shared_ptr<AST::Declaration::Local::Lambda> PAR::Parser_Declaration_Local::
   auto lam = ctx.Create_Decl<AST::Declaration::Local::Lambda>(ctx.tok_v.peek());
 
   if (ctx.tok_v.check(TokTy::IDENTIFIER)) {
-    lam->id = ctx.p_ref->identifier(lam.get(), true);
+    lam->name = ctx.parse_name();
     ctx.m_sym->add_decl(lam);
-    ctx.m_sym->enter_scope(lam->id.name, EScopeType::Lambda);
+    ctx.m_sym->enter_scope(lam->name, EScopeType::Lambda);
   } else {
     ctx.m_sym->enter_scope("lam", EScopeType::Lambda);
   }
@@ -282,11 +282,11 @@ std::shared_ptr<AST::Declaration::Local::Capability> PAR::Parser_Declaration_Loc
   auto  capa          = ctx.Create_Decl<AST::Declaration::Local::Capability>(ctx.tok_v.peek(-1));
   capa->kind          = TokTy_to_ECapability(capa_tok_kind.type);
 
-  capa->id = ctx.p_ref->identifier(true);
+  capa->name = ctx.parse_name("", hint);
 
   ctx.tok_v.expect<48>(TokTy::ASSIGN, "Expected classic assignation '=' after capability declaration.", hint);
 
-  capa->reference = std::shared_ptr<AST::AExpression>(ctx.p_ref->parse_reference());
+  capa->right = ctx.p_expr->parse_expression();
 
   return capa;
 }
@@ -301,7 +301,7 @@ PAR::Parser_Declaration_Local::component_pattern(ECapability capa, AST::ID &comp
 
   auto comp_pat = ctx.Create_Node<AST::Declaration::Local::Pattern_Component>(ctx.tok_v.peek());
 
-  comp_pat->component_id = comp_id;
+  comp_pat->name = comp_id;
   comp_pat->capability   = capa;
 
   while (!ctx.tok_v.is_end()) {

@@ -243,7 +243,7 @@ std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP:
   ctx.m_sym->enter_scope("cast", EScopeType::Entity_Cast);
 
   auto key_self_case = [&]() {
-    auto self             = ctx.Create_Node<AST::Reference::Self>(ctx.tok_v.peek());
+    auto self             = ctx.Create_Node<AST::Expression::Self>(ctx.tok_v.peek());
     self->self_definition = inEntity;
 
     return self;
@@ -372,14 +372,14 @@ std::shared_ptr<AST::Declaration::COP::System_Case> PAR::Parser_Declaration_COP:
 
   if (!sys_case->isDefault) {
     while (!ctx.tok_v.is_end()) {
-      auto bind = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek());
-      bind->id  = ctx.p_ref->identifier();
       ctx.tok_v.expect<38>(TokTy::OPEN_PAREN, "Expected start binding '(' after component name pattern.", hint);
-      bind->id = ctx.p_ref->identifier(true);
-      ctx.tok_v.expect<39>(TokTy::OPEN_PAREN, "Expected end binding ')' after component name pattern.", hint);
 
+      auto bind  = ctx.Create_Decl<AST::Declaration::Local::Variable_Binding>(ctx.tok_v.peek());
+      bind->name = ctx.parse_name("", hint);
       ctx.m_sym->add_decl(bind);
       sys_case->bindings.push_back(bind);
+
+      ctx.tok_v.expect<39>(TokTy::OPEN_PAREN, "Expected end binding ')' after component name pattern.", hint);
 
       if (ctx.match_field_separator(TokTy::OP_PLUS, TokTy::OPEN_BRACE)) break;
     }
