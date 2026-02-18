@@ -243,7 +243,7 @@ std::shared_ptr<AST::Declaration::COP::Entity_Cast> PAR::Parser_Declaration_COP:
   ctx.m_sym->enter_scope("cast", EScopeType::Entity_Cast);
 
   auto key_self_case = [&]() {
-    auto self             = ctx.Create_Node<AST::Reference::Self>(ctx.tok_v.peek());
+    auto self             = ctx.Create_Node<AST::Expression::Self>(ctx.tok_v.peek());
     self->self_definition = inEntity;
 
     return self;
