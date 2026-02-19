@@ -4,6 +4,7 @@
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Headers.hpp"
 #include "Parser_Headers.hpp"
+#include <sys/types.h>
 
 // const, optional, volatile
 std::tuple<bool, bool, bool> PAR::Parser_Type::get_type_annotation()
@@ -81,12 +82,17 @@ std::unique_ptr<AST::Expr_ID_Generic> PAR::Parser_Type::id_type(bool isConst, bo
   std::unique_ptr<AST::Expr_ID_Generic> result;
   auto                                  base_tok = ctx.tok_v.peek();
   auto                                  id       = ctx.p_expr->identifier();
-  auto                                  id_type  = ctx.p_expr->identifier_typed(id);
+  auto                                  id_type  = ctx.p_expr->identifier_typed();
+  id_type->name                                  = std::move(id);
+
   // generic type
-  if (id_type) result = std::move(id_type.value());
+  if (id_type) {
+    result = std::move(id_type);
+  }
   // no generic type
-  else
-    result = ctx.Create_Node<AST::Type::>(base_tok);
+  else {
+    result = ctx.Create_Node<AST::Expr_ID_Generic>(base_tok);
+  }
 
   result->type_isConst                      = isConst;
   result->type_isOptional                   = isOptional;
@@ -130,27 +136,23 @@ std::unique_ptr<AST::AType> PAR::Parser_Type::parse_type()
   auto [isConst, isOptional, isVolatile] = get_type_annotation();
 
   switch (ctx.tok_v.peek().type) {
-    case TokTy::OPEN_SQUARE:
-      return table(isConst, isOptional, isVolatile);
-    case TokTy::PTR:
-    case TokTy::UPTR:
-    case TokTy::SPTR:
-    case TokTy::WPTR:
-      return pointer(isConst, isOptional, isVolatile);
-    case TokTy::OPEN_PAREN:
-      return tuple(isConst, isOptional, isVolatile);
-    case TokTy::FUNCTION:
-      return function_proto(isConst, isOptional, isVolatile);
-    default:
-      if (ctx.tok_v.check_any(kPrimitiveTypeTokens)) return primitive(isConst, isOptional, isVolatile);
-      if (ctx.tok_v.match_id_val("comptime")) {
-        ctx.tok_v.expect<125>(TokTy::STATIC_ACCESS, "Expected static access '::' after comptime operation.", "");
-        if (ctx.tok_v.match_id_val("type")) return expr_get_expr_type();
-        ctx.tok_v.prev(); // unconsume ::
-        ctx.tok_v.prev(); // unconsume comptime
-      }
+  case TokTy::OPEN_SQUARE: return table(isConst, isOptional, isVolatile);
+  case TokTy::PTR:
+  case TokTy::UPTR:
+  case TokTy::SPTR:
+  case TokTy::WPTR:        return pointer(isConst, isOptional, isVolatile);
+  case TokTy::OPEN_PAREN:  return tuple(isConst, isOptional, isVolatile);
+  case TokTy::FUNCTION:    return function_proto(isConst, isOptional, isVolatile);
+  default:
+    if (ctx.tok_v.check_any(kPrimitiveTypeTokens)) return primitive(isConst, isOptional, isVolatile);
+    if (ctx.tok_v.match_id_val("comptime")) {
+      ctx.tok_v.expect<125>(TokTy::STATIC_ACCESS, "Expected static access '::' after comptime operation.", "");
+      if (ctx.tok_v.match_id_val("type")) return expr_get_expr_type();
+      ctx.tok_v.prev(); // unconsume ::
+      ctx.tok_v.prev(); // unconsume comptime
+    }
 
-      if (ctx.tok_v.check(TokTy::IDENTIFIER)) return reference(isConst, isOptional, isVolatile);
+    if (ctx.tok_v.check(TokTy::IDENTIFIER)) return id_type(isConst, isOptional, isVolatile);
   }
 
   ctx.tok_v.add_error<126>("Unexpected type definition '" + ctx.tok_v.peek().val + "'.",
@@ -251,7 +253,7 @@ std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> PAR::Parser_Typ
     if (param->passMode == EPassMode::NONE)
       ctx.tok_v.add_error<132>("Expected parameter pass mode before the parameter name.", hint);
 
-    param->id = ctx.p_ref->identifier(true);
+    param->name = ctx.parse_name("", hint);
     // check pointer parameter type
     ctx.tok_v.expect<133>(TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
     param->type = ctx.p_type->parse_type();

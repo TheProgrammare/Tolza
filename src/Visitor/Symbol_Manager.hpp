@@ -38,19 +38,14 @@ struct Symbols_Manager {
   ScriptInfo &scr_info;
 
   std::vector<std::shared_ptr<Symbol_Data>> declarations;
+  std::vector<ScopeData>                    current_scope_path;
+  std::vector<std::string>                  decl_errors;
 
-  std::vector<ScopeData> current_scope_path;
-
-  std::vector<std::string> decl_errors;
-
-  std::string get_current_export_name() const;
-
-  std::shared_ptr<Symbol_Data> add_decl(std::shared_ptr<AST::ADeclaration> declaration);
-  std::shared_ptr<Symbol_Data> add_decl_ex_nihilo(std::shared_ptr<AST::ADeclaration> declaration);
-
+  std::string                            get_current_export_name() const;
+  std::shared_ptr<Symbol_Data>           add_decl(std::shared_ptr<AST::ADeclaration> declaration);
+  std::shared_ptr<Symbol_Data>           add_decl_ex_nihilo(std::shared_ptr<AST::ADeclaration> declaration);
   void                                   enter_scope(const std::string &name, EScopeType type, size_t depth = 0);
   void                                   exit_scope();
   [[nodiscard]] std::vector<std::string> get_current_path() const;
-
   [[nodiscard]] std::optional<std::shared_ptr<AST::ADeclaration>> find_symbol(const std::string &full_name);
 };

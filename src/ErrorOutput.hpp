@@ -23,14 +23,10 @@ enum class EErrorSeverity { debug, warning, error, fatal };
 inline std::string ESeverity_to_str(EErrorSeverity severity)
 {
   switch (severity) {
-    case EErrorSeverity::debug:
-      return "debug";
-    case EErrorSeverity::warning:
-      return "warning";
-    case EErrorSeverity::error:
-      return "error";
-    case EErrorSeverity::fatal:
-      return "fatal";
+  case EErrorSeverity::debug:   return "debug";
+  case EErrorSeverity::warning: return "warning";
+  case EErrorSeverity::error:   return "error";
+  case EErrorSeverity::fatal:   return "fatal";
   }
 }
 
@@ -38,27 +34,23 @@ inline std::string ESeverity_to_str(EErrorSeverity severity)
 inline std::string ESeverity_to_color(EErrorSeverity severity)
 {
   switch (severity) {
-    case EErrorSeverity::debug:
-      return color_CYAN;
-    case EErrorSeverity::warning:
-      return color_YELLOW;
-    case EErrorSeverity::error:
-      return color_RED;
-    case EErrorSeverity::fatal:
-      return color_RED;
+  case EErrorSeverity::debug:   return color_CYAN;
+  case EErrorSeverity::warning: return color_YELLOW;
+  case EErrorSeverity::error:   return color_RED;
+  case EErrorSeverity::fatal:   return color_RED;
   }
 }
 
 template <size_t Code> struct Error_Diagnostic {
   const ScriptInfo &scr_info;
 
-  Token              token;
-  std::vector<Token> tokens_inpacted;
-  EPhase             phase    = EPhase::parser;
-  EErrorSeverity     severity = EErrorSeverity::error;
+  Token                    token;
+  std::vector<Token>       tokens_inpacted;
+  EPhase                   phase    = EPhase::parser;
+  EErrorSeverity           severity = EErrorSeverity::error;
   // classic error 0000 - 0999
   // internal error 1000 - 1999
-  size_t                   code = 0000;
+  size_t                   code     = 0000;
   std::vector<std::string> context;
   std::string              msg;
   std::string              hint;
@@ -68,8 +60,8 @@ template <size_t Code> struct Error_Diagnostic {
   Error_Diagnostic<Code>(const ScriptInfo &_scr_info, const Token &_token, const std::vector<Token> &_tokens,
                          EPhase _phase, EErrorSeverity _severity, const std::vector<std::string> &_context,
                          const std::string &_msg, const std::string &_hint)
-      : scr_info(_scr_info), token(_token), tokens_inpacted(_tokens), phase(_phase), severity(_severity), code(Code),
-        context(_context), msg(_msg), hint(_hint)
+    : scr_info(_scr_info), token(_token), tokens_inpacted(_tokens), phase(_phase), severity(_severity), code(Code),
+      context(_context), msg(_msg), hint(_hint)
   {
     static_assert(Code < 9999, "The Error code is higher than 9999 maximum permitted.");
   }
@@ -144,35 +136,25 @@ private:
   inline std::string escapeChar(unsigned char c) const
   {
     switch (c) {
-      case '\a':
-        return "\\a";
-      case '\b':
-        return "\\b";
-      case '\f':
-        return "\\f";
-      case '\n':
-        return "\\n";
-      case '\r':
-        return "\\r";
-      case '\t':
-        return "\\t";
-      case '\v':
-        return "\\v";
-      case '\\':
-        return "\\\\";
-      case '\'':
-        return "\\\'";
-      case '\"':
-        return "\\\"";
-      default:
-        if (isprint(c))
-          return std::string(1, c); // caractère visible
-        else {
-          // caractère de contrôle non standard → représentation hexadécimale
-          std::ostringstream oss;
-          oss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (int)c;
-          return oss.str();
-        }
+    case '\a': return "\\a";
+    case '\b': return "\\b";
+    case '\f': return "\\f";
+    case '\n': return "\\n";
+    case '\r': return "\\r";
+    case '\t': return "\\t";
+    case '\v': return "\\v";
+    case '\\': return "\\\\";
+    case '\'': return "\\\'";
+    case '\"': return "\\\"";
+    default:
+      if (isprint(c))
+        return std::string(1, c); // caractère visible
+      else {
+        // caractère de contrôle non standard → représentation hexadécimale
+        std::ostringstream oss;
+        oss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (int)c;
+        return oss.str();
+      }
     }
   }
 

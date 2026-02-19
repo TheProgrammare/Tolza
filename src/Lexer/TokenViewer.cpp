@@ -168,29 +168,27 @@ void TokenViewer::synchronize()
     if (peek(-1).type == TokTy::SEMICOLON) return;
 
     switch (peek().type) {
-      case TokTy::LET:
-      case TokTy::VAR:
-      case TokTy::ENTITY:
-      case TokTy::METACODE:
-      case TokTy::ENUM:
-      case TokTy::IF:
-      case TokTy::ELSE:
-      case TokTy::WHILE:
-      case TokTy::INJECT:
-      case TokTy::FOR:
-      case TokTy::RETURN:
-      case TokTy::BREAK:
-      case TokTy::CONTINUE:
-      case TokTy::MATCH:
-      case TokTy::CAST:
-      case TokTy::FUNCTION:
-      case TokTy::SYSTEM:
-      case TokTy::OP:
-      case TokTy::COMPONENT:
-      case TokTy::IDENTIFIER:
-        return; // end the function
-      default:
-        break; // continue
+    case TokTy::LET:
+    case TokTy::VAR:
+    case TokTy::ENTITY:
+    case TokTy::METACODE:
+    case TokTy::ENUM:
+    case TokTy::IF:
+    case TokTy::ELSE:
+    case TokTy::WHILE:
+    case TokTy::INJECT:
+    case TokTy::FOR:
+    case TokTy::RETURN:
+    case TokTy::BREAK:
+    case TokTy::CONTINUE:
+    case TokTy::MATCH:
+    case TokTy::CAST:
+    case TokTy::FUNCTION:
+    case TokTy::SYSTEM:
+    case TokTy::OP:
+    case TokTy::COMPONENT:
+    case TokTy::IDENTIFIER: return; // end the function
+    default:                break;                 // continue
     }
 
     next(); // consume token and continue

@@ -1,6 +1,7 @@
 #include "AST_Generic.hpp"
 
 #include "AST_Declaration_COP.hpp"
+#include "AST_Expression.hpp"
 
 bool AST::Generic::Have_Op::type_isValid(const AType &type) const
 {

@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Forward.hpp"
@@ -14,7 +13,7 @@ struct Parser_Literal {
   Parser_Literal(Parser_Context &ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::optional<std::unique_ptr<AST::ALiteral>> try_literal(bool is_silent_error = false);
-  [[nodiscard]] std::unique_ptr<AST::Literal::Range>          literal_range(std::unique_ptr<AST::Node> start);
+  [[nodiscard]] std::unique_ptr<AST::Literal::Range>          literal_range(std::unique_ptr<AST::AExpression> start);
 
 private:
   [[nodiscard]] std::unique_ptr<AST::Literal::Boolean>          literal_boolean();

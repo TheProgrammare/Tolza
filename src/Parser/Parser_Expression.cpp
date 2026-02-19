@@ -65,14 +65,10 @@ std::unique_ptr<AST::Operation::Cast_As> PAR::Parser_Expression::cast_as(std::un
   auto asCast = ctx.Create_Node<AST::Operation::Cast_As>(ctx.tok_v.peek());
 
   switch (ctx.tok_v.peek().type) {
-    case TokTy::AS:
-      asCast->cast_type = AST::Operation::Cast_As::ECastType::AS;
-    case TokTy::AS_REINTERPRET:
-      asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_REINTERPRET;
-    case TokTy::AS_SAFE:
-      asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_SAFE;
-    default:
-      ctx.tok_v.add_error<1000>("Unexpected token encounted in casting", "");
+  case TokTy::AS:             asCast->cast_type = AST::Operation::Cast_As::ECastType::AS;
+  case TokTy::AS_REINTERPRET: asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_REINTERPRET;
+  case TokTy::AS_SAFE:        asCast->cast_type = AST::Operation::Cast_As::ECastType::AS_SAFE;
+  default:                    ctx.tok_v.add_error<1000>("Unexpected token encounted in casting", "");
   }
 
   ctx.tok_v.next(); // consume as
@@ -298,7 +294,7 @@ std::unique_ptr<AST::Expression::Member_Access> PAR::Parser_Expression::member_a
   ctx.tok_v.match(TokTy::DOT);
 
   auto access   = ctx.Create_Node<AST::Expression::Member_Access>(ctx.tok_v.peek(-2));
-  access->right = parse_expression();
+  access->right = identifier(true);
 
   return access;
 }

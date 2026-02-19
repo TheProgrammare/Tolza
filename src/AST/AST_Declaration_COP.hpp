@@ -13,7 +13,7 @@ namespace Declaration
 namespace COP
 {
 
-struct Component_Field : public ADeclaration {
+struct Component_Field final : public ADeclaration {
   SYM_DEFINITION parent_component;
 
   std::unique_ptr<AType>       type;
@@ -26,7 +26,7 @@ struct Component_Field : public ADeclaration {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Component : public ADeclaration {
+struct Component final : public ADeclaration {
   SYM_DEFINITION parent_entity;
 
   [[maybe_unused]]
@@ -39,7 +39,7 @@ struct Component : public ADeclaration {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Role : public ADeclaration {
+struct Role final : public ADeclaration {
   std::vector<std::unique_ptr<AExpression>> components;
 
   std::string debug_str() const override { return "declaration role \"" + name + "\""; }
@@ -51,7 +51,7 @@ struct Role : public ADeclaration {
 struct Entity_Op;
 struct Entity_Cast;
 
-struct Entity : public ADeclaration {
+struct Entity final : public ADeclaration {
   std::vector<std::unique_ptr<Literal::Component>> comps;
 
   // fn type, lines
@@ -78,7 +78,7 @@ struct Entity : public ADeclaration {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Entity_Cast : public ADeclaration {
+struct Entity_Cast final : public ADeclaration {
   SYM_DEFINITION parent_entity;
 
   std::unique_ptr<Node>  source;
@@ -110,7 +110,7 @@ struct Entity_Op : public ADeclaration {
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
-struct Entity_OpIndex : public Entity_Op {
+struct Entity_OpIndex final : public Entity_Op {
   // nullptr = usize by default
   // other non int type = map like
   // Range = always return a Slice
@@ -124,7 +124,7 @@ struct Entity_OpIndex : public Entity_Op {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct System : public ADeclaration, ICallable {
+struct System final : public ADeclaration, ICallable {
   std::shared_ptr<Type::Function_Proto>     prototype;
   std::vector<std::shared_ptr<System_Case>> cases;
 
@@ -138,7 +138,7 @@ struct System : public ADeclaration, ICallable {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct System_Case : public ADeclaration {
+struct System_Case final : public ADeclaration {
   // resolved in def_system
   SYM_DEFINITION parent;
 

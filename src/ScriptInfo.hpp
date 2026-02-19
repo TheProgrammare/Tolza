@@ -29,7 +29,7 @@ struct Extern_Item {
   std::vector<std::string> path;
 
   Extern_Item(const std::string &_name, const std::vector<std::string> &_path, Kind _kind)
-      : name(_name), path(_path), kind(_kind)
+    : name(_name), path(_path), kind(_kind)
   {
   }
 };
@@ -91,7 +91,7 @@ struct ModuleExportation {
 struct ScriptInfo {
   ScriptInfo(const std::string &_name, const std::string &_file_path, const std::string &_file_str,
              const std::vector<std::string> &_file_lines)
-      : name(_name), file_path(_file_path), file_str(_file_str), file_lines(_file_lines)
+    : name(_name), file_path(_file_path), file_str(_file_str), file_lines(_file_lines)
   {
   }
 

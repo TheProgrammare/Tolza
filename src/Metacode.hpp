@@ -118,16 +118,11 @@ inline bool check_pattern(const MetaWord &word, const std::string &pattern)
 {
   EPatternKey pattern_key = get_pattern_key(pattern);
   switch (pattern_key) {
-    case EPatternKey::Any:
-      return true;
-    case EPatternKey::Identifier:
-      return word.contains(TokTy::IDENTIFIER);
-    case EPatternKey::Numeric:
-      return word.contains_one(kNumericTypeTokens);
-    case EPatternKey::Alternative:
-      return word.is_alternative();
-    case EPatternKey::None:
-      return word.contains(pattern);
+  case EPatternKey::Any:         return true;
+  case EPatternKey::Identifier:  return word.contains(TokTy::IDENTIFIER);
+  case EPatternKey::Numeric:     return word.contains_one(kNumericTypeTokens);
+  case EPatternKey::Alternative: return word.is_alternative();
+  case EPatternKey::None:        return word.contains(pattern);
   }
 }
 
@@ -138,7 +133,7 @@ struct MetaBlock;
 struct MetaInstruct {
   std::vector<MetaWord> words;
   // parent code block of the instruction
-  MetaBlock *code_block = nullptr;
+  MetaBlock            *code_block = nullptr;
 
   MetaInstruct(MetaBlock *code_block, const std::vector<MetaWord> &words) : code_block(code_block), words(words) {}
 
@@ -212,7 +207,7 @@ struct MetaScope {
   size_t      start_scope_position = 1;
   size_t      end_scope_position   = 1;
   // subline scope don't keep track of the token generation flow
-  bool is_subline_scope = true;
+  bool        is_subline_scope     = true;
 
   [[nodiscard]]
   bool is_valid() const
@@ -224,9 +219,9 @@ struct MetaScope {
 // code block
 struct MetaBlock {
   [[maybe_unused]]
-  MetaBlock *parent = nullptr;
+  MetaBlock                *parent = nullptr;
   // if scoped
-  MetaScope _scope;
+  MetaScope                 _scope;
   // all instructions
   std::vector<MetaInstruct> _instructions;
 
@@ -483,12 +478,9 @@ struct MetaBlock_If : public MetaBlock {
   std::string print_type() const
   {
     switch (flow_type) {
-      case EFlowType::IF:
-        return "if";
-      case EFlowType::ELIF:
-        return "elif";
-      case EFlowType::ELSE:
-        return "else";
+    case EFlowType::IF:   return "if";
+    case EFlowType::ELIF: return "elif";
+    case EFlowType::ELSE: return "else";
     }
   }
 
@@ -529,12 +521,9 @@ struct Expand_If : public MetaBlock {
   std::string print_type() const
   {
     switch (flow_type) {
-      case EFlowType::IF:
-        return "if";
-      case EFlowType::ELIF:
-        return "elif";
-      case EFlowType::ELSE:
-        return "else";
+    case EFlowType::IF:   return "if";
+    case EFlowType::ELIF: return "elif";
+    case EFlowType::ELSE: return "else";
     }
   }
 
@@ -557,7 +546,7 @@ struct MetaBlock_Expand : public MetaBlock {
   std::map<std::string, std::vector<Token>> placeholders;
   std::vector<std::unique_ptr<Expand_If>>   expand_conditions;
   // code model position, placeholder target
-  std::unordered_map<size_t, std::string> placeholders_pos;
+  std::unordered_map<size_t, std::string>   placeholders_pos;
 
   std::vector<Token> tokens_expanded;
 

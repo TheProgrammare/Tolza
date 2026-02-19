@@ -9,6 +9,8 @@
 #include "AST/AST_Evaluator.hpp"
 #include "AST/AST_Forward.hpp"
 
+using proto_cb = std::function<AST::CodeBlock_instruction()>;
+
 namespace PAR
 {
 struct Parser_Context;
@@ -24,12 +26,12 @@ struct Parser_Declaration_Local {
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Pattern>
   parse_pattern(std::shared_ptr<AST::AExpression> comparison_ref);
 
-  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable>        variable();
-  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable_Unpack> variable_unpack();
-  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Lambda>          lambda();
-  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Capability>      capability();
-  [[nodiscard]] std::unique_ptr<AST::Declaration::Local::CodeBlock>
-  code_block(bool is_silent_error, std::function<AST::CodeBlock_instruction()> in_function);
+  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable>               variable();
+  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Variable_Unpack>        variable_unpack();
+  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Lambda>                 lambda();
+  [[nodiscard]] std::shared_ptr<AST::Declaration::Local::Capability>             capability();
+  [[nodiscard]] std::unique_ptr<AST::Declaration::Local::CodeBlock>              code_block(bool     is_silent_error,
+                                                                                            proto_cb in_function);
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::CodeBlock>              code_block_instruction();
   [[nodiscard]] std::unique_ptr<AST::Declaration::Local::Lambda_Capture>         lambda_capture();
   [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> parameters();

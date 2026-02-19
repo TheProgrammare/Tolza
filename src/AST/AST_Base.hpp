@@ -72,6 +72,7 @@ struct AType : virtual Node {
   bool type_isConst    = false;
   bool type_isVolatile = false;
 
+  AType()          = default;
   virtual ~AType() = default;
 };
 
@@ -81,6 +82,8 @@ struct ADeclaration : virtual Node {
   std::string name;
 
   SYM_DEFINITION symbol;
+
+  ADeclaration() = default;
 
   ADeclaration(const ADeclaration &)            = delete;
   ADeclaration &operator=(const ADeclaration &) = delete;
@@ -113,6 +116,8 @@ struct AIdentifier : virtual AExpression {
 
 struct Expr_ID final : virtual AIdentifier {
   std::string name;
+
+  Expr_ID() = default;
   explicit Expr_ID(const std::string &_name) : name(_name) {}
 
   std::string get_base_name() const override { return name; }
@@ -124,6 +129,7 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   std::string              name;
   std::vector<std::string> path;
 
+  Expr_ID_Qualified() = default;
   Expr_ID_Qualified(const std::vector<std::string> &p_path, const std::string &_name) : name(_name) { path = p_path; }
 
   bool qualification_at_root_scope    = false; // e.g. ::math::add()

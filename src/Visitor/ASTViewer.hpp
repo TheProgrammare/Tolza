@@ -12,26 +12,13 @@ static inline std::string escapeDot(const std::string &s)
   out.reserve(s.size() + 8);
   for (char c : s) {
     switch (c) {
-      case '\\':
-        out += "\\\\";
-        break;
-      case '"':
-        out += "\\\"";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '.':
-        out += "_";
-        break;
-      case ' ':
-        out += "_";
-        break;
-      case '\r':
-        break;
-      default:
-        out += c;
-        break;
+    case '\\': out += "\\\\"; break;
+    case '"':  out += "\\\""; break;
+    case '\n': out += "\\n"; break;
+    case '.':  out += "_"; break;
+    case ' ':  out += "_"; break;
+    case '\r': break;
+    default:   out += c; break;
     }
   }
   return out;

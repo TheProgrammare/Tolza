@@ -31,8 +31,8 @@ struct Enum final : public AExpression {
 };
 
 struct Member_Access final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
+  std::unique_ptr<AIdentifier> left;
+  std::unique_ptr<AIdentifier> right;
 
   std::string debug_str() const override { return left->debug_str() + "." + right->debug_str(); }
   void        accept(Visitor_Base &v) override { v.visit(*this); }
@@ -59,8 +59,8 @@ struct Call_Argument final : public AExpression {
   std::string                  name;
   std::unique_ptr<AExpression> expression;
   // resolved by superior node
-  SYM_DEFINITION function_definition;
-  SYM_DEFINITION parameter_definition;
+  SYM_DEFINITION               function_definition;
+  SYM_DEFINITION               parameter_definition;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return name; }
@@ -86,14 +86,14 @@ struct Call : public AExpression {
   }
 };
 
-struct Call_System : public Call {
+struct Call_System final : public Call {
   std::unique_ptr<AExpression> target_entity;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return "run"; }
 };
 
-struct Call_Pipe : public AExpression {
+struct Call_Pipe final : public AExpression {
   std::unique_ptr<AIdentifier>                             name;
   std::vector<std::unique_ptr<AType>>                      base_gen_args;
   std::vector<std::vector<std::unique_ptr<AType>>>         gen_args;
@@ -105,7 +105,7 @@ struct Call_Pipe : public AExpression {
   void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Table_Access : public AExpression {
+struct Table_Access final : public AExpression {
   // most of time only one arg
   std::unique_ptr<Node> selector;
 
@@ -114,7 +114,7 @@ struct Table_Access : public AExpression {
 };
 
 // my_ptr'at(i)
-struct Ptr_At : public AExpression {
+struct Ptr_At final : public AExpression {
   std::unique_ptr<AExpression> target;
 
   std::unique_ptr<AExpression> index;
@@ -124,7 +124,7 @@ struct Ptr_At : public AExpression {
 };
 
 // my_ptr'offset(i)
-struct Ptr_Offset : public AExpression {
+struct Ptr_Offset final : public AExpression {
   std::unique_ptr<AExpression> target;
 
   std::unique_ptr<AExpression> offset;
@@ -134,7 +134,7 @@ struct Ptr_Offset : public AExpression {
 };
 
 // val'my_ptr
-struct Ptr_Val : public AExpression {
+struct Ptr_Val final : public AExpression {
   std::unique_ptr<AExpression> target;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
@@ -142,14 +142,14 @@ struct Ptr_Val : public AExpression {
 };
 
 // addr'my_val
-struct Addr_Of : public AExpression {
+struct Addr_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return "addr'"; }
 };
 
-struct Size_Of : public AExpression {
+struct Size_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
   size_t                       size = 0;
 
@@ -158,7 +158,7 @@ struct Size_Of : public AExpression {
 };
 
 // target~[0..8] | target~[16..24]
-struct GetBits : public AExpression {
+struct GetBits final : public AExpression {
   std::unique_ptr<AExpression> target;
   std::unique_ptr<AExpression> range;
 
@@ -172,7 +172,7 @@ struct GetBits : public AExpression {
 };
 
 // move'p
-struct Move : public AExpression {
+struct Move final : public AExpression {
   std::unique_ptr<Node> target;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
@@ -180,7 +180,7 @@ struct Move : public AExpression {
 };
 
 // new ptr'T(val)
-struct New_Ptr : public AExpression {
+struct New_Ptr final : public AExpression {
   EPtrType               pointer = EPtrType::raw_ptr;
   std::shared_ptr<AType> type;
   std::unique_ptr<Node>  expression;

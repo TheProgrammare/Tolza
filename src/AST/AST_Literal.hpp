@@ -10,7 +10,7 @@ namespace AST
 namespace Literal
 {
 
-struct Boolean : public ALiteral {
+struct Boolean final : public ALiteral {
   bool val = false;
 
   Boolean();
@@ -19,7 +19,7 @@ struct Boolean : public ALiteral {
   std::string debug_str() const override { return "bool(" + std::to_string(val) + ")"; }
 };
 
-struct Integral : public ALiteral {
+struct Integral final : public ALiteral {
   Int128    val;
   EPrimType type = EPrimType::i64;
 
@@ -29,7 +29,7 @@ struct Integral : public ALiteral {
   std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")"; }
 };
 
-struct Decimal : public ALiteral {
+struct Decimal final : public ALiteral {
   Int128 val;
   size_t integral_num = 1;
   size_t decimal_num  = 1;
@@ -54,7 +54,7 @@ struct Decimal : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Floating : public ALiteral {
+struct Floating final : public ALiteral {
   Float128  val;
   EPrimType type = EPrimType::f64;
 
@@ -66,7 +66,7 @@ struct Floating : public ALiteral {
 };
 
 // Latin-1 encoding
-struct ASCII : public ALiteral {
+struct ASCII final : public ALiteral {
   char val = 0x0;
 
   ASCII();
@@ -76,7 +76,7 @@ struct ASCII : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct UTF32 : public ALiteral {
+struct UTF32 final : public ALiteral {
   std::string codePoints;
 
   UTF32();
@@ -86,7 +86,7 @@ struct UTF32 : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Text : public ALiteral {
+struct Text final : public ALiteral {
   std::u32string val;
   size_t         length   = 1;
   bool           is_ascii = false;
@@ -108,7 +108,7 @@ struct Text : public ALiteral {
 // precision   ::= digit +
 // type        ::= "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g"
 // | "G" | "n" | "o" | "s" | "x" | "X" | "%"
-struct Format_Specifier : public Node {
+struct Format_Specifier final : public Node {
   std::string src_Str;
   char        fill = '\0'; // char fill, e.g. '0', '*', ' '
   enum class EAlign { Right, Left, Center, Justify };
@@ -154,7 +154,7 @@ struct Format_Specifier : public Node {
 };
 
 // "{expression}" "{expression:spec}"
-struct Text_Lerp : public AExpression {
+struct Text_Lerp final : public AExpression {
   std::unique_ptr<AExpression>      expression;
   std::unique_ptr<Format_Specifier> spec;
 
@@ -163,7 +163,7 @@ struct Text_Lerp : public AExpression {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Textual_Element {
+struct Textual_Element final {
   enum class Kind { Text, Lerp };
 
   Kind                         kind;
@@ -174,7 +174,7 @@ struct Textual_Element {
 };
 
 // "format node {formatVariable} can be formated"
-struct Textual_Format : public ALiteral {
+struct Textual_Format final : public ALiteral {
   std::vector<Textual_Element> values;
 
   std::string debug_str() const override { return "format_text"; }
@@ -182,7 +182,7 @@ struct Textual_Format : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Table_Population : public ALiteral {
+struct Table_Population final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> ranges;
   std::unique_ptr<AExpression>              expression;
   std::unique_ptr<AExpression>              map_expression_value;
@@ -195,7 +195,7 @@ struct Table_Population : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Table : public ALiteral {
+struct Table final : public ALiteral {
   // for explicit specified values like: { 0, 1, 2, 3 }
   [[maybe_unused]]
   std::vector<std::unique_ptr<AExpression>> values;
@@ -216,7 +216,7 @@ struct Table : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Map : public ALiteral {
+struct Map final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> keys;
   std::vector<std::unique_ptr<AExpression>> values;
 
@@ -235,7 +235,7 @@ struct Map : public ALiteral {
   std::string debug_str() const override { return "map[" + std::to_string(keys.size()) + "]"; }
 };
 
-struct Tuple : public ALiteral {
+struct Tuple final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> values;
   std::vector<std::string>                  name_fields;
 
@@ -251,7 +251,7 @@ struct Tuple : public ALiteral {
 };
 
 // first..end or first..=end
-struct Range : public ALiteral {
+struct Range final : public ALiteral {
   std::unique_ptr<AExpression> start;
   std::unique_ptr<AExpression> end;
   std::unique_ptr<AExpression> step;
@@ -263,7 +263,7 @@ struct Range : public ALiteral {
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
-struct Component : public ALiteral {
+struct Component final : public ALiteral {
   std::unique_ptr<AST::AIdentifier>                       name;
   std::vector<std::unique_ptr<Expression::Call_Argument>> field_args;
 
@@ -274,7 +274,7 @@ struct Component : public ALiteral {
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
 // not the same as Person("Zagreus", 32) it's a call of constructor
-struct Entity : public ALiteral {
+struct Entity final : public ALiteral {
   std::unique_ptr<AST::AIdentifier>       name;
   std::vector<std::unique_ptr<Component>> comp_args;
 
@@ -283,7 +283,7 @@ struct Entity : public ALiteral {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Iterator : public ALiteral {
+struct Iterator final : public ALiteral {
   std::unique_ptr<AExpression> collection;
 
   std::string debug_str() const override { return "literal iterator"; }

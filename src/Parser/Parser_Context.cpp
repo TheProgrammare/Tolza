@@ -23,8 +23,7 @@
 #include "Metacode.hpp"
 
 PAR::Parser_Context::Parser_Context(ScriptInfo &_scr_info)
-    : scr_info(_scr_info), m_sym(new Symbols_Manager(_scr_info)), m_meta(_scr_info.m_meta),
-      tok_v(TokenViewer(_scr_info))
+  : scr_info(_scr_info), m_sym(new Symbols_Manager(_scr_info)), m_meta(_scr_info.m_meta), tok_v(TokenViewer(_scr_info))
 {
   scr_info.m_sym = m_sym;
 }

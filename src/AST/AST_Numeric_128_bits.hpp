@@ -4,7 +4,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 
-class Float128
+class Float128 final
 {
 public:
   llvm::APFloat val;
@@ -28,7 +28,7 @@ public:
   }
 };
 
-class Int128
+class Int128 final
 {
 public:
   llvm::APInt val;

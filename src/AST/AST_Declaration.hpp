@@ -15,7 +15,7 @@ namespace AST
 namespace Declaration
 {
 
-struct Enum_Element : public Node {
+struct Enum_Element final : public Node {
   // if empty : it's a simple enum key element
   std::string                         name;
   std::vector<std::unique_ptr<AType>> types;
@@ -28,7 +28,7 @@ struct Enum_Element : public Node {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Enum : public ADeclaration {
+struct Enum final : public ADeclaration {
   std::vector<std::unique_ptr<Enum_Element>> variants;
 
   bool                       isGlobal              = true;
@@ -41,7 +41,7 @@ struct Enum : public ADeclaration {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Flag : public ADeclaration {
+struct Flag final : public ADeclaration {
   std::vector<std::string> fields;
 
   std::string debug_str() const override { return "declaration flag \"" + name + "\""; }
@@ -60,7 +60,7 @@ struct Mod : public ADeclaration {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Export : public Mod {
+struct Export final : public Mod {
   std::shared_ptr<ModuleExportation> mod_exp_sym;
 
   std::string debug_str() const override { return "declaration export \"" + name + "\""; }
@@ -69,7 +69,7 @@ struct Export : public Mod {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Function : public ADeclaration, ICallable {
+struct Function final : public ADeclaration, ICallable {
   std::shared_ptr<Type::Function_Proto> prototype;
   std::unique_ptr<Local::CodeBlock>     codeblock;
   bool                                  isDefinition  = false;
@@ -86,7 +86,7 @@ struct Function : public ADeclaration, ICallable {
   void accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
-struct Type_Alias : public ADeclaration {
+struct Type_Alias final : public ADeclaration {
   std::unique_ptr<AType> type;
 
   std::string debug_str() const override { return "declaration typealias \"" + name + "\""; }
@@ -96,7 +96,7 @@ struct Type_Alias : public ADeclaration {
 };
 
 // gen name<T, U,...> { condition }
-struct Generic : public ADeclaration {
+struct Generic final : public ADeclaration {
   std::vector<std::unique_ptr<AType>>                  gen_args;
   std::set<std::string>                                targetGenericSymbols; // generic typenames
   std::vector<std::unique_ptr<AST::Generic::IGenCond>> conditions;           // generic conditions
@@ -108,7 +108,7 @@ struct Generic : public ADeclaration {
 };
 
 // let/var a: ptr'type#tableSize = expression;
-struct Global : public ADeclaration {
+struct Global final : public ADeclaration {
   std::unique_ptr<AType> type;                                       // infered if nullptr
   EAssignmentType        assignment = EAssignmentType::MoveSemantic; // assign type
   std::unique_ptr<Node>  expression;                                 // affectation
@@ -121,17 +121,10 @@ struct Global : public ADeclaration {
     std::string out;
     out += "declaration global ";
     switch (kind) {
-      case EVariableKind::Const:
-        out += "const ";
-        break;
-      case EVariableKind::Let:
-        out += "let ";
-        break;
-      case EVariableKind::Var:
-        out += "var ";
-        break;
-      case EVariableKind::NONE:
-        return "NO VAR KIND";
+    case EVariableKind::Const: out += "const "; break;
+    case EVariableKind::Let:   out += "let "; break;
+    case EVariableKind::Var:   out += "var "; break;
+    case EVariableKind::NONE:  return "NO VAR KIND";
     }
     out += name;
     return out;

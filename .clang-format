@@ -1,4 +1,4 @@
-# .clang-format adapté du style Linux kernel
+
 BasedOnStyle: LLVM
 Language: Cpp
 
@@ -13,10 +13,28 @@ AllowShortLoopsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: true
 AllowShortBlocksOnASingleLine: false
 
-IndentCaseLabels: true
-AlignConsecutiveDeclarations: true
-AlignConsecutiveAssignments: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCaseColons: false
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignOperands: true
+
 AlignTrailingComments: true
+
+AllowShortCaseLabelsOnASingleLine: true
 
 AlignAfterOpenBracket: true
 SpaceAfterCStyleCast: false
@@ -25,3 +43,4 @@ BreakBeforeBinaryOperators: NonAssignment
 SortIncludes: false
 MaxEmptyLinesToKeep: 2
 
+ConstructorInitializerIndentWidth: 2

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "AST/AST_Base.hpp"
+#include "AST/AST_Declaration_Local.hpp"
 #include "AST/AST_Headers.hpp"
 #include "AST/AST_Literal.hpp"
 #include "Parser_Headers.hpp"

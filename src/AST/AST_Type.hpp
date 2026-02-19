@@ -15,8 +15,7 @@ struct Ptr final : public AType {
   std::unique_ptr<AType> inner;
 
   std::string debug_str() const override { return EPtrType_to_str(pointer_type); }
-
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
 struct Table final : public AType {
@@ -26,8 +25,7 @@ struct Table final : public AType {
   std::unique_ptr<AType> inner;
 
   std::string debug_str() const override { return "<type> table"; }
-
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base &v) override { v.visit(*this); }
 };
 
 struct Primitive final : public AType {

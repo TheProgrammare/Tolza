@@ -5,50 +5,49 @@
 #include <memory>
 #include <stdio.h>
 
+#include "AST/AST_Base.hpp"
 #include "AST/AST_Headers.hpp"
 #include "AST/AST_Literal.hpp"
-#include "AST/AST_Reference.hpp"
+#include "AST/AST_Expression.hpp"
 #include "Parser_Headers.hpp"
 
 std::optional<std::unique_ptr<AST::ALiteral>> PAR::Parser_Literal::try_literal(bool is_silent_error)
 {
   switch (ctx.tok_v.peek().type) {
-    case TokTy::TRUE:
-    case TokTy::FALSE:
-      return literal_boolean();
-      // literal decimal
-    case TokTy::L_DECIMAL:
-    case TokTy::L_UDECIMAL:
-      return literal_decimal();
-      // literal float
-    case TokTy::L_F:
-      return literal_floating_point();
-      // literal integer
-    case TokTy::L_BIN:
-    case TokTy::L_OCT:
-    case TokTy::L_HEX:
-    case TokTy::L_I:
-    case TokTy::L_U:
-      return literal_integral();
-      // literal character
-    case TokTy::L_ASCII:
-      return literal_ascii();
-      // literal string
-    case TokTy::L_TEXTUAL:
-      return literal_textual();
-      // literal range
-    case TokTy::RANGE:
-    case TokTy::RANGE_INCLUSIVE:
-      return literal_range(nullptr);
-      // literal collection
-    case TokTy::OPEN_BRACE:
-      return literal_table();
-    case TokTy::OPEN_PAREN:
-      if (ctx.tok_v.peek(2).type == TokTy::COMMA || ctx.tok_v.peek(2).type == TokTy::COLON) {
-        return literal_tuple();
-      }
-    default:
-      break;
+  case TokTy::TRUE:
+  case TokTy::FALSE:
+    return literal_boolean();
+    // literal decimal
+  case TokTy::L_DECIMAL:
+  case TokTy::L_UDECIMAL:
+    return literal_decimal();
+    // literal float
+  case TokTy::L_F:
+    return literal_floating_point();
+    // literal integer
+  case TokTy::L_BIN:
+  case TokTy::L_OCT:
+  case TokTy::L_HEX:
+  case TokTy::L_I:
+  case TokTy::L_U:
+    return literal_integral();
+    // literal character
+  case TokTy::L_ASCII:
+    return literal_ascii();
+    // literal string
+  case TokTy::L_TEXTUAL:
+    return literal_textual();
+    // literal range
+  case TokTy::RANGE:
+  case TokTy::RANGE_INCLUSIVE:
+    return literal_range(nullptr);
+    // literal collection
+  case TokTy::OPEN_BRACE: return literal_table();
+  case TokTy::OPEN_PAREN:
+    if (ctx.tok_v.peek(2).type == TokTy::COMMA || ctx.tok_v.peek(2).type == TokTy::COLON) {
+      return literal_tuple();
+    }
+  default: break;
   }
 
   if (!is_silent_error) {
@@ -77,7 +76,7 @@ std::unique_ptr<AST::Literal::Decimal> PAR::Parser_Literal::literal_decimal()
     // Partie before comma
     before_comma = ctx.tok_v.peek().val.substr(0, decimal_pos);
     // Partie after comma (no point)
-    after_comma = ctx.tok_v.peek().val.substr(decimal_pos + 1);
+    after_comma  = ctx.tok_v.peek().val.substr(decimal_pos + 1);
   } else
     ctx.tok_v.add_error<81>("Expected an point '.' in lietral decimal.",
                             "define literal decimal like:\n  - `0000.00d`\n  - `520.15d`\n  - "
@@ -158,28 +157,27 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral()
 
   try {
     switch (literalTok.type) {
-      case TokTy::L_BIN:
-        api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
-        literal->type = EPrimType::b64;
-        break;
+    case TokTy::L_BIN:
+      api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
+      literal->type = EPrimType::b64;
+      break;
 
-      case TokTy::L_OCT:
-        api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 8);
-        literal->type = EPrimType::b64;
-        break;
+    case TokTy::L_OCT:
+      api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 8);
+      literal->type = EPrimType::b64;
+      break;
 
-      case TokTy::L_HEX:
-        api           = llvm::APInt(bitWidth, literalTok.val, 16);
-        literal->type = EPrimType::b64;
-        break;
+    case TokTy::L_HEX:
+      api           = llvm::APInt(bitWidth, literalTok.val, 16);
+      literal->type = EPrimType::b64;
+      break;
 
-      case TokTy::L_I:
-        api           = llvm::APInt(bitWidth, literalTok.val, 10);
-        literal->type = EPrimType::b64;
-        break;
+    case TokTy::L_I:
+      api           = llvm::APInt(bitWidth, literalTok.val, 10);
+      literal->type = EPrimType::b64;
+      break;
 
-      default:
-        throw std::runtime_error("Token literal non supporté");
+    default: throw std::runtime_error("Token literal non supporté");
     }
 
     // Si la valeur dépasse 64 bits, on passe à 128 bits
@@ -273,24 +271,23 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 
     format->fill = tok1.val[0];
     switch (tok2.type) {
-      case TokTy::OPEN_BRACKETS: {
-        format->align = AST::Literal::Format_Specifier::EAlign::Left;
-        break;
-      }
-      case TokTy::CLOSE_BRACKETS: {
-        format->align = AST::Literal::Format_Specifier::EAlign::Right;
-        break;
-      }
-      case TokTy::OP_CIRCUMFLEX: {
-        format->align = AST::Literal::Format_Specifier::EAlign::Center;
-        break;
-      }
-      case TokTy::TILDE: {
-        format->align = AST::Literal::Format_Specifier::EAlign::Justify;
-        break;
-      }
-      default:
-        break;
+    case TokTy::OPEN_BRACKETS: {
+      format->align = AST::Literal::Format_Specifier::EAlign::Left;
+      break;
+    }
+    case TokTy::CLOSE_BRACKETS: {
+      format->align = AST::Literal::Format_Specifier::EAlign::Right;
+      break;
+    }
+    case TokTy::OP_CIRCUMFLEX: {
+      format->align = AST::Literal::Format_Specifier::EAlign::Center;
+      break;
+    }
+    case TokTy::TILDE: {
+      format->align = AST::Literal::Format_Specifier::EAlign::Justify;
+      break;
+    }
+    default: break;
     }
 
     ctx.tok_v.next();
@@ -300,20 +297,19 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
   // sign
   if (ctx.tok_v.match_any({TokTy::OP_PLUS, TokTy::OP_MINUS, TokTy::SPACE})) {
     switch (ctx.tok_v.peek(-1).type) {
-      case TokTy::OP_PLUS: {
-        format->sign = AST::Literal::Format_Specifier::ESign::Pos;
-        break;
-      }
-      case TokTy::OP_MINUS: {
-        format->sign = AST::Literal::Format_Specifier::ESign::Neg;
-        break;
-      }
-      case TokTy::SPACE: {
-        format->sign = AST::Literal::Format_Specifier::ESign::Space;
-        break;
-      }
-      default:
-        break;
+    case TokTy::OP_PLUS: {
+      format->sign = AST::Literal::Format_Specifier::ESign::Pos;
+      break;
+    }
+    case TokTy::OP_MINUS: {
+      format->sign = AST::Literal::Format_Specifier::ESign::Neg;
+      break;
+    }
+    case TokTy::SPACE: {
+      format->sign = AST::Literal::Format_Specifier::ESign::Space;
+      break;
+    }
+    default: break;
     }
   }
 
@@ -323,18 +319,10 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
     char prefix = ctx.tok_v.peek(-1).val[0];
 
     switch (prefix) {
-      case 'x':
-        format->prefix = AST::Literal::Format_Specifier::EPrefix::Hex;
-        break;
-      case 'X':
-        format->prefix = AST::Literal::Format_Specifier::EPrefix::HEX;
-        break;
-      case 'b':
-        format->prefix = AST::Literal::Format_Specifier::EPrefix::Bin;
-        break;
-      case 'o':
-        format->prefix = AST::Literal::Format_Specifier::EPrefix::Oct;
-        break;
+    case 'x': format->prefix = AST::Literal::Format_Specifier::EPrefix::Hex; break;
+    case 'X': format->prefix = AST::Literal::Format_Specifier::EPrefix::HEX; break;
+    case 'b': format->prefix = AST::Literal::Format_Specifier::EPrefix::Bin; break;
+    case 'o': format->prefix = AST::Literal::Format_Specifier::EPrefix::Oct; break;
     }
   }
 
@@ -350,7 +338,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
 
   // width from variable
   if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
-    format->width = ctx.p_ref->parse_reference();
+    format->width = ctx.p_expr->parse_expression_term();
     ctx.tok_v.expect<86>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
   }
   // width from literal
@@ -368,7 +356,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
   if (ctx.tok_v.match(TokTy::DOT)) {
     // precision from variable
     if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
-      format->precision = ctx.p_ref->parse_reference();
+      format->precision = ctx.p_expr->parse_expression_term();
       ctx.tok_v.expect<87>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
     }
     // precision from literal
@@ -381,51 +369,21 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
   // display format
   if (ctx.tok_v.match_any({TokTy::L_ASCII, TokTy::PERCENTAGE})) {
     switch (ctx.tok_v.peek(-1).val[0]) {
-      case 's':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::String;
-        break;
-      case 'b':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Binary;
-        break;
-      case 'c':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Character;
-        break;
-      case 'd':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Decimal;
-        break;
-      case 'o':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Octal;
-        break;
-      case 'x':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Hex;
-        break;
-      case 'X':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::HEX;
-        break;
-      case 'n':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Number;
-        break;
-      case 'e':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::e;
-        break;
-      case 'E':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::E;
-        break;
-      case 'f':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Fixed;
-        break;
-      case 'F':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::FIXED;
-        break;
-      case 'g':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::g;
-        break;
-      case 'G':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::G;
-        break;
-      case '%':
-        format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Percentage;
-        break;
+    case 's': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::String; break;
+    case 'b': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Binary; break;
+    case 'c': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Character; break;
+    case 'd': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Decimal; break;
+    case 'o': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Octal; break;
+    case 'x': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Hex; break;
+    case 'X': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::HEX; break;
+    case 'n': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Number; break;
+    case 'e': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::e; break;
+    case 'E': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::E; break;
+    case 'f': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Fixed; break;
+    case 'F': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::FIXED; break;
+    case 'g': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::g; break;
+    case 'G': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::G; break;
+    case '%': format->display_format = AST::Literal::Format_Specifier::EDisplayFormat::Percentage; break;
     }
   }
 
@@ -436,7 +394,7 @@ std::unique_ptr<AST::Literal::Format_Specifier> PAR::Parser_Literal::format_spec
   return format;
 }
 
-std::unique_ptr<AST::Literal::Range> PAR::Parser_Literal::literal_range(std::unique_ptr<AST::Node> start)
+std::unique_ptr<AST::Literal::Range> PAR::Parser_Literal::literal_range(std::unique_ptr<AST::AExpression> start)
 {
   static const std::string hint =
       "define range like: "
@@ -483,8 +441,8 @@ std::unique_ptr<AST::ALiteral> PAR::Parser_Literal::literal_table()
   if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return ctx.Create_Node<AST::Literal::Table>(ctx.tok_v.peek(-1));
   ;
 
-  std::vector<std::unique_ptr<AST::Node>> values;
-  std::vector<std::unique_ptr<AST::Node>> map_values;
+  std::vector<std::unique_ptr<AST::AExpression>> values;
+  std::vector<std::unique_ptr<AST::AExpression>> map_values;
 
   while (!ctx.tok_v.is_end()) {
     values.push_back(ctx.p_expr->parse_expression());
@@ -549,31 +507,30 @@ std::unique_ptr<AST::Literal::Table_Population> PAR::Parser_Literal::literal_tab
   return pop;
 }
 
-std::unique_ptr<AST::Literal::Entity>
-PAR::Parser_Literal::literal_entity(const AST::ID &id, std::vector<std::unique_ptr<AST::AType>> &gen_args)
+std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(std::unique_ptr<AST::AIdentifier> id)
 {
-  auto lit_entity = ctx.Create_Node<AST::Literal::Entity>(ctx.tok_v.peek());
-
-  lit_entity->id       = id;
-  lit_entity->gen_args = std::move(gen_args);
+  auto lit_entity  = ctx.Create_Node<AST::Literal::Entity>(ctx.tok_v.peek());
+  lit_entity->name = std::move(id);
 
   ctx.tok_v.match(TokTy::OPEN_BRACE);
   if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return lit_entity;
 
   while (!ctx.tok_v.is_end()) {
-    auto ref = ctx.p_ref->parse_reference();
+    auto expr = ctx.p_expr->parse_expression();
 
-    if (auto comp = dynamic_cast<AST::Literal::Component *>(ref.get())) {
+    if (dynamic_cast<AST::Literal::Component *>(expr.get())) {
       lit_entity->comp_args.push_back(
-          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(ref.release())));
-    } else if (auto comp_member = dynamic_cast<AST::Reference::Member_Access *>(ref.get())) {
+          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(expr.release())));
+
+    } else if (auto comp_member = dynamic_cast<AST::Expression::Member_Access *>(expr.get())) {
       ctx.tok_v.expect<90>(TokTy::ASSIGN, "Expected component field initialisation '='.",
                            "define literal component member like: `CPosition.x= 10, CPosition.y = 15`");
 
-      auto lit_comp = ctx.Create_Node<AST::Literal::Component>(ref->_token);
-      lit_comp->id  = ref->id;
+      auto lit_comp = ctx.Create_Node<AST::Literal::Component>(expr->_token);
+      lit_comp->name =
+          std::move(std::unique_ptr<AST::AIdentifier>(static_cast<AST::AIdentifier *>(comp_member->left.release())));
     } else {
-      ctx.tok_v.add_error_tok<91>(ref->_token, "Unexpected literal reference",
+      ctx.tok_v.add_error_tok<91>(expr->_token, "Unexpected literal reference",
                                   "define literal components only in literal entity");
     }
 
@@ -591,9 +548,8 @@ std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(
       "\n  - normal `name{ .field1: val1, .field2: val2 }`"
       "\n  - generic `name<gen_args>{ .field1: val1, .field2: val2 }`";
 
-  auto comp = ctx.Create_Node<AST::Literal::Component>(ctx.tok_v.peek());
-
-  comp->id = id;
+  auto comp  = ctx.Create_Node<AST::Literal::Component>(ctx.tok_v.peek());
+  comp->name = std::move(id);
 
   ctx.tok_v.match(TokTy::OPEN_BRACE);
   if (!ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
@@ -603,11 +559,11 @@ std::unique_ptr<AST::Literal::Component> PAR::Parser_Literal::literal_component(
 
     ctx.tok_v.expect<92>(TokTy::DOT, "Expected contextual field access '.' in literal component", hint);
 
-    auto field_arg  = ctx.Create_Node<AST::Reference::Call_Argument>(ctx.tok_v.peek());
+    auto field_arg  = ctx.Create_Node<AST::Expression::Call_Argument>(ctx.tok_v.peek());
     field_arg->name = ctx.parse_name("", hint);
     ctx.tok_v.expect<94>(TokTy::COLON, "Expected field assignation ':' after field name", hint);
 
-    field_arg->val = ctx.p_expr->parse_expression();
+    field_arg->expression = ctx.p_expr->parse_expression();
     comp->field_args.push_back(std::move(field_arg));
 
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;

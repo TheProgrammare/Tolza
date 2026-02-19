@@ -41,30 +41,25 @@ public:
 
   enum class EPrefixFound { None, Prefix, All };
 
-  EPrefixFound get_prefix_keyword(TokTy _type, const std::string &_key, const std::string &_search);
-  bool         is_valid_prefix(char prefix, const std::string &_current);
-
-  void tokenize(const std::set<char> &exit_char);
-
-  void process_escape();
-
-  void tokenize_textual();
-  bool tokenize_spec();
-  void tokenize_comment();
-  void tokenize_metacode();
-  void tokenize_numeric();
+  EPrefixFound                  get_prefix_keyword(TokTy _type, const std::string &_key, const std::string &_search);
+  bool                          is_valid_prefix(char prefix, const std::string &_current);
+  void                          tokenize(const std::set<char> &exit_char);
+  void                          process_escape();
+  void                          tokenize_textual();
+  bool                          tokenize_spec();
+  void                          tokenize_comment();
+  void                          tokenize_metacode();
+  void                          tokenize_numeric();
   // not idependent
   void                          tokenize_identifier();
   void                          tokenize_keyword();
   std::pair<TokTy, std::string> getToken();
   void                          addToken(TokTy type);
   bool                          eat();
-
-  template <size_t Code> void add_error(const std::string &msg, const std::string &hint);
-
-  TokTy classifyNumerals(std::string &outValue);
-  TokTy classifyKeyword(std::string &outWord);
-  TokTy classifyFormatSpec(std::string &outFormat);
+  template <size_t Code> void   add_error(const std::string &msg, const std::string &hint);
+  TokTy                         classifyNumerals(std::string &outValue);
+  TokTy                         classifyKeyword(std::string &outWord);
+  TokTy                         classifyFormatSpec(std::string &outFormat);
 
   ScriptInfo              &scr_info;
   StreamTracker            stream;

@@ -3,6 +3,7 @@
 
 #include "AST/AST_Base.hpp"
 #include "AST/AST_Headers.hpp"
+#include "AST/AST_Operation.hpp"
 #include "Parser_Headers.hpp"
 
 // Parsing precedence hierarchy:
@@ -180,7 +181,7 @@ std::unique_ptr<AST::AExpression> PAR::Parser_Operator::memory_distance()
 {
   auto node = logicial_xor_xnor();
   while (ctx.tok_v.check(TokTy::MEM_DIST)) {
-    auto dist   = ctx.Create_Node<AST::Memory::Dist>(ctx.tok_v.peek());
+    auto dist   = ctx.Create_Node<AST::Operation::Ptr_Dist>(ctx.tok_v.peek());
     auto right  = logicial_xor_xnor();
     dist->left  = std::move(node);
     dist->right = std::move(right);

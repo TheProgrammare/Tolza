@@ -61,26 +61,16 @@ enum class EPhase {
 inline std::string Phase_to_code(EPhase phase)
 {
   switch (phase) {
-    case EPhase::filesystem:
-      return "FSYS";
-    case EPhase::lexer:
-      return "LEXE";
-    case EPhase::preprosessor:
-      return "PREP";
-    case EPhase::parser:
-      return "PARS";
-    case EPhase::embinder:
-      return "EMBI";
-    case EPhase::resolver_symbol:
-      return "SYMB";
-    case EPhase::resolver_type:
-      return "TYPE";
-    case EPhase::resolver_semantic:
-      return "SEMA";
-    case EPhase::llvmir:
-      return "LLVM";
-    case EPhase::linker:
-      return "LINK";
+  case EPhase::filesystem:        return "FSYS";
+  case EPhase::lexer:             return "LEXE";
+  case EPhase::preprosessor:      return "PREP";
+  case EPhase::parser:            return "PARS";
+  case EPhase::embinder:          return "EMBI";
+  case EPhase::resolver_symbol:   return "SYMB";
+  case EPhase::resolver_type:     return "TYPE";
+  case EPhase::resolver_semantic: return "SEMA";
+  case EPhase::llvmir:            return "LLVM";
+  case EPhase::linker:            return "LINK";
   }
 }
 
@@ -88,38 +78,28 @@ inline std::string Phase_to_code(EPhase phase)
 inline std::string Phase_to_str(EPhase phase)
 {
   switch (phase) {
-    case EPhase::filesystem:
-      return "file system";
-    case EPhase::lexer:
-      return "lexer";
-    case EPhase::preprosessor:
-      return "preprocessor";
-    case EPhase::parser:
-      return "parser";
-    case EPhase::embinder:
-      return "external module binder";
-    case EPhase::resolver_symbol:
-      return "resolver symbol";
-    case EPhase::resolver_type:
-      return "resolver type";
-    case EPhase::resolver_semantic:
-      return "resolver semantic";
-    case EPhase::llvmir:
-      return "LLVM IR";
-    case EPhase::linker:
-      return "linker";
+  case EPhase::filesystem:        return "file system";
+  case EPhase::lexer:             return "lexer";
+  case EPhase::preprosessor:      return "preprocessor";
+  case EPhase::parser:            return "parser";
+  case EPhase::embinder:          return "external module binder";
+  case EPhase::resolver_symbol:   return "resolver symbol";
+  case EPhase::resolver_type:     return "resolver type";
+  case EPhase::resolver_semantic: return "resolver semantic";
+  case EPhase::llvmir:            return "LLVM IR";
+  case EPhase::linker:            return "linker";
   }
 }
 
-#define color_RESET "\033[0m"
-#define color_BLACK "\033[30m"   /* Black */
-#define color_RED "\033[31m"     /* Red */
-#define color_GREEN "\033[32m"   /* Green */
-#define color_YELLOW "\033[33m"  /* Yellow */
-#define color_BLUE "\033[34m"    /* Blue */
+#define color_RESET   "\033[0m"
+#define color_BLACK   "\033[30m" /* Black */
+#define color_RED     "\033[31m" /* Red */
+#define color_GREEN   "\033[32m" /* Green */
+#define color_YELLOW  "\033[33m" /* Yellow */
+#define color_BLUE    "\033[34m" /* Blue */
 #define color_MAGENTA "\033[35m" /* Magenta */
-#define color_CYAN "\033[36m"    /* Cyan */
-#define color_WHITE "\033[37m"   /* White */
+#define color_CYAN    "\033[36m" /* Cyan */
+#define color_WHITE   "\033[37m" /* White */
 
 static const std::string COMP_ABORT =
     "[build] Compilation aborted\n"

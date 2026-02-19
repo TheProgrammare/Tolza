@@ -8,7 +8,7 @@ namespace AST
 {
 namespace Operation
 {
-struct Cast_As : public AExpression {
+struct Cast_As final : public AExpression {
   std::unique_ptr<AExpression> valueCasted;
   std::unique_ptr<AType>       typeCasted;
 
@@ -20,17 +20,14 @@ struct Cast_As : public AExpression {
   std::string debug_str() const override
   {
     switch (cast_type) {
-      case ECastType::AS:
-        return "as";
-      case ECastType::AS_REINTERPRET:
-        return "as!";
-      case ECastType::AS_SAFE:
-        return "as?";
+    case ECastType::AS:             return "as";
+    case ECastType::AS_REINTERPRET: return "as!";
+    case ECastType::AS_SAFE:        return "as?";
     }
   }
 };
 
-struct Is : public AExpression {
+struct Is final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
 
@@ -40,7 +37,7 @@ struct Is : public AExpression {
   std::string debug_str() const override { return "is"; }
 };
 
-struct In : public AExpression {
+struct In final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
 
@@ -51,7 +48,7 @@ struct In : public AExpression {
 };
 
 // a copy= b | a clone= b | a move= b | a ref= b | a mut= b
-struct Assignment : public Node {
+struct Assignment final : public Node {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
   EAssignmentType              assignmentType = EAssignmentType::Copy;
@@ -60,20 +57,16 @@ struct Assignment : public Node {
   std::string debug_str() const override
   {
     switch (assignmentType) {
-      case EAssignmentType::Copy:
-        return "copy=";
-      case EAssignmentType::Clone:
-        return "clone=";
-      case EAssignmentType::MoveSemantic:
-        return "move=";
-      case EAssignmentType::NONE:
-        return "NO ASSIGNMENT TYPE";
+    case EAssignmentType::Copy:         return "copy=";
+    case EAssignmentType::Clone:        return "clone=";
+    case EAssignmentType::MoveSemantic: return "move=";
+    case EAssignmentType::NONE:         return "NO ASSIGNMENT TYPE";
     }
   }
 };
 
 // a op b
-struct Binary : public AExpression {
+struct Binary final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
   EBinOpType                   op = EBinOpType::Add;
@@ -85,18 +78,18 @@ struct Binary : public AExpression {
 };
 
 // ++a a++ --a a-- !a +a -a
-struct Unary : public AExpression {
+struct Unary final : public AExpression {
   std::unique_ptr<AExpression> base;
-  EUnaryOpType                 unitaryOp = EUnaryOpType::Incr;
+  EUnaryOpType                 unitaryOp    = EUnaryOpType::Incr;
   // for pre increment/decrement or sign
-  bool pre_operator = false;
+  bool                         pre_operator = false;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return "<op> unary(" + EUnaryOpType_to_str(unitaryOp) + ")"; }
 };
 
 // a </<= b >/>= c
-struct Interval : public AExpression {
+struct Interval final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> center;
   std::unique_ptr<AExpression> right;
@@ -114,7 +107,7 @@ struct Interval : public AExpression {
 };
 
 // p1 <-> p2
-struct Ptr_Dist : public AExpression {
+struct Ptr_Dist final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
 

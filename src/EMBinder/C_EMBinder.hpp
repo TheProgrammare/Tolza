@@ -79,40 +79,40 @@ struct CVeloxType {
   // val_type == EVeloxTypeFromC::func
   std::unique_ptr<CVeloxFuncType> func_type;
   // val_type == EVeloxTypeFromC::struct_comp
-  std::unique_ptr<CVeloxComp> comp_type;
+  std::unique_ptr<CVeloxComp>     comp_type;
   // val_type == EVeloxTypeFromC::_union
-  std::unique_ptr<CVeloxUnion> union_type;
+  std::unique_ptr<CVeloxUnion>    union_type;
   // val_type == EVeloxTypeFromC::enum_flag
-  std::unique_ptr<CVeloxFlag> flag_type;
+  std::unique_ptr<CVeloxFlag>     flag_type;
 
   // T[N]
   // [T; N]
-  bool is_table = false;
+  bool                is_table             = false;
   // *T[N]
   // [ptr'T; N]
-  bool is_table_of_pointers = false;
+  bool                is_table_of_pointers = false;
   // [N]
   std::vector<size_t> table_size;
 
   // const T
   // $T
-  bool is_val_type_const = false;
+  bool is_val_type_const    = false;
   // volatile T
   // !T
   bool is_val_type_volatile = false;
 
   // *T
   // ptr'T
-  bool is_pointer = false;
+  bool is_pointer          = false;
   // **T
   // ptr'ptr'T
-  bool is_pointer_double = false;
+  bool is_pointer_double   = false;
   // (*T)[N]
   // ptr'[T; N]
   bool is_pointer_on_table = false;
   // T const *
   // $ptr'T
-  bool is_pointer_const = false;
+  bool is_pointer_const    = false;
   // T volatile *
   // !ptr'T
   bool is_pointer_volatile = false;
@@ -135,7 +135,7 @@ struct CVeloxType {
 };
 
 struct CVeloxFuncType {
-  CVeloxType return_type;
+  CVeloxType                               return_type;
   // type, restrict
   std::vector<std::pair<CVeloxType, bool>> params;
   bool                                     is_variadic = false;
@@ -148,14 +148,14 @@ struct CVeloxFunc {
 };
 
 struct CVeloxFlag {
-  std::string     name;
-  EVeloxTypeFromC underlying_type;
+  std::string                                 name;
+  EVeloxTypeFromC                             underlying_type;
   // string: name, size_t: bitvalue
   std::vector<std::pair<std::string, size_t>> members;
 };
 
 struct CVeloxUnion {
-  std::string name;
+  std::string                                     name;
   // key: name, val: type
   std::vector<std::pair<std::string, CVeloxType>> members;
 };

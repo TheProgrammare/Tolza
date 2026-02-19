@@ -22,7 +22,7 @@ private:
   [[nodiscard]] std::unique_ptr<AST::Type::Function_Proto> function_proto(bool isConst, bool isOptional,
                                                                           bool isVolatile);
   // isRef, isConst, isOptional
-  [[nodiscard]] std::tuple<bool, bool, bool> get_type_annotation();
+  [[nodiscard]] std::tuple<bool, bool, bool>               get_type_annotation();
 
 public:
   [[nodiscard]] std::unique_ptr<AST::Type::Tuple>          explicit_tuple();

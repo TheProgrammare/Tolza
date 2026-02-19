@@ -114,108 +114,86 @@ void Lexer::process_escape()
   }
 
   switch (ch) {
-    case 'n':
-      buffer += '\n';
-      break;
-    case 't':
-      buffer += '\t';
-      break;
-    case 'r':
-      buffer += '\r';
-      break;
-    case '\\':
-      buffer += '\\';
-      break;
-    case '\'':
-      buffer += '\'';
-      break;
-    case '"':
-      buffer += '"';
-      break;
-    case '0':
-      buffer += '\0';
-      break;
-    case 'a':
-      buffer += '\a';
-      break;
-    case 'b':
-      buffer += '\b';
-      break;
-    case 'f':
-      buffer += '\f';
-      break;
-    case 'v':
-      buffer += '\v';
-      break;
+  case 'n':  buffer += '\n'; break;
+  case 't':  buffer += '\t'; break;
+  case 'r':  buffer += '\r'; break;
+  case '\\': buffer += '\\'; break;
+  case '\'': buffer += '\''; break;
+  case '"':  buffer += '"'; break;
+  case '0':  buffer += '\0'; break;
+  case 'a':  buffer += '\a'; break;
+  case 'b':  buffer += '\b'; break;
+  case 'f':  buffer += '\f'; break;
+  case 'v':  buffer += '\v'; break;
 
-    // hex sequence \xHH
-    case 'x': {
-      std::string hex;
-      for (int i = 0; i < 2; ++i) { // On lit 1 ou 2 chiffres hexadécimaux
-        if (!stream.get(ch) || !isxdigit(ch)) {
-          if (hex.empty()) {
-            add_error<2>("Invalid hex escape sequence", "define hex escape like: `\\xHH`");
-            return;
-          } else {
-            // return partial char if only one digit is read
-            break;
-          }
-        }
-        hex.push_back(ch);
-      }
-      try {
-        char value = static_cast<char>(std::stoul(hex, nullptr, 16));
-        buffer += value;
-      } catch (...) {
-        add_error<3>("Invalid hex escape value", "define hex escape like: `\\xHH`");
-      }
-      break;
-    }
-
-    // Unicode sequence \uXXXX or \UXXXXXXXX
-    case 'u':
-    case 'U': {
-      int         numDigits = (ch == 'u') ? 4 : 8;
-      std::string hex;
-      for (int i = 0; i < numDigits; ++i) {
-        if (!stream.get(ch) || !isxdigit(ch)) {
-          add_error<3>("Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
+  // hex sequence \xHH
+  case 'x':  {
+    std::string hex;
+    for (int i = 0; i < 2; ++i) { // On lit 1 ou 2 chiffres hexadécimaux
+      if (!stream.get(ch) || !isxdigit(ch)) {
+        if (hex.empty()) {
+          add_error<2>("Invalid hex escape sequence", "define hex escape like: `\\xHH`");
           return;
-        }
-        hex.push_back(ch);
-      }
-      try {
-        char32_t codepoint = std::stoul(hex, nullptr, 16);
-        // basic convertion UTF-32 -> UTF-8
-        if (codepoint <= 0x7F)
-          buffer += static_cast<char>(codepoint);
-        else if (codepoint <= 0x7FF) {
-          buffer += static_cast<char>(0xC0 | (codepoint >> 6));
-          buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
-        } else if (codepoint <= 0xFFFF) {
-          buffer += static_cast<char>(0xE0 | (codepoint >> 12));
-          buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-          buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
-        } else if (codepoint <= 0x10FFFF) {
-          buffer += static_cast<char>(0xF0 | (codepoint >> 18));
-          buffer += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
-          buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-          buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
         } else {
-          add_error<4>("Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
+          // return partial char if only one digit is read
+          break;
         }
-      } catch (...) {
-        add_error<5>("Invalid Unicode escape value", "");
       }
-      break;
+      hex.push_back(ch);
     }
+    try {
+      char value = static_cast<char>(std::stoul(hex, nullptr, 16));
+      buffer += value;
+    } catch (...) {
+      add_error<3>("Invalid hex escape value", "define hex escape like: `\\xHH`");
+    }
+    break;
+  }
 
-    default:
-      // Caractère d’échappement inconnu : on le garde littéralement ou on signale une erreur
-      // escape char unknown : keep literally or ring the error
-      add_error<6>("Unknown escape sequence: \\" + std::to_string(ch), "");
-      buffer += ch;
-      break;
+  // Unicode sequence \uXXXX or \UXXXXXXXX
+  case 'u':
+  case 'U': {
+    int         numDigits = (ch == 'u') ? 4 : 8;
+    std::string hex;
+    for (int i = 0; i < numDigits; ++i) {
+      if (!stream.get(ch) || !isxdigit(ch)) {
+        add_error<3>("Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
+        return;
+      }
+      hex.push_back(ch);
+    }
+    try {
+      char32_t codepoint = std::stoul(hex, nullptr, 16);
+      // basic convertion UTF-32 -> UTF-8
+      if (codepoint <= 0x7F)
+        buffer += static_cast<char>(codepoint);
+      else if (codepoint <= 0x7FF) {
+        buffer += static_cast<char>(0xC0 | (codepoint >> 6));
+        buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
+      } else if (codepoint <= 0xFFFF) {
+        buffer += static_cast<char>(0xE0 | (codepoint >> 12));
+        buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+        buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
+      } else if (codepoint <= 0x10FFFF) {
+        buffer += static_cast<char>(0xF0 | (codepoint >> 18));
+        buffer += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+        buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+        buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
+      } else {
+        add_error<4>("Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
+      }
+    } catch (...) {
+      add_error<5>("Invalid Unicode escape value", "");
+    }
+    break;
+  }
+
+  default:
+    // Caractère d’échappement inconnu : on le garde littéralement ou on signale une erreur
+    // escape char unknown : keep literally or ring the error
+    add_error<6>("Unknown escape sequence: \\" + std::to_string(ch), "");
+    buffer += ch;
+    break;
   }
 }
 
@@ -281,56 +259,29 @@ bool Lexer::tokenize_spec()
   // Symbols and operators;
   buffer = ch;
   switch (ch) {
-    case '.':
-      addToken(TokTy::DOT);
-      return true;
-    case ',':
-      addToken(TokTy::COMMA);
-      return true;
-    case '_':
-      addToken(TokTy::UNDERSCORE);
-      return true;
-    case '\'':
-      addToken(TokTy::TICK);
-      return true;
-    case '+':
-      addToken(TokTy::OP_PLUS);
-      return true;
-    case '-':
-      addToken(TokTy::OP_MINUS);
-      return true;
-    case '<':
-      addToken(TokTy::OPEN_BRACKETS);
-      return true;
-    case '>':
-      addToken(TokTy::CLOSE_BRACKETS);
-      return true;
-    case '^':
-      addToken(TokTy::OP_CIRCUMFLEX);
-      return true;
-    case '~':
-      addToken(TokTy::TILDE);
-      return true;
-    case '=':
-      addToken(TokTy::ASSIGN);
-      return true;
-    case '%':
-      addToken(TokTy::OP_MODULO);
-      return true;
-    case ' ':
-      addToken(TokTy::SPACE);
-      return true;
-    case '}':
-      return false;
-    default: {
-      auto error = Error_Diagnostic<151>(
-          scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)), {}, EPhase::lexer,
-          EErrorSeverity::error, {}, "Unexpected format specifier character",
-          "define format specifier like:"
-          "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
+  case '.':  addToken(TokTy::DOT); return true;
+  case ',':  addToken(TokTy::COMMA); return true;
+  case '_':  addToken(TokTy::UNDERSCORE); return true;
+  case '\'': addToken(TokTy::TICK); return true;
+  case '+':  addToken(TokTy::OP_PLUS); return true;
+  case '-':  addToken(TokTy::OP_MINUS); return true;
+  case '<':  addToken(TokTy::OPEN_BRACKETS); return true;
+  case '>':  addToken(TokTy::CLOSE_BRACKETS); return true;
+  case '^':  addToken(TokTy::OP_CIRCUMFLEX); return true;
+  case '~':  addToken(TokTy::TILDE); return true;
+  case '=':  addToken(TokTy::ASSIGN); return true;
+  case '%':  addToken(TokTy::OP_MODULO); return true;
+  case ' ':  addToken(TokTy::SPACE); return true;
+  case '}':  return false;
+  default:   {
+    auto error = Error_Diagnostic<151>(
+        scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)), {}, EPhase::lexer,
+        EErrorSeverity::error, {}, "Unexpected format specifier character",
+        "define format specifier like:"
+        "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
 
-      errors.push_back(error.print_error());
-    }
+    errors.push_back(error.print_error());
+  }
   }
   return false;
 }
@@ -553,43 +504,43 @@ void Lexer::tokenize_keyword()
       if (val.empty() || val[0] != buffer[0]) continue;
       if (buffer.size() > val.size()) continue;
       switch (get_prefix_keyword(type, val, buffer)) {
-        case EPrefixFound::None: {
-          continue;
-        }
-        case EPrefixFound::All: {
-          buffer = val;
-          addToken(type);
-          return;
-        }
-        case EPrefixFound::Prefix: {
-          char next = stream.peek();
-          if (next == EOF || std::iscntrl(next) || std::isspace(next)) {
-            keep_searching = false;
-            break;
-          }
-
-          // optimization
-          if (is_valid_prefix(next, buffer)) {
-            eat();
-            buffer += next;
-            if (buffer.size() > MAX_KEYWORD_SIZE) break;
-            keep_searching = true;
-          } else {
-            while (buffer.size() > 0) {
-              if (str_is_identifier(buffer)) return;
-              if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
-                addToken(type);
-                return;
-              }
-              char last = buffer.back();
-              buffer.pop_back();
-              stream.putback(last);
-            }
-
-            keep_searching = false;
-          }
+      case EPrefixFound::None: {
+        continue;
+      }
+      case EPrefixFound::All: {
+        buffer = val;
+        addToken(type);
+        return;
+      }
+      case EPrefixFound::Prefix: {
+        char next = stream.peek();
+        if (next == EOF || std::iscntrl(next) || std::isspace(next)) {
+          keep_searching = false;
           break;
         }
+
+        // optimization
+        if (is_valid_prefix(next, buffer)) {
+          eat();
+          buffer += next;
+          if (buffer.size() > MAX_KEYWORD_SIZE) break;
+          keep_searching = true;
+        } else {
+          while (buffer.size() > 0) {
+            if (str_is_identifier(buffer)) return;
+            if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
+              addToken(type);
+              return;
+            }
+            char last = buffer.back();
+            buffer.pop_back();
+            stream.putback(last);
+          }
+
+          keep_searching = false;
+        }
+        break;
+      }
       }
       if (keep_searching) break;
     }
@@ -652,7 +603,7 @@ template <size_t Code> void Lexer::add_error(const std::string &msg, const std::
 {
   Span span(0, stream.get_line(), stream.get_column(), buffer.size());
   span.anteprocess_pos = scr_info.tokens.size();
-  auto tok             = Token(buffer, ETokenType::NONE, span);
+  auto        tok      = Token(buffer, ETokenType::NONE, span);
   // std::shared_ptr<ScriptInfo> _scr_info,
   // 	 const Token &_token, const std::vector<Token> &_tokens,
   // 	 Phase _phase, Severity _severity,
@@ -847,33 +798,19 @@ TokTy Lexer::classifyFormatSpec(std::string &outFormat)
   // Symbols and operators;
   outFormat += c;
   switch (c) {
-    case '.':
-      return TokTy::DOT;
-    case ',':
-      return TokTy::COMMA;
-    case '_':
-      return TokTy::UNDERSCORE;
-    case '\'':
-      return TokTy::TICK;
-    case '+':
-      return TokTy::OP_PLUS;
-    case '-':
-      return TokTy::OP_MINUS;
-    case '<':
-      return TokTy::OPEN_BRACKETS;
-    case '>':
-      return TokTy::CLOSE_BRACKETS;
-    case '^':
-      return TokTy::OP_CIRCUMFLEX;
-    case '~':
-      return TokTy::TILDE;
-    case '=':
-      return TokTy::ASSIGN;
-    case '%':
-      return TokTy::OP_MODULO;
-    case ' ':
-      return TokTy::SPACE;
-    default:
-      return TokTy::UNKNOWN;
+  case '.':  return TokTy::DOT;
+  case ',':  return TokTy::COMMA;
+  case '_':  return TokTy::UNDERSCORE;
+  case '\'': return TokTy::TICK;
+  case '+':  return TokTy::OP_PLUS;
+  case '-':  return TokTy::OP_MINUS;
+  case '<':  return TokTy::OPEN_BRACKETS;
+  case '>':  return TokTy::CLOSE_BRACKETS;
+  case '^':  return TokTy::OP_CIRCUMFLEX;
+  case '~':  return TokTy::TILDE;
+  case '=':  return TokTy::ASSIGN;
+  case '%':  return TokTy::OP_MODULO;
+  case ' ':  return TokTy::SPACE;
+  default:   return TokTy::UNKNOWN;
   }
 }

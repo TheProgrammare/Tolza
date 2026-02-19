@@ -845,7 +845,7 @@ struct Span {
   Span() = default;
 
   // postprocess_position
-  uint32_t pos = 1;
+  uint32_t pos             = 1;
   // original tokenizer position
   uint32_t anteprocess_pos = 1;
   uint16_t line            = 1;
@@ -876,12 +876,9 @@ struct Token {
     if (!val.empty()) return val;
 
     switch (type) {
-      case ETokenType::METACODE:
-        return "#";
-      case ETokenType::S_METACODE_PLACEHOLDER:
-        return "[[" + val + "]]";
-      default:
-        break;
+    case ETokenType::METACODE:               return "#";
+    case ETokenType::S_METACODE_PLACEHOLDER: return "[[" + val + "]]";
+    default:                                 break;
     }
     return "";
   }

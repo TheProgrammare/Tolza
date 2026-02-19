@@ -12,14 +12,14 @@ namespace Memory
 {
 
 // del var
-struct Del : public Node {
+struct Del final : public Node {
   std::unique_ptr<AExpression> target;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }
   std::string debug_str() const override { return "delete"; }
 };
 
-struct Align : public Node {
+struct Align final : public Node {
   std::unique_ptr<AExpression> target;
   size_t                       align = 0;
 
@@ -27,7 +27,7 @@ struct Align : public Node {
   std::string debug_str() const override { return "<mem> align(" + std::to_string(align) + ")"; }
 };
 
-struct Drop : public Node {
+struct Drop final : public Node {
   std::unique_ptr<AExpression> target;
 
   void        accept(Visitor_Base &v) override { v.visit(*this); }

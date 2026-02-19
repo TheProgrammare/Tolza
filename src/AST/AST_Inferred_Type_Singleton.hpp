@@ -125,7 +125,11 @@ inline INFERRED_TYPE get_bsize_type()
   return prim;
 }
 
-inline INFERRED_TYPE get_ptrdiff_type() { static Primitive *prim = new Primitive(EPrimType::ptrdiff); }
+inline INFERRED_TYPE get_ptrdiff_type()
+{
+  static Primitive *prim = new Primitive(EPrimType::ptrdiff);
+  return prim;
+}
 
 // floats
 inline INFERRED_TYPE get_f32_type()

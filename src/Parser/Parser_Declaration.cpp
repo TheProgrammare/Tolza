@@ -11,34 +11,23 @@ std::shared_ptr<AST::ADeclaration> PAR::Parser_Declaration::parse_declaration()
 {
   auto tok = ctx.tok_v.peek();
   switch (tok.type) {
-    case TokTy::MOD:
-      return module();
-    case TokTy::ENUM:
-      return enumeration();
-    case TokTy::VAR:
-    case TokTy::LET:
-    case TokTy::CONST:
-      return global_variable();
-    case TokTy::FUNCTION:
-      return function();
-    case TokTy::GENERIC:
-      return generic();
-    case TokTy::TYPE:
-      return type_alias();
-    case TokTy::COMPONENT:
-      return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->component());
-    case TokTy::SYSTEM:
-      return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->system());
-    case TokTy::ENTITY:
-      return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->entity());
-    case TokTy::EXPORT:
-      return ctx.p_base->parse_export();
-    case TokTy::IMPORT: {
-      auto ignore = ctx.p_base->parse_import();
-      return nullptr;
-    }
-    default:
-      break;
+  case TokTy::MOD:       return module();
+  case TokTy::ENUM:      return enumeration();
+  case TokTy::VAR:
+  case TokTy::LET:
+  case TokTy::CONST:     return global_variable();
+  case TokTy::FUNCTION:  return function();
+  case TokTy::GENERIC:   return generic();
+  case TokTy::TYPE:      return type_alias();
+  case TokTy::COMPONENT: return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->component());
+  case TokTy::SYSTEM:    return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->system());
+  case TokTy::ENTITY:    return std::static_pointer_cast<AST::ADeclaration>(ctx.p_cop->entity());
+  case TokTy::EXPORT:    return ctx.p_base->parse_export();
+  case TokTy::IMPORT:    {
+    auto ignore = ctx.p_base->parse_import();
+    return nullptr;
+  }
+  default: break;
   }
 
   ctx.tok_v.add_error<60>("Illegal instruction '" + tok.val + "' in global.",
@@ -52,9 +41,9 @@ std::shared_ptr<AST::Declaration::Mod> PAR::Parser_Declaration::module()
   static const std::string hint = "define module like `mod myName { ... }`";
   ctx.tok_v.match(TokTy::MOD);
 
-  auto node = ctx.Create_Decl<AST::Declaration::Mod>(ctx.tok_v.peek());
-  node->id  = ctx.p_ref->identifier(false, true);
-  ctx.m_sym->enter_scope(node->id.name, EScopeType::Mod);
+  auto node  = ctx.Create_Decl<AST::Declaration::Mod>(ctx.tok_v.peek());
+  node->name = ctx.parse_name("", hint);
+  ctx.m_sym->enter_scope(node->name, EScopeType::Mod);
 
   ctx.tok_v.expect<61>(TokTy::OPEN_BRACE, "Expected open code block '{' after module name.", hint);
 
@@ -84,7 +73,7 @@ std::shared_ptr<AST::Declaration::Enum> PAR::Parser_Declaration::enumeration()
   auto enu  = ctx.Create_Decl<AST::Declaration::Enum>(ctx.tok_v.peek());
   enu->name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(enu);
-  ctx.m_sym->enter_scope(enu->id.name, EScopeType::Enum);
+  ctx.m_sym->enter_scope(enu->name, EScopeType::Enum);
 
   ctx.tok_v.expect<63>(TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
 
@@ -126,13 +115,13 @@ std::shared_ptr<AST::Declaration::Global> PAR::Parser_Declaration::global_variab
 
   auto var  = ctx.Create_Decl<AST::Declaration::Global>(ctx.tok_v.peek());
   var->kind = kind;
-  var->id   = ctx.p_ref->identifier(true);
+  var->name = ctx.parse_name("", hint);
 
   var->isExtern = ctx.metablock_contains(*var, "extern");
 
   ctx.m_sym->add_decl(var);
 
-  if (var->id.name.empty()) {
+  if (var->name.empty()) {
     ctx.tok_v.add_error<66>("Invalid Identifier !", "");
   }
 
@@ -183,7 +172,7 @@ std::shared_ptr<AST::Declaration::Function> PAR::Parser_Declaration::function()
 
   auto fn = ctx.Create_Decl<AST::Declaration::Function>(ctx.tok_v.peek());
 
-  fn->id      = ctx.p_ref->identifier();
+  fn->name    = ctx.parse_name("", hint);
   fn->isConst = ctx.metablock_contains(*fn, "const");
   fn->isPure  = ctx.metablock_contains(*fn, "pure");
 
@@ -193,7 +182,7 @@ std::shared_ptr<AST::Declaration::Function> PAR::Parser_Declaration::function()
   }
 
   ctx.m_sym->add_decl(fn);
-  ctx.m_sym->enter_scope(fn->id.name, EScopeType::Function);
+  ctx.m_sym->enter_scope(fn->name, EScopeType::Function);
 
   fn->prototype = ctx.p_type->explicit_function_proto(false);
 
@@ -226,7 +215,7 @@ std::shared_ptr<AST::Declaration::Generic> PAR::Parser_Declaration::generic()
 
   gen->name = ctx.parse_name("", kHint_gen);
   ctx.m_sym->add_decl(gen);
-  ctx.m_sym->enter_scope(gen->id.name, EScopeType::Generic);
+  ctx.m_sym->enter_scope(gen->name, EScopeType::Generic);
   ctx.tok_v.expect<70>(TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {

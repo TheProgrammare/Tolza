@@ -9,7 +9,7 @@
 namespace AST
 {
 
-struct Evaluator {
+struct Evaluator final {
   enum class EKind { None, Pattern, Condition };
   EKind kind = EKind::None;
 
