@@ -12,13 +12,13 @@
 namespace
 {
 
-bool hasTargetExtension(const std::filesystem::path &filePath)
+bool hasTargetExtension(const std::filesystem::path& filePath)
 {
   auto ext = filePath.extension().string();
   return ext == ".vel" || ext == ".vlx" || ext == ".velox" || ext == ".velb" || ext == ".vlxb" || ext == ".veloxb";
 }
 
-std::optional<std::vector<std::filesystem::path>> find_files(const std::string &target_path)
+std::optional<std::vector<std::filesystem::path>> find_files(const std::string& target_path)
 {
   std::vector<std::filesystem::path> filesFounds;
 
@@ -29,21 +29,21 @@ std::optional<std::vector<std::filesystem::path>> find_files(const std::string &
   bool error = false;
 
   try {
-    for (auto &entry : std::filesystem::recursive_directory_iterator(target_path)) {
+    for (auto& entry : std::filesystem::recursive_directory_iterator(target_path)) {
       if (std::filesystem::is_regular_file(entry) && hasTargetExtension(entry.path())) {
         filesFounds.push_back(entry.path());
       }
     }
 
     size_t count = 0;
-    for (const auto &lines : filesFounds) {
+    for (const auto& lines : filesFounds) {
       if (in_binding_compilation) std::cout << "[EMBinder] ";
       std::cout << "[file]";
       std::cout << color_CYAN " [" << ++count << "/" << filesFounds.size() << "] " color_RESET;
       std::cout << color_MAGENTA << lines << color_RESET << "\n" << std::flush;
     }
 
-  } catch (const std::filesystem::filesystem_error &e) {
+  } catch (const std::filesystem::filesystem_error& e) {
     if (in_binding_compilation) std::cout << "[EMBinder] ";
     std::cout << "[file] ";
     std::cerr << color_RED << "ERR reading " << e.what() << color_RESET << "\n";
@@ -53,12 +53,12 @@ std::optional<std::vector<std::filesystem::path>> find_files(const std::string &
   return filesFounds;
 }
 
-std::vector<std::string> str_files(const std::vector<std::filesystem::path> &fPaths)
+std::vector<std::string> str_files(const std::vector<std::filesystem::path>& fPaths)
 {
   std::vector<std::string> filesStr;
 
   size_t i = 0;
-  for (auto &path : fPaths) {
+  for (auto& path : fPaths) {
     std::ifstream if_stream(path);
     if (!if_stream) {
       std::cerr << color_RED << "[error] [file] " color_MAGENTA << fPaths[i] << color_RESET << std::endl;
@@ -73,7 +73,7 @@ std::vector<std::string> str_files(const std::vector<std::filesystem::path> &fPa
   return filesStr;
 }
 
-std::vector<std::vector<std::string>> lines_files(const std::vector<std::string> &strFiles)
+std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>& strFiles)
 {
   std::vector<std::vector<std::string>> lineFiles;
   lineFiles.reserve(strFiles.size());
@@ -97,7 +97,7 @@ std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>
 
 } // namespace
 
-std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string &target_file)
+std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string& target_file)
 {
   auto filesResult = find_files(target_file);
   if (!filesResult.has_value()) return {};

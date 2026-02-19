@@ -12,13 +12,13 @@ namespace PAR
 {
 struct Parser_Context;
 struct Parser_Expression {
-  Parser_Expression(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Expression(Parser_Context& ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::unique_ptr<AST::AExpression>        parse_expression();
   [[nodiscard]] std::unique_ptr<AST::AExpression>        parse_expression_term();
   [[nodiscard]] std::unique_ptr<AST::Operation::Cast_As> cast_as(std::unique_ptr<AST::AExpression> expr);
 
-  void check_reference_external(const std::string &name, const std::vector<std::string> &path, Extern_Item::Kind kind);
+  void check_reference_external(const std::string& name, const std::vector<std::string>& path, Extern_Item::Kind kind);
 
   //[[nodiscard]] std::unique_ptr<AST::Expression::Call_Pipe>                  function_call_pipe();
 
@@ -41,8 +41,8 @@ struct Parser_Expression {
   [[nodiscard]] std::unique_ptr<AST::Expression::Ptr_At>     ptr_at(std::unique_ptr<AST::AExpression> ref);
   [[nodiscard]] std::unique_ptr<AST::Expression::Ptr_Offset> ptr_offset(std::unique_ptr<AST::AExpression> ref);
 
-  [[nodiscard]] ModuleImportation *get_external_source(const std::string &name, const std::vector<std::string> &path);
+  [[nodiscard]] ModuleImportation* get_external_source(const std::string& name, const std::vector<std::string>& path);
 
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

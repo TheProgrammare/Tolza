@@ -10,19 +10,19 @@
 
 #include "Metacode.hpp"
 
-PAR::Parser_Base::Parser_Base(ScriptInfo &scr_info)
+PAR::Parser_Base::Parser_Base(ScriptInfo& scr_info)
 {
   ctx = new Parser_Context(scr_info);
 
-  Parser_Declaration_COP   *p_cop   = new Parser_Declaration_COP(*ctx);
-  Parser_Declaration       *p_decl  = new Parser_Declaration(*ctx);
-  Parser_Expression        *p_expr  = new Parser_Expression(*ctx);
-  Parser_Literal           *p_lit   = new Parser_Literal(*ctx);
-  Parser_Declaration_Local *p_loc   = new Parser_Declaration_Local(*ctx);
-  Parser_Memory            *p_mem   = new Parser_Memory(*ctx);
-  Parser_Operator          *p_op    = new Parser_Operator(*ctx);
-  Parser_Statement         *p_state = new Parser_Statement(*ctx);
-  Parser_Type              *p_type  = new Parser_Type(*ctx);
+  Parser_Declaration_COP*   p_cop   = new Parser_Declaration_COP(*ctx);
+  Parser_Declaration*       p_decl  = new Parser_Declaration(*ctx);
+  Parser_Expression*        p_expr  = new Parser_Expression(*ctx);
+  Parser_Literal*           p_lit   = new Parser_Literal(*ctx);
+  Parser_Declaration_Local* p_loc   = new Parser_Declaration_Local(*ctx);
+  Parser_Memory*            p_mem   = new Parser_Memory(*ctx);
+  Parser_Operator*          p_op    = new Parser_Operator(*ctx);
+  Parser_Statement*         p_state = new Parser_Statement(*ctx);
+  Parser_Type*              p_type  = new Parser_Type(*ctx);
 
   ctx->p_cop   = p_cop;
   ctx->p_decl  = p_decl;
@@ -51,7 +51,7 @@ std::vector<std::string> PAR::Parser_Base::start_parsing()
       if (line) ctx->scr_info.rootNode->global_nodes.push_back(line);
       if (ctx->tok_v.match(TokTy::S_END_OF_FILE)) break;
     }
-  } catch (const std::runtime_error &e) {
+  } catch (const std::runtime_error& e) {
     // std::cerr << e.what() << std::endl;
     // context.tokView.synchronize();
     // attempt_recovery();
@@ -60,7 +60,7 @@ std::vector<std::string> PAR::Parser_Base::start_parsing()
   return ctx->tok_v.errors;
 }
 
-ModuleImportation *PAR::Parser_Base::parse_import()
+ModuleImportation* PAR::Parser_Base::parse_import()
 {
   static const std::string hint =
       "define import module like:"
@@ -205,7 +205,7 @@ std::optional<AST::CodeBlock_instruction> PAR::Parser_Base::parse_instruction()
       return cb;
     }
     // call and sys_call
-    else if (dynamic_cast<AST::Expression::Call *>(expr.get())) {
+    else if (dynamic_cast<AST::Expression::Call*>(expr.get())) {
       AST::CodeBlock_instruction cb;
       cb.data = std::move(expr);
       return cb;

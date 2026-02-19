@@ -15,7 +15,7 @@ struct Boolean final : public ALiteral {
 
   Boolean();
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "bool(" + std::to_string(val) + ")"; }
 };
 
@@ -25,7 +25,7 @@ struct Integral final : public ALiteral {
 
   Integral();
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")"; }
 };
 
@@ -38,9 +38,9 @@ struct Decimal final : public ALiteral {
 
   Decimal();
 
-  bool operator==(const ALiteral &other) const
+  bool operator==(const ALiteral& other) const
   {
-    if (auto ptr = dynamic_cast<const Decimal *>(&other))
+    if (auto ptr = dynamic_cast<const Decimal*>(&other))
       return integral_num == ptr->integral_num && decimal_num == ptr->decimal_num;
     return false;
   }
@@ -51,7 +51,7 @@ struct Decimal final : public ALiteral {
     return "deci(" + val.i128_to_string() + ")";
   }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Floating final : public ALiteral {
@@ -62,7 +62,7 @@ struct Floating final : public ALiteral {
 
   std::string debug_str() const override { return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // Latin-1 encoding
@@ -73,7 +73,7 @@ struct ASCII final : public ALiteral {
 
   std::string debug_str() const override { return "ascii('" + std::to_string(val) + "')"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct UTF32 final : public ALiteral {
@@ -83,7 +83,7 @@ struct UTF32 final : public ALiteral {
 
   std::string debug_str() const override { return "utf32('" + codePoints + "')"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Text final : public ALiteral {
@@ -95,7 +95,7 @@ struct Text final : public ALiteral {
 
   std::string debug_str() const override { return "text(\"" + std::string(val.begin(), val.end()) + "\")"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -150,7 +150,7 @@ struct Format_Specifier final : public Node {
 
   std::string debug_str() const override { return "<format> specifier \":" + src_Str + "\""; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // "{expression}" "{expression:spec}"
@@ -160,7 +160,7 @@ struct Text_Lerp final : public AExpression {
 
   std::string debug_str() const override { return "text_lerp"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Textual_Element final {
@@ -179,7 +179,7 @@ struct Textual_Format final : public ALiteral {
 
   std::string debug_str() const override { return "format_text"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Table_Population final : public ALiteral {
@@ -192,7 +192,7 @@ struct Table_Population final : public ALiteral {
 
   std::string debug_str() const override { return "<table population>"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Table final : public ALiteral {
@@ -213,7 +213,7 @@ struct Table final : public ALiteral {
 
   std::string debug_str() const override;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Map final : public ALiteral {
@@ -231,7 +231,7 @@ struct Map final : public ALiteral {
   // key + value (no alignment need because it's translated to 2 arrays)
   size_t ty_sizeByte = 0;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "map[" + std::to_string(keys.size()) + "]"; }
 };
 
@@ -247,7 +247,7 @@ struct Tuple final : public ALiteral {
     return "named tuple(" + std::to_string(values.size()) + ")";
   }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // first..end or first..=end
@@ -259,7 +259,7 @@ struct Range final : public ALiteral {
 
   std::string debug_str() const override { return "literal range"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
@@ -269,7 +269,7 @@ struct Component final : public ALiteral {
 
   std::string debug_str() const override { return "literal component \"" + name->debug_str() + "\""; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
@@ -280,7 +280,7 @@ struct Entity final : public ALiteral {
 
   std::string debug_str() const override { return "literal entity \"" + name->debug_str() + "\""; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Iterator final : public ALiteral {
@@ -288,7 +288,7 @@ struct Iterator final : public ALiteral {
 
   std::string debug_str() const override { return "literal iterator"; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 } // namespace Literal

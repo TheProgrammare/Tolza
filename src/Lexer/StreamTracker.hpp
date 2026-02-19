@@ -10,10 +10,10 @@ class StreamTracker
   char               lastChar = '\0';
 
 public:
-  StreamTracker(const std::string &s) : stream(std::istringstream(s)) {}
+  StreamTracker(const std::string& s) : stream(std::istringstream(s)) {}
 
   // Read char and update line and column
-  bool get(char &c)
+  bool get(char& c)
   {
     if (!stream.get(c)) return false;
     if (lastChar == '\n') {

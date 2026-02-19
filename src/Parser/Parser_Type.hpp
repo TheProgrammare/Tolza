@@ -9,7 +9,7 @@ namespace PAR
 {
 struct Parser_Context;
 struct Parser_Type {
-  Parser_Type(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Type(Parser_Context& ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::unique_ptr<AST::AType> parse_type();
 
@@ -30,6 +30,6 @@ public:
   [[nodiscard]] std::shared_ptr<AST::Type::Function_Proto> explicit_function_proto(bool isLam = false);
   [[nodiscard]] std::vector<std::shared_ptr<AST::Declaration::Local::Parameter>> parameters();
 
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

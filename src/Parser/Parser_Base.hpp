@@ -33,16 +33,16 @@ namespace PAR
 struct Parser_Context;
 
 struct Parser_Base {
-  Parser_Base(ScriptInfo &scr_info);
+  Parser_Base(ScriptInfo& scr_info);
   ~Parser_Base();
 
   [[nodiscard]] std::vector<std::string> start_parsing();
 
-  [[nodiscard]] ModuleImportation                        *parse_import();
+  [[nodiscard]] ModuleImportation*                        parse_import();
   [[nodiscard]] std::shared_ptr<AST::Declaration::Export> parse_export();
 
   [[nodiscard]] std::optional<AST::CodeBlock_instruction> parse_instruction();
 
-  Parser_Context *ctx;
+  Parser_Context* ctx;
 };
 } // namespace PAR

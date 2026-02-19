@@ -16,10 +16,10 @@ struct Evaluator final {
   std::unique_ptr<Declaration::Local::Pattern> pattern;
   std::unique_ptr<AExpression>                 condition;
 
-  AExpression *node() const
+  AExpression* node() const
   {
     if (kind == EKind::Pattern)
-      return dynamic_cast<AExpression *>(pattern.get());
+      return dynamic_cast<AExpression*>(pattern.get());
     else
       return condition.get();
   }

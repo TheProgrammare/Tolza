@@ -193,11 +193,11 @@ std::unique_ptr<AST::Expression::Call_Pipe> PAR::Parser_Expression::function_cal
 */
 
 
-ModuleImportation *PAR::Parser_Expression::get_external_source(const std::string              &name,
-                                                               const std::vector<std::string> &path)
+ModuleImportation* PAR::Parser_Expression::get_external_source(const std::string&              name,
+                                                               const std::vector<std::string>& path)
 {
   if (path.empty()) return nullptr;
-  const std::string &base = path[0];
+  const std::string& base = path[0];
   return ctx.scr_info.get_import_module(base);
 }
 
@@ -360,14 +360,15 @@ std::unique_ptr<AST::Expression::GetBits> PAR::Parser_Expression::getbits(std::u
   static const std::string hint = "define get bit like: `target~[0..8]` get first octect on target.";
 
   ctx.tok_v.match(TokTy::TILDE);
+
   ctx.tok_v.expect<98>(TokTy::OPEN_SQUARE, "Expected start slice block '[' after a get bit operator '~'", hint);
+
   auto get_bit    = ctx.Create_Node<AST::Expression::GetBits>(ctx.tok_v.peek(-2));
   get_bit->target = std::move(expr);
   get_bit->range  = ctx.p_expr->parse_expression();
+
   ctx.tok_v.expect<99>(TokTy::CLOSE_SQUARE, "Expected end slice block ']' after range expression", hint);
-  if (auto range_ptr = dynamic_cast<AST::AType *>(get_bit->range.get())) {
-    get_bit->resolved_range_type = std::shared_ptr<AST::AType>(dynamic_cast<AST::AType *>(get_bit->range.release()));
-  }
+
   return get_bit;
 }
 

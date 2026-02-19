@@ -300,7 +300,7 @@ PAR::Parser_Declaration_Local::component_pattern(ECapability capa, std::unique_p
       "define component mapping like:"
       "\n  - `[ref/mut] CComponent{field1: [ref/mut/copy/clone] a, field2: 10} = val`";
 
-  if (dynamic_cast<AST::AType *>(comp_id.get()) != nullptr)
+  if (dynamic_cast<AST::AType*>(comp_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
 
   auto comp_pat = ctx.Create_Node<AST::Declaration::Local::Pattern_Component>(ctx.tok_v.peek());
@@ -341,7 +341,7 @@ PAR::Parser_Declaration_Local::entity_pattern(ECapability capa, std::unique_ptr<
       "\n  - component field mapping `[ref/mut] MyEntity::{CComponent.field1: [ref/mut/copy/clone] "
       "a, CComponent.field2: 10}`";
 
-  if (dynamic_cast<AST::AType *>(entity_id.get()) != nullptr)
+  if (dynamic_cast<AST::AType*>(entity_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
 
 
@@ -439,7 +439,7 @@ PAR::Parser_Declaration_Local::enum_pattern(ECapability capa, std::unique_ptr<AS
       "  - check only indexation `[if/elif/while] value == Some`";
 
 
-  if (dynamic_cast<AST::AType *>(enum_id.get()) != nullptr)
+  if (dynamic_cast<AST::AType*>(enum_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
 
   auto pat  = ctx.Create_Node<AST::Declaration::Local::Pattern_Enum>(ctx.tok_v.peek());

@@ -18,7 +18,7 @@ namespace Local
 struct CodeBlock final : public Node {
   std::vector<CodeBlock_instruction> elements;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "codeblock"; }
 };
 
@@ -37,7 +37,7 @@ struct Variable_Binding final : public ALocal {
   std::string debug_str() const override { return "bind[" + name + "]"; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Bind; };
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Pattern_Element final {
@@ -52,11 +52,11 @@ struct Pattern_Element final {
   Pattern_Element(std::unique_ptr<ALiteral> _literal) : kind(Kind::Literal), literal(std::move(_literal)) {}
   Pattern_Element() : kind(Kind::Ignore) {}
 
-  Node *node()
+  Node* node()
   {
     switch (kind) {
-    case Kind::Binding: return static_cast<Node *>(bind.get());
-    case Kind::Literal: return static_cast<Node *>(literal.get());
+    case Kind::Binding: return static_cast<Node*>(bind.get());
+    case Kind::Literal: return static_cast<Node*>(literal.get());
     case Kind::Ignore:  return nullptr;
     }
   }
@@ -76,7 +76,7 @@ struct Pattern_Enum final : public Pattern {
   std::unique_ptr<AIdentifier> name;
   std::vector<Pattern_Element> mapping;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "enum pattern \"" + name->debug_str() + "\""; }
 };
 
@@ -84,7 +84,7 @@ struct Pattern_Enum final : public Pattern {
 struct Pattern_Tuple final : public Pattern {
   std::vector<Pattern_Element> mapping;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "tuple pattern"; }
 };
 
@@ -96,7 +96,7 @@ struct Pattern_Entity final : public Pattern {
   // component identifier, field_name, pattern_element
   std::vector<std::unique_ptr<Pattern_Component>> mapping;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "entity pattern \"" + name->debug_str() + "\""; }
 };
 
@@ -107,7 +107,7 @@ struct Pattern_Component final : public Pattern {
   // field_name, pattern_element
   std::vector<std::tuple<std::string, Pattern_Element>> mapping;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "component pattern \"" + name->debug_str() + "\""; }
 };
 
@@ -120,7 +120,7 @@ struct Variable_Unpack final : public ALocal {
   EVariableKind kind     = EVariableKind::Const;
   bool          isStatic = false;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override;
   ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
@@ -137,9 +137,9 @@ struct Lambda final : public ALocal, ICallable {
   bool isLambdaConstexpr = false;
   bool isConstexpr       = false;
 
-  void                  accept(Visitor_Base &v) override { v.visit(*this); }
+  void                  accept(Visitor_Base& v) override { v.visit(*this); }
   std::string           debug_str() const override { return "lam \"" + name + "\""; };
-  Type::Function_Proto *get_signature() override { return prototype.get(); };
+  Type::Function_Proto* get_signature() override { return prototype.get(); };
   ESymbolType           get_symbol_type() const override { return ESymbolType::Lambda; };
 };
 
@@ -152,7 +152,7 @@ struct Variable final : public ALocal {
   EVariableKind   kind       = EVariableKind::Const;
   bool            isStatic   = false;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return EVariableKind_to_str(kind) + " " + name; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Local; };
 };
@@ -163,7 +163,7 @@ struct Capability final : public ALocal {
 
   ECapability kind = ECapability::NONE;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override
   {
     std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
@@ -182,7 +182,7 @@ struct Capture_Member final : public Node {
     return "capture by " + ECapability_to_str(capability) + " \"" + name->debug_str() + "\"";
   }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Lambda_Capture final : public Node {
@@ -191,7 +191,7 @@ struct Lambda_Capture final : public Node {
   bool isAllRef      = false;
   bool isCaptureSelf = false;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "<def> capture"; }
 };
 
@@ -204,7 +204,7 @@ struct Parameter final : public ALocal {
   bool           isVariadic = false;
   SYM_DEFINITION parent_function;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override
   {
     if (isVariadic)
@@ -220,7 +220,7 @@ struct Generic_Parameter final : public ALocal {
 
   std::string name;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override
   {
     std::string out = generic_references.empty() ? name : name + ": ";

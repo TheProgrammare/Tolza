@@ -16,7 +16,7 @@
 #include "Pipeline.hpp"
 #include "ScriptInfo.hpp"
 
-bool generate_script(const Bind_Package &bind)
+bool generate_script(const Bind_Package& bind)
 {
   std::cout << color_MAGENTA << "\"" << BINDING_DIR << "/" << bind.bind_name << color_RESET " generation... "
             << std::flush;
@@ -40,13 +40,13 @@ bool generate_script(const Bind_Package &bind)
   return true;
 }
 
-bool generate_binds(const std::vector<Bind_Package> &binds)
+bool generate_binds(const std::vector<Bind_Package>& binds)
 {
   auto                          start = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> final_duration;
 
   size_t count = 0;
-  for (const auto &bind : binds) {
+  for (const auto& bind : binds) {
     std::cout << "[EMBinder]" color_CYAN " [" << ++count << "/" << binds.size() << "] " color_RESET;
 
     bool success = generate_script(bind);
@@ -86,7 +86,7 @@ bool generate_binds(const std::vector<Bind_Package> &binds)
   return true;
 }
 
-bool pipeline_start_EMBinder(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_EMBinder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::vector<Bind_Package> binds;
   binds.reserve(scr_infos.size());
@@ -98,7 +98,7 @@ bool pipeline_start_EMBinder(const std::vector<std::shared_ptr<ScriptInfo>> &scr
   // affect all symbols imported
   // according to the imported module name
   size_t count = 1;
-  for (auto &scr_info : scr_infos) {
+  for (auto& scr_info : scr_infos) {
     std::cout << "[EMBinder]";
     std::cout << color_CYAN " [" << count++ << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
@@ -106,7 +106,7 @@ bool pipeline_start_EMBinder(const std::vector<std::shared_ptr<ScriptInfo>> &scr
     std::filesystem::create_directories(BINDING_DIR);
     size_t bind_count = 0;
 
-    for (const auto &extern_imp : scr_info->get_externs()) {
+    for (const auto& extern_imp : scr_info->get_externs()) {
       Bind_Package  bind;
       std::string   f_name = "EMB_" + extern_imp->name + "_" + extern_imp->extern_lib + ".vlxb";
       std::string   path   = BINDING_DIR + "/" + f_name; // same as .velox but for wrapper/headers

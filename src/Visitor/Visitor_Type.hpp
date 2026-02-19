@@ -18,7 +18,7 @@ struct Visitor_Type : public Visitor_Default {
   // keep parent constructor
   using Visitor_Default::Visitor_Default;
 
-  std::optional<AST::ATypeInfo *> resolve_type(AST::Node &n, AST::ATypeInfo *input_type, bool silentError = false);
+  std::optional<AST::ATypeInfo*> resolve_type(AST::Node& n, AST::ATypeInfo* input_type, bool silentError = false);
 
   /*
 

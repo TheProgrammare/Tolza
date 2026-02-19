@@ -5,18 +5,18 @@
 
 #include "Globals.hpp"
 
-bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   auto start = std::chrono::high_resolution_clock::now();
 
-  std::multimap<std::string, ScriptInfo *>                                 exportations;
-  std::multimap<std::string, std::pair<ModuleImportation *, ScriptInfo *>> importations;
+  std::multimap<std::string, ScriptInfo*>                                exportations;
+  std::multimap<std::string, std::pair<ModuleImportation*, ScriptInfo*>> importations;
 
-  for (auto &scr_info : scr_infos) {
-    for (auto &exp : scr_info->exported_mod) {
+  for (auto& scr_info : scr_infos) {
+    for (auto& exp : scr_info->exported_mod) {
       exportations.insert({exp->name, scr_info.get()});
     }
-    for (auto &imp : scr_info->imported_mod) {
+    for (auto& imp : scr_info->imported_mod) {
       importations.insert({imp->name, {imp.get(), scr_info.get()}});
     }
   }
@@ -25,8 +25,8 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>> &scr
 
   bool   success = true;
   size_t count   = 0;
-  for (auto &[name, pair] : importations) {
-    auto &[imp, imp_scr] = pair;
+  for (auto& [name, pair] : importations) {
+    auto& [imp, imp_scr] = pair;
     auto range           = exportations.equal_range(name);
 
     size_t mods_count = 0;

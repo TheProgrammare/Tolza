@@ -31,7 +31,7 @@ struct Symbols_Manager;
 
 namespace PAR
 {
-bool is_gen_args(TokenViewer &tokView);
+bool is_gen_args(TokenViewer& tokView);
 struct Parser_Base;
 struct Parser_Expression;
 struct Parser_Type;
@@ -44,12 +44,12 @@ struct Parser_Declaration_COP;
 struct Parser_Statement;
 
 struct Parser_Context {
-  explicit Parser_Context(ScriptInfo &_scr_info);
+  explicit Parser_Context(ScriptInfo& _scr_info);
   ~Parser_Context();
 
-  ScriptInfo             &scr_info;
-  Symbols_Manager        *m_sym  = nullptr;
-  META::MetablockManager *m_meta = nullptr;
+  ScriptInfo&             scr_info;
+  Symbols_Manager*        m_sym  = nullptr;
+  META::MetablockManager* m_meta = nullptr;
   TokenViewer             tok_v;
   size_t                  node_count = 0;
 
@@ -66,11 +66,11 @@ struct Parser_Context {
   // return true if end is encounter
   [[nodiscard]] bool        match_field_any_separator(TokTy                        separator = TokTy::COMMA,
                                                       std::initializer_list<TokTy> end       = {TokTy::CLOSE_BRACE});
-  [[nodiscard]] std::string parse_name(const std::string &msg = "", const std::string &hint = "");
+  [[nodiscard]] std::string parse_name(const std::string& msg = "", const std::string& hint = "");
 
   // to create node, set some data, store in resolvers
   template <DerivedFromNode NodeType, typename... Args>
-  inline std::unique_ptr<NodeType> Create_Node(Token token, Args &&...args)
+  inline std::unique_ptr<NodeType> Create_Node(Token token, Args&&... args)
   {
     static_assert(!std::is_abstract_v<NodeType>, "Create_Node cannot instantiate abstract AST nodes");
 
@@ -81,7 +81,7 @@ struct Parser_Context {
     return node;
   }
   template <DerivedFromDecl NodeType, typename... Args>
-  inline std::shared_ptr<NodeType> Create_Decl(Token token, Args &&...args)
+  inline std::shared_ptr<NodeType> Create_Decl(Token token, Args&&... args)
   {
     auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
     node->_token = token;
@@ -91,24 +91,24 @@ struct Parser_Context {
   };
 
   // MetaBlockManager shortcut for ASTNode
-  [[nodiscard]] bool                      metablock_contains(const AST::Node &n, const std::string &s) const;
-  [[nodiscard]] bool                      metablock_contains(const AST::Node &n, TokTy t) const;
-  [[nodiscard]] std::string               get_export_name(const AST::Node &n) const;
-  [[nodiscard]] const META::MetaInstruct *get_instruct(const AST::Node                          &n,
-                                                       const std::initializer_list<std::string> &pattern) const;
-  [[nodiscard]] const META::MetaBlock    *get_metablock(const AST::Node                          &n,
-                                                        const std::initializer_list<std::string> &pattern);
+  [[nodiscard]] bool                      metablock_contains(const AST::Node& n, const std::string& s) const;
+  [[nodiscard]] bool                      metablock_contains(const AST::Node& n, TokTy t) const;
+  [[nodiscard]] std::string               get_export_name(const AST::Node& n) const;
+  [[nodiscard]] const META::MetaInstruct* get_instruct(const AST::Node&                          n,
+                                                       const std::initializer_list<std::string>& pattern) const;
+  [[nodiscard]] const META::MetaBlock*    get_metablock(const AST::Node&                          n,
+                                                        const std::initializer_list<std::string>& pattern);
 
   // sub parsers accessible to all
-  Parser_Expression        *p_expr;
-  Parser_Type              *p_type;
-  Parser_Literal           *p_lit;
-  Parser_Declaration_Local *p_loc;
-  Parser_Operator          *p_op;
-  Parser_Memory            *p_mem;
-  Parser_Declaration       *p_decl;
-  Parser_Declaration_COP   *p_cop;
-  Parser_Statement         *p_state;
-  Parser_Base              *p_base;
+  Parser_Expression*        p_expr;
+  Parser_Type*              p_type;
+  Parser_Literal*           p_lit;
+  Parser_Declaration_Local* p_loc;
+  Parser_Operator*          p_op;
+  Parser_Memory*            p_mem;
+  Parser_Declaration*       p_decl;
+  Parser_Declaration_COP*   p_cop;
+  Parser_Statement*         p_state;
+  Parser_Base*              p_base;
 };
 } // namespace PAR

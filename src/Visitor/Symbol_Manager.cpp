@@ -43,7 +43,7 @@ std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl_ex_nihilo(std::shared_ptr
   return sym;
 }
 
-void Symbols_Manager::enter_scope(const std::string &name, EScopeType type, size_t depth)
+void Symbols_Manager::enter_scope(const std::string& name, EScopeType type, size_t depth)
 {
   current_scope_path.push_back(ScopeData{name, type, depth});
 }
@@ -54,15 +54,15 @@ std::vector<std::string> Symbols_Manager::get_current_path() const
 {
   std::vector<std::string> result;
   result.reserve(current_scope_path.size());
-  for (auto &elem : current_scope_path) result.push_back(elem.name);
+  for (auto& elem : current_scope_path) result.push_back(elem.name);
 
   std::reverse(result.begin(), result.end());
   return result;
 }
 
-std::optional<std::shared_ptr<AST::ADeclaration>> Symbols_Manager::find_symbol(const std::string &full_name)
+std::optional<std::shared_ptr<AST::ADeclaration>> Symbols_Manager::find_symbol(const std::string& full_name)
 {
-  for (auto &sym : declarations) {
+  for (auto& sym : declarations) {
     if (sym->mangling == full_name) return sym->symbol;
   }
   return std::nullopt;

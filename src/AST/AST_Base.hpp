@@ -34,7 +34,7 @@ struct AType;
 
 using SYM_DEFINITION = std::weak_ptr<Symbol_Data>;
 
-inline std::string mangle_id(const std::string &inId)
+inline std::string mangle_id(const std::string& inId)
 {
   if (inId.empty()) return ""; // no name, must return empty string and no 0
   return std::to_string(inId.size()) + inId;
@@ -44,7 +44,7 @@ namespace AST
 {
 
 struct ICallable {
-  [[nodiscard]] virtual Type::Function_Proto *get_signature() = 0;
+  [[nodiscard]] virtual Type::Function_Proto* get_signature() = 0;
 };
 
 // base of every node in AST
@@ -62,21 +62,23 @@ struct Node {
   [[nodiscard]] size_t              get_tok_pos() const { return _token.span.pos; }
   [[nodiscard]] std::string         mangle_scope() const;
   [[nodiscard]] virtual std::string debug_str() const       = 0;
-  virtual void                      accept(Visitor_Base &v) = 0;
+  virtual void                      accept(Visitor_Base& v) = 0;
 };
 
-inline EPassMode get_defaultParamPassmode(AST::AType &node);
+inline EPassMode get_defaultParamPassmode(AST::AType& node);
 
 struct AType : virtual Node {
   bool type_isOptional = false;
   bool type_isConst    = false;
   bool type_isVolatile = false;
 
+  [[nodiscard]] virtual std::string mangle_type() const = 0;
+
   AType()          = default;
   virtual ~AType() = default;
 };
 
-using INFERRED_TYPE = AType *;
+using INFERRED_TYPE = AType*;
 
 struct ADeclaration : virtual Node {
   std::string name;
@@ -85,10 +87,10 @@ struct ADeclaration : virtual Node {
 
   ADeclaration() = default;
 
-  ADeclaration(const ADeclaration &)            = delete;
-  ADeclaration &operator=(const ADeclaration &) = delete;
-  ADeclaration(ADeclaration &&)                 = delete;
-  ADeclaration &operator=(ADeclaration &&)      = delete;
+  ADeclaration(const ADeclaration&)            = delete;
+  ADeclaration& operator=(const ADeclaration&) = delete;
+  ADeclaration(ADeclaration&&)                 = delete;
+  ADeclaration& operator=(ADeclaration&&)      = delete;
 
   virtual ESymbolType get_symbol_type() const = 0;
 
@@ -110,19 +112,28 @@ struct ALiteral : virtual AExpression {
 };
 
 struct AIdentifier : virtual AExpression {
-  [[nodiscard]] virtual std::string get_base_name() const = 0;
-  virtual ~AIdentifier()                                  = default;
+  // A::B::C -> C
+  // mod A { B } -> B
+  [[nodiscard]] virtual std::string get_base_name() const         = 0;
+  // mod E { A::B::C } -> 1E1C
+  [[nodiscard]] virtual std::string mangle_local_name() const     = 0;
+  // mod E { A::B::C } -> 1A1B1C
+  [[nodiscard]] virtual std::string mangle_qualified_name() const = 0;
+  virtual ~AIdentifier()                                          = default;
 };
 
 struct Expr_ID final : virtual AIdentifier {
   std::string name;
 
   Expr_ID() = default;
-  explicit Expr_ID(const std::string &_name) : name(_name) {}
+  explicit Expr_ID(const std::string& _name) : name(_name) {}
 
   std::string get_base_name() const override { return name; }
+  std::string mangle_local_name() const override { return mangle_scope() + mangle_id(name); }
+  std::string mangle_qualified_name() const override { return mangle_id(name); }
+
   std::string debug_str() const override { return "identifier \"" + name + "\""; }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Expr_ID_Qualified final : virtual AIdentifier {
@@ -130,25 +141,26 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   std::vector<std::string> path;
 
   Expr_ID_Qualified() = default;
-  Expr_ID_Qualified(const std::vector<std::string> &p_path, const std::string &_name) : name(_name) { path = p_path; }
+  Expr_ID_Qualified(const std::vector<std::string>& p_path, const std::string& _name) : name(_name) { path = p_path; }
 
   bool qualification_at_root_scope    = false; // e.g. ::math::add()
   bool qualification_at_parent_scope  = false; // e.g. super::math::add()
   bool qualification_at_current_scope = false; // e.g. self::math::add()
 
-  bool operator==(const Expr_ID_Qualified &other) const noexcept
+  bool operator==(const Expr_ID_Qualified& other) const noexcept
   {
     return mangle_local_name() == other.mangle_local_name();
   }
 
-  std::string                       get_base_name() const override { return name; }
-  [[nodiscard]] bool                is_qualified_id() const { return !path.empty(); }
-  [[nodiscard]] std::string         debug_str() const override;
-  [[nodiscard]] virtual std::string mangle_path() const;
-  [[nodiscard]] virtual std::string mangle_local_name() const;
-  [[nodiscard]] virtual std::string mangle_absolute_name() const;
-  [[nodiscard]] virtual std::string mangle_name() const { return mangle_id(name); }
-  void                              accept(Visitor_Base &v) override { v.visit(*this); }
+  [[nodiscard]] bool        is_qualified_id() const { return !path.empty(); }
+  [[nodiscard]] std::string mangle_path() const;
+
+  std::string get_base_name() const override { return name; }
+  std::string mangle_local_name() const override;
+  std::string mangle_qualified_name() const override;
+
+  [[nodiscard]] std::string debug_str() const override;
+  void                      accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // for every node who need a type resolution
@@ -156,16 +168,21 @@ struct Expr_ID_Generic final : public AIdentifier, AType {
   std::unique_ptr<AIdentifier>                         name;
   [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
+  [[nodiscard]] std::string mangle_types() const;
+
   std::string get_base_name() const override { return name->get_base_name(); }
+  std::string mangle_local_name() const override;
+  std::string mangle_qualified_name() const override;
+
   std::string debug_str() const override { return "identifier type"; }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Root final : public Node {
   std::vector<std::shared_ptr<Node>> global_nodes;
 
   std::string debug_str() const override { return "root"; }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 } // namespace AST

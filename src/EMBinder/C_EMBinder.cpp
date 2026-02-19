@@ -25,35 +25,35 @@ int EMBinder_LibC::c_lib_to_velox_lib()
   if (!ast.enums.empty()) {
     os << EMBINDER_ENUM_HEADER;
 
-    for (auto &elem : ast.enums) {
+    for (auto& elem : ast.enums) {
       os << flag_to_str(elem);
     }
   }
   if (!ast.comps.empty()) {
     os << EMBINDER_COMP_HEADER;
 
-    for (auto &elem : ast.comps) {
+    for (auto& elem : ast.comps) {
       os << comp_to_str(elem);
     }
   }
   if (!ast.unions.empty()) {
     os << EMBINDER_UNION_HEADER;
 
-    for (auto &elem : ast.unions) {
+    for (auto& elem : ast.unions) {
       os << union_to_str(elem);
     }
   }
   if (!ast.globals.empty()) {
     os << EMBINDER_GLOBAL_HEADER;
 
-    for (auto &elem : ast.globals) {
+    for (auto& elem : ast.globals) {
       os << global_to_str(elem);
     }
   }
   if (!ast.funcs.empty()) {
     os << EMBINDER_FUNCTION_HEADER;
 
-    for (auto &elem : ast.funcs) {
+    for (auto& elem : ast.funcs) {
       os << func_to_str(elem);
     }
   }
@@ -67,7 +67,7 @@ int EMBinder_LibC::c_lib_to_velox_lib()
 
 CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data)
 {
-  CVeloxAST   *ast  = static_cast<CVeloxAST *>(client_data);
+  CVeloxAST*   ast  = static_cast<CVeloxAST*>(client_data);
   CXCursorKind kind = clang_getCursorKind(cursor);
 
   // no interop allowed if internal
@@ -78,7 +78,7 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
   std::set<std::string> fn_names;
   std::set<std::string> gl_names;
 
-  for (auto &item : ast->bind.items) {
+  for (auto& item : ast->bind.items) {
     if (item.kind == Extern_Item::Kind::Function)
       fn_names.insert(item.name);
     else if (item.kind == Extern_Item::Kind::Global)
@@ -143,14 +143,14 @@ CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientD
 }
 
 // --- Fonction principale pour parser un fichier C ---
-CVeloxAST parse_translation_unit(const Bind_Package &_bind, const std::string &filename,
-                                 const std::vector<std::string> &args = {})
+CVeloxAST parse_translation_unit(const Bind_Package& _bind, const std::string& filename,
+                                 const std::vector<std::string>& args = {})
 {
   CXIndex index = clang_createIndex(0, 0);
 
   // Convertir args en format char*[]
-  std::vector<const char *> cargs;
-  for (const auto &s : args) cargs.push_back(s.c_str());
+  std::vector<const char*> cargs;
+  for (const auto& s : args) cargs.push_back(s.c_str());
 
   CXTranslationUnit tu;
   CXErrorCode error = clang_parseTranslationUnit2(index, filename.c_str(), cargs.data(), static_cast<int>(cargs.size()),
@@ -170,7 +170,7 @@ CVeloxAST parse_translation_unit(const Bind_Package &_bind, const std::string &f
   return ast;
 }
 
-EVeloxTypeFromC c_type_base_to_velox_type_base(CXType cType, CXType &out_base_cType)
+EVeloxTypeFromC c_type_base_to_velox_type_base(CXType cType, CXType& out_base_cType)
 {
   switch (cType.kind) {
   case CXType_Char_S:
@@ -301,7 +301,7 @@ CVeloxType c_type_to_velox_type(CXType cType)
   return vt;
 }
 
-EVeloxParamPassMode type_to_passMode(CVeloxType &cVel)
+EVeloxParamPassMode type_to_passMode(CVeloxType& cVel)
 {
   if (!cVel.is_pointer && cVel.val_type != EVeloxTypeFromC::struct_comp && cVel.val_type != EVeloxTypeFromC::func
       && cVel.val_type != EVeloxTypeFromC::_union)
@@ -336,7 +336,7 @@ CVeloxComp c_struct_to_velox_comp(CXCursor cCur)
   clang_visitChildren(
       cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
-        auto *comp_ptr = static_cast<CVeloxComp *>(client_data);
+        auto* comp_ptr = static_cast<CVeloxComp*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
           CVeloxType  t    = c_type_to_velox_type(clang_getCursorType(cur));
           std::string name = clang_getCString(clang_getCursorSpelling(cur));
@@ -356,7 +356,7 @@ CVeloxUnion c_union_to_velox_union(CXCursor cCur)
   clang_visitChildren(
       cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
-        auto *u_ptr = static_cast<CVeloxUnion *>(client_data);
+        auto* u_ptr = static_cast<CVeloxUnion*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
           CVeloxType  t    = c_type_to_velox_type(clang_getCursorType(cur));
           std::string name = clang_getCString(clang_getCursorSpelling(cur));
@@ -376,7 +376,7 @@ CVeloxFlag c_enum_to_velox_flag(CXCursor cCur)
   clang_visitChildren(
       cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
-        auto *e_ptr = static_cast<CVeloxFlag *>(client_data);
+        auto* e_ptr = static_cast<CVeloxFlag*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_EnumConstantDecl) {
           std::string        name       = clang_getCString(clang_getCursorSpelling(cur));
           CXType             t          = clang_getEnumDeclIntegerType(clang_getCursorSemanticParent(cur));
@@ -422,7 +422,7 @@ CVeloxFunc c_function_to_velox_function(CXCursor cCur)
   return f;
 }
 
-std::string type_to_str(CVeloxType &cVel)
+std::string type_to_str(CVeloxType& cVel)
 {
   std::string ptr;
   std::string type;
@@ -442,7 +442,7 @@ std::string type_to_str(CVeloxType &cVel)
 
   if (cVel.is_table) {
     for (size_t i = 0; i < cVel.table_size.size(); i++) {
-      size_t &size = cVel.table_size[i];
+      size_t& size = cVel.table_size[i];
       table_dim += std::to_string(size);
       if (i != cVel.table_size.size() - 1) table_dim += ", ";
     }
@@ -488,7 +488,7 @@ std::string type_to_str(CVeloxType &cVel)
       std::string str_params;
 
       for (size_t i = 0; i < cVel.func_type->params.size(); i++) {
-        auto &[type, _] = cVel.func_type->params[i];
+        auto& [type, _] = cVel.func_type->params[i];
         str_params += type_to_str(type);
         if (i != cVel.func_type->params.size() - 1) str_params += ", ";
       }
@@ -513,12 +513,12 @@ std::string type_to_str(CVeloxType &cVel)
 
 // --------------------
 // CVeloxComp → comp syntax
-std::string comp_to_str(CVeloxComp &cVel)
+std::string comp_to_str(CVeloxComp& cVel)
 {
   std::string members;
 
   for (size_t i = 0; i < cVel.fields.size(); i++) {
-    auto &[name, type] = cVel.fields[i];
+    auto& [name, type] = cVel.fields[i];
     std::string field  = EMBINDER_EXTERN_FIELD;
     fmt_template(field, {name, type_to_str(type)});
 
@@ -532,12 +532,12 @@ std::string comp_to_str(CVeloxComp &cVel)
 
 // --------------------
 // CVeloxUnion → union syntax
-std::string union_to_str(CVeloxUnion &cVel)
+std::string union_to_str(CVeloxUnion& cVel)
 {
   std::string members;
 
   for (size_t i = 0; i < cVel.members.size(); i++) {
-    auto &[name, type] = cVel.members[i];
+    auto& [name, type] = cVel.members[i];
     members += name + ": " + type_to_str(type) + ",\n";
   }
 
@@ -548,12 +548,12 @@ std::string union_to_str(CVeloxUnion &cVel)
 
 // --------------------
 // CVeloxFlag → flag syntax
-std::string flag_to_str(CVeloxFlag &cVel)
+std::string flag_to_str(CVeloxFlag& cVel)
 {
   std::string members;
 
   for (size_t i = 0; i < cVel.members.size(); i++) {
-    auto &[name, bits] = cVel.members[i];
+    auto& [name, bits] = cVel.members[i];
     members += name + ": " + std::to_string(bits) + ",\n";
   }
 
@@ -564,13 +564,13 @@ std::string flag_to_str(CVeloxFlag &cVel)
 
 // --------------------
 // CVeloxFunc → fn syntax
-std::string func_to_str(CVeloxFunc &cVel)
+std::string func_to_str(CVeloxFunc& cVel)
 {
   std::string params;
 
   for (size_t i = 0; i < cVel.param_names.size(); i++) {
     std::string name          = cVel.param_names[i];
-    auto &[type, is_restrict] = cVel.type.params[i];
+    auto& [type, is_restrict] = cVel.type.params[i];
     std::string pass_mode     = EVeloxParamPassMode_to_str(type_to_passMode(type));
     params += pass_mode + " " + name + ": " + type_to_str(type);
 
@@ -589,7 +589,7 @@ std::string func_to_str(CVeloxFunc &cVel)
 
 // --------------------
 // CVeloxGlobal → var syntax
-std::string global_to_str(CVeloxGlobal &cVel)
+std::string global_to_str(CVeloxGlobal& cVel)
 {
   std::string kind = cVel.is_const ? "let" : "var";
 

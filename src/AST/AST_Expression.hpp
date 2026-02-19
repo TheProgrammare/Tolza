@@ -17,7 +17,7 @@ struct If_Ternary final : public AExpression {
   [[maybe_unused]]
   std::unique_ptr<Node> false_line;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "ternary if"; }
 };
 
@@ -27,7 +27,7 @@ struct Enum final : public AExpression {
 
   std::string debug_str() const override { return "literal enum \"" + name + "\""; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Member_Access final : public AExpression {
@@ -35,13 +35,13 @@ struct Member_Access final : public AExpression {
   std::unique_ptr<AIdentifier> right;
 
   std::string debug_str() const override { return left->debug_str() + "." + right->debug_str(); }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Self final : public AExpression {
   SYM_DEFINITION self_definition;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "self"; }
 };
 
@@ -49,7 +49,7 @@ struct Other final : public AExpression {
   // can be primitive or other entity
   SYM_DEFINITION other_definition;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "other"; }
 };
 
@@ -62,7 +62,7 @@ struct Call_Argument final : public AExpression {
   SYM_DEFINITION               function_definition;
   SYM_DEFINITION               parameter_definition;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return name; }
 };
 
@@ -73,13 +73,13 @@ struct Call : public AExpression {
 
   std::string debug_str() const override { return "call \"" + name->debug_str() + "\""; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
-  bool to_lit_enum(Enum &lit_enum)
+  bool to_lit_enum(Enum& lit_enum)
   {
     lit_enum.name = name->get_base_name();
     lit_enum.member_values.reserve(param_args.size());
-    for (auto &param : param_args) {
+    for (auto& param : param_args) {
       lit_enum.member_values.push_back(std::move(param->expression));
     }
     return true;
@@ -89,7 +89,7 @@ struct Call : public AExpression {
 struct Call_System final : public Call {
   std::unique_ptr<AExpression> target_entity;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "run"; }
 };
 
@@ -102,7 +102,7 @@ struct Call_Pipe final : public AExpression {
   std::vector<EBinOpType>                                  mutableOperators;
 
   std::string debug_str() const override { return "pipecall \"" + name->debug_str() + "\""; }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Table_Access final : public AExpression {
@@ -110,26 +110,24 @@ struct Table_Access final : public AExpression {
   std::unique_ptr<Node> selector;
 
   std::string debug_str() const override { return "table access"; }
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // my_ptr'at(i)
 struct Ptr_At final : public AExpression {
   std::unique_ptr<AExpression> target;
-
   std::unique_ptr<AExpression> index;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "ptr at"; }
 };
 
 // my_ptr'offset(i)
 struct Ptr_Offset final : public AExpression {
   std::unique_ptr<AExpression> target;
-
   std::unique_ptr<AExpression> offset;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "ptr offset"; }
 };
 
@@ -137,7 +135,7 @@ struct Ptr_Offset final : public AExpression {
 struct Ptr_Val final : public AExpression {
   std::unique_ptr<AExpression> target;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "val'"; }
 };
 
@@ -145,7 +143,7 @@ struct Ptr_Val final : public AExpression {
 struct Addr_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "addr'"; }
 };
 
@@ -153,7 +151,7 @@ struct Size_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
   size_t                       size = 0;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "<mem> size(" + std::to_string(size) + ")"; }
 };
 
@@ -162,12 +160,11 @@ struct GetBits final : public AExpression {
   std::unique_ptr<AExpression> target;
   std::unique_ptr<AExpression> range;
 
-  std::shared_ptr<AType> resolved_range_type;
   // 8, 16, 32, 64, 128
   enum EBitSize { _8, _16, _32, _64, _128 };
   EBitSize bit_size = _8;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "bits get"; }
 };
 
@@ -175,17 +172,18 @@ struct GetBits final : public AExpression {
 struct Move final : public AExpression {
   std::unique_ptr<Node> target;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "move"; }
 };
 
 // new ptr'T(val)
 struct New_Ptr final : public AExpression {
-  EPtrType               pointer = EPtrType::raw_ptr;
   std::shared_ptr<AType> type;
   std::unique_ptr<Node>  expression;
 
-  void        accept(Visitor_Base &v) override { v.visit(*this); }
+  EPtrType pointer = EPtrType::raw_ptr;
+
+  void        accept(Visitor_Base& v) override { v.visit(*this); }
   std::string debug_str() const override { return "new"; }
 };
 

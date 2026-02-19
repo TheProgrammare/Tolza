@@ -112,8 +112,8 @@ std::unique_ptr<AST::Literal::Floating> PAR::Parser_Literal::literal_floating_po
   } else {
     ctx.tok_v.next();
 
-    auto       &apf = literal->val.val;
-    const auto &sem = apf.getSemantics();
+    auto&       apf = literal->val.val;
+    const auto& sem = apf.getSemantics();
 
     llvm::APFloat maxF32(sem);
     llvm::APFloat maxF64(sem);
@@ -150,7 +150,7 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral()
   auto literalTok = ctx.tok_v.next();
   auto literal    = ctx.Create_Node<AST::Literal::Integral>(literalTok);
 
-  auto &api = literal->val.val;
+  auto& api = literal->val.val;
 
   // Par défaut, on essaye 64 bits
   unsigned bitWidth = 64;
@@ -189,12 +189,12 @@ std::unique_ptr<AST::Literal::Integral> PAR::Parser_Literal::literal_integral()
                                                                      : 10));
       literal->type = EPrimType::i128;
     }
-  } catch (const std::invalid_argument &) {
+  } catch (const std::invalid_argument&) {
     ctx.tok_v.add_error<82>("Impossible to parse literal integral",
                             "define literal integral like:\n  - decimal: 1234\n  - bin: "
                             "0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
     throw std::runtime_error("Impossible to parse APInt literal");
-  } catch (const std::out_of_range &) {
+  } catch (const std::out_of_range&) {
     ctx.tok_v.add_error<83>("Integral literal too big for 128 bits",
                             "define literal integral like:\n  - decimal: 1234\n  - bin: "
                             "0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
@@ -456,8 +456,8 @@ std::unique_ptr<AST::ALiteral> PAR::Parser_Literal::literal_table()
 
   // is a literal table population
   if (values.size() == 1) {
-    if (dynamic_cast<AST::Literal::Table_Population *>(values[0].get())) {
-      auto pop_ptr = dynamic_cast<AST::Literal::Table_Population *>(values[0].release());
+    if (dynamic_cast<AST::Literal::Table_Population*>(values[0].get())) {
+      auto pop_ptr = dynamic_cast<AST::Literal::Table_Population*>(values[0].release());
 
       // is a map population
       if (pop_ptr->map_expression_value) {
@@ -518,17 +518,17 @@ std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(std::u
   while (!ctx.tok_v.is_end()) {
     auto expr = ctx.p_expr->parse_expression();
 
-    if (dynamic_cast<AST::Literal::Component *>(expr.get())) {
+    if (dynamic_cast<AST::Literal::Component*>(expr.get())) {
       lit_entity->comp_args.push_back(
-          std::unique_ptr<AST::Literal::Component>(dynamic_cast<AST::Literal::Component *>(expr.release())));
+          std::unique_ptr<AST::Literal::Component>(dynamic_cast<AST::Literal::Component*>(expr.release())));
 
-    } else if (auto comp_member = dynamic_cast<AST::Expression::Member_Access *>(expr.get())) {
+    } else if (auto comp_member = dynamic_cast<AST::Expression::Member_Access*>(expr.get())) {
       ctx.tok_v.expect<90>(TokTy::ASSIGN, "Expected component field initialisation '='.",
                            "define literal component member like: `CPosition.x= 10, CPosition.y = 15`");
 
       auto lit_comp = ctx.Create_Node<AST::Literal::Component>(expr->_token);
       lit_comp->name =
-          std::move(std::unique_ptr<AST::AIdentifier>(static_cast<AST::AIdentifier *>(comp_member->left.release())));
+          std::move(std::unique_ptr<AST::AIdentifier>(static_cast<AST::AIdentifier*>(comp_member->left.release())));
     } else {
       ctx.tok_v.add_error_tok<91>(expr->_token, "Unexpected literal reference",
                                   "define literal components only in literal entity");

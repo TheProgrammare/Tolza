@@ -22,7 +22,7 @@
 
 #include "Metacode.hpp"
 
-PAR::Parser_Context::Parser_Context(ScriptInfo &_scr_info)
+PAR::Parser_Context::Parser_Context(ScriptInfo& _scr_info)
   : scr_info(_scr_info), m_sym(new Symbols_Manager(_scr_info)), m_meta(_scr_info.m_meta), tok_v(TokenViewer(_scr_info))
 {
   scr_info.m_sym = m_sym;
@@ -54,7 +54,7 @@ PAR::Parser_Context::~Parser_Context()
   p_base = nullptr;
 }
 
-bool PAR::is_gen_args(TokenViewer &tok_v)
+bool PAR::is_gen_args(TokenViewer& tok_v)
 {
   size_t originPos           = tok_v.position();
   bool   isGenArgsValid      = true;
@@ -112,29 +112,29 @@ bool PAR::is_gen_args(TokenViewer &tok_v)
   return result;
 }
 
-bool PAR::Parser_Context::metablock_contains(const AST::Node &n, const std::string &s) const
+bool PAR::Parser_Context::metablock_contains(const AST::Node& n, const std::string& s) const
 {
   return m_meta->contains(n.get_tok_antepos(), s);
 }
 
-bool PAR::Parser_Context::metablock_contains(const AST::Node &n, TokTy t) const
+bool PAR::Parser_Context::metablock_contains(const AST::Node& n, TokTy t) const
 {
   return m_meta->contains(n.get_tok_antepos(), t);
 }
 
-std::string PAR::Parser_Context::get_export_name(const AST::Node &n) const
+std::string PAR::Parser_Context::get_export_name(const AST::Node& n) const
 {
   return m_meta->get_export_name(n.get_tok_antepos());
 }
 
-const META::MetaInstruct *PAR::Parser_Context::get_instruct(const AST::Node                          &n,
-                                                            const std::initializer_list<std::string> &pattern) const
+const META::MetaInstruct* PAR::Parser_Context::get_instruct(const AST::Node&                          n,
+                                                            const std::initializer_list<std::string>& pattern) const
 {
   return m_meta->get_instruct(n.get_tok_antepos(), pattern);
 }
 
-const META::MetaBlock *PAR::Parser_Context::get_metablock(const AST::Node                          &n,
-                                                          const std::initializer_list<std::string> &pattern)
+const META::MetaBlock* PAR::Parser_Context::get_metablock(const AST::Node&                          n,
+                                                          const std::initializer_list<std::string>& pattern)
 {
   return m_meta->get_metablock(n.get_tok_antepos(), pattern);
 }
@@ -229,7 +229,7 @@ bool PAR::Parser_Context::match_field_any_separator(TokTy separator, std::initia
   if (tok_v.match_any(end)) return true;
   std::string endSymbols;
   size_t      countSym = 0;
-  for (auto &elem : end) {
+  for (auto& elem : end) {
     endSymbols += "'" + std::to_string(int(elem)) + "', ";
     if (++countSym > 10) {
       endSymbols += "\n";
@@ -241,7 +241,7 @@ bool PAR::Parser_Context::match_field_any_separator(TokTy separator, std::initia
   return false;
 }
 
-std::string PAR::Parser_Context::parse_name(const std::string &custom_msg, const std::string &custom_hint)
+std::string PAR::Parser_Context::parse_name(const std::string& custom_msg, const std::string& custom_hint)
 {
   static const std::string _msg = "Expected identifier (classic name).";
   static const std::string _hint =

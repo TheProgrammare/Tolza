@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 
-bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::vector<std::tuple<std::string, std::vector<std::string>>> parErrors;
   std::vector<std::tuple<std::string, std::vector<std::string>>> declErrors;
@@ -31,7 +31,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_i
 
     auto                      start       = std::chrono::high_resolution_clock::now();
     std::vector<std::string>  out_par_err = inParser.start_parsing();
-    std::vector<std::string> &out_sym_err = inParser.ctx->m_sym->decl_errors;
+    std::vector<std::string>& out_sym_err = inParser.ctx->m_sym->decl_errors;
     auto                      end         = std::chrono::high_resolution_clock::now();
     double                    milli       = std::chrono::duration<double, std::milli>(end - start).count();
 
@@ -53,17 +53,17 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_i
     std::cerr << color_RED "[build] Parser failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
-    for (auto &[name, fileError] : parErrors) {
+    for (auto& [name, fileError] : parErrors) {
       err_count += fileError.size();
     }
     std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
 
-    for (auto &[name, fileError] : parErrors) {
+    for (auto& [name, fileError] : parErrors) {
       if (fileError.empty()) continue;
 
       if (in_binding_compilation) std::cout << color_RED "[EMBinder] ";
       std::cerr << color_RED "[parse] [error] [file] " color_MAGENTA << name << color_RESET "\n\n";
-      for (const auto &f_err : fileError) {
+      for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
       std::cerr << std::endl;
@@ -76,18 +76,18 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>> &scr_i
     std::cerr << color_RED "[build] Declaration failed\n";
     // sum of errors
     size_t err_count = 0;
-    for (auto &p_err : declErrors) {
+    for (auto& p_err : declErrors) {
       err_count += std::get<1>(p_err).size();
     }
     std::cerr << color_YELLOW "[parse] [summary] " << color_RED << err_count
               << " errors, build failed\n" color_RESET "\n";
 
-    for (auto &[name, fileError] : declErrors) {
+    for (auto& [name, fileError] : declErrors) {
       if (fileError.empty()) continue;
 
       if (in_binding_compilation) std::cout << color_RED "[EMBinder] ";
       std::cerr << color_RED "[declaration] [error] [file] " color_MAGENTA << name << color_RESET "\n\n";
-      for (const auto &f_err : fileError) {
+      for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
       std::cerr << std::endl;

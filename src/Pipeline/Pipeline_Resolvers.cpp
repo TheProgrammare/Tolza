@@ -16,7 +16,7 @@
 #include "Visitor/Visitor_Symbol.hpp"
 #include "Visitor/Visitor_Type.hpp"
 
-bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::string passName[3] = {"Symbol", "Type", "Semantic"};
 
@@ -74,9 +74,9 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>> &sc
 
     if (!resErrors.empty()) {
       std::cerr << color_RED "[build] " << name << " Resolver failed" color_RESET << std::endl;
-      for (auto &[file_name, fileError] : resErrors) {
+      for (auto& [file_name, fileError] : resErrors) {
         std::cerr << color_RED "[resolver] [error] [file] " color_MAGENTA << file_name << color_MAGENTA "\n";
-        for (auto &error : fileError) {
+        for (auto& error : fileError) {
           std::cerr << error << "\n";
         }
         std::cerr << std::endl;

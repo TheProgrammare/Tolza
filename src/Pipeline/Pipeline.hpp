@@ -19,6 +19,6 @@
 
 #include <string>
 
-bool start_compilation(const std::string &target_file);
+bool start_compilation(const std::string& target_file);
 
-void parseArgs(int argc, char **argv);
+void parseArgs(int argc, char** argv);

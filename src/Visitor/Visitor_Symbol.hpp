@@ -11,7 +11,7 @@ struct Visitor_Symbol : public Visitor_Default {
 
   virtual ~Visitor_Symbol();
 
-  AST::Declaration::COP::Entity *current_entity;
+  AST::Declaration::COP::Entity* current_entity;
 
   std::shared_ptr<AST::Declaration::COP::Component> current_component;
   std::shared_ptr<AST::Declaration::Function>       current_function;
@@ -21,8 +21,7 @@ struct Visitor_Symbol : public Visitor_Default {
   // void resolve_arguments(std::vector<std::unique_ptr<AST::Declaration::Call_Arg>>& args,
   // AST::Type::FunctionProto& fn);
 
-  std::shared_ptr<AST::ADeclaration> resolve_def(AST::AExpression &expr, SYM_DEFINITION target_resolution,
-                                                 bool silentError = false);
+  bool resolve_sym(AST::AExpression& expr, SYM_DEFINITION& target_resolution, bool silentError = false);
 
   // all commented visit are not concerned by the symbol resolution
   // but the default visitor will visit and can execute inferior node in SymVisitor

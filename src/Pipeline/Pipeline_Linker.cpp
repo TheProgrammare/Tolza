@@ -2,7 +2,7 @@
 
 // color_CYAN " [" + std::to_string(left) + "\\" + std::to_string(right) + "] " color_RESET;
 
-bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 { /*
 // get all exported modules
 // module name -> ScriptInfo*

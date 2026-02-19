@@ -10,7 +10,7 @@
 #include "Preprocessor.hpp"
 #include "ScriptInfo.hpp"
 
-bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::vector<std::tuple<std::string, std::vector<std::string>>> errs;
 
@@ -29,8 +29,8 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>> 
 
     auto                      start      = std::chrono::high_resolution_clock::now();
     std::vector<Token>        final_toks = pre.preprocess();
-    META::MetablockManager  *&meta       = pre.m_meta;
-    std::vector<std::string> &err        = pre.tok_v->errors;
+    META::MetablockManager*&  meta       = pre.m_meta;
+    std::vector<std::string>& err        = pre.tok_v->errors;
 
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
@@ -53,17 +53,17 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>> 
     std::cerr << color_RED "[build] Preprocessor failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
-    for (auto &[name, fileError] : errs) {
+    for (auto& [name, fileError] : errs) {
       err_count += fileError.size();
     }
     std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
 
-    for (auto &[name, fileError] : errs) {
+    for (auto& [name, fileError] : errs) {
       if (fileError.empty()) continue;
 
       if (in_binding_compilation) std::cout << color_RED "[EMBinder] ";
       std::cerr << color_RED "[preprocess] [error] [file] " color_MAGENTA << name << color_RESET "\n\n";
-      for (const auto &f_err : fileError) {
+      for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
       std::cerr << std::endl;

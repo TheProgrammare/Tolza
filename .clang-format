@@ -36,6 +36,10 @@ AlignTrailingComments: true
 
 AllowShortCaseLabelsOnASingleLine: true
 
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+
 AlignAfterOpenBracket: true
 SpaceAfterCStyleCast: false
 

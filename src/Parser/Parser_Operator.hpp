@@ -12,7 +12,7 @@ namespace PAR
 {
 struct Parser_Context;
 struct Parser_Operator {
-  Parser_Operator(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Operator(Parser_Context& ctx) : ctx(ctx) {}
 
   bool no_literal_cop_mode = false;
 
@@ -41,6 +41,6 @@ private:
   [[nodiscard]] std::unique_ptr<AST::Operation::Unary> Create_UnOp(EUnaryOpType                      op,
                                                                    std::unique_ptr<AST::AExpression> base);
 
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

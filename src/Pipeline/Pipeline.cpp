@@ -43,7 +43,7 @@ static const std::string pipeline_info = color_BLUE
     "[back-end]\n"
     "[9  ] [Linker      ] link all .ll then .o scripts into one executable\n" color_RESET;
 
-bool start_compilation(const std::string &target_file)
+bool start_compilation(const std::string& target_file)
 {
   if (in_binding_compilation) std::cout << "[EMBinder] ";
   std::cout << color_BLUE "[build] Compilation Started\n" color_RESET << std::endl;
@@ -177,7 +177,7 @@ void applyDefaultAndDetectNative()
 }
 
 // simple parseur CLI minimal
-void parseArgs(int argc, char **argv)
+void parseArgs(int argc, char** argv)
 {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];

@@ -5,7 +5,7 @@
 #include "Globals.hpp"
 #include "Token.hpp"
 
-void Lexer::tokenize(const std::set<char> &exit_char)
+void Lexer::tokenize(const std::set<char>& exit_char)
 {
   auto stop_guard = [&]() -> bool {
     while ((std::iscntrl(ch) || std::isspace(ch)) && exit_char.find(ch) == exit_char.end()) {
@@ -473,16 +473,16 @@ void Lexer::tokenize_numeric()
   return addToken(TokTy::L_I);
 }
 
-Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, const std::string &_key, const std::string &_search)
+Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search)
 {
   if (_key == _search) return EPrefixFound::All;
   if (_search.size() < _key.size() && _key.rfind(_search, 0) == 0) return EPrefixFound::Prefix;
   return EPrefixFound::None;
 }
 
-bool Lexer::is_valid_prefix(char prefix, const std::string &_current)
+bool Lexer::is_valid_prefix(char prefix, const std::string& _current)
 {
-  for (auto &[val, type] : kSortedKeywords()) {
+  for (auto& [val, type] : kSortedKeywords()) {
     if (val.size() <= _current.size()) continue;
     if (val.rfind(_current, 0) != 0) continue;
     if (val[_current.size()] == prefix) return true;
@@ -499,7 +499,7 @@ void Lexer::tokenize_keyword()
   while (keep_searching) {
     keep_searching = false;
 
-    for (auto &[val, type] : kSortedKeywords()) {
+    for (auto& [val, type] : kSortedKeywords()) {
       // Ignore keywords that can't possibly match the first character
       if (val.empty() || val[0] != buffer[0]) continue;
       if (buffer.size() > val.size()) continue;
@@ -599,7 +599,7 @@ bool Lexer::eat()
   return false;
 }
 
-template <size_t Code> void Lexer::add_error(const std::string &msg, const std::string &hint)
+template <size_t Code> void Lexer::add_error(const std::string& msg, const std::string& hint)
 {
   Span span(0, stream.get_line(), stream.get_column(), buffer.size());
   span.anteprocess_pos = scr_info.tokens.size();
@@ -614,7 +614,7 @@ template <size_t Code> void Lexer::add_error(const std::string &msg, const std::
   errors.push_back(out);
 }
 
-TokTy Lexer::classifyNumerals(std::string &outValue)
+TokTy Lexer::classifyNumerals(std::string& outValue)
 {
   outValue.clear();
   char c;
@@ -728,7 +728,7 @@ TokTy Lexer::classifyNumerals(std::string &outValue)
   return TokTy::L_I; // standard integral
 }
 
-TokTy Lexer::classifyKeyword(std::string &outWord)
+TokTy Lexer::classifyKeyword(std::string& outWord)
 {
   char c = outWord[0];
 
@@ -769,7 +769,7 @@ TokTy Lexer::classifyKeyword(std::string &outWord)
   return TokTy::UNKNOWN;
 }
 
-TokTy Lexer::classifyFormatSpec(std::string &outFormat)
+TokTy Lexer::classifyFormatSpec(std::string& outFormat)
 {
   outFormat.clear();
   char c = outFormat[0];

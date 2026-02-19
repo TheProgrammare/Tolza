@@ -27,12 +27,12 @@ inline bool         DEBUG_MODE                 = false;
 inline bool         DEBUG_POSTPROCESSOR_OUTPUT = false;
 inline bool         DOT_PRINT                  = false;
 inline bool         DOT_EXPOSER_PRINT          = false;
-inline const size_t POINTER_SIZE               = sizeof(void *);
-inline const size_t ARCHITECTURE_SIZE          = sizeof(void *);
+inline const size_t POINTER_SIZE               = sizeof(void*);
+inline const size_t ARCHITECTURE_SIZE          = sizeof(void*);
 inline const size_t MAX_PATH_SEG_SIZE          = 12;
 inline const size_t MAX_KEYWORD_SIZE           = 32;
 
-inline void fmt_template(std::string &templateStr, const std::vector<std::string> &args)
+inline void fmt_template(std::string& templateStr, const std::vector<std::string>& args)
 {
   for (size_t i = 0; i < args.size(); ++i) {
     std::string placeholder = "%" + std::to_string(i + 1);

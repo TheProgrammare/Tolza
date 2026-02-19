@@ -12,7 +12,7 @@ namespace Generic
 struct IGenCond : public Node {
   virtual ~IGenCond()                                              = default;
   // for semantic viewer
-  [[nodiscard]] virtual bool type_isValid(const AType &type) const = 0;
+  [[nodiscard]] virtual bool type_isValid(const AType& type) const = 0;
 };
 
 struct Is_Type final : IGenCond {
@@ -21,12 +21,12 @@ struct Is_Type final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
-  bool type_isValid(const AType &type) const override
+  bool type_isValid(const AType& type) const override
   {
-    for (auto &_type : inType) {
-      if (auto ptr = dynamic_cast<AST::AType *>(_type.get())) {
+    for (auto& _type : inType) {
+      if (auto ptr = dynamic_cast<AST::AType*>(_type.get())) {
         // if (*ptr == type) return true;
       }
     }
@@ -42,9 +42,9 @@ struct Can_Cast final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
-  bool type_isValid(const AType &type) const override
+  bool type_isValid(const AType& type) const override
   {
     // return *target == type;
     return false;
@@ -59,9 +59,9 @@ struct Have_Op final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
-  bool        type_isValid(const AType &type) const override;
+  bool        type_isValid(const AType& type) const override;
   std::string debug_str() const override { return "gen op"; }
 };
 
@@ -71,11 +71,11 @@ struct Have_Role final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
   std::shared_ptr<Declaration::COP::Role> resolved_role_sym;
 
-  bool        type_isValid(const AType &type) const override;
+  bool        type_isValid(const AType& type) const override;
   std::string debug_str() const override { return "gen role"; }
 };
 
@@ -85,11 +85,11 @@ struct Use_Component final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
   std::shared_ptr<Declaration::COP::Component> resolved_comp_sym;
 
-  bool        type_isValid(const AType &type) const override;
+  bool        type_isValid(const AType& type) const override;
   std::string debug_str() const override { return "gen component"; }
 };
 
@@ -99,11 +99,11 @@ struct Compatible_System final : IGenCond {
 
   SYM_DEFINITION parent_generic;
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
   std::shared_ptr<Declaration::COP::System> resolved_system_sym;
 
-  bool        type_isValid(const AType &type) const override;
+  bool        type_isValid(const AType& type) const override;
   std::string debug_str() const override { return "gen system"; }
 };
 

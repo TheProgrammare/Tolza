@@ -28,13 +28,13 @@ struct Extern_Item {
   std::string              name;
   std::vector<std::string> path;
 
-  Extern_Item(const std::string &_name, const std::vector<std::string> &_path, Kind _kind)
+  Extern_Item(const std::string& _name, const std::vector<std::string>& _path, Kind _kind)
     : name(_name), path(_path), kind(_kind)
   {
   }
 };
 
-Extern_Item::Kind AST_AExpression_to_Extern_Item_Kind(const AST::AExpression &n);
+Extern_Item::Kind AST_AExpression_to_Extern_Item_Kind(const AST::AExpression& n);
 
 struct Symbols_Manager;
 
@@ -56,13 +56,13 @@ struct ModuleImportation {
   // is from another language or lib
   bool is_std = false;
 
-  std::vector<ScriptInfo *> target_modules;
+  std::vector<ScriptInfo*> target_modules;
 
   std::vector<Extern_Item> extern_references;
 
   bool is_external() const { return !extern_lib.empty(); }
 
-  void add_extern_reference(const Extern_Item &ext_item) { extern_references.push_back(ext_item); }
+  void add_extern_reference(const Extern_Item& ext_item) { extern_references.push_back(ext_item); }
 };
 
 struct ModuleExportation {
@@ -75,22 +75,22 @@ struct ModuleExportation {
   // no module namespace need for usage
   bool is_native = false;
 
-  ScriptInfo *target_module = nullptr;
+  ScriptInfo* target_module = nullptr;
 
   [[maybe_unused]]
-  ScriptInfo *script_mirror = nullptr;
+  ScriptInfo* script_mirror = nullptr;
 
   bool is_mirror = false;
 
   [[maybe_unused]]
-  ModuleImportation *mirror = nullptr;
+  ModuleImportation* mirror = nullptr;
 
   bool is_external() const { return !extern_lib.empty(); }
 };
 
 struct ScriptInfo {
-  ScriptInfo(const std::string &_name, const std::string &_file_path, const std::string &_file_str,
-             const std::vector<std::string> &_file_lines)
+  ScriptInfo(const std::string& _name, const std::string& _file_path, const std::string& _file_str,
+             const std::vector<std::string>& _file_lines)
     : name(_name), file_path(_file_path), file_str(_file_str), file_lines(_file_lines)
   {
   }
@@ -99,27 +99,27 @@ struct ScriptInfo {
   std::string             file_path;
   std::string             file_str;
   std::vector<Token>      tokens;
-  META::MetablockManager *m_meta = nullptr;
+  META::MetablockManager* m_meta = nullptr;
 
   // names of modules exported
   std::vector<std::shared_ptr<ModuleExportation>> exported_mod;
   // names of modules imported
   std::vector<std::shared_ptr<ModuleImportation>> imported_mod;
 
-  AST::Root *rootNode = nullptr;
+  AST::Root* rootNode = nullptr;
 
   std::vector<std::string> semantic_resolveType_errors;
   std::vector<std::string> semantic_checkType_errors;
 
-  Symbols_Manager *m_sym = nullptr;
+  Symbols_Manager* m_sym = nullptr;
 
-  void add_export(const ModuleExportation &exp);
-  void add_import(const ModuleImportation &imp);
+  void add_export(const ModuleExportation& exp);
+  void add_import(const ModuleImportation& imp);
 
-  ModuleExportation *get_export_module(const std::string &name);
-  ModuleImportation *get_import_module(const std::string &name);
+  ModuleExportation* get_export_module(const std::string& name);
+  ModuleImportation* get_import_module(const std::string& name);
 
-  std::set<ModuleImportation *> get_externs();
+  std::set<ModuleImportation*> get_externs();
 
   std::set<std::string> get_extern_languages();
 
@@ -133,12 +133,12 @@ struct ScriptInfo {
   size_t get_line_size() const { return file_lines.size(); }
 
   // No copy
-  ScriptInfo(const ScriptInfo &)            = delete;
-  ScriptInfo &operator=(const ScriptInfo &) = delete;
+  ScriptInfo(const ScriptInfo&)            = delete;
+  ScriptInfo& operator=(const ScriptInfo&) = delete;
 
   // can move
-  ScriptInfo(ScriptInfo &&)            = default;
-  ScriptInfo &operator=(ScriptInfo &&) = default;
+  ScriptInfo(ScriptInfo&&)            = default;
+  ScriptInfo& operator=(ScriptInfo&&) = default;
 
 private:
   std::vector<std::string> file_lines;

@@ -185,29 +185,29 @@ CVeloxFunc          c_function_to_velox_function(CXCursor cCur);
 CVeloxUnion         c_union_to_velox_union(CXCursor cCur);
 CVeloxFlag          c_enum_to_velox_flag(CXCursor cCur);
 CVeloxGlobal        c_global_to_velox_global(CXCursor cCur);
-EVeloxTypeFromC     c_type_base_to_velox_type_base(CXType cType, CXType &out_base_cType);
+EVeloxTypeFromC     c_type_base_to_velox_type_base(CXType cType, CXType& out_base_cType);
 CVeloxType          c_type_to_velox_type(CXType cType);
-EVeloxParamPassMode type_to_passMode(CVeloxType &cVel);
+EVeloxParamPassMode type_to_passMode(CVeloxType& cVel);
 
-std::string comp_to_str(CVeloxComp &cVel);
-std::string func_to_str(CVeloxFunc &cVel);
-std::string union_to_str(CVeloxUnion &cVel);
-std::string flag_to_str(CVeloxFlag &cVel);
-std::string global_to_str(CVeloxGlobal &cVel);
-std::string type_to_str(CVeloxType &cVel);
+std::string comp_to_str(CVeloxComp& cVel);
+std::string func_to_str(CVeloxFunc& cVel);
+std::string union_to_str(CVeloxUnion& cVel);
+std::string flag_to_str(CVeloxFlag& cVel);
+std::string global_to_str(CVeloxGlobal& cVel);
+std::string type_to_str(CVeloxType& cVel);
 
 class EMBinder_LibC
 {
 public:
-  EMBinder_LibC(const Bind_Package &_bind, std::ofstream &_os) : bind(_bind), os(_os) {}
+  EMBinder_LibC(const Bind_Package& _bind, std::ofstream& _os) : bind(_bind), os(_os) {}
 
   Bind_Package bind;
 
-  std::ofstream &os;
+  std::ofstream& os;
 
   [[nodiscard]] int c_lib_to_velox_lib();
 };
 
 CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data);
-CVeloxAST          parse_translation_unit(const Bind_Package &_bind, const std::string &filename,
-                                          const std::vector<std::string> &args);
+CVeloxAST          parse_translation_unit(const Bind_Package& _bind, const std::string& filename,
+                                          const std::vector<std::string>& args);

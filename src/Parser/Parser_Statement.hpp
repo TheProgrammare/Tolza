@@ -9,7 +9,7 @@ namespace PAR
 {
 struct Parser_Context;
 struct Parser_Statement {
-  Parser_Statement(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Statement(Parser_Context& ctx) : ctx(ctx) {}
 
   // decl_possible means parse_instruction can failed without error to try to parse a declaration
   // after
@@ -23,6 +23,6 @@ struct Parser_Statement {
   [[nodiscard]] std::unique_ptr<AST::Statement::GoTo_Label> goto_label_statement();
   [[nodiscard]] std::unique_ptr<AST::Statement::Return>     return_flow();
 
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

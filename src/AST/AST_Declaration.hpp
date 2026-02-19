@@ -25,7 +25,7 @@ struct Enum_Element final : public Node {
 
   std::string debug_str() const override { return "::" + name; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Enum final : public ADeclaration {
@@ -38,7 +38,7 @@ struct Enum final : public ADeclaration {
   std::string debug_str() const override { return "declaration enum \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Enum; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Flag final : public ADeclaration {
@@ -47,7 +47,7 @@ struct Flag final : public ADeclaration {
   std::string debug_str() const override { return "declaration flag \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Flag; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // e.g. mod name {}
@@ -57,7 +57,7 @@ struct Mod : public ADeclaration {
   std::string debug_str() const override { return "declaration mod \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Module; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Export final : public Mod {
@@ -66,7 +66,7 @@ struct Export final : public Mod {
   std::string debug_str() const override { return "declaration export \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Export; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Function final : public ADeclaration, ICallable {
@@ -80,10 +80,10 @@ struct Function final : public ADeclaration, ICallable {
   std::string                           extern_call_convention;
 
   std::string           debug_str() const override { return "declaration fn \"" + name + "\""; }
-  Type::Function_Proto *get_signature() override { return prototype.get(); };
+  Type::Function_Proto* get_signature() override { return prototype.get(); };
   ESymbolType           get_symbol_type() const override { return ESymbolType::Function; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Type_Alias final : public ADeclaration {
@@ -92,7 +92,7 @@ struct Type_Alias final : public ADeclaration {
   std::string debug_str() const override { return "declaration typealias \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Typealias; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // gen name<T, U,...> { condition }
@@ -104,7 +104,7 @@ struct Generic final : public ADeclaration {
   std::string debug_str() const override { return "declaration generic \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Generic; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // let/var a: ptr'type#tableSize = expression;
@@ -131,7 +131,7 @@ struct Global final : public ADeclaration {
   }
   ESymbolType get_symbol_type() const override { return ESymbolType::Global; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 
 private:
   bool type_already_checked = false;

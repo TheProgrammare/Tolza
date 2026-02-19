@@ -37,8 +37,8 @@ namespace META
 struct MetaWord {
   std::vector<Token> tokens;
 
-  MetaWord(const Token &tok) : tokens({tok}) {}
-  MetaWord(const std::vector<Token> &tok) : tokens(tok) {}
+  MetaWord(const Token& tok) : tokens({tok}) {}
+  MetaWord(const std::vector<Token>& tok) : tokens(tok) {}
 
   [[nodiscard]]
   bool is_alternative() const
@@ -48,23 +48,23 @@ struct MetaWord {
   [[nodiscard]]
   bool contains(TokTy type) const
   {
-    for (auto &tok : tokens) {
+    for (auto& tok : tokens) {
       if (tok.type == type) return true;
     }
     return false;
   }
   [[nodiscard]]
-  bool contains(const std::string &s) const
+  bool contains(const std::string& s) const
   {
-    for (auto &tok : tokens) {
+    for (auto& tok : tokens) {
       if (tok.val == s) return true;
     }
     return false;
   }
   [[nodiscard]]
-  bool contains_one(const std::initializer_list<TokTy> &l) const
+  bool contains_one(const std::initializer_list<TokTy>& l) const
   {
-    for (const TokTy &m_elem : l) {
+    for (const TokTy& m_elem : l) {
       if (contains(m_elem)) return true;
     }
     return false;
@@ -104,7 +104,7 @@ enum struct EPatternKey {
 };
 
 [[nodiscard]]
-inline EPatternKey get_pattern_key(const std::string &key)
+inline EPatternKey get_pattern_key(const std::string& key)
 {
   if (key == "<*>") return EPatternKey::Any;
   if (key == "<a>") return EPatternKey::Identifier;
@@ -114,7 +114,7 @@ inline EPatternKey get_pattern_key(const std::string &key)
 }
 
 [[nodiscard]]
-inline bool check_pattern(const MetaWord &word, const std::string &pattern)
+inline bool check_pattern(const MetaWord& word, const std::string& pattern)
 {
   EPatternKey pattern_key = get_pattern_key(pattern);
   switch (pattern_key) {
@@ -133,12 +133,12 @@ struct MetaBlock;
 struct MetaInstruct {
   std::vector<MetaWord> words;
   // parent code block of the instruction
-  MetaBlock            *code_block = nullptr;
+  MetaBlock*            code_block = nullptr;
 
-  MetaInstruct(MetaBlock *code_block, const std::vector<MetaWord> &words) : code_block(code_block), words(words) {}
+  MetaInstruct(MetaBlock* code_block, const std::vector<MetaWord>& words) : code_block(code_block), words(words) {}
 
   [[nodiscard]]
-  bool match_pattern(const std::vector<std::string> &pattern) const
+  bool match_pattern(const std::vector<std::string>& pattern) const
   {
     if (pattern.empty()) return false;
 
@@ -156,10 +156,10 @@ struct MetaInstruct {
   [[nodiscard]]
   // returns the first occurence index
   // -1 = not found
-  int8_t contains(const std::string &s) const
+  int8_t contains(const std::string& s) const
   {
     int8_t count = 0;
-    for (auto &word : words) {
+    for (auto& word : words) {
       if (word.contains(s)) return count;
       count++;
     }
@@ -171,7 +171,7 @@ struct MetaInstruct {
   int8_t contains(TokTy type) const
   {
     int8_t count = 0;
-    for (auto &word : words) {
+    for (auto& word : words) {
       if (word.contains(type)) return count;
       count++;
     }
@@ -193,7 +193,7 @@ struct MetaInstruct {
   std::string debug_str()
   {
     std::string str = "# ";
-    for (auto &word : words) {
+    for (auto& word : words) {
       str += word.debug_str();
       str += " ";
     }
@@ -219,7 +219,7 @@ struct MetaScope {
 // code block
 struct MetaBlock {
   [[maybe_unused]]
-  MetaBlock                *parent = nullptr;
+  MetaBlock*                parent = nullptr;
   // if scoped
   MetaScope                 _scope;
   // all instructions
@@ -246,7 +246,7 @@ struct MetaBlock {
   }
 
   [[nodiscard]]
-  virtual std::vector<Token> generate_tokens(ScriptInfo &scr_info) const;
+  virtual std::vector<Token> generate_tokens(ScriptInfo& scr_info) const;
 
   [[nodiscard]]
   bool is_scoped() const
@@ -269,9 +269,9 @@ struct MetaBlock {
   }
 
   [[nodiscard]]
-  bool contains(const std::string &s) const
+  bool contains(const std::string& s) const
   {
-    for (auto &elem : _instructions) {
+    for (auto& elem : _instructions) {
       if (elem.contains(s)) return true;
     }
     return false;
@@ -279,26 +279,26 @@ struct MetaBlock {
   [[nodiscard]]
   bool contains(TokTy type) const
   {
-    for (auto &elem : _instructions) {
+    for (auto& elem : _instructions) {
       if (elem.contains(type)) return true;
     }
     return false;
   }
 
   [[nodiscard]]
-  bool contains(const std::initializer_list<std::string> &pattern) const
+  bool contains(const std::initializer_list<std::string>& pattern) const
   {
-    for (auto &elem : _instructions) {
+    for (auto& elem : _instructions) {
       if (elem.match_pattern(pattern)) return true;
     }
     return false;
   }
 
   [[nodiscard]]
-  std::vector<const MetaInstruct *> match_pattern(const std::initializer_list<std::string> &pattern) const
+  std::vector<const MetaInstruct*> match_pattern(const std::initializer_list<std::string>& pattern) const
   {
-    std::vector<const MetaInstruct *> founds;
-    for (auto &elem : _instructions) {
+    std::vector<const MetaInstruct*> founds;
+    for (auto& elem : _instructions) {
       if (elem.match_pattern(pattern)) founds.push_back(&elem);
     }
     return founds;
@@ -307,7 +307,7 @@ struct MetaBlock {
   [[nodiscard]]
   std::string at_str(size_t x, size_t alt = 0) const
   {
-    for (auto &elem : _instructions) {
+    for (auto& elem : _instructions) {
       if (elem.words.size() > x) return elem.words[x].at_str(alt);
     }
     return "";
@@ -315,7 +315,7 @@ struct MetaBlock {
   [[nodiscard]]
   Token at_tok(size_t x, size_t alt = 0) const
   {
-    for (auto &elem : _instructions) {
+    for (auto& elem : _instructions) {
       if (elem.words.size() > x) return elem.words[x].at_tok(alt);
     }
     return Token();
@@ -335,13 +335,13 @@ struct MetaBlock_Reuse_Param {
   [[maybe_unused]] std::unique_ptr<AST::Node> defaultValue;
   bool                                        is_variadic = false;
 
-  bool operator==(const MetaBlock_Reuse_Param &other) const
+  bool operator==(const MetaBlock_Reuse_Param& other) const
   {
     return pass_mode == other.pass_mode && type == other.type && is_variadic == other.is_variadic;
   }
 };
 
-bool is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param &a, const MetaBlock_Reuse_Param &b);
+bool is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param& a, const MetaBlock_Reuse_Param& b);
 
 // block reuable (with name and params)
 struct MetaBlock_Reuse : public MetaBlock {
@@ -359,7 +359,7 @@ struct Cond_Base {
   virtual ~Cond_Base() = default;
 
   [[nodiscard]]
-  virtual bool eval(const std::multimap<std::string, std::string> &ctx) const = 0;
+  virtual bool eval(const std::multimap<std::string, std::string>& ctx) const = 0;
   [[nodiscard]]
   virtual std::string print_eval() const = 0;
 };
@@ -370,13 +370,13 @@ struct Cond_Eq : Cond_Base {
   std::string value;
   bool        isNot = false;
 
-  Cond_Eq(const std::string &ph, const std::string &val, bool isN) : placeholder(ph), value(val), isNot(isN) {}
+  Cond_Eq(const std::string& ph, const std::string& val, bool isN) : placeholder(ph), value(val), isNot(isN) {}
 
   // placeholders values
   // placeholder_name == place_holder_symbol
   // _T == "i32"
   [[nodiscard]]
-  bool eval(const std::multimap<std::string, std::string> &ctx) const override
+  bool eval(const std::multimap<std::string, std::string>& ctx) const override
   {
     auto range = ctx.equal_range(placeholder);
     if (range.first == range.second) return isNot; // no key -> if negate: is "true"
@@ -408,7 +408,7 @@ struct Cond_And : Cond_Base {
   Cond_And(std::shared_ptr<Cond_Base> l, std::shared_ptr<Cond_Base> r) : lhs(l), rhs(r) {}
 
   [[nodiscard]]
-  bool eval(const std::multimap<std::string, std::string> &ctx) const override
+  bool eval(const std::multimap<std::string, std::string>& ctx) const override
   {
     return lhs->eval(ctx) && rhs->eval(ctx);
   }
@@ -427,7 +427,7 @@ struct Cond_Or : Cond_Base {
   Cond_Or(std::shared_ptr<Cond_Base> l, std::shared_ptr<Cond_Base> r) : lhs(l), rhs(r) {}
 
   [[nodiscard]]
-  bool eval(const std::multimap<std::string, std::string> &ctx) const override
+  bool eval(const std::multimap<std::string, std::string>& ctx) const override
   {
     return lhs->eval(ctx) || rhs->eval(ctx);
   }
@@ -444,7 +444,7 @@ struct Cond_Not : Cond_Base {
 
   Cond_Not(std::shared_ptr<Cond_Base> c) : child(c) {}
   [[nodiscard]]
-  bool eval(const std::multimap<std::string, std::string> &ctx) const override
+  bool eval(const std::multimap<std::string, std::string>& ctx) const override
   {
     return !child->eval(ctx);
   }
@@ -466,10 +466,10 @@ struct MetaBlock_If : public MetaBlock {
   EFlowType flow_type = EFlowType::IF;
 
   [[nodiscard]]
-  std::vector<Token> generate_tokens(ScriptInfo &scr_info) const override;
+  std::vector<Token> generate_tokens(ScriptInfo& scr_info) const override;
 
   [[nodiscard]]
-  MetaBlock_If *get_alternative() const
+  MetaBlock_If* get_alternative() const
   {
     return alternative.get();
   }
@@ -485,7 +485,7 @@ struct MetaBlock_If : public MetaBlock {
   }
 
   [[nodiscard]]
-  bool eval(const std::multimap<std::string, std::string> &ctx) const
+  bool eval(const std::multimap<std::string, std::string>& ctx) const
   {
     if (condition)
       return condition->eval(ctx);
@@ -493,7 +493,7 @@ struct MetaBlock_If : public MetaBlock {
       return true;
   }
   [[nodiscard]]
-  bool eval_placeholders(const std::map<std::string, Token> &ctx) const;
+  bool eval_placeholders(const std::map<std::string, Token>& ctx) const;
   [[nodiscard]]
   std::string print_eval() const
   {
@@ -512,7 +512,7 @@ struct Expand_If : public MetaBlock {
   EFlowType flow_type = EFlowType::IF;
 
   [[nodiscard]]
-  Expand_If *get_alternative() const
+  Expand_If* get_alternative() const
   {
     return alternative.get();
   }
@@ -528,7 +528,7 @@ struct Expand_If : public MetaBlock {
   }
 
   [[nodiscard]]
-  bool eval(const std::map<std::string, Token> &ctx) const;
+  bool eval(const std::map<std::string, Token>& ctx) const;
   [[nodiscard]]
   std::string print_eval() const
   {
@@ -550,14 +550,14 @@ struct MetaBlock_Expand : public MetaBlock {
 
   std::vector<Token> tokens_expanded;
 
-  std::vector<Token> generate_tokens(ScriptInfo &scr_info) const override;
+  std::vector<Token> generate_tokens(ScriptInfo& scr_info) const override;
   // result of generate tokens
-  std::vector<Token> generate_model_expansion(ScriptInfo &scr_info, std::vector<Token> &model) const;
+  std::vector<Token> generate_model_expansion(ScriptInfo& scr_info, std::vector<Token>& model) const;
 
   void add_expand_condition(std::unique_ptr<Expand_If> exp_cond);
 
   [[nodiscard]]
-  bool is_valid_placeholder_name(const std::string &name) const
+  bool is_valid_placeholder_name(const std::string& name) const
   {
     return placeholders.contains(name);
   }
@@ -566,7 +566,7 @@ struct MetaBlock_Expand : public MetaBlock {
   std::set<std::string> get_placeholder_names() const
   {
     std::set<std::string> names;
-    for (auto &elem : placeholders) {
+    for (auto& elem : placeholders) {
       // for _T as ... | ...
       names.insert(elem.first);
     }
@@ -577,16 +577,16 @@ struct MetaBlock_Expand : public MetaBlock {
   size_t get_expansion_count() const
   {
     size_t count = 1;
-    for (auto &elem : placeholders) {
+    for (auto& elem : placeholders) {
       // for _T as ... | ...
       count *= elem.second.size();
     }
     return count;
   }
 
-  void generate_combinations(std::map<std::string, Token>                             &current,
+  void generate_combinations(std::map<std::string, Token>&                             current,
                              std::map<std::string, std::vector<Token>>::const_iterator it,
-                             std::vector<std::map<std::string, Token>>                &result) const;
+                             std::vector<std::map<std::string, Token>>&                result) const;
 
   // Generic wrapper
   std::vector<std::map<std::string, Token>> generate_all_combinations() const;
@@ -595,13 +595,13 @@ struct MetaBlock_Expand : public MetaBlock {
 // manage all metablocks
 struct MetablockManager {
   // key: position, val: MetaBlock
-  std::map<size_t, MetaBlock *> metablocks;
+  std::map<size_t, MetaBlock*> metablocks;
 
   // Avoid memory destruction
   MetaBlock root_metabock;
 
   [[nodiscard]]
-  const MetaBlock *get_closest_metablock_at(size_t pos) const
+  const MetaBlock* get_closest_metablock_at(size_t pos) const
   {
     // invalid position
     if (pos < 1) return nullptr;
@@ -627,11 +627,11 @@ struct MetablockManager {
   }
 
   [[nodiscard]]
-  std::vector<const MetaBlock *> get_metablocks_parent_cascade(const MetaBlock *mb) const
+  std::vector<const MetaBlock*> get_metablocks_parent_cascade(const MetaBlock* mb) const
   {
     if (!mb) return {};
 
-    std::vector<const MetaBlock *> result;
+    std::vector<const MetaBlock*> result;
     result.reserve(8);
 
     auto current_mb = mb;
@@ -645,15 +645,15 @@ struct MetablockManager {
     return result;
   }
 
-  void filter_metablocks_parent_cascade(std::vector<const MetaBlock *> &input) const
+  void filter_metablocks_parent_cascade(std::vector<const MetaBlock*>& input) const
   {
-    const std::vector<const MetaBlock *> &tmp = input;
+    const std::vector<const MetaBlock*>& tmp = input;
 
-    std::vector<const MetaBlock *> tmp_first_filter;
+    std::vector<const MetaBlock*> tmp_first_filter;
     tmp_first_filter.reserve(tmp.size());
     std::set<std::string> mb_scopes_excluded;
 
-    for (auto &mb : tmp) {
+    for (auto& mb : tmp) {
       if (!mb->match_pattern({"exclude", "all", "<!>"}).empty()) {
         tmp_first_filter.push_back(mb);
 
@@ -674,8 +674,8 @@ struct MetablockManager {
     input.clear();
     input.reserve(tmp_first_filter.size());
 
-    for (auto &mb : tmp_first_filter) {
-      const std::string &mb_scope_name = mb->_scope.name;
+    for (auto& mb : tmp_first_filter) {
+      const std::string& mb_scope_name = mb->_scope.name;
 
       // mb is excluded, don't add it
       if (!mb_scope_name.empty() && mb_scopes_excluded.contains(mb_scope_name)) continue;
@@ -687,14 +687,14 @@ struct MetablockManager {
   // will try to get all metablocks who have a influence to the specified position
   // handle the metablock scoped exclusion
   [[nodiscard]]
-  std::vector<const MetaBlock *> get_metablocks_at(size_t pos) const
+  std::vector<const MetaBlock*> get_metablocks_at(size_t pos) const
   {
 
     // while nested metablock exists
     auto closest_mb = get_closest_metablock_at(pos);
 
     // temporary list of metablocks found
-    std::vector<const MetaBlock *> tmp = get_metablocks_parent_cascade(closest_mb);
+    std::vector<const MetaBlock*> tmp = get_metablocks_parent_cascade(closest_mb);
 
     filter_metablocks_parent_cascade(tmp);
 
@@ -703,10 +703,10 @@ struct MetablockManager {
 
   [[nodiscard]]
   // get first codeblock directly
-  const MetaBlock *get_metablock(size_t pos, const std::initializer_list<std::string> &pattern) const
+  const MetaBlock* get_metablock(size_t pos, const std::initializer_list<std::string>& pattern) const
   {
     auto line_metas = get_metablocks_at(pos);
-    for (const MetaBlock *meta : line_metas) {
+    for (const MetaBlock* meta : line_metas) {
       if (!meta->match_pattern(pattern).empty()) return meta;
     }
     return nullptr;
@@ -714,20 +714,20 @@ struct MetablockManager {
 
   [[nodiscard]]
   // get first instruction directly
-  const MetaInstruct *get_instruct(size_t pos, const std::initializer_list<std::string> &pattern) const
+  const MetaInstruct* get_instruct(size_t pos, const std::initializer_list<std::string>& pattern) const
   {
     auto line_metas = get_metablocks_at(pos);
-    for (const MetaBlock *meta : line_metas) {
+    for (const MetaBlock* meta : line_metas) {
       if (auto instruct = meta->match_pattern(pattern); !instruct.empty()) return instruct[0];
     }
     return nullptr;
   }
 
   [[nodiscard]]
-  bool contains(size_t pos, const std::string &s) const
+  bool contains(size_t pos, const std::string& s) const
   {
     auto line_metas = get_metablocks_at(pos);
-    for (const MetaBlock *meta : line_metas) {
+    for (const MetaBlock* meta : line_metas) {
       if (meta->contains(s)) return true;
     }
     return false;
@@ -737,7 +737,7 @@ struct MetablockManager {
   bool contains(size_t pos, TokTy t) const
   {
     auto line_metas = get_metablocks_at(pos);
-    for (const MetaBlock *meta : line_metas) {
+    for (const MetaBlock* meta : line_metas) {
       if (meta->contains(t)) return true;
     }
     return false;

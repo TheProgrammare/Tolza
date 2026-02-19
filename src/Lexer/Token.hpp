@@ -854,7 +854,7 @@ struct Span {
 
   Span(size_t pos, size_t line, size_t col, size_t size) : pos(pos), line(line), col(col), size(size) {}
 
-  bool operator==(const Span &other) const
+  bool operator==(const Span& other) const
   {
     return anteprocess_pos == other.anteprocess_pos && pos == other.pos && line == other.line && col == other.col
            && size == other.size;
@@ -869,7 +869,7 @@ struct Token {
   Span        span;
   bool        debug_end_of_line = false;
 
-  Token(const std::string &val, ETokenType type, Span span) : val(val), type(type), span(span) {}
+  Token(const std::string& val, ETokenType type, Span span) : val(val), type(type), span(span) {}
 
   std::string display() const
   {
@@ -896,7 +896,7 @@ inline bool str_is_identifier(const std::string s)
 
 inline bool isKeywordChar(char ch) { return !std::isspace(ch) && !std::iscntrl(ch); }
 
-inline ETokenType Str_to_ETokenType(const std::string &str)
+inline ETokenType Str_to_ETokenType(const std::string& str)
 {
   if (auto it = kKeywords.find(str); it != kKeywords.end()) return it->second;
   return ETokenType::UNKNOWN;
@@ -908,12 +908,12 @@ inline std::vector<std::pair<std::string, ETokenType>> kSortedKeywords()
   static std::vector<std::pair<std::string, ETokenType>> out;
   if (!out.empty()) return out;
 
-  for (auto &[text, type] : kKeywords) {
+  for (auto& [text, type] : kKeywords) {
     out.push_back({text, type});
   }
 
   std::stable_sort(out.begin(), out.end(),
-                   [](const auto &a, const auto &b) { return a.first.size() > b.first.size(); });
+                   [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
 
   return out;
 }

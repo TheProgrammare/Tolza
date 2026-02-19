@@ -11,7 +11,7 @@ std::string AST::Declaration::Local::Variable_Unpack::debug_str() const
   case EVariableKind::NONE:  return "";
   }
   out += "[";
-  for (auto &elem : elements) {
+  for (auto& elem : elements) {
     out += elem->name + ", ";
   }
   return out + "]";

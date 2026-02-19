@@ -16,7 +16,7 @@ namespace PAR
 struct Parser_Context;
 
 struct Parser_Declaration_Local {
-  Parser_Declaration_Local(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Declaration_Local(Parser_Context& ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::shared_ptr<AST::ALocal> parse_local(bool silent_error = false);
 
@@ -48,6 +48,6 @@ struct Parser_Declaration_Local {
   enum_pattern(ECapability capa, std::unique_ptr<AST::AIdentifier> enum_id,
                std::shared_ptr<AST::AExpression> comparison_ref);
 
-  PAR::Parser_Context &ctx;
+  PAR::Parser_Context& ctx;
 };
 } // namespace PAR

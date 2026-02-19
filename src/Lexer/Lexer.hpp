@@ -37,13 +37,13 @@ const std::unordered_set<std::string> kScriptMeta = {
 class Lexer
 {
 public:
-  Lexer(ScriptInfo &_scr_info) : scr_info(_scr_info), stream(scr_info.file_str) {}
+  Lexer(ScriptInfo& _scr_info) : scr_info(_scr_info), stream(scr_info.file_str) {}
 
   enum class EPrefixFound { None, Prefix, All };
 
-  EPrefixFound                  get_prefix_keyword(TokTy _type, const std::string &_key, const std::string &_search);
-  bool                          is_valid_prefix(char prefix, const std::string &_current);
-  void                          tokenize(const std::set<char> &exit_char);
+  EPrefixFound                  get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search);
+  bool                          is_valid_prefix(char prefix, const std::string& _current);
+  void                          tokenize(const std::set<char>& exit_char);
   void                          process_escape();
   void                          tokenize_textual();
   bool                          tokenize_spec();
@@ -56,12 +56,12 @@ public:
   std::pair<TokTy, std::string> getToken();
   void                          addToken(TokTy type);
   bool                          eat();
-  template <size_t Code> void   add_error(const std::string &msg, const std::string &hint);
-  TokTy                         classifyNumerals(std::string &outValue);
-  TokTy                         classifyKeyword(std::string &outWord);
-  TokTy                         classifyFormatSpec(std::string &outFormat);
+  template <size_t Code> void   add_error(const std::string& msg, const std::string& hint);
+  TokTy                         classifyNumerals(std::string& outValue);
+  TokTy                         classifyKeyword(std::string& outWord);
+  TokTy                         classifyFormatSpec(std::string& outFormat);
 
-  ScriptInfo              &scr_info;
+  ScriptInfo&              scr_info;
   StreamTracker            stream;
   std::vector<std::string> errors;
   std::string              buffer;

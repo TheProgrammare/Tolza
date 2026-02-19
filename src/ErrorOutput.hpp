@@ -42,7 +42,7 @@ inline std::string ESeverity_to_color(EErrorSeverity severity)
 }
 
 template <size_t Code> struct Error_Diagnostic {
-  const ScriptInfo &scr_info;
+  const ScriptInfo& scr_info;
 
   Token                    token;
   std::vector<Token>       tokens_inpacted;
@@ -57,9 +57,9 @@ template <size_t Code> struct Error_Diagnostic {
 
   Error_Diagnostic<Code>() = delete;
 
-  Error_Diagnostic<Code>(const ScriptInfo &_scr_info, const Token &_token, const std::vector<Token> &_tokens,
-                         EPhase _phase, EErrorSeverity _severity, const std::vector<std::string> &_context,
-                         const std::string &_msg, const std::string &_hint)
+  Error_Diagnostic<Code>(const ScriptInfo& _scr_info, const Token& _token, const std::vector<Token>& _tokens,
+                         EPhase _phase, EErrorSeverity _severity, const std::vector<std::string>& _context,
+                         const std::string& _msg, const std::string& _hint)
     : scr_info(_scr_info), token(_token), tokens_inpacted(_tokens), phase(_phase), severity(_severity), code(Code),
       context(_context), msg(_msg), hint(_hint)
   {
@@ -90,7 +90,7 @@ template <size_t Code> struct Error_Diagnostic {
       str_msg += "\n[context] " color_CYAN;
 
       size_t count = 0;
-      for (auto &elem : context) {
+      for (auto& elem : context) {
         str_msg += elem;
         if (count != context.size() - 1) str_msg += " >> ";
       }
@@ -158,9 +158,9 @@ private:
     }
   }
 
-  std::string trim(const std::string &str) const
+  std::string trim(const std::string& str) const
   {
-    const char *whitespace = " \t\n\r\f\v";
+    const char* whitespace = " \t\n\r\f\v";
 
     // Find first position who is not white space
     size_t start = str.find_first_not_of(whitespace);

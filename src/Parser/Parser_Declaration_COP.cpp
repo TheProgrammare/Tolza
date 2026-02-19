@@ -136,10 +136,10 @@ void PAR::Parser_Declaration_COP::parse_entity_declaration(SYM_DEFINITION       
     }
     auto comp = ctx.p_lit->literal_component(std::move(comp_id));
 
-    if (auto ptr = dynamic_cast<AST::Literal::Component *>(comp.get())) {
+    if (auto ptr = dynamic_cast<AST::Literal::Component*>(comp.get())) {
       // Transfert ownership directement en downcast
       n_entity->comps.push_back(
-          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(comp.release())));
+          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component*>(comp.release())));
     } else {
       ctx.tok_v.add_error<19>("Expected Literal component after 'use' instruction", hint);
     }
@@ -388,8 +388,8 @@ std::shared_ptr<AST::Declaration::COP::System_Case> PAR::Parser_Declaration_COP:
 
   sys_case->codeblock = ctx.p_loc->code_block_instruction();
 
-  for (auto &instruction : sys_case->codeblock->elements) {
-    if (dynamic_cast<AST::Statement::Return *>(instruction.node())) {
+  for (auto& instruction : sys_case->codeblock->elements) {
+    if (dynamic_cast<AST::Statement::Return*>(instruction.node())) {
       sys_case->isReturn = true;
       break;
     }

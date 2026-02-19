@@ -6,7 +6,7 @@
 const size_t META::MetaBlock_Expand::k_placeholder_flag = k_metacode_flag - 1;
 const size_t META::MetaBlock_Expand::k_expand_if_flag   = k_metacode_flag - 2;
 
-bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param &a, const MetaBlock_Reuse_Param &b)
+bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param& a, const MetaBlock_Reuse_Param& b)
 {
   const bool same_pass_mode = a.pass_mode == b.pass_mode;
   const bool same_type      = a.type.get() == b.type.get();
@@ -15,7 +15,7 @@ bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param &a, con
   return same_pass_mode && same_type && same_variadic;
 }
 
-std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo &scr_info) const
+std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo& scr_info) const
 {
   std::vector<Token> result;
   if (tokens_to_generate.empty()) return {};
@@ -27,7 +27,7 @@ std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo &scr_info) const
   for (auto pos : tokens_to_generate) {
     // if children must be generated before
     if (pos == k_metacode_flag) {
-      MetaBlock         *child      = _childrens[children_generated_count++].get();
+      MetaBlock*         child      = _childrens[children_generated_count++].get();
       std::vector<Token> child_toks = child->generate_tokens(scr_info);
 
       if (!child_toks.empty()) {
@@ -46,14 +46,14 @@ std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo &scr_info) const
   return result;
 }
 
-std::vector<Token> META::MetaBlock_If::generate_tokens(ScriptInfo &scr_info) const
+std::vector<Token> META::MetaBlock_If::generate_tokens(ScriptInfo& scr_info) const
 {
   if (!eval(COMPILATION_ARGS) && alternative.get()) return alternative->generate_tokens(scr_info);
 
   return MetaBlock::generate_tokens(scr_info);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo &scr_info) const
+std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo& scr_info) const
 {
   std::vector<Token> model;
   model.reserve(tokens_to_generate.size());
@@ -64,7 +64,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo &scr_info)
     const size_t pos = tokens_to_generate[i];
 
     if (pos == k_metacode_flag) {
-      MetaBlock         *child      = _childrens[children_generated_count++].get();
+      MetaBlock*         child      = _childrens[children_generated_count++].get();
       std::vector<Token> child_toks = child->generate_tokens(scr_info);
 
       if (!child_toks.empty()) {
@@ -96,8 +96,8 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo &scr_info)
   return generate_model_expansion(scr_info, model);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo         &scr_info,
-                                                                    std::vector<Token> &model) const
+std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo&         scr_info,
+                                                                    std::vector<Token>& model) const
 {
   auto combos = generate_all_combinations();
 
@@ -105,20 +105,20 @@ std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo  
   result.reserve(model.size() * combos.size());
 
   // generate code model for each combination (combo)
-  for (const auto &combo : combos) {
+  for (const auto& combo : combos) {
     size_t expand_if_count = 0;
 
-    for (const auto &tok : model) {
+    for (const auto& tok : model) {
       // expand if encounted
       if (tok.type == TokTy::S_METACODE_EXPAND_IF) {
-        Expand_If *exp_if = expand_conditions[expand_if_count++].get();
+        Expand_If* exp_if = expand_conditions[expand_if_count++].get();
 
         if (exp_if->eval(combo)) {
           std::vector<Token> exp_if_model = exp_if->generate_tokens(scr_info);
 
           std::vector<Token> exp_if_model_placeholded;
           exp_if_model_placeholded.reserve(exp_if_model.size());
-          for (auto &exp_if_tok : exp_if_model) {
+          for (auto& exp_if_tok : exp_if_model) {
             if (exp_if_tok.type == ETokenType::S_METACODE_PLACEHOLDER) {
               // find placeholder symbol by identifier
               if (auto it = combo.find(exp_if_tok.val); it != combo.end()) {
@@ -164,9 +164,9 @@ void META::MetaBlock_Expand::add_expand_condition(std::unique_ptr<Expand_If> exp
   tokens_to_generate.push_back(k_expand_if_flag);
 }
 
-void META::MetaBlock_Expand::generate_combinations(std::map<std::string, Token>                             &current,
+void META::MetaBlock_Expand::generate_combinations(std::map<std::string, Token>&                             current,
                                                    std::map<std::string, std::vector<Token>>::const_iterator it,
-                                                   std::vector<std::map<std::string, Token>> &result) const
+                                                   std::vector<std::map<std::string, Token>>& result) const
 {
   if (it == placeholders.end()) {
     // All placeholders are assigned : save the combination
@@ -174,10 +174,10 @@ void META::MetaBlock_Expand::generate_combinations(std::map<std::string, Token> 
     return;
   }
 
-  const std::string        &key    = it->first;
-  const std::vector<Token> &tokens = it->second;
+  const std::string&        key    = it->first;
+  const std::vector<Token>& tokens = it->second;
 
-  for (const Token &token : tokens) {
+  for (const Token& token : tokens) {
     current[key] = token;
     generate_combinations(current, std::next(it), result);
   }
@@ -191,7 +191,7 @@ std::vector<std::map<std::string, Token>> META::MetaBlock_Expand::generate_all_c
   return result;
 }
 
-bool META::Expand_If::eval(const std::map<std::string, Token> &ctx) const
+bool META::Expand_If::eval(const std::map<std::string, Token>& ctx) const
 {
   std::multimap<std::string, std::string> final_ctx;
 

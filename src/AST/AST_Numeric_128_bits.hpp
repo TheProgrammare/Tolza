@@ -12,7 +12,7 @@ public:
   Float128() : val(llvm::APFloatBase::IEEEquad(), llvm::StringRef("0.0")) {}
 
   // Conversion string → APFloat
-  void string_to_f128(const std::string &s)
+  void string_to_f128(const std::string& s)
   {
     llvm::StringRef sr(s);
     llvm::APFloat   tmp(llvm::APFloatBase::IEEEquad(), sr);
@@ -36,7 +36,7 @@ public:
   Int128() : val(128, 0, true) {}
 
   // Conversion string → APInt
-  void string_to_i128(const std::string &s, int base = 10)
+  void string_to_i128(const std::string& s, int base = 10)
   {
     llvm::APInt tmp(128, 0, true); // 128 bits signed
     bool        ok = false;

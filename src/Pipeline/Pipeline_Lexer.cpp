@@ -6,7 +6,7 @@
 #include "Globals.hpp"
 #include "Lexer/Lexer.hpp"
 
-bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::vector<std::tuple<std::string, std::vector<std::string>>> lexErrors;
 
@@ -14,7 +14,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>> &scr_in
   size_t                        final_toks = 0;
 
   size_t path_count = 0;
-  for (auto &scr_info : scr_infos) {
+  for (auto& scr_info : scr_infos) {
     Lexer lexer(*scr_info.get());
     if (in_binding_compilation) std::cout << "[EMBinder] ";
     std::cout << "[lex]";
@@ -42,9 +42,9 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>> &scr_in
   if (!lexErrors.empty()) {
     if (in_binding_compilation) std::cout << color_RED "[EMBinder] ";
     std::cerr << color_RED "[build] Lexer failed\n" color_RESET;
-    for (auto &errs : lexErrors) {
+    for (auto& errs : lexErrors) {
       auto [name, fileError] = errs;
-      for (const auto &f_err : fileError) {
+      for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
     }

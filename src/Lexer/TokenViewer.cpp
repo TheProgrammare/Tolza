@@ -77,7 +77,7 @@ bool TokenViewer::check(TokTy type)
   return false;
 }
 
-bool TokenViewer::check_any(const std::initializer_list<ETokenType> &types)
+bool TokenViewer::check_any(const std::initializer_list<ETokenType>& types)
 {
   for (ETokenType type : types) {
     if (check(type)) return true;
@@ -94,7 +94,7 @@ bool TokenViewer::match(TokTy type)
   return false;
 }
 
-bool TokenViewer::check_id_val(const std::string &val)
+bool TokenViewer::check_id_val(const std::string& val)
 {
   if (check(TokTy::IDENTIFIER)) {
     return peek().val == val;
@@ -102,12 +102,12 @@ bool TokenViewer::check_id_val(const std::string &val)
   return false;
 }
 
-bool TokenViewer::check_val(const std::string &val) { return peek().val == val; }
+bool TokenViewer::check_val(const std::string& val) { return peek().val == val; }
 
-std::string TokenViewer::match_any_val(const std::initializer_list<std::string> &val)
+std::string TokenViewer::match_any_val(const std::initializer_list<std::string>& val)
 {
   const std::string tok = peek().val;
-  for (auto &elem : val) {
+  for (auto& elem : val) {
     if (tok == elem) {
       next();
       return elem;
@@ -117,7 +117,7 @@ std::string TokenViewer::match_any_val(const std::initializer_list<std::string> 
   return "";
 }
 
-bool TokenViewer::match_val(const std::string &val)
+bool TokenViewer::match_val(const std::string& val)
 {
   if (peek().val == val) {
     next();
@@ -126,7 +126,7 @@ bool TokenViewer::match_val(const std::string &val)
   return false;
 }
 
-bool TokenViewer::match_id_val(const std::string &val)
+bool TokenViewer::match_id_val(const std::string& val)
 {
   if (check_id_val(val)) {
     next();
@@ -135,7 +135,7 @@ bool TokenViewer::match_id_val(const std::string &val)
   return false;
 }
 
-bool TokenViewer::match_any(const std::initializer_list<ETokenType> &types)
+bool TokenViewer::match_any(const std::initializer_list<ETokenType>& types)
 {
   for (ETokenType type : types) {
     if (check(type)) {
@@ -202,7 +202,7 @@ std::string TokenViewer::get_line_str_at(size_t line) const
   return scr_info.get_line(offset);
 }
 
-const Token &TokenViewer::get(size_t position)
+const Token& TokenViewer::get(size_t position)
 {
   if (scr_info.tokens.size() < position) auto val = scr_info.tokens.back();
   return scr_info.tokens[position];

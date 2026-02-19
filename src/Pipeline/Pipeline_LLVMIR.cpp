@@ -13,14 +13,14 @@
 #include "ScriptInfo.hpp"
 #include "Visitor/Visitor_Codegen.hpp"
 
-bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   std::vector<std::tuple<std::string, std::vector<std::string>>> llvmIRErrors;
 
   std::filesystem::create_directories(LLVM_IR_DIR);
 
   size_t count = 0;
-  for (auto &scr_info : scr_infos) {
+  for (auto& scr_info : scr_infos) {
     std::cout << "[LLVM IR]";
     std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
@@ -44,10 +44,10 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>> &scr_
 
   if (!llvmIRErrors.empty()) {
     std::cerr << color_RED "[build] LLVM IR Generation failed !" color_RESET "\n";
-    for (auto &[name, fileError] : llvmIRErrors) {
+    for (auto& [name, fileError] : llvmIRErrors) {
 
       std::cerr << color_RED "[LLVM IR] [error] [file] " << name << color_RESET "\n";
-      for (auto &error : fileError) {
+      for (auto& error : fileError) {
         std::cerr << error << "\n";
       }
       std::cerr << std::endl;

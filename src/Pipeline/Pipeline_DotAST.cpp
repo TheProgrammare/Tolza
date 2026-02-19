@@ -8,7 +8,7 @@
 
 #include "Visitor/ASTViewer.hpp"
 
-void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>> &scr_infos)
+void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   auto basePath = PROJECT_DIR "/dot";
   std::filesystem::create_directories(basePath);

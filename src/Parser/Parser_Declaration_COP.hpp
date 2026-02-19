@@ -12,7 +12,7 @@ namespace PAR
 struct Parser_Context;
 
 struct Parser_Declaration_COP {
-  Parser_Declaration_COP(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Declaration_COP(Parser_Context& ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::shared_ptr<AST::Declaration::COP::Component> component();
   [[nodiscard]] std::shared_ptr<AST::Declaration::COP::Role>      role();
@@ -23,6 +23,6 @@ struct Parser_Declaration_COP {
   [[nodiscard]] std::shared_ptr<AST::Declaration::COP::System>      system();
   [[nodiscard]] std::shared_ptr<AST::Declaration::COP::System_Case> _system_case();
 
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

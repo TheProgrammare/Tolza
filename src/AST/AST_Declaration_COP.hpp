@@ -23,7 +23,7 @@ struct Component_Field final : public ADeclaration {
   std::string debug_str() const override { return "field \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Component final : public ADeclaration {
@@ -36,7 +36,7 @@ struct Component final : public ADeclaration {
   std::string debug_str() const override { return "declaration component \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Component; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Role final : public ADeclaration {
@@ -45,7 +45,7 @@ struct Role final : public ADeclaration {
   std::string debug_str() const override { return "declaration role \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Role; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Entity_Op;
@@ -67,15 +67,15 @@ struct Entity final : public ADeclaration {
   bool isCastable     = true;
   bool isExtCastable  = true;
 
-  [[nodiscard]] bool contains_op(EBinOpType op, const AType *return_type) const;
-  [[nodiscard]] bool contains_cast(const AType &target_type, bool isCastFrom) const;
-  [[nodiscard]] bool contains_comp(const Component &target_comp) const;
+  [[nodiscard]] bool contains_op(EBinOpType op, const AType* return_type) const;
+  [[nodiscard]] bool contains_cast(const AType& target_type, bool isCastFrom) const;
+  [[nodiscard]] bool contains_comp(const Component& target_comp) const;
 
   // faire une injection de nomenclature
   std::string debug_str() const override { return "declaration entity \"" + name + "\""; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Entity; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Entity_Cast final : public ADeclaration {
@@ -91,7 +91,7 @@ struct Entity_Cast final : public ADeclaration {
   std::string debug_str() const override { return "entity cast"; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Cast; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct Entity_Op : public ADeclaration {
@@ -106,7 +106,7 @@ struct Entity_Op : public ADeclaration {
   std::string debug_str() const override { return "entity op " + EBinOpType_to_str(operatorType); }
   ESymbolType get_symbol_type() const override { return ESymbolType::Entity_Op; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
@@ -121,7 +121,7 @@ struct Entity_OpIndex final : public Entity_Op {
   std::string debug_str() const override { return "entity op[index]"; }
   ESymbolType get_symbol_type() const override { return ESymbolType::Entity_OpIndex; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct System final : public ADeclaration, ICallable {
@@ -130,12 +130,12 @@ struct System final : public ADeclaration, ICallable {
 
   std::string debug_str() const override { return "declaration system \"" + name + "\""; }
 
-  bool                  manage_entity(const Entity &entity) const;
-  bool                  manage_component(const Component &comp) const;
-  Type::Function_Proto *get_signature() override { return prototype.get(); };
+  bool                  manage_entity(const Entity& entity) const;
+  bool                  manage_component(const Component& comp) const;
+  Type::Function_Proto* get_signature() override { return prototype.get(); };
   ESymbolType           get_symbol_type() const override { return ESymbolType::System; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 struct System_Case final : public ADeclaration {
@@ -150,12 +150,12 @@ struct System_Case final : public ADeclaration {
 
   std::string debug_str() const override { return "system case"; }
 
-  bool manage_entity(const Entity &entity) const;
+  bool manage_entity(const Entity& entity) const;
 
-  bool        manage_component(const Component &comp) const;
+  bool        manage_component(const Component& comp) const;
   ESymbolType get_symbol_type() const override { return ESymbolType::System_Case; }
 
-  void accept(Visitor_Base &v) override { v.visit(*this); }
+  void accept(Visitor_Base& v) override { v.visit(*this); }
 };
 
 } // namespace COP

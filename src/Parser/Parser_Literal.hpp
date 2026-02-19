@@ -10,7 +10,7 @@ namespace PAR
 {
 struct Parser_Context;
 struct Parser_Literal {
-  Parser_Literal(Parser_Context &ctx) : ctx(ctx) {}
+  Parser_Literal(Parser_Context& ctx) : ctx(ctx) {}
 
   [[nodiscard]] std::optional<std::unique_ptr<AST::ALiteral>> try_literal(bool is_silent_error = false);
   [[nodiscard]] std::unique_ptr<AST::Literal::Range>          literal_range(std::unique_ptr<AST::AExpression> start);
@@ -32,6 +32,6 @@ public:
   [[nodiscard]] std::unique_ptr<AST::Literal::Component> literal_component(std::unique_ptr<AST::AIdentifier> id);
 
 private:
-  Parser_Context &ctx;
+  Parser_Context& ctx;
 };
 } // namespace PAR

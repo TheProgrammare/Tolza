@@ -5,4 +5,4 @@
 #include <string>
 #include <vector>
 
-std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string &target_file);
+std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string& target_file);

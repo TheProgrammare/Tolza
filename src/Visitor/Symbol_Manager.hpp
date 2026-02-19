@@ -33,9 +33,9 @@ struct Symbol_Data {
 };
 
 struct Symbols_Manager {
-  Symbols_Manager(ScriptInfo &_scr_info) : scr_info(_scr_info) {}
+  Symbols_Manager(ScriptInfo& _scr_info) : scr_info(_scr_info) {}
 
-  ScriptInfo &scr_info;
+  ScriptInfo& scr_info;
 
   std::vector<std::shared_ptr<Symbol_Data>> declarations;
   std::vector<ScopeData>                    current_scope_path;
@@ -44,8 +44,8 @@ struct Symbols_Manager {
   std::string                            get_current_export_name() const;
   std::shared_ptr<Symbol_Data>           add_decl(std::shared_ptr<AST::ADeclaration> declaration);
   std::shared_ptr<Symbol_Data>           add_decl_ex_nihilo(std::shared_ptr<AST::ADeclaration> declaration);
-  void                                   enter_scope(const std::string &name, EScopeType type, size_t depth = 0);
+  void                                   enter_scope(const std::string& name, EScopeType type, size_t depth = 0);
   void                                   exit_scope();
   [[nodiscard]] std::vector<std::string> get_current_path() const;
-  [[nodiscard]] std::optional<std::shared_ptr<AST::ADeclaration>> find_symbol(const std::string &full_name);
+  [[nodiscard]] std::optional<std::shared_ptr<AST::ADeclaration>> find_symbol(const std::string& full_name);
 };
