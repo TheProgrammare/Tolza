@@ -144,8 +144,7 @@ std::shared_ptr<AST::Declaration::Local::Variable_Unpack> PAR::Parser_Declaratio
   const auto varKind = ctx.tok_v.next().type;
   auto       unpack  = ctx.Create_Decl<AST::Declaration::Local::Variable_Unpack>(ctx.tok_v.peek());
   unpack->kind       = TokTy_to_EVariableKind(ctx.tok_v.next().type);
-
-  unpack->isStatic = ctx.metablock_contains(*unpack, "static");
+  unpack->isStatic   = ctx.metablock_contains(*unpack, "static");
 
   while (!ctx.tok_v.is_end()) {
     // ignore variable

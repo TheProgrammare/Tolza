@@ -21,7 +21,7 @@ std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl(std::shared_ptr<AST::ADec
 
   auto sym         = std::make_shared<Symbol_Data>();
   sym->symbol      = declaration;
-  sym->mangling    = declaration->id.mangle_local_name();
+  sym->mangling    = declaration->mangle_scope() + mangle_id(declaration->name);
   sym->is_exported = !get_current_export_name().empty();
   sym->type        = declaration->get_symbol_type();
 

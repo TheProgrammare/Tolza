@@ -11,8 +11,8 @@
 #include "AST/AST_Literal.hpp"
 #include "AST/AST_Memory.hpp"
 #include "AST/AST_Operation.hpp"
-#include "AST/AST_Reference.hpp"
 #include "AST/AST_Statement.hpp"
+#include "AST/AST_Expression.hpp"
 #include "AST/AST_Type.hpp"
 
 // ============ AST ============
@@ -22,15 +22,16 @@ void Visitor_Default::visit(AST::AType &n) {}
 void Visitor_Default::visit(AST::ALiteral &n) {}
 void Visitor_Default::visit(AST::ADeclaration &n) {}
 void Visitor_Default::visit(AST::ALocal &n) {}
-void Visitor_Default::visit(AST::AReference &n) {}
-void Visitor_Default::visit(AST::AType_Reference &n)
+void Visitor_Default::visit(AST::AExpression &n) {}
+
+void Visitor_Default::visit(AST::Expr_ID &n) {}
+void Visitor_Default::visit(AST::Expr_ID_Qualified &n) {}
+void Visitor_Default::visit(AST::Expr_ID_Generic &n)
 {
   for (auto &elem : n.gen_args) elem->accept(*this);
 }
 
 void Visitor_Default::visit(AST::Root &n) {}
-
-void Visitor_Default::visit(AST::ID &n) {}
 
 // ============ DECLARATION ============
 void Visitor_Default::visit(AST::Declaration::Global &n)
@@ -105,7 +106,7 @@ void Visitor_Default::visit(AST::Declaration::Local::Generic_Parameter &n)
 void Visitor_Default::visit(AST::Declaration::Local::Pattern &n)
 {
   if (n.additive_evaluator) n.additive_evaluator->accept(*this);
-  if (n.reference) n.reference->accept(*this);
+  if (n.right) n.right->accept(*this);
 }
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Enum &n)
 {
@@ -123,8 +124,8 @@ void Visitor_Default::visit(AST::Declaration::Local::Pattern_Tuple &n)
 }
 void Visitor_Default::visit(AST::Declaration::Local::Pattern_Entity &n)
 {
-  for (auto &[id, _, elem] : n.mapping) {
-    if (auto node = elem.node()) node->accept(*this);
+  for (auto &elem : n.mapping) {
+    for (auto &[_, elem2] : elem->mapping) elem2.node()->accept(*this);
   }
   visit(static_cast<AST::Declaration::Local::Pattern &>(n));
 }
@@ -136,11 +137,11 @@ void Visitor_Default::visit(AST::Declaration::Local::Pattern_Component &n)
   visit(static_cast<AST::Declaration::Local::Pattern &>(n));
 }
 
-void Visitor_Default::visit(AST::Declaration::Local::Variable_Binding &n) { n.reference->accept(*this); }
+void Visitor_Default::visit(AST::Declaration::Local::Variable_Binding &n) {}
 void Visitor_Default::visit(AST::Declaration::Local::Variable_Unpack &n)
 {
   for (auto &elem : n.elements) elem->accept(*this);
-  n.reference->accept(*this);
+  n.right->accept(*this);
 }
 void Visitor_Default::visit(AST::Declaration::Local::Variable &n)
 {
@@ -211,9 +212,9 @@ void Visitor_Default::visit(AST::Generic::Have_Op &n)
 {
   if (n.explicit_return_type) n.explicit_return_type->accept(*this);
 }
-void Visitor_Default::visit(AST::Generic::Have_Role &n) { n.role_reference->accept(*this); }
-void Visitor_Default::visit(AST::Generic::Use_Component &n) { n.component_reference->accept(*this); }
-void Visitor_Default::visit(AST::Generic::Compatible_System &n) { n.system_reference->accept(*this); }
+void Visitor_Default::visit(AST::Generic::Have_Role &n) { n.role->accept(*this); }
+void Visitor_Default::visit(AST::Generic::Use_Component &n) { n.component->accept(*this); }
+void Visitor_Default::visit(AST::Generic::Compatible_System &n) { n.system->accept(*this); }
 
 // ============ TYPE ============
 void Visitor_Default::visit(AST::Type::Ptr &n) { n.inner->accept(*this); }
@@ -299,17 +300,80 @@ void Visitor_Default::visit(AST::Literal::Range &n)
 
 void Visitor_Default::visit(AST::Literal::Component &n)
 {
-  for (auto &elem : n.gen_args) elem->accept(*this);
+  n.name->accept(*this);
   for (auto &elem : n.field_args) elem->accept(*this);
 }
 void Visitor_Default::visit(AST::Literal::Entity &n)
 {
-  for (auto &elem : n.gen_args) elem->accept(*this);
+  n.name->accept(*this);
   for (auto &elem : n.comp_args) elem->accept(*this);
 }
 
-// ============ REFERENCE ============
-void Visitor_Default::visit(AST::Reference::Enum &n)
+// ============ Expression ============
+void visit(AST::Expression::If_Ternary &n)
+{
+  n.evaluator.node()->accept(*this);
+  n.true_line->accept(*this);
+  n.false_line->accept(*this);
+}
+void visit(AST::Expression::Enum &n)
+{
+  for (auto &elem : n.member_values) elem->accept(*this);
+}
+
+void visit(AST::Expression::Member_Access &n)
+{
+  n.left->accept(*this);
+  n.right->accept(*this);
+}
+
+void visit(AST::Expression::Self &n) {}
+void visit(AST::Expression::Other &n) {}
+
+void visit(AST::Expression::Call &n)
+{
+  n.name->accept(*this);
+  for (auto &elem : n.param_args) elem->accept(*this);
+  for (auto &elem : n.gen_args) elem->accept(*this);
+}
+void visit(AST::Expression::Call_Argument &n) { n.expression->accept(*this); }
+void visit(AST::Expression::Call_System &n)
+{
+  n.name->accept(*this);
+  n.target_entity->accept(*this);
+  for (auto &elem : n.param_args) elem->accept(*this);
+  for (auto &elem : n.gen_args) elem->accept(*this);
+}
+void visit(AST::Expression::Call_Pipe &n)
+{
+  // std::unique_ptr<AIdentifier>                             name;
+  // std::vector<std::unique_ptr<AType>>                      base_gen_args;
+  // std::vector<std::vector<std::unique_ptr<AType>>>         gen_args;
+  // std::vector<std::vector<std::unique_ptr<Call_Argument>>> arguments;
+
+  n.name->accept(*this);
+  for (auto &elem : n.base_gen_args) elem->accept(*this);
+  for (auto &elem : n.gen_args) {
+    for (auto &elem1 : elem) elem1->accept(*this);
+  }
+  for (auto &elem : n.arguments) {
+    for (auto &elem1 : elem) elem1->accept(*this);
+  }
+}
+
+void visit(AST::Expression::Table_Access &n) {}
+
+void visit(AST::Expression::Ptr_At &n) {}
+void visit(AST::Expression::Ptr_Offset &n) {}
+void visit(AST::Expression::Ptr_Val &n) {}
+void visit(AST::Expression::Addr_Of &n) {}
+void visit(AST::Expression::Size_Of &n) {}
+void visit(AST::Expression::GetBits &n) {}
+
+void visit(AST::Expression::Move &n) {}
+void visit(AST::Expression::New_Ptr &n) {}
+
+void Visitor_Default::visit(AST::Expression::Enum &n)
 {
   for (auto &elem : n.member_values) elem->accept(*this);
 }

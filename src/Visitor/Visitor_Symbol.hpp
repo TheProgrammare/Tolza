@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "AST/AST_Base.hpp"
 #include "Visitor_Default.hpp"
 
 struct Visitor_Symbol : public Visitor_Default {
@@ -20,8 +21,8 @@ struct Visitor_Symbol : public Visitor_Default {
   // void resolve_arguments(std::vector<std::unique_ptr<AST::Declaration::Call_Arg>>& args,
   // AST::Type::FunctionProto& fn);
 
-  std::shared_ptr<AST::ADeclaration>
-  resolve_def(AST::AReference &ref, std::shared_ptr<AST::ADeclaration> target_resolution, bool silentError = false);
+  std::shared_ptr<AST::ADeclaration> resolve_def(AST::AExpression &expr, SYM_DEFINITION target_resolution,
+                                                 bool silentError = false);
 
   // all commented visit are not concerned by the symbol resolution
   // but the default visitor will visit and can execute inferior node in SymVisitor

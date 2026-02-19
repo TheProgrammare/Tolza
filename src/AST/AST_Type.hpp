@@ -29,8 +29,9 @@ struct Table final : public AType {
 };
 
 struct Primitive final : public AType {
-  EPrimType _type = EPrimType::u8;
+  EPrimType _type = EPrimType::Void;
 
+  Primitive() = default;
   Primitive(EPrimType p_type) : _type(p_type) {}
 
   std::string debug_str() const override { return EPrimTy_to_str(_type); }

@@ -38,7 +38,8 @@ struct Visitor_Default : public Visitor_Base {
     errors.push_back(out);
   }
 
-  virtual EPhase current_EPhase() { return EPhase::resolver_symbol; }
+  EPhase current_EPhase() { return EPhase::resolver_symbol; }
+
 
   // ============ AST ============
   void visit(AST::Node &n) override;
@@ -47,12 +48,12 @@ struct Visitor_Default : public Visitor_Base {
   void visit(AST::ALiteral &n) override;
   void visit(AST::ADeclaration &n) override;
   void visit(AST::ALocal &n) override;
-  void visit(AST::AReference &n) override;
-  void visit(AST::AType_Reference &n) override;
+  void visit(AST::AExpression &n) override;
+  void visit(AST::Expr_ID &n) override;
+  void visit(AST::Expr_ID_Qualified &n) override;
+  void visit(AST::Expr_ID_Generic &n) override;
 
   void visit(AST::Root &n) override;
-
-  void visit(AST::ID &n) override;
 
   // ============ DECLARATION ============
   void visit(AST::Declaration::Global &n) override;
@@ -150,24 +151,34 @@ struct Visitor_Default : public Visitor_Base {
   void visit(AST::Literal::Component &n) override;
   void visit(AST::Literal::Entity &n) override;
 
-  // ============ REFERENCE ============
-  void visit(AST::Reference::Enum &n) override;
+  // ============ Expression ============
+  void visit(AST::Expression::If_Ternary &n) override;
+  void visit(AST::Expression::Enum &n) override;
 
-  void visit(AST::Reference::Member_Access &n) override;
+  void visit(AST::Expression::Member_Access &n) override;
 
-  void visit(AST::Reference::Self &n) override;
-  void visit(AST::Reference::Other &n) override;
+  void visit(AST::Expression::Self &n) override;
+  void visit(AST::Expression::Other &n) override;
 
-  void visit(AST::Reference::Call &n) override;
-  void visit(AST::Reference::Call_Argument &n) override;
-  void visit(AST::Reference::Call_System &n) override;
-  void visit(AST::Reference::Call_Pipe &n) override;
+  void visit(AST::Expression::Call &n) override;
+  void visit(AST::Expression::Call_Argument &n) override;
+  void visit(AST::Expression::Call_System &n) override;
+  void visit(AST::Expression::Call_Pipe &n) override;
 
-  void visit(AST::Reference::Table_Access &n) override;
+  void visit(AST::Expression::Table_Access &n) override;
+
+  void visit(AST::Expression::Ptr_At &n) override;
+  void visit(AST::Expression::Ptr_Offset &n) override;
+  void visit(AST::Expression::Ptr_Val &n) override;
+  void visit(AST::Expression::Addr_Of &n) override;
+  void visit(AST::Expression::Size_Of &n) override;
+  void visit(AST::Expression::GetBits &n) override;
+
+  void visit(AST::Expression::Move &n) override;
+  void visit(AST::Expression::New_Ptr &n) override;
 
   // ============ STATEMENT ============
   void visit(AST::Statement::If &n) override;
-  void visit(AST::Statement::If_Ternary &n) override;
 
   void visit(AST::Statement::For &n) override;
   void visit(AST::Statement::Loop &n) override;
@@ -190,18 +201,10 @@ struct Visitor_Default : public Visitor_Base {
   void visit(AST::Operation::Binary &n) override;
   void visit(AST::Operation::Unary &n) override;
   void visit(AST::Operation::Interval &n) override;
+  void visit(AST::Operation::Ptr_Dist &n) override;
 
   // ============ MEMORY ============
-  void visit(AST::Memory::Move &n) override;
-  void visit(AST::Memory::New &n) override;
   void visit(AST::Memory::Del &n) override;
-  void visit(AST::Memory::Val_Of_Ptr &n) override;
-  void visit(AST::Memory::Addr_Of_Ref &n) override;
-  void visit(AST::Memory::Dist &n) override;
-  void visit(AST::Memory::Size &n) override;
   void visit(AST::Memory::Align &n) override;
-  void visit(AST::Memory::GetBits &n) override;
   void visit(AST::Memory::Drop &n) override;
-  void visit(AST::Memory::Ptr_At &n) override;
-  void visit(AST::Memory::Ptr_Offset &n) override;
 };

@@ -15,7 +15,6 @@
 #include "AST/AST_Literal.hpp"
 #include "AST/AST_Memory.hpp"
 #include "AST/AST_Operation.hpp"
-#include "AST/AST_Reference.hpp"
 #include "AST/AST_Statement.hpp"
 #include "AST/AST_Type.hpp"
 

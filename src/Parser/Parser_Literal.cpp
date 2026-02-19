@@ -520,7 +520,7 @@ std::unique_ptr<AST::Literal::Entity> PAR::Parser_Literal::literal_entity(std::u
 
     if (dynamic_cast<AST::Literal::Component *>(expr.get())) {
       lit_entity->comp_args.push_back(
-          std::unique_ptr<AST::Literal::Component>(static_cast<AST::Literal::Component *>(expr.release())));
+          std::unique_ptr<AST::Literal::Component>(dynamic_cast<AST::Literal::Component *>(expr.release())));
 
     } else if (auto comp_member = dynamic_cast<AST::Expression::Member_Access *>(expr.get())) {
       ctx.tok_v.expect<90>(TokTy::ASSIGN, "Expected component field initialisation '='.",
