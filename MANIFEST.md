@@ -110,7 +110,6 @@ There is 6 main type modifiers:
 | raw ptr  | `ptr'T` | raw pointer |
 | unique ptr | `uptr'T` | unique pointer |
 | shared ptr | `sptr'T` | shared pointer |
-| quantum ptr | `qptr'T` | quantum pointer |
 
 > Note: the modifier can be placed before or after the type (except pointers), is only must be juxtaposed outside the targereted type
 > Note: `$` `?` `!` are cumulatives : `i32?!`-> optional i32 with volatile possibility 
