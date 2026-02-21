@@ -70,10 +70,12 @@ The Zen-C programming language demonstrates a clear commitment to modernizing C,
 ## Complex
 | type | syntax | literal | size |
 |-|-|-|-|
-| enum | `enum EMyEnum<T>{ Some(T), None }` | `EMyEnum::Some(10)` | size of the biggest type + index `usize`
+| enumeration | `enum EMyEnum<T>{ Some(T), None }` | `EMyEnum::Some(10)` | size of the biggest type + index `usize`
 | flag | `flag FMyFlag { read, write, access }` | `FMyFlag::read` | `u8` 
 | union | `union UMyUnion { i: i32; u: u64 }` | `UMyUnion.i = ...` `var a = UMyUnion.i` | size of the biggest type
-| gen | `gen GNumeric<T> { ... }` | `var a: GNumeric = ...` | 
+| generic | `gen GNumeric<T> { ... }` | `var a: GNumeric = ...` | 
+| component | `comp CID { name: str = "", age: i32 = 20, id: b64 = 0x0 }` | `var marc = CID{ .name= "Marc", .age= 40, .id= 0x00FFF }` | list of related data | sum of type + offset on largest
+| entity | `entity Player { use CPosition, use CID { .name= "Player" } }` | `var player2 = Player{ CID.name= "Player2", CID.id= 0x00AAA }` | list of component for static composition | sum of components (and offset)
 
 ### Implicit Cast
 no memory loss allowed 
