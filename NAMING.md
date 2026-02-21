@@ -62,6 +62,7 @@ use this for too long names and for most used local variable or temporary variab
 |------|----------|
 | bool | `b` |
 | void | `u0` |
+| ptrdiff | `pdif` |
 | i8 - i128 - isize | `i8` - `i128` `isz` |
 | u8 - u128 - isize| `u8` - `u128` `usz` |
 | b8 - b128 - bsize | `b8` `b128` `bsz` |
