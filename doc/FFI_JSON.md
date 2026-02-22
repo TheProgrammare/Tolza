@@ -7,7 +7,7 @@
 This document defines the **JSON convention** used to represent an **Abstract Syntax Tree (AST)** for FFI (Foreign Function Interface) bindings.  
 The JSON file contains all the necessary information to define **functions, types, structures, entities, enums, unions, flags, and aliases** exposed by an external library.
 
-Each AST section is represented by a JSON object with specific fields, strictly defined to ensure reliable conversion into the corresponding Velox structures (`Func`, `Type`, `Comp`, `Entity`, `Global`, `Enum`, `Union`, `Flag`, `TypeAlias`).
+Each AST section is represented by a JSON object with specific fields, strictly defined to ensure reliable conversion into the corresponding Velox structures (`functions`, `type`, `components`, `entities`, `globals`, `enums`, `unions`, `flags`, `typealiases`).
 
 Key conventions:
 - **Types** are described by objects containing the base type (`base_type`) and additional attributes such as pointer, array, const/volatile qualifiers, and atomicity.
@@ -86,7 +86,7 @@ Velox convention:
 - `entity`: entity
 - `union`: union
 - `flag`: flag
-- `proto` `prototype`: function prototype
+- `prototype`: function prototype
 
 C convention:
 - `schar` `sc` / `uchar` `uc`: character / unsigned character
