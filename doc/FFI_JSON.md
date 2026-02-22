@@ -9,7 +9,7 @@ The JSON file contains all the necessary information to define **functions, type
 
 Each AST section is represented by a JSON object with specific fields, strictly defined to ensure reliable conversion into the corresponding Velox structures (`functions`, `type`, `components`, `entities`, `globals`, `enums`, `unions`, `flags`, `typealiases`).
 
-Key conventions:
+## Key conventions
 - **Types** are described by objects containing the base type (`base_type`) and additional attributes such as pointer, array, const/volatile qualifiers, and atomicity.
 - **Functions** (`functions`) include the name, calling convention, prototype, and parameter names.
 - **Components** (`components`) contain fields and memory layout information.
@@ -23,6 +23,9 @@ Key conventions:
 - All name fields are mandatory.
 
 This JSON convention enables reliable **serialization and deserialization of the AST** in Velox using functions from the `FFI::JSON` namespace.
+
+## FFI JSON Pipeline
+`Foreign Code` ► `[User Script/Generator]` ► `JSON AST` ► `[Compiler]` ► `Target Scripts`
 
 # JSON root file
 ``` json
