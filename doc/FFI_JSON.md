@@ -25,7 +25,18 @@ Each AST section is represented by a JSON object with specific fields, strictly 
 This JSON convention enables reliable **serialization and deserialization of the AST** in Velox using functions from the `FFI::JSON` namespace.
 
 ## FFI JSON Pipeline
-`Foreign Code` ► `[User Script/Generator]` ► `JSON AST` ► `[Compiler]` ► `Target Scripts`
+The pipeline permit to generate FFI for velox from any language or lib
+
+The generator must convert the Foreign Code to a valid JSON AST. 
+The Velox compiler will inspect JSON files (at `FFI_JSON/` in current project folder) then generate binding scripts for the compilation at EMBBinder phase (at `EMBinder/` in current project folder)
+
+Binding script generation:
+
+`Foreign Code` ► `[User Script/Generator]` ► `JSON AST` ► `[Compiler]` ► `Binding Scripts`
+
+Binding script compilation:
+
+`EMBinder phase` ► `Lexing` ► `Preprocess` ► `Parsing` ► push to the main compilation pipeline...
 
 # JSON root file
 ``` json
@@ -105,7 +116,7 @@ C convention:
 `pass_mode` must have one string value: `copy` `ref` `mut` `move` `addr`
 
 ``` json
-"parameters": [
+[
   {
     "pass_mode",
     { <type> },
@@ -117,7 +128,7 @@ C convention:
 
 # Prototype
 ``` json
-"proto": {
+"prototype": {
   { <type> }, // return type
   false, // is_variadic
   [ <parameters> ] // parameters
@@ -144,65 +155,84 @@ C convention:
 
 # Entity
 ``` json
-"entity": {
-  "name": "",
-  "components": [
+"entities": [
+  {
+    "name": "",
+    "components": [
       { <components> },
       ...
     ]
-  }
-}
+  },
+  ...
+]
 ```
 
 # Enum
 ``` json
-"enum": {
-  "name": "",
-  "members": [
-    [ "member_name", { <type> } ],
-    ...
-  ]
+"enums": [
+  {
+    "name": "",
+    "members": [
+      [ "member_name", { <type> } ],
+      ...
+    ]
+  },
+  ...
 }
 ```
 
 # Union
 ``` json
-"union": {
-  "name": "",
-  "members": [
-    [ "member_name", { <type> } ],
-    ...
-  ]
+"unions": [
+  {
+    "name": "",
+    "members": [
+      [ "member_name", { <type> } ],
+      ...
+    ]
+  },
+  ...
 }
 ```
 
 # Flag
 ``` json
-"flag": {
-  "name": "",
-  "members": [
-    [ "member_name", { <type> } ],
+"flags": [
+  {
+    "name": "",
+    "members": [
+      [ "member_name", { <type> } ],
+      ...
+    ],
+    "underlying_type": "<base_type>"
+    },
     ...
-  ],
-  "underlying_type": "<base_type>"
-}
+  },
+  ...
+]
 ```
 
 # Global
 ``` json
-"global": {
-  "name": "",
-  "type": { <type> },
-  "is_const": false
-}
+"globals": [
+  {
+    "name": "",
+    "type": { <type> },
+    "is_const": false
+  },
+  ...
+]
 ```
 
 # Typealias
 ``` json
-"typealias": {
-  "name": "",
-  "type": { <type> }
-}
+"typealiases": [
+  {
+    "name": "",
+    "type": { <type> }
+  },
+  ...
+]
 ```
 
 # function
@@ -211,11 +241,14 @@ C convention:
 
 
 ``` json
-"funcs": {
-  "name": "",
-  "call_convention": "C|std_call|fast_call|vector_call|systemv",
-  "prototype": { <prototype> },
-  "param_names": [ "param_name", ... ]
-}
+"functions": [
+  {
+    "name": "",
+    "call_convention": "C|std_call|fast_call|vector_call|systemv",
+    "prototype": { <prototype> },
+    "param_names": [ "param_name", ... ]
+  },
+  ...
+]
 ```
 
