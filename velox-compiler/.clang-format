@@ -1,0 +1,61 @@
+
+BasedOnStyle: LLVM
+Language: Cpp
+
+IndentWidth: 2
+UseTab: Never
+ColumnLimit: 120
+
+BreakBeforeBraces: Linux
+AlwaysBreakBeforeMultilineStrings: true
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortBlocksOnASingleLine: false
+
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeConceptDeclarations: Always
+
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Left
+
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCaseColons: false
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+
+AlignOperands: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+
+BreakConstructorInitializers: BeforeComma
+
+AlignTrailingComments: true
+
+AllowShortCaseLabelsOnASingleLine: true
+
+ReflowComments: true
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+SpaceAfterCStyleCast: false
+
+AllowAllParametersOfDeclarationOnNextLine: true
+SortIncludes: false
+MaxEmptyLinesToKeep: 2
+
+ConstructorInitializerIndentWidth: 2

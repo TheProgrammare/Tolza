@@ -1,6 +1,0 @@
-import extern C :: stdio
-import C
-fn main ( ) {
-let hello = new ptr ' C :: _char ( Hello World )
-C :: printf ( hello )
-}  

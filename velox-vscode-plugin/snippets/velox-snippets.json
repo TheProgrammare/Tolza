@@ -375,12 +375,12 @@
         ],
         "description": "compiletime variable declaration"
     },
-    "Type alias": {
-        "prefix": "type",
+    "Alias": {
+        "prefix": "alias",
         "body": [
-            "type ${1:alias}: ${2:Type}"
+            "alias ${1:alias}: ${2:Type}"
         ],
-        "description": "Type alias"
+        "description": "Alias"
     },
     "Named generic": {
         "prefix": "gen",

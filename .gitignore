@@ -1,9 +1,10 @@
 # Velox compiler generation
 build/
 source/
-llvm-ir/
+LLVM-IR/
+FFI-JSON/
 EMBinds/
-post_preprocess/
+post-preprocess/
 dot/
 .cache/
 
