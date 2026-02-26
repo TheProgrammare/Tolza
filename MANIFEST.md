@@ -13,10 +13,10 @@ The public repository reflects the current implementation.
 
 Velox is currently in an experimental stage and should be considered a work in progress.
 
-This MANIEST presents the vision and core ideas behind the language.  
+This TECHNICAL IMPLEMENTATION presents the vision and core ideas behind the language.  
 Some features and syntax are still under development.
 
-Velox is a next-generation programming language that aims to combine performance, simplicity, and extensibility. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate.
+Velox is a next-generation programming language. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate and minimal undefined behaviour through memory and code logic.
 
 > Explicit Inspirations: ![Rust](https://github.com/rust-lang/rust) - ![C](https://github.com/llvm/llvm-project) - ![C++](https://github.com/llvm/llvm-project) - ![Python](https://github.com/python) - ![COBOL](https://github.com/dscobol/Cobol-Projects) - ![FORTAN](https://github.com/fortran-lang) - ![Lisp](https://github.com/topics/common-lisp?l=scheme&o=desc&s=) - ![Zen-C](https://github.com/z-libs/Zen-C)</br>
 The Zen-C programming language demonstrates a clear commitment to modernizing C, offering a safer language that aligns with modern programming practices. We are following the progress of this project with great interest, as it shares some of the goals we are pursuing in our own language.
@@ -40,6 +40,15 @@ The Zen-C programming language demonstrates a clear commitment to modernizing C,
 ![Highlighter](https://img.shields.io/badge/Highlighter-Done-darkgreen)
 ![Snippet](https://img.shields.io/badge/Snippet-Done-darkgreen)
 ![Compilation_Dot](https://img.shields.io/badge/Compilation_debug_dot_graph-Done-darkgreen)
+
+### Dependencies
+This project uses the following open-source libraries:
+
+- https://json.nlohmann.me – for reading and writing JSON syntax.
+- https://github.com/benhoyt/inih – for reading INI configuration files.
+
+> Thanks to the authors for their excellent open-source work!</br>
+> header-only, no install required
 
 # Type
 ## Primitives
