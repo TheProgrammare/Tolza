@@ -71,11 +71,12 @@ These rules are:
 Velox does not use classical object-oriented inheritance.
 
 It favors **static composition (COP)**:
+- components are set of variables
 - entities are composed of components
 - systems operate on well-defined component sets
 - system selection and data access are resolved at compile time
 
-This avoids hidden polymorphism and runtime dispatch by default.
+This avoids hidden polymorphism and runtime dispatch.
 
 > COP: Compositional Oriented Paradigm
 
@@ -106,7 +107,7 @@ fn length(mut v: Vec2) -> f32 {
 In this example:
 - no implicit allocation occurs
 - no hidden copies are made
-- mutation is not allowed unless explicitly stated
+- mutation is allowed because explicitly stated
 
 ## Some Utilities
 ### 1. Async and Messaging (Overview)
