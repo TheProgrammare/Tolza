@@ -32,19 +32,25 @@ Install the `.exe` installer and **make sure to check**:
 Download Clangd for Windows from:</br>
 https://clangd.llvm.org/
 
+Download Ninja for Windows from:</br>
+https://ninja-build.org/
+
+Download CMake for Windows from:</br>
+https://cmake.org/
+
 ### I.B Install on Linux / UNIX
 
 **Debian-based**
 ```
-sudo apt install llvm-19 llvm-19-dev clang-19 clangd
+sudo apt install llvm-19 llvm-19-dev clang-19 clangd ninja-build cmake
 ```
 **Fedora-based**
 ```
-sudo dnf install llvm19 llvm19-devel clang19 clangd
+sudo dnf install llvm19 llvm19-devel clang19 clangd ninja-build cmake
 ```
 **Arch-based**
 ```
-sudo pacman -S llvm clang clangd
+sudo pacman -S llvm clang clangd ninja cmake
 ```
 
 > Arch Linux provides a single system-wide LLVM version
@@ -69,6 +75,13 @@ https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
 
 Download Clangd for macOS from:</br>
 https://clangd.llvm.org/
+
+Download Ninja for Windows from:</br>
+https://ninja-build.org/
+
+Download CMake for Windows from:</br>
+https://cmake.org/
+
 
 ### II. Verify installation
 Run the following commands:
