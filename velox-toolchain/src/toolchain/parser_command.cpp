@@ -1,6 +1,7 @@
 #include "parser_command.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 
 #include "command_audit.hpp"
@@ -50,11 +51,16 @@ bool command_create(bool short_command, int argc, const char* argv[])
   if (short_command) {
     std::string command = argv[1];
     if (command == "cw") {
-      std::string name         = argv[2];
-      fs::path    path         = (argc >= 4) ? fs::absolute(argv[3]) : fs::current_path();
-      fs::path    project_path = path / name;
-      command::workspace::generate_velox_workspace(name, path);
+      std::cout << "test" << std::endl;
+      if (argc >= 3) {
+        std::string name         = argv[2];
+        fs::path    path         = (argc >= 4) ? fs::absolute(argv[3]) : fs::current_path();
+        fs::path    project_path = path / name;
+        command::workspace::generate_velox_workspace(name, path);
+        return true;
+      }
 
+      command::workspace::ask_new_workspace(fs::current_path());
       return true;
     } else if (command == "cc") {
       fs::path path = (argc >= 3) ? fs::absolute(argv[2]) : fs::current_path();
@@ -90,7 +96,7 @@ bool command_create(bool short_command, int argc, const char* argv[])
 
 bool command_gui(int argc, const char* argv[])
 {
-  std::cout << "[velox] Opening the velox compiler graphical user interface" << std::endl;
+  std::cout << "[velox] Opening the velox toolchain graphical user interface" << std::endl;
   return true;
 }
 

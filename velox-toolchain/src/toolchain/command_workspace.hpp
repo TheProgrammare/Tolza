@@ -23,7 +23,7 @@ bool new_velox_workspace();
 // %5 debug
 inline constexpr const char* VELOX_CONFIG_TEMPLATE =
     R"(
-# main velox compiler config
+# main velox toolchain config
 # it's the default configuration
 # set config field to specify a sub configuration to compile (use his name in sub_configs)
 

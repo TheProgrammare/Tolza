@@ -39,7 +39,7 @@ Available commands:
   build [path] [options]    Compile the project.
   b [path] [options]        (alias)
   - If no path is provided, the current directory will be used.
-  - (the compiler search velox.config in the current directory)
+  - (the toolchain search velox.config in the current directory)
 
   create workspace [name] [path]
   cw [name] [path]          (alias)
@@ -51,7 +51,7 @@ Available commands:
   cc [name] [path]          (alias)
   - If no path is provided, the current directory will be used.
 
-  gui [path]                Open the compiler interface.
+  gui [path]                Open the toolchain interface.
   ui [path]                 (alias)
   - If no path is provided, the current directory will be used.
 
@@ -128,11 +128,11 @@ Sanity options:
 
 Options:        
   --help | -h               Display this help message and exit.
-  --version | -v            Display the current version of the compiler.
+  --version | -v            Display the current version of the toolchain.
 
 Examples:
   $ velox build ./my_project --debug --emit=asm
   $ velox create MyProject
   $ velox create # will prompt for project name
-  $ velox gui # will launch the compiler qt interface
+  $ velox gui # will launch the toolchain qt interface
 )";

@@ -6,7 +6,7 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["create", "test", "workspace"],
+            "args": ["cw"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },

@@ -11,7 +11,7 @@ void command::workspace::generate_velox_workspace(const std::string& project_nam
 {
   fs::path project_path = path / project_name;
 
-  if (!cli::yes_no_question("Do you want to generate a new velox projet at \"" + project_path.string() + "\"?")) {
+  if (!cli::yes_no_question("Do you want to generate a new velox projet at\n  \"" + project_path.string() + "\"?")) {
     std::cout << "[velox] Velox workspace generation aborted..." << std::endl;
     return;
   }
@@ -71,7 +71,7 @@ void command::workspace::write_config_file(const fs::path& path, const std::stri
 
 void command::workspace::ask_new_workspace(const fs::path& ws_path)
 {
-  if (!cli::yes_no_question("Do you want to generate a new Velox project in a new folder?")) {
+  if (!cli::yes_no_question("Do you want to generate a Velox project in a new folder?")) {
   retry_project_name:
     auto filename = cli::get_input("Write down your project name (file name only valid)");
 

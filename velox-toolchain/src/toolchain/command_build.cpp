@@ -18,8 +18,8 @@
 std::optional<CompCtx> command::build::init_compilation_context(const fs::path& path)
 {
   // check the workspace sanity
-  std::cout << "[velox] Welcome to the Velox compiler !" << "\n  Version: " << VELOX_COMPILER_VERSION
-            << "\n  Compiler launched at: " << path << "\n"
+  std::cout << "[velox] Welcome to the Velox toolchain !" << "\n  Version: " << VELOX_COMPILER_VERSION
+            << "\n  Toolchain launched at: " << path << "\n"
             << "\n[velox] Checking workspace sanity..." << std::endl;
   fs::path config_path = path / "velox.config";
   if (!command::sanity::check_workspace_sanity(path)) {

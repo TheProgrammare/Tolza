@@ -20,7 +20,7 @@ std::string cli::sanitize_filename(std::string name)
 
 bool cli::yes_no_question(const std::string& msg)
 {
-  std::cout << msg << " [Y/n]: ";
+  std::cout << "[velox] [ask] " << msg << " [Y/n]: ";
   std::string reponse;
   std::getline(std::cin, reponse);
 
