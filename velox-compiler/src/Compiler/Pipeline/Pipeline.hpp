@@ -15,12 +15,10 @@
  *  limitations under the License.
  */
 
-#include "Toolchain/Parser_Command.hpp"
+#pragma once
 
-int main(int argc, const char* argv[])
-{
-  if (parse_commands(argc, argv))
-    return 0;
-  else
-    return 1;
-}
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+bool start_compilation(const fs::path& target_file);

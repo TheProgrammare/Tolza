@@ -60,11 +60,7 @@ inline void fmt_template(std::string& templateStr, const std::vector<std::string
 
 struct Config {
   // compilation flags
-  inline static bool in_binding_compilation     = false; // mutable
-  inline static bool debug_mode                 = false; // mutable
-  inline static bool debug_postprocessor_output = false; // mutable
-  inline static bool dot_print                  = false; // mutable
-  inline static bool dot_exposer_print          = false; // mutable
+  inline static bool in_binding_compilation = false; // mutable
 
   // Constantes immuables
   inline static constexpr bool engage_breakpoint_on_error = true;

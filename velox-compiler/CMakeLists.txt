@@ -26,8 +26,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 file(GLOB_RECURSE VELOX_SOURCES
     CONFIGURE_DEPENDS
     src/*.cpp
-    thirdparty/*.cpp
-    thirdparty/*.c
 )
 
 add_executable(velox ${VELOX_SOURCES})
@@ -41,12 +39,27 @@ if(VELOX_DEV_ARGS)
 endif()
 
 # ----------------------------
+# Thirdparty
+# ----------------------------
+file(GLOB_RECURSE THIRD_SOURCES
+    CONFIGURE_DEPENDS
+    thirdparty/*.cpp
+    thirdparty/*.c
+)
+
+add_library(velox_thirdparty ${THIRD_SOURCES})
+
+# ----------------------------
 # Include directories
 # ----------------------------
 # Root for project includes
 target_include_directories(velox
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+)
+
+target_include_directories(velox_thirdparty
+    SYSTEM PUBLIC
         ${CMAKE_SOURCE_DIR}/thirdparty
 )
 
@@ -73,6 +86,7 @@ target_link_libraries(velox
     PRIVATE
         LLVM
         libclang
+        velox_thirdparty
 )
 
 # ----------------------------

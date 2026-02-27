@@ -2,11 +2,56 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Debug project creation",
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
             "args": ["create", "test", "workspace"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug help",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["--help"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug version",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["--version"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug sanity",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["sanity", "/mnt/Data/Workspace/velox-git/Velox/velox-compiler/workspace/velox-example"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug gui",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["gui", "/mnt/Data/Workspace/velox-git/Velox/velox-compiler/workspace/velox-example"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug build",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["build", "/mnt/Data/Workspace/velox-git/Velox/velox-compiler/workspace/velox-example"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },

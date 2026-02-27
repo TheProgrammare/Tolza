@@ -12,19 +12,27 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
-#include "benhoyt/ini.h"
+
+#include "../ini.h"
+
 #include "INIReader.h"
 
 using std::string;
 
-INIReader::INIReader(const string& filename) { _error = ini_parse(filename.c_str(), ValueHandler, this); }
+INIReader::INIReader(const string& filename)
+{
+  _error = ini_parse(filename.c_str(), ValueHandler, this);
+}
 
 INIReader::INIReader(const char* buffer, size_t buffer_size)
 {
   _error = ini_parse_string_length(buffer, buffer_size, ValueHandler, this);
 }
 
-int INIReader::ParseError() const { return _error; }
+int INIReader::ParseError() const
+{
+  return _error;
+}
 
 string INIReader::ParseErrorMessage() const
 {
