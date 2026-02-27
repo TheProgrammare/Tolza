@@ -6,8 +6,9 @@
 
 **Static composition, dynamic possibilities.**
 
+![Toolchain](https://img.shields.io/badge/Toolchain-Done-darkgreen)
 ![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
-![Version](https://img.shields.io/badge/Version-2026.1b-blue)
+![Version](https://img.shields.io/badge/Version-2026.2.0b-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
 ![Platform](https://img.shields.io/badge/Current_Platform-Linux-darkblue)
 
@@ -176,9 +177,11 @@ Major areas of exploration include:
 - deterministic async systems
 
 Documentation
-- 📘 Language Manifesto & Specification: `MANIFEST.md`
 - 📄 Examples: coming later
-- 🛠️ Front-end Compiler: work in progress (build in C++)
+- 📘 Documentation: coming later
+- 🔎 Reference: see [MANIFEST](MANIFEST.md)
+- 🛠️ Toolchain: done (build in c++) 
+- 🧮 Front-end Compiler: work in progress (build in C++)
 - 🖥️ Back-end Compiler: LLVM-IR generation work in progress
 - 🔍 Highlighter: done (VS Code)
 - 📜 Snippet: done (VS Code)
