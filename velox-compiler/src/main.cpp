@@ -15,47 +15,14 @@
  *  limitations under the License.
  */
 
-#include <iostream>
 
-#include "Globals.hpp"
-#include "Compilation.hpp"
-#include "Pipeline/Pipeline.hpp"
+#include "CommandParser.hpp"
 
-
-int velox_main(int argc, const char* argv[])
-{
-  parseArgs(argc, argv);
-
-  auto comp_result = start_compilation(COMP_CTX.src_file);
-
-  if (!comp_result) {
-    std::cerr << color_RED << Config::k_comp_abort << color_RESET;
-    return 1;
-  }
-
-  return 0;
-}
 
 int main(int argc, const char* argv[])
 {
-#ifdef VELOX_DEV_ARGS
-  std::vector<std::string> args = {argv[0],
-                                   "--arch=amd64",
-                                   "--bits=64",
-                                   "--os=linux",
-                                   "--abi=LP64",
-                                   "--debug",
-                                   "--debug-pp",
-                                   "--debug-dot",
-                                   "--debug-exposer",
-                                   std::string("--src=") + k_project_dir + "/source",
-                                   std::string("--dest=") + k_project_dir + "/dest"};
-
-  std::vector<const char*> cargs;
-  for (auto& s : args) cargs.push_back(s.c_str());
-
-  return velox_main((int)cargs.size(), cargs.data());
-#else
-  return velox_main(argc, argv);
-#endif
+  if (parse_commands(argc, argv))
+    return 0;
+  else
+    return 1;
 }

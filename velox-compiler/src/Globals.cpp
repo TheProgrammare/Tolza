@@ -126,12 +126,14 @@ fs::path Config::get_userlib_dir()
 #endif
 }
 
-fs::path Config::get_project_dir() { return fs::path(COMP_CTX.src_file); }
-fs::path Config::get_postpreprocess_dir() { return get_project_dir() / "post-preprocess"; }
-fs::path Config::get_binding_dir() { return get_project_dir() / "EMBinds"; }
-fs::path Config::get_dot_dir() { return get_project_dir() / "dot"; }
-fs::path Config::get_LLVM_IR_dir() { return get_project_dir() / "LLVM-IR"; }
-fs::path Config::get_FFI_JSON_dir() { return get_project_dir() / "FFI-JSON"; }
+fs::path Config::get_project_dir() { return fs::path(COMP_CTX.codegen_dest_file); }
+fs::path Config::get_src_dir() { return get_project_dir() / "src"; }
+fs::path Config::get_build_dir() { return get_project_dir() / "build"; }
+fs::path Config::get_postpreprocess_dir() { return get_build_dir() / "post-preprocess"; }
+fs::path Config::get_binding_dir() { return get_build_dir() / "EMBinds"; }
+fs::path Config::get_dot_dir() { return get_build_dir() / "dot"; }
+fs::path Config::get_LLVM_IR_dir() { return get_build_dir() / "LLVM-IR"; }
+fs::path Config::get_FFI_JSON_dir() { return get_build_dir() / "FFI-JSON"; }
 
 
 std::string Config::Phase_to_code(EPhase phase)
