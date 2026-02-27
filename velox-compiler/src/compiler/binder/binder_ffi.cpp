@@ -1,0 +1,362 @@
+#include "binder_ffi.hpp"
+
+#include <fstream>
+#include <filesystem>
+#include <stdexcept>
+
+#include "globals.hpp"
+
+
+ffi::EPassMode ffi::type_to_passMode(const Type& ty)
+{
+  if (!ty.is_pointer && ty.base_type != ffi::EType::_comp && ty.base_type != ffi::EType::_proto
+      && ty.base_type != ffi::EType::_union && ty.base_type != ffi::EType::_entity && ty.base_type != ffi::EType::_enum)
+    return ffi::EPassMode::copy;
+
+  if (ty.is_pointer && ty.is_val_type_const) return ffi::EPassMode::ref;
+
+  if (ty.is_pointer) return ffi::EPassMode::mut;
+
+  if (ty.is_pointer_double) return ffi::EPassMode::addr;
+
+  return ffi::EPassMode::NONE;
+}
+
+std::string ffi::EPassMode_to_str(ffi::EPassMode pm)
+{
+  switch (pm) {
+  case ffi::EPassMode::NONE: return "/*INVALID PASS MODE*/";
+  case ffi::EPassMode::copy: return "copy";
+  case ffi::EPassMode::ref:  return "ref";
+  case ffi::EPassMode::mut:  return "mut";
+  case ffi::EPassMode::move: return "move";
+  case ffi::EPassMode::addr: return "addr";
+  }
+}
+
+std::string ffi::EType_to_str(const EType ty)
+{
+  switch (ty) {
+  case ffi::EType::INVALID:     return "/*INVALID TYPE*/";
+
+  case ffi::EType::_i8:         return "i8";
+  case ffi::EType::_i16:        return "i16";
+  case ffi::EType::_i32:        return "i32";
+  case ffi::EType::_i64:        return "i64";
+  case ffi::EType::_i128:       return "i128";
+  case ffi::EType::_isize:      return "isize";
+
+  case ffi::EType::_u8:         return "u8";
+  case ffi::EType::_u16:        return "u16";
+  case ffi::EType::_u32:        return "u32";
+  case ffi::EType::_u64:        return "u64";
+  case ffi::EType::_u128:       return "u128";
+  case ffi::EType::_usize:      return "usize";
+
+  case ffi::EType::_b8:         return "b8";
+  case ffi::EType::_b16:        return "b16";
+  case ffi::EType::_b32:        return "b32";
+  case ffi::EType::_b64:        return "b64";
+  case ffi::EType::_b128:       return "b128";
+
+  case ffi::EType::_f32:        return "f32";
+  case ffi::EType::_f64:        return "f64";
+  case ffi::EType::_f128:       return "f128";
+
+  case ffi::EType::_str:        return "str";
+  case ffi::EType::_text:       return "text";
+  case ffi::EType::_ascii:      return "ascii";
+  case ffi::EType::_utf32:      return "utf32";
+
+  case ffi::EType::_schar:      return "ffi::c::_schar";
+  case ffi::EType::_short:      return "ffi::c::_short";
+  case ffi::EType::_long:       return "ffi::c::_long";
+  case ffi::EType::_longlong:   return "ffi::c::_longlong";
+  case ffi::EType::_int:        return "ffi::c::_int";
+
+  case ffi::EType::_uchar:      return "ffi::c::_uchar";
+  case ffi::EType::_ushort:     return "ffi::c::_ushort";
+  case ffi::EType::_ulong:      return "ffi::c::_ulong";
+  case ffi::EType::_ulonglong:  return "ffi::c::_ulonglong";
+  case ffi::EType::_uint:       return "ffi::c::_uint";
+
+  case ffi::EType::_ptrdiff:    return "ptrdiff";
+
+  case ffi::EType::_float:      return "ffi::c::_float";
+  case ffi::EType::_double:     return "ffi::c::_double";
+  case ffi::EType::_longdouble: return "ffi::c::_longdouble";
+
+  case ffi::EType::_bool:       return "bool";
+  case ffi::EType::_void:       return "void";
+  default:                      return "";
+  }
+}
+
+std::string ffi::type_to_str(const Type& ty)
+{
+  std::string ptr;
+  std::string type;
+  std::string table_dim;
+
+  if (ty.is_opaque()) return "ptr'void";
+  if (ty.is_string()) return "ffi::c::_str";
+
+  // qualifiers
+  if (ty.is_pointer) {
+    if (ty.is_pointer_const) ptr += "$";
+    if (ty.is_pointer_volatile) ptr += "!";
+    ptr += "ptr'";
+  } else if (ty.is_pointer_double) {
+    ptr = "ptr'ptr'";
+  }
+
+  if (ty.is_table) {
+    for (size_t i = 0; i < ty.table_size.size(); i++) {
+      const size_t& size = ty.table_size[i];
+      table_dim += std::to_string(size);
+      if (i != ty.table_size.size() - 1) table_dim += ", ";
+    }
+    table_dim += "]";
+  }
+
+  if (ty.is_table_of_pointers) {
+    ptr += "[";
+  }
+
+  // base types
+  type = ffi::EType_to_str(ty.base_type);
+
+  switch (ty.base_type) {
+  case ffi::EType::_comp:
+  case ffi::EType::_entity:
+  case ffi::EType::_union:
+  case ffi::EType::_flag:
+  case ffi::EType::_enum:
+  case ffi::EType::_alias:  type = ty.complex_type_name; break;
+  case ffi::EType::_proto:  {
+    if (ty.proto_type.get()) {
+      std::string str_params;
+
+      for (size_t i = 0; i < ty.proto_type->params.size(); i++) {
+        auto& [pass_mode, type, _] = ty.proto_type->params[i];
+        str_params += ffi::type_to_str(type);
+        if (i != ty.proto_type->params.size() - 1) str_params += ", ";
+      }
+
+      std::string str_return = ffi::type_to_str(ty.proto_type->return_type);
+
+      std::string fn = EMBINDER_PROTOTYPE_TEMPLATE;
+      fmt_template(fn, {str_params, str_return});
+      type = fn;
+    } else {
+      std::runtime_error("Undefined function type");
+    }
+    break;
+  }
+  default: break;
+  }
+
+  if (ty.is_val_type_const) type = "$" + type;
+  if (ty.is_val_type_volatile) type = "!" + type;
+
+  return ptr + type + table_dim;
+}
+
+std::string ffi::comp_to_str(const Comp& comp)
+{
+  std::string members;
+
+  for (size_t i = 0; i < comp.fields.size(); i++) {
+    auto& [name, type] = comp.fields[i];
+    std::string field  = EMBINDER_EXTERN_FIELD;
+    fmt_template(field, {name, type_to_str(type)});
+
+    members += field;
+  }
+
+  std::string out = EMBINDER_EXTERN_COMP_TEMPLATE;
+  fmt_template(out, {comp.name, members});
+  return out;
+}
+
+std::string ffi::entity_to_str(const Entity& entity)
+{
+  std::string members;
+
+  for (size_t i = 0; i < entity.components.size(); i++) {
+    auto& comp = entity.components[i];
+    members += "use " + comp.name + ", \n";
+  }
+
+  std::string out = EMBINDER_EXTERN_ENTITY_TEMPLATE;
+  fmt_template(out, {entity.name, members});
+  return out;
+}
+
+std::string ffi::union_to_str(const Union& _union)
+{
+  std::string members;
+
+  for (auto& [name, type] : _union.members) {
+    members += name + ": " + type_to_str(type) + ",\n";
+  }
+
+  bool test = members.empty() ? true : false;
+
+  std::string out = EMBINDER_EXTERN_UNION_TEMPLATE;
+  fmt_template(out, {_union.name, members});
+  return out;
+}
+
+std::string ffi::flag_to_str(const Flag& flag)
+{
+  std::string members;
+
+  for (auto& [name, bits] : flag.members) {
+    members += name + ": " + std::to_string(bits) + ",\n";
+  }
+
+  std::string out = EMBINDER_EXTERN_FLAG_TEMPLATE;
+  fmt_template(out, {flag.name, ffi::EType_to_str(flag.underlying_type), members});
+  return out;
+}
+
+std::string ffi::enum_to_str(const Enum& _enum)
+{
+  std::string members;
+
+  for (auto& [name, types] : _enum.members) {
+    members += name + "(";
+    for (size_t i = 0; i < types.size(); ++i) {
+      const Type& ty = types[i];
+      members += type_to_str(ty);
+
+      if (i != types.size() - 1) members += ", ";
+    }
+
+    members += "),\n";
+  }
+
+  std::string out = EMBINDER_EXTERN_ENUM_TEMPLATE;
+  fmt_template(out, {_enum.name, members});
+  return out;
+}
+
+std::string ffi::func_to_str(const Func& func)
+{
+  std::string params;
+
+  for (size_t i = 0; i < func.proto.params.size(); i++) {
+    auto& [pass_mode, type, is_restrict] = func.proto.params[i];
+    auto&       name                     = func.param_names[i];
+    std::string str_pass_mode            = ffi::EPassMode_to_str(pass_mode);
+
+    params += str_pass_mode + " " + name + ": " + type_to_str(type);
+
+    if (i != func.proto.params.size() - 1) params += ", ";
+  }
+
+  if (func.proto.is_variadic) {
+    if (func.proto.params.size() > 0) params += ", ";
+    params += "__args: ptr'void...";
+  }
+
+  std::string out = EMBINDER_EXTERN_FN_TEMPALTE;
+  fmt_template(out, {func.name, params, type_to_str(func.proto.return_type)});
+  return out;
+}
+
+std::string ffi::global_to_str(const Global& glo)
+{
+  std::string kind = glo.is_const ? "let" : "var";
+
+  std::string out = EMBINDER_EXTERN_GLOBAL_TEMPLATE;
+  fmt_template(out, {kind, glo.name, type_to_str(glo.type)});
+  return out;
+}
+
+std::string ffi::typealias_to_str(const TypeAlias& _ty_alias)
+{
+  std::string out = EMBINDER_EXTERN_TYPEALIAS_TEMPLATE;
+  fmt_template(out, {_ty_alias.name, type_to_str(_ty_alias.type)});
+  return out;
+}
+
+
+void ffi::write_ast(const ffi::AST& ast, const std::string& target_path)
+{
+  std::ofstream os(target_path);
+
+  if (!os.is_open()) throw std::runtime_error("Cannot open file: \"" + target_path + "\"");
+
+  os.clear();
+
+  std::string _lang  = ast.bind.lang + std::string(labs(static_cast<long>(29 - ast.bind.lang.size())), ' ');
+  std::string _lib   = ast.bind.lib + std::string(labs(static_cast<long>(29 - ast.bind.lib.size())), ' ');
+  std::string header = ffi::EMBINDER_FILE_HEADER;
+  fmt_template(header, {_lang, _lib, ast.bind.lang});
+  os << header << std::flush;
+
+  if (!ast.enums.empty()) {
+    os << ffi::EMBINDER_ENUM_HEADER;
+
+    for (auto& elem : ast.flags) {
+      os << ffi::flag_to_str(elem);
+    }
+  }
+  if (!ast.comps.empty()) {
+    os << ffi::EMBINDER_COMP_HEADER;
+
+    for (auto& elem : ast.comps) {
+      os << ffi::comp_to_str(elem);
+    }
+  }
+  if (!ast.unions.empty()) {
+    os << ffi::EMBINDER_UNION_HEADER;
+
+    for (auto& elem : ast.unions) {
+      os << union_to_str(elem);
+    }
+  }
+  if (!ast.globals.empty()) {
+    os << ffi::EMBINDER_GLOBAL_HEADER;
+
+    for (auto& elem : ast.globals) {
+      os << global_to_str(elem);
+    }
+  }
+  if (!ast.funcs.empty()) {
+    os << ffi::EMBINDER_FUNCTION_HEADER;
+
+    for (auto& elem : ast.funcs) {
+      os << func_to_str(elem);
+    }
+  }
+  if (!ast.typealias.empty()) {
+    os << ffi::EMBINDER_TYPEALIAS_HEADER;
+
+    for (auto& elem : ast.typealias) {
+      os << typealias_to_str(elem);
+    }
+  }
+  if (!ast.flags.empty()) {
+    os << ffi::EMBINDER_FLAG_HEADER;
+
+    for (auto& elem : ast.flags) {
+      os << flag_to_str(elem);
+    }
+  }
+  if (!ast.entities.empty()) {
+    os << ffi::EMBINDER_ENTITY_HEADER;
+
+    for (auto& elem : ast.entities) {
+      os << entity_to_str(elem);
+    }
+  }
+
+  os << "\n}" << std::flush;
+
+  os.close();
+
+  std::filesystem::remove(target_path);
+}
