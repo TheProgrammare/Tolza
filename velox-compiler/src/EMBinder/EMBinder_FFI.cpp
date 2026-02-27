@@ -6,17 +6,6 @@
 
 #include "Globals.hpp"
 
-inline void FFI::fmt_template(std::string& templateStr, const std::vector<std::string>& args)
-{
-  for (size_t i = 0; i < args.size(); ++i) {
-    std::string placeholder = "%" + std::to_string(i + 1);
-    size_t      pos         = 0;
-    while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
-      templateStr.replace(pos, placeholder.length(), args[i]);
-      pos += args[i].length();
-    }
-  }
-}
 
 FFI::EPassMode FFI::type_to_passMode(const Type& ty)
 {

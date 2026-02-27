@@ -26,9 +26,6 @@
 namespace FFI
 {
 
-void fmt_template(std::string& templateStr, const std::vector<std::string>& args);
-
-
 struct Bind_Package {
   std::string                 bind_name;
   std::shared_ptr<ScriptInfo> scr_info;
@@ -145,8 +142,14 @@ struct Type {
     return base_type == EType::_comp || base_type == EType::_union || base_type == EType::_flag
            || base_type == EType::_proto || base_type == EType::_entity || base_type == EType::_enum;
   }
-  [[nodiscard]] bool is_opaque() const { return base_type == EType::_void && is_pointer; }
-  [[nodiscard]] bool is_flexible_table() const { return is_table && table_size.empty(); }
+  [[nodiscard]] bool is_opaque() const
+  {
+    return base_type == EType::_void && is_pointer;
+  }
+  [[nodiscard]] bool is_flexible_table() const
+  {
+    return is_table && table_size.empty();
+  }
 };
 
 struct Prototype {
@@ -248,14 +251,14 @@ const char EMBINDER_FILE_HEADER[] =
     "\n"
     "// +-------------------------------------+\n"
     "// |    Velox auto generated wrappers    |\n"
-    "// | Lang: %1 |\n"
-    "// |  Lib: %2 |\n"
+    "// | Lang: %0 |\n"
+    "// |  Lib: %1 |\n"
     "// |                                     |\n"
     "// |    Please do not modify the file    |\n"
     "// +-------------------------------------+\n"
     "\n"
     "\n"
-    "export %3 {\n";
+    "export %2 {\n";
 
 const char EMBINDER_ENUM_HEADER[] =
     "\n"
@@ -313,83 +316,82 @@ const char EMBINDER_TYPEALIAS_HEADER[] =
     "// +-----------------------+\n"
     "\n";
 
-// %1 name
-// %2 params
-// %3 return
+// %0 name
+// %1 params
+// %2 return
 const char EMBINDER_EXTERN_FN_TEMPALTE[] =
     "# extern\n"
-    "fn %1(%2) -> %3;\n";
+    "fn %0(%1) -> %2;\n";
 
-// %1 pass mode
-// %2 name
-// %3 type
-const char EMBINDER_EXTERN_PARAM_TEMPALTE[] = "%1 %2: %3";
+// %0 pass mode
+// %1 name
+// %2 type
+const char EMBINDER_EXTERN_PARAM_TEMPALTE[] = "%0 %1: %2";
 
 const char EMBINDER_EXTERN_PARAM_VARIADIC[] = "args: addr ...";
 
-// %1 name
-// %2 underlying_type
-// %3 members
+// %0 name
+// %1 underlying_type
+// %2 members
 const char EMBINDER_EXTERN_FLAG_TEMPLATE[] =
     "# extern\n"
-    "flag %1 : %2 {\n"
-    "%3"
+    "flag %0 : %1 {\n"
+    "%2"
     "}\n";
 
-// %1 name
-// %2 members
+// %0 name
+// %1 members
 const char EMBINDER_EXTERN_ENUM_TEMPLATE[] =
     "# extern\n"
-    "enum %1 {\n"
-    "%2"
+    "enum %0 {\n"
+    "%1"
     "}\n";
 
-// %1 name
-// %2 members
+// %0 name
+// %1 members
 const char EMBINDER_EXTERN_UNION_TEMPLATE[] =
     "# extern\n"
-    "union %1 {\n"
-    "%2"
+    "union %0 {\n"
+    "%1"
     "}\n";
 
-// %1 kind
-// %2 name
-// %3 type
+// %0 name
+// %1 type
 const char EMBINDER_EXTERN_FIELD[] =
     "# no default\n"
-    "%2: %3,\n";
+    "%1: %2,\n";
 
-// %1 name
-// %2 members
+// %0 name
+// %1 members
 const char EMBINDER_EXTERN_COMP_TEMPLATE[] =
     "# extern\n"
-    "comp %1 {\n"
-    "%2"
+    "comp %0 {\n"
+    "%1"
     "}\n";
 
-// %1 name
-// %2 members
+// %0 name
+// %1 members
 const char EMBINDER_EXTERN_ENTITY_TEMPLATE[] =
     "# extern\n"
-    "entity %1 {\n"
-    "%2"
+    "entity %0 {\n"
+    "%1"
     "}\n";
 
-// %1 kind
-// %2 name
-// %3 type
-const char EMBINDER_EXTERN_GLOBAL_TEMPLATE[] =
-    "# extern\n"
-    "%1 %2: %3\n";
-
+// %0 kind
 // %1 name
 // %2 type
+const char EMBINDER_EXTERN_GLOBAL_TEMPLATE[] =
+    "# extern\n"
+    "%0 %1: %2\n";
+
+// %0 name
+// %1 type
 const char EMBINDER_EXTERN_TYPEALIAS_TEMPLATE[] =
     "# extern\n"
-    "type %1: %2\n";
+    "type %0: %1\n";
 
-// %1 parameters
-// %2 retuns
-const char EMBINDER_PROTOTYPE_TEMPLATE[] = "fn(%1) -> (%2)";
+// %0 parameters
+// %1 retuns
+const char EMBINDER_PROTOTYPE_TEMPLATE[] = "fn(%0) -> (%1)";
 
 } // namespace FFI

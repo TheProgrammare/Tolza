@@ -1,8 +1,0 @@
-import extern C::stdio
-import FFI::C
-
-fn main() {
-  let hello = new ptr'FFI::C::_char("Hello World")
-  C::printf(hello)
-}
-

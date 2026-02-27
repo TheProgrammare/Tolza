@@ -162,10 +162,9 @@ bool start_compilation(const fs::path& target_file)
   return true;
 }
 
-void applyDefaultAndDetectNative() {}
 
 // simple parseur CLI minimal
-void parseArgs(int argc, const char* argv[])
+void parse_args_for_compilation_context(CompCtx& ctx, int argc, const char* argv[])
 {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -173,62 +172,62 @@ void parseArgs(int argc, const char* argv[])
       auto str = arg.substr(6);
 
       COMPILATION_ARGS.emplace("src", str);
-      COMP_CTX.src_file = str;
+      ctx.source_dir = str;
 
     } else if (arg.rfind("--dest=", 0) == 0) {
       auto str = arg.substr(7);
 
       COMPILATION_ARGS.emplace("dest", str);
-      COMP_CTX.dest_file = str;
+      ctx.codegen_dest_file = str;
 
     } else if (arg.rfind("--abi=", 0) == 0) {
       auto str = arg.substr(6);
 
       COMPILATION_ARGS.emplace("abi", str);
-      COMP_CTX.target_abi = str;
+      ctx.target_abi = str;
 
     } else if (arg.rfind("--arch=", 0) == 0) {
       auto str = arg.substr(7);
 
       COMPILATION_ARGS.emplace("arch", str);
-      COMP_CTX.target_arch = str;
+      ctx.target_arch = str;
 
     } else if (arg.rfind("--bits=", 0) == 0) {
       auto str = arg.substr(7);
 
       COMPILATION_ARGS.emplace("bits", str);
-      COMP_CTX.target_arch_bits = std::stoul(str);
+      ctx.target_bits = std::stoul(str);
 
     } else if (arg.rfind("--os=", 0) == 0) {
       auto str = arg.substr(5);
 
       COMPILATION_ARGS.emplace("os", str);
-      COMP_CTX.target_os = str;
+      ctx.target_os = str;
 
     } else if (arg.rfind("--libc=", 0) == 0) {
       auto str = arg.substr(7);
 
       COMPILATION_ARGS.emplace("libc", str);
-      COMP_CTX.libc = str;
+      ctx.target_libc = str;
 
     } else if (arg == "--debug") {
       COMPILATION_ARGS.emplace("debug", "1");
-      COMP_CTX.is_debug  = true;
+      ctx.profile_debug  = true;
       Config::debug_mode = true;
 
     } else if (arg == "--release") {
       COMPILATION_ARGS.emplace("debug", "0");
-      COMP_CTX.is_debug = false;
+      ctx.profile_debug = false;
 
     } else if (arg.rfind("--opt-level=", 0) == 0) {
       auto str = arg.substr(12);
 
       COMPILATION_ARGS.emplace("opt-level", str);
-      COMP_CTX.opt_level = std::stoi(str);
+      ctx.profile_opt_level = std::stoi(str);
 
     } else if (arg == "--size-opt") {
       COMPILATION_ARGS.emplace("size-opt", "true");
-      COMP_CTX.is_size_opt = true;
+      ctx.profile_size_opt = true;
 
     } else if (arg == "--debug-dot") {
       COMPILATION_ARGS.emplace("debug-dot", "true");
@@ -256,40 +255,38 @@ void parseArgs(int argc, const char* argv[])
         value = "1"; // implicit value
       }
       COMPILATION_ARGS.emplace(name, value);
-      COMP_CTX.defines.emplace(name, value);
+      ctx.defines.emplace(name, value);
 
     } else if (arg.rfind("-U", 0) == 0) {
       auto name = arg.substr(2);
 
       COMPILATION_ARGS.emplace(name, ""); // no value for -UName
-      COMP_CTX.undefines.push_back(name);
+      ctx.undefines.push_back(name);
 
     } else if (arg.rfind("--output=", 0) == 0) {
       auto str = arg.substr(9);
 
       COMPILATION_ARGS.emplace("output", str);
-      COMP_CTX.output = str;
+      ctx.codegen_output_dir = str;
 
     } else if (arg == "--emit-obj" || arg == "--emit=obj") {
       COMPILATION_ARGS.emplace("emit", "obj");
-      COMP_CTX.emit_mode = CompCtx::EEmitMode::OBJ;
+      ctx.codegen_emit_mode = CompCtx::EEmitMode::OBJ;
 
     } else if (arg == "--emit-asm" || arg == "--emit=asm") {
       COMPILATION_ARGS.emplace("emit", "asm");
-      COMP_CTX.emit_mode = CompCtx::EEmitMode::ASM;
+      ctx.codegen_emit_mode = CompCtx::EEmitMode::ASM;
 
     } else if (arg == "--emit-bc" || arg == "--emit=bc") {
       COMPILATION_ARGS.emplace("emit", "bc");
-      COMP_CTX.emit_mode = CompCtx::EEmitMode::BC;
+      ctx.codegen_emit_mode = CompCtx::EEmitMode::BC;
 
     } else if (arg == "--emit-bin" || arg == "--emit=bin") {
       COMPILATION_ARGS.emplace("emit", "bin");
-      COMP_CTX.emit_mode = CompCtx::EEmitMode::BIN;
+      ctx.codegen_emit_mode = CompCtx::EEmitMode::BIN;
 
     } else {
       std::cerr << "Warning: unknown argument '" << arg << "'\n";
     }
   }
-
-  applyDefaultAndDetectNative();
 }

@@ -1,0 +1,7 @@
+import FFI::C
+import extern C::stdio
+
+fn main() {
+  let c_msg = "hello world!" as FFI::C::_str
+  C::println("hello world!")
+}

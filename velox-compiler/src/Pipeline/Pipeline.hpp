@@ -19,9 +19,11 @@
 
 #include <filesystem>
 
+#include "Compilation.hpp"
+
 namespace fs = std::filesystem;
 
 
 bool start_compilation(const fs::path& target_file);
 
-void parseArgs(int argc, const char* argv[]);
+void parse_args_for_compilation_context(CompCtx& ctx, int argc, const char* argv[]);
