@@ -10,7 +10,7 @@ BreakBeforeBraces: Linux
 AlwaysBreakBeforeMultilineStrings: true
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: false
 AllowShortBlocksOnASingleLine: false
 
 AlwaysBreakTemplateDeclarations: true

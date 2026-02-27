@@ -9,6 +9,7 @@ project(velox
     LANGUAGES C CXX
 )
 
+
 # ----------------------------
 # Language standards
 # ----------------------------
@@ -25,6 +26,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 file(GLOB_RECURSE VELOX_SOURCES
     CONFIGURE_DEPENDS
     src/*.cpp
+    thirdparty/*.cpp
+    thirdparty/*.c
 )
 
 add_executable(velox ${VELOX_SOURCES})
@@ -44,6 +47,7 @@ endif()
 target_include_directories(velox
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/thirdparty
 )
 
 # ----------------------------

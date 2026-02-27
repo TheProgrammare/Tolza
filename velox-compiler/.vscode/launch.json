@@ -2,12 +2,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug",
             "type": "lldb-dap",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/build/velox",
-            "args": ["-DVELOX_DEV_ARGS=ON"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["create", "test", "workspace"],
             "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Release",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/release/velox",
+            "args": ["build", "workspace/velox-example"],
             "cwd": "${workspaceFolder}"
         }
     ]
