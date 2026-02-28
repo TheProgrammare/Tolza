@@ -1,7 +1,15 @@
 #include "command_audit.hpp"
+#include "globals.hpp"
 
+#include <filesystem>
+#include <regex>
+#include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 bool command::audit::is_blank(const std::string& line)
 {
@@ -10,15 +18,29 @@ bool command::audit::is_blank(const std::string& line)
   return true;
 }
 
+
 void command::audit::process_file(const fs::path& file, CategoryStats& cat_stats, GlobalStats& global_stats)
 {
   std::ifstream in(file);
   if (!in.is_open()) return;
 
-  cat_stats.size_bytes += fs::file_size(file);
+  cat_stats.files++;
 
   std::string line;
   bool        in_block_comment = false;
+
+  // Préparer les regex pour les mots-clés
+  std::regex r_import("\\bimport\\b");
+  std::regex r_export("\\bexport\\b");
+  std::regex r_fn("\\bfn\\b");
+  std::regex r_gen("\\bgen\\b");
+  std::regex r_role("\\brole\\b");
+  std::regex r_entity("\\bentity\\b");
+  std::regex r_comp("\\bcomp\\b");
+  std::regex r_enum("\\benum\\b");
+  std::regex r_union("\\bunion\\b");
+  std::regex r_flag("\\bflag\\b");
+  std::regex r_sys("\\bsys\\b");
 
   while (std::getline(in, line)) {
     cat_stats.lines++;
@@ -31,17 +53,20 @@ void command::audit::process_file(const fs::path& file, CategoryStats& cat_stats
       continue;
     }
 
+    // gestion bloc de commentaire
     if (in_block_comment) {
       cat_stats.comment_lines++;
       if (trimmed.find("*/") != std::string::npos) in_block_comment = false;
       continue;
     }
 
+    // commentaire sur une ligne
     if (trimmed.find("//") == 0) {
       cat_stats.comment_lines++;
       continue;
     }
 
+    // début d'un bloc de commentaire
     if (trimmed.find("/*") == 0) {
       cat_stats.comment_lines++;
       if (trimmed.find("*/") == std::string::npos) in_block_comment = true;
@@ -51,21 +76,50 @@ void command::audit::process_file(const fs::path& file, CategoryStats& cat_stats
     // ligne de code
     cat_stats.code_lines++;
 
-    // compter les instructions globalement
-    if (trimmed.find("import") != std::string::npos) global_stats.imports++;
-    if (trimmed.find("export") != std::string::npos) global_stats.exports++;
-    if (trimmed.find("fn") != std::string::npos) global_stats.functions++;
-    if (trimmed.find("entity") != std::string::npos) global_stats.entities++;
-    if (trimmed.find("comp") != std::string::npos) global_stats.comps++;
-    if (trimmed.find("enum") != std::string::npos) global_stats.enums++;
-    if (trimmed.find("union") != std::string::npos) global_stats.unions++;
-    if (trimmed.find("flag") != std::string::npos) global_stats.flags++;
-    if (trimmed.find("sys") != std::string::npos) global_stats.sys++;
+    // compter les mots-clés avec regex
+    if (std::regex_search(trimmed, r_import)) global_stats.imports++;
+    if (std::regex_search(trimmed, r_export)) global_stats.exports++;
+    if (std::regex_search(trimmed, r_fn)) global_stats.functions++;
+    if (std::regex_search(trimmed, r_gen)) global_stats.generics++;
+    if (std::regex_search(trimmed, r_role)) global_stats.roles++;
+    if (std::regex_search(trimmed, r_entity)) global_stats.entities++;
+    if (std::regex_search(trimmed, r_comp)) global_stats.comps++;
+    if (std::regex_search(trimmed, r_enum)) global_stats.enums++;
+    if (std::regex_search(trimmed, r_union)) global_stats.unions++;
+    if (std::regex_search(trimmed, r_flag)) global_stats.flags++;
+    if (std::regex_search(trimmed, r_sys)) global_stats.sys++;
   }
+
+  global_stats.byte_size += fs::file_size(file);
 }
 
 void command::audit::audit_workspace(const fs::path& root)
 {
+  static const char* out_str = R"(
+=============================================================================== 
+ [Audit]             Files        Lines         Code     Comments       Blanks
+ Source Code     %0    %1    %2    %3    %4
+ Third Party     %5    %6    %7    %8    %9
+ Binder          %10    %11    %12    %13    %14
+=============================================================================== 
+ [Total]         %15    %16    %17    %18    %19
+=============================================================================== 
+ [Population]        Roles     Entities   Components      Systems      Imports
+                 %20    %21    %22    %23    %24
+ Enumerations    Functions     Generics       Unions        Flags      Exports
+    %25    %26    %27    %28    %29    %30
+=============================================================================== 
+  [Disk Size]            %31 Ko
+===============================================================================
+  )";
+
+  auto fmt_number = [&](size_t num) {
+    std::ostringstream os;
+    os << std::setw(9) << std::setfill(' ') << num;
+    std::string str = os.str();
+    return str;
+  };
+
   CategoryStats source_code;
   CategoryStats third_party;
   CategoryStats binder;
@@ -83,34 +137,63 @@ void command::audit::audit_workspace(const fs::path& root)
       process_file(entry.path(), source_code, global);
     } else if (relative_path.find("thirdparty/") == 0) {
       process_file(entry.path(), third_party, global);
-    }
-
-    if (ext == ".vlxb") {
+    } else if (relative_path.find("bind/") == 0) {
       process_file(entry.path(), binder, global);
     }
   }
 
-  auto print_category = [](const std::string& name, const CategoryStats& stats) {
-    std::cout << "=== " << name << " ===\n";
-    std::cout << "Lines: " << stats.lines << "\n";
-    std::cout << "Code: " << stats.code_lines << "\n";
-    std::cout << "Comment: " << stats.comment_lines << "\n";
-    std::cout << "Blank: " << stats.blank_lines << "\n";
-    std::cout << "Size on disk: " << stats.size_bytes << " bytes\n\n";
+  global.global_cat.lines         = source_code.lines + third_party.lines + binder.lines;
+  global.global_cat.code_lines    = source_code.code_lines + third_party.code_lines + binder.code_lines;
+  global.global_cat.comment_lines = source_code.comment_lines + third_party.comment_lines + binder.comment_lines;
+  global.global_cat.blank_lines   = source_code.blank_lines + third_party.blank_lines + binder.blank_lines;
+  global.global_cat.files         = source_code.files + third_party.files + binder.files;
+
+  double file_size = static_cast<double>(global.byte_size) / 1024.0;
+
+  std::string out = out_str;
+
+  std::vector<std::string> vars = {
+
+      fmt_number(source_code.files),
+      fmt_number(source_code.lines),
+      fmt_number(source_code.code_lines),
+      fmt_number(source_code.comment_lines),
+      fmt_number(source_code.blank_lines),
+
+      fmt_number(third_party.files),
+      fmt_number(third_party.lines),
+      fmt_number(third_party.code_lines),
+      fmt_number(third_party.comment_lines),
+      fmt_number(third_party.blank_lines),
+
+      fmt_number(binder.files),
+      fmt_number(binder.lines),
+      fmt_number(binder.code_lines),
+      fmt_number(binder.comment_lines),
+      fmt_number(binder.blank_lines),
+
+      fmt_number(global.global_cat.files),
+      fmt_number(global.global_cat.lines),
+      fmt_number(global.global_cat.code_lines),
+      fmt_number(global.global_cat.comment_lines),
+      fmt_number(global.global_cat.blank_lines),
+
+      fmt_number(global.roles),
+      fmt_number(global.entities),
+      fmt_number(global.comps),
+      fmt_number(global.sys),
+      fmt_number(global.imports),
+      fmt_number(global.enums),
+      fmt_number(global.functions),
+      fmt_number(global.generics),
+      fmt_number(global.unions),
+      fmt_number(global.flags),
+      fmt_number(global.exports),
+      std::to_string(file_size)
+
   };
 
-  print_category("Source Code", source_code);
-  print_category("Third Party", third_party);
-  print_category("Binder", binder);
+  fmt_template(out, vars);
 
-  std::cout << "=== Global Stats ===\n";
-  std::cout << "Imports: " << global.imports << "\n";
-  std::cout << "Exports: " << global.exports << "\n";
-  std::cout << "Functions: " << global.functions << "\n";
-  std::cout << "Entities: " << global.entities << "\n";
-  std::cout << "Comps: " << global.comps << "\n";
-  std::cout << "Enums: " << global.enums << "\n";
-  std::cout << "Unions: " << global.unions << "\n";
-  std::cout << "Flags: " << global.flags << "\n";
-  std::cout << "Sys: " << global.sys << "\n";
+  std::cout << out << std::endl;
 }

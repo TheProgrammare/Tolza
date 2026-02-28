@@ -89,7 +89,7 @@ Logs options:
   --log-lexer | -llex       Log the lexer pass.
   --log-pre | -lpre         Log the preprocessor pass.
   --log-parser | -lpar      Log the parser pass.
-  --log-embinder | -lemb    Log the EMBinder pass.
+  --log-binder | -lb        Log the binder pass.
   --log-exporter | -lexp    Log the exporter pass.
   --log-resolver | -lres    Log the resolver pass.
   --log-llvm | -lllvm       Log the LLVM IR code generation pass.

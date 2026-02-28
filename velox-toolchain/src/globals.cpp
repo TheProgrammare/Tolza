@@ -5,6 +5,7 @@
 #include <vector>
 #include <filesystem>
 #include <stdexcept>
+#include <regex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,6 +19,18 @@
 #include <unistd.h>
 #endif
 
+
+void fmt_template(std::string& templateStr, const std::vector<std::string>& args)
+{
+  for (size_t i = args.size(); i-- > 0;) { // parcours en sens inverse
+    std::string placeholder = "%" + std::to_string(i);
+    size_t      pos         = 0;
+    while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
+      templateStr.replace(pos, placeholder.length(), args[i]);
+      pos += args[i].length();
+    }
+  }
+}
 
 fs::path get_home_dir()
 {

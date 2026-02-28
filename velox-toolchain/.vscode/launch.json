@@ -11,11 +11,11 @@
             "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Debug help",
+            "name": "Debug audit",
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["--help"],
+            "args": ["audit", "/mnt/Data/Workspace/velox-git/Velox/velox-toolchain/workspace/velox-example"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },

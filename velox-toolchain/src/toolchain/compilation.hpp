@@ -46,7 +46,7 @@ struct CompCtx {
   bool log_lexer;
   bool log_preprocessor;
   bool log_parser;
-  bool log_EMBinder;
+  bool log_binder;
   bool log_exporter;
   bool log_resolver;
   bool log_LLVM_IR;

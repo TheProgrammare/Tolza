@@ -40,17 +40,8 @@
 
 namespace fs = std::filesystem;
 
-inline void fmt_template(std::string& templateStr, const std::vector<std::string>& args)
-{
-  for (size_t i = 0; i < args.size(); ++i) {
-    std::string placeholder = "%" + std::to_string(i);
-    size_t      pos         = 0;
-    while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
-      templateStr.replace(pos, placeholder.length(), args[i]);
-      pos += args[i].length();
-    }
-  }
-}
+
+void fmt_template(std::string& templateStr, const std::vector<std::string>& args);
 
 [[nodiscard]] fs::path get_home_dir();
 [[nodiscard]] fs::path get_stdlib_dir();

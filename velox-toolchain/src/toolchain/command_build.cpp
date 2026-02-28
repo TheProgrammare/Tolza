@@ -92,7 +92,7 @@ CompCtx command::build::parse_compilation_context(const fs::path& config_path)
   result.log_lexer        = reader.GetBoolean("logs", "lexer", false);
   result.log_preprocessor = reader.GetBoolean("logs", "preprocessor", false);
   result.log_parser       = reader.GetBoolean("logs", "parser", false);
-  result.log_EMBinder     = reader.GetBoolean("logs", "embinder", false);
+  result.log_binder       = reader.GetBoolean("logs", "embinder", false);
   result.log_exporter     = reader.GetBoolean("logs", "exporter", false);
   result.log_resolver     = reader.GetBoolean("logs", "resolver", false);
   result.log_LLVM_IR      = reader.GetBoolean("logs", "llvm-ir", false);
@@ -224,7 +224,7 @@ void command::build::parse_args_for_compilation_context(CompCtx& ctx, int start_
     if (bool_arg(ctx.log_lexer, "log-lexer", "llex")) continue;
     if (bool_arg(ctx.log_preprocessor, "log-pre", "lpre")) continue;
     if (bool_arg(ctx.log_parser, "log-parser", "lpar")) continue;
-    if (bool_arg(ctx.log_EMBinder, "log-embinder", "lemb")) continue;
+    if (bool_arg(ctx.log_binder, "log-embinder", "lemb")) continue;
     if (bool_arg(ctx.log_exporter, "log-exporter", "lexp")) continue;
     if (bool_arg(ctx.log_resolver, "log-resolver", "lres")) continue;
     if (bool_arg(ctx.log_LLVM_IR, "log-llvm", "lllvm")) continue;

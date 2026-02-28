@@ -11,7 +11,7 @@ namespace workspace
 {
 void generate_velox_workspace(const std::string& project_name, const fs::path& path);
 bool write_file(const fs::path& path, const std::string& text);
-void write_config_file(const fs::path& path, const std::string& name, bool file_debug_mode);
+bool write_config_file(const fs::path& path, const std::string& name, bool file_debug_mode);
 void ask_new_workspace(const fs::path& ws_path);
 bool new_velox_workspace();
 
@@ -49,7 +49,7 @@ filesystem      = %5
 lexer           = %5
 preprocessor    = %5
 parser          = %5
-EMBinder        = %5
+binder          = %5
 exporter        = %5
 resolver        = %5
 LLVM_IR         = %5
