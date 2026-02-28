@@ -12,6 +12,16 @@ struct CategoryStats {
   size_t code_lines    = 0;
   size_t comment_lines = 0;
   size_t blank_lines   = 0;
+
+  CategoryStats& operator+=(const CategoryStats& other)
+  {
+    files += other.files;
+    lines += other.lines;
+    code_lines += other.code_lines;
+    comment_lines += other.comment_lines;
+    blank_lines += other.blank_lines;
+    return *this;
+  }
 };
 
 struct GlobalStats {
@@ -28,6 +38,23 @@ struct GlobalStats {
   size_t        unions    = 0;
   size_t        flags     = 0;
   size_t        sys       = 0;
+
+  GlobalStats& operator+=(const GlobalStats& other)
+  {
+    byte_size += other.byte_size;
+    imports += other.imports;
+    exports += other.exports;
+    functions += other.functions;
+    generics += other.generics;
+    roles += other.roles;
+    entities += other.entities;
+    comps += other.comps;
+    enums += other.enums;
+    unions += other.unions;
+    flags += other.flags;
+    sys += other.sys;
+    return *this;
+  }
 };
 
 namespace command
