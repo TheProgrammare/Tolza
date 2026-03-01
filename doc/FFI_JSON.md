@@ -11,6 +11,7 @@ Each AST section is represented by a JSON object with specific fields, strictly 
 
 ## Key conventions
 - **Types** are described by objects containing the base type (`base_type`) and additional attributes such as pointer, array, const/volatile qualifiers, and atomicity.
+- **Imports** (`imports`) contain name, path, importation type.
 - **Functions** (`functions`) include the name, calling convention, prototype, and parameter names.
 - **Components** (`components`) contain fields and memory layout information.
 - **Entites** (`entities`) contain components.
@@ -56,10 +57,27 @@ Binding script compilation:
 # Bind base
 ``` json
 "bind": {
-  "bind_name": "",
+  "api": "",
   "lang": "",
   "lib": ""
 }
+```
+
+# Import
+`type` must have one of this value: `user` `stdlib` `lib` `any`
+
+```json
+"imports": [
+  {
+    "name": "my_module_name",
+    "path": [
+      "module_path_elem_1",
+      ...
+    ],
+    "type": "user"
+  },
+  ...
+]
 ```
 
 # Type
