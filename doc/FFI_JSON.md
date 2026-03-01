@@ -57,7 +57,7 @@ Binding script compilation:
 # Bind base
 ``` json
 "bind": {
-  "api": "",
+  "abi": "",
   "lang": "",
   "lib": ""
 }
