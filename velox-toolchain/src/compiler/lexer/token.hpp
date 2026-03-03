@@ -1,10 +1,8 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <string>
-#include <vector>
 
 // T_ = Type L_ = Literal S_ = Special (no text key representation)
 enum class ETokenType {
@@ -64,6 +62,10 @@ enum class ETokenType {
   T_TUPLE,
   HASHTAG,
   AT,
+  STD_LIB,
+  THIRD_LIB,
+  USR_LIB,
+  EXT_LIB,
   // literal values
   L_BIN,
   L_OCT,
@@ -309,6 +311,10 @@ const std::map<std::string, ETokenType> kKeywords = {
     // metacode or static table key
     {"#",        ETokenType::HASHTAG         },
     {"@",        ETokenType::AT              },
+    {"std:",     ETokenType::STD_LIB         },
+    {"lib:",     ETokenType::THIRD_LIB       },
+    {"usr:",     ETokenType::USR_LIB         },
+    {"ext:",     ETokenType::EXT_LIB         },
     // boolean litteral key
     {"true",     ETokenType::TRUE            },
     {"false",    ETokenType::FALSE           },
@@ -866,7 +872,7 @@ struct Token {
 };
 
 
-inline bool str_is_identifier(const std::string s)
+inline bool str_is_identifier(const std::string& s)
 {
   if (s.empty()) return false;
   if (!std::isalpha(s[0]) && s[0] != '_') return false;
@@ -884,19 +890,4 @@ inline ETokenType Str_to_ETokenType(const std::string& str)
 {
   if (auto it = kKeywords.find(str); it != kKeywords.end()) return it->second;
   return ETokenType::UNKNOWN;
-}
-
-inline std::vector<std::pair<std::string, ETokenType>> kSortedKeywords()
-{
-  static std::vector<std::pair<std::string, ETokenType>> out;
-  if (!out.empty()) return out;
-
-  for (auto& [text, type] : kKeywords) {
-    out.push_back({text, type});
-  }
-
-  std::stable_sort(out.begin(), out.end(),
-                   [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
-
-  return out;
 }

@@ -7,6 +7,7 @@
 
 #include "ast_base.hpp"
 #include "ast_forward.hpp"
+#include "compiler/ast/ast_data.hpp"
 
 struct ModuleExportation;
 
@@ -76,7 +77,7 @@ struct Flag final : public ADeclaration {
 
 // e.g. mod name {}
 struct Mod : public ADeclaration {
-  std::vector<std::shared_ptr<Node>> elements;
+  std::vector<std::shared_ptr<ADeclaration>> declarations;
 
   std::string debug_str() const override
   {
@@ -109,6 +110,21 @@ struct Export final : public Mod {
   }
 };
 
+struct Extern final : public Mod {
+
+  std::string debug_str() const override
+  {
+    return "extern \"" + name + "\"";
+  }
+  ESymbolType get_symbol_type() const override
+  {
+    return ESymbolType::Extern;
+  }
+  void accept(Visitor_Base& v) override
+  {
+    v.visit(*this);
+  }
+};
 
 struct Function final : public ADeclaration, ICallable {
   std::shared_ptr<type::Function_Proto> prototype;

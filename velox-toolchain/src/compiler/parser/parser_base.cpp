@@ -1,6 +1,9 @@
 
 #include "parser_base.hpp"
 
+#include "compiler/ast/ast_base.hpp"
+#include "compiler/ast/ast_data.hpp"
+#include "compiler/ast/ast_declaration.hpp"
 #include "compiler/ast/ast_expression.hpp"
 #include "compiler/ast/ast_headers.hpp"
 #include "parser_headers.hpp"
@@ -9,6 +12,7 @@
 #include "compiler/visitor/symbol_manager.hpp"
 
 #include "compiler/metacode.hpp"
+#include <memory>
 
 parser::Parser_Base::Parser_Base(ScriptInfo& scr_info)
 {
@@ -63,34 +67,51 @@ std::vector<std::string> parser::Parser_Base::start_parsing()
 ModuleImportation* parser::Parser_Base::parse_import()
 {
   static const std::string hint =
-      "define import module like:"
-      "\n  - import `import <name>[::*]`"
-      "\n  - import standard `import @<name>[::*]`"
-      "\n  - import user (default) `import $<name>[::*]`"
-      "\n  - import external `import extern <lang>::<lib>`"
-      "\n  - export/import module only declared in the root scope";
+      R"(define import module like:
+  - import `import <name>[::*]`
+  - import standard `import @<name>[::*]`
+  - import user (default) `import $<name>[::*]`
+  - import external `import extern <lang>::<lib>`
+  - export/import module only declared in the root scope)";
+
+  auto extract_id = [](const ast::AIdentifier& id, std::string& input_name, std::vector<std::string>& input_path) {
+    input_name = id.get_base_name();
+    if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) input_path = ptr->path;
+  };
 
   ctx->tok_v.match(TokTy::IMPORT);
 
   ModuleImportation mod_imp;
 
-  // standard lib importation e.g. import @io
-  if (ctx->tok_v.match(TokTy::AT)) {
+  // import std: @
+  if (ctx->tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
     mod_imp.import_source = ModuleImportation::EImportSource::StandardLib;
+    auto id               = ctx->p_expr->identifier();
+    extract_id(*id, mod_imp.name, mod_imp.path);
   }
-  // user importation e.g. import $io
-  else if (ctx->tok_v.match(TokTy::DOLLAR)) {
+  // import usr: $
+  else if (ctx->tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
     mod_imp.import_source = ModuleImportation::EImportSource::User;
-  } else {
+    auto id               = ctx->p_expr->identifier();
+    extract_id(*id, mod_imp.name, mod_imp.path);
+  }
+  // import lib: #
+  else if (ctx->tok_v.match_any({TokTy::HASHTAG, TokTy::USR_LIB})) {
+    mod_imp.import_source = ModuleImportation::EImportSource::UserLib;
+    auto id               = ctx->p_expr->identifier();
+    extract_id(*id, mod_imp.name, mod_imp.path);
+  }
+  // import ext:
+  else if (ctx->tok_v.match(TokTy::EXT_LIB)) {
     // import from external code e.g. import extern C::stdio
-    if (ctx->tok_v.match(TokTy::EXTERN)) {
-      mod_imp.name      = ctx->p_expr->identifier();
-      mod_imp.is_extern = true;
-      ctx->tok_v.expect<8>(TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
-      mod_imp.extern_lib = ctx->tok_v.next().val;
-    } else {
-      mod_imp.name = ctx->p_expr->identifier();
-    }
+    mod_imp.import_source = ModuleImportation::EImportSource::Extern;
+    mod_imp.name          = ctx->parse_name();
+    ctx->tok_v.expect<8>(TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
+    mod_imp.extern_lib = ctx->tok_v.next().val;
+  } else {
+    mod_imp.import_source = ModuleImportation::EImportSource::Unknown;
+    auto id               = ctx->p_expr->identifier();
+    extract_id(*id, mod_imp.name, mod_imp.path);
   }
 
   auto uptr_imp = std::make_unique<ModuleImportation>(mod_imp);
@@ -103,11 +124,11 @@ ModuleImportation* parser::Parser_Base::parse_import()
 std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 {
   static const std::string hint =
-      "define export module like:"
-      "\n  - export module `export {...}`"
-      "\n  - export imported module (mirror) `export import <name>`"
-      "\n  - export to other language `export extern <language> {...}`"
-      "\n  - export/import module only declared in the root scope";
+      R"(define export module like:
+  - export module `export {...}`
+  - export imported module (mirror) `export import <name>`
+  - export to other language `export extern <language> {...}`
+  - export/import module only declared in the root scope)";
 
   ctx->tok_v.match(TokTy::EXPORT);
 
@@ -126,7 +147,7 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
   }
 
   // is external exportation e.g. export math extern C
-  if (ctx->tok_v.match(TokTy::EXTERN)) {
+  if (ctx->tok_v.match(TokTy::EXT_LIB)) {
     mod_exp.extern_lib = ctx->parse_name("Expected external language name to export", hint);
   }
 
@@ -148,27 +169,66 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
       ctx->tok_v.add_error_tok<10>(ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
     }
 
-    exp_node->elements.push_back(ctx->p_decl->parse_declaration());
+    exp_node->declarations.push_back(ctx->p_decl->parse_declaration());
 
     ctx->tok_v.match(TokTy::SEMICOLON);
     if (ctx->match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
+
   return exp_node;
+}
+
+std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
+{
+  static const std::string hint = R"(define extern like: `extern "ABI" {...}`)";
+
+  ctx->tok_v.match(TokTy::EXTERN);
+
+  auto ext_tok = ctx->tok_v.peek(-1);
+
+  auto ext_node  = ctx->Create_Decl<ast::declaration::Extern>(ext_tok);
+  ext_node->name = ctx->tok_v.expect<153>(TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
+
+
+  ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+
+  ctx->in_extern = true;
+  ctx->m_sym->enter_scope("", EScopeType::Extern, 0);
+
+  if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
+    ctx->in_extern = false;
+    return ext_node;
+  }
+
+  while (!ctx->tok_v.is_end()) {
+    if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
+      ctx->tok_v.add_error_tok<10>(ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+    }
+
+    ext_node->declarations.push_back(ctx->p_decl->parse_declaration());
+
+    ctx->tok_v.match(TokTy::SEMICOLON);
+    if (ctx->match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+  }
+
+  ctx->in_extern = false;
+
+  return ext_node;
 }
 
 std::optional<ast::CodeBlock_instruction> parser::Parser_Base::parse_instruction()
 {
   static const std::string hint =
-      "define insutrction like:"
-      "\n  - statement `if/elif/else/match/while/do-while/loop/for/goto`"
-      "\n  - local variable declaration `let/var/const`"
-      "\n  - lambda declaration `lam ...`"
-      "\n  - assignation `left copy=/move=/ref=/mut= ...`"
-      "\n  - operation assignation `left +=/-=/*=//=/... ...`"
-      "\n  - function call `name()`"
-      "\n  - system call `entity_name::>system_name()`"
-      "\n  - memory deletion `del pointer_name`";
+      R"(define insutrction like:
+  - statement `if/elif/else/match/while/do-while/loop/for/goto`
+  - local variable declaration `let/var/const`
+  - lambda declaration `lam ...`
+  - assignation `left copy=/move=/ref=/mut= ...`
+  - operation assignation `left +=/-=/*=//=/... ...`
+  - function call `name()`
+  - system call `entity_name::>system_name()`
+  - memory deletion `del pointer_name`)";
 
   // if elif else for ...
   if (auto statement = ctx->p_state->parse_statement(true)) {

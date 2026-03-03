@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Velox Compiler",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/debug/velox",
+      "args": ["build", "/mnt/Data/Workspace/velox-git/Velox/velox-toolchain/workspace/velox-example"],
+      "problemMatcher": {
+        "owner": "velox",
+        "fileLocation": ["absolute"],
+        "pattern": [
+          {
+            "regexp": "^\\[file\\]\\s+(.*):(\\d+):(\\d+)$",
+            "file": 1,
+            "line": 2,
+            "column": 3
+          },
+          {
+            "regexp": "^\\[(error|warning)\\]\\s+\\[(.*?)\\]\\s+(.*)$",
+            "severity": 1,
+            "code": 2,
+            "message": 3
+          }
+        ]
+      }
+    }
+  ]
+}

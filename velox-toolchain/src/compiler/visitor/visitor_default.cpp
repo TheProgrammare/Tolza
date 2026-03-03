@@ -63,11 +63,15 @@ void Visitor_Default::visit(ast::declaration::Function& n)
 
 void Visitor_Default::visit(ast::declaration::Mod& n)
 {
-  for (auto& elem : n.elements) elem->accept(*this);
+  for (auto& elem : n.declarations) elem->accept(*this);
 }
 void Visitor_Default::visit(ast::declaration::Export& n)
 {
-  for (auto& elem : n.elements) elem->accept(*this);
+  for (auto& elem : n.declarations) elem->accept(*this);
+}
+void Visitor_Default::visit(ast::declaration::Extern& n)
+{
+  for (auto& elem : n.declarations) elem->accept(*this);
 }
 
 void Visitor_Default::visit(ast::declaration::Enum& n)
@@ -285,7 +289,6 @@ void Visitor_Default::visit(ast::type::Function_Proto& n)
   for (auto& elem : n.parameters) elem->accept(*this);
   for (auto& elem : n.gen_parameters) elem->accept(*this);
   if (n.returnType) n.returnType->accept(*this);
-  if (n.variadic_type) n.variadic_type->accept(*this);
 }
 
 void Visitor_Default::visit(ast::type::Get_Expr_Type& n)

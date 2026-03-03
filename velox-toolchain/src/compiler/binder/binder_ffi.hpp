@@ -27,11 +27,12 @@ namespace ffi
 {
 
 struct Bind_Package {
-  std::string                 bind_name;
   std::shared_ptr<ScriptInfo> scr_info;
   std::vector<Extern_Item>    items;
   std::string                 lang;
   std::string                 lib;
+  std::string                 abi;
+  fs::path                    path;
 };
 
 enum class EPassMode {
@@ -219,8 +220,17 @@ struct TypeAlias {
   Type        type;
 };
 
+struct Import {
+  enum class EImportType { lib, user, stdlib, unknown };
+
+  std::string              name;
+  std::vector<std::string> path;
+  EImportType              type;
+};
+
 struct AST {
   Bind_Package           bind;
+  std::vector<Import>    imports;
   std::vector<Comp>      comps;
   std::vector<Union>     unions;
   std::vector<Flag>      flags;
@@ -236,6 +246,7 @@ struct AST {
 [[nodiscard]] std::string    EType_to_str(EType ty);
 [[nodiscard]] std::string    type_to_str(const Type& ty);
 
+[[nodiscard]] std::string import_to_str(const Import& _imp);
 [[nodiscard]] std::string comp_to_str(const Comp& _comp);
 [[nodiscard]] std::string entity_to_str(const Entity& _entity);
 [[nodiscard]] std::string func_to_str(const Func& _func);
@@ -245,154 +256,173 @@ struct AST {
 [[nodiscard]] std::string global_to_str(const Global& _glo);
 [[nodiscard]] std::string typealias_to_str(const TypeAlias& _ty_alias);
 
-void write_ast(const AST& ast, const std::string& target_path);
+
+void write_ast(const AST& ast, const fs::path& target_path);
 
 
-const char EMBINDER_FILE_HEADER[] =
-    "\n"
-    "// +-------------------------------------+\n"
-    "// |    Velox auto generated wrappers    |\n"
-    "// | Lang: %0 |\n"
-    "// |  Lib: %1 |\n"
-    "// |                                     |\n"
-    "// |    Please do not modify the file    |\n"
-    "// +-------------------------------------+\n"
-    "\n"
-    "\n"
-    "export %2 {\n";
+// %0 language
+// %1 library
+// %2 imports
+const char BINDER_FILE_HEADER[] =
+    R"(
+// +-------------------------------------+
+// |    Velox auto generated wrappers    |
+// | Lang: %0 |
+// |  Lib: %1 |
+// |                                     |
+// |    Please do not modify the file    |
+// +-------------------------------------+
 
-const char EMBINDER_ENUM_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |    enum definition    |\n"
-    "// +-----------------------+\n"
-    "\n";
+%2
 
-const char EMBINDER_COMP_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |    comp definition    |\n"
-    "// +-----------------------+\n"
-    "\n";
+export {
 
-const char EMBINDER_UNION_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |    union definition   |\n"
-    "// +-----------------------+\n"
-    "\n";
+extern "%3" {
+)";
 
-const char EMBINDER_FLAG_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |    flag definition    |\n"
-    "// +-----------------------+\n"
-    "\n";
+const char BINDER_IMPORT_HEADER[] =
+    R"(
+// +-----------------------+
+// |   import definition   |
+// +-----------------------+
+)";
 
-const char EMBINDER_GLOBAL_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |   global definition   |\n"
-    "// +-----------------------+\n"
-    "\n";
+const char BINDER_ENUM_HEADER[] =
+    R"(
+// +-----------------------+
+// |    enum definition    |
+// +-----------------------+
+)";
 
-const char EMBINDER_FUNCTION_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |  function definition  |\n"
-    "// +-----------------------+\n"
-    "\n";
+const char BINDER_COMP_HEADER[] =
+    R"(
+// +-----------------------+
+// |    comp definition    |
+// +-----------------------+
+)";
 
-const char EMBINDER_ENTITY_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |   entity definition   |\n"
-    "// +-----------------------+\n"
-    "\n";
+const char BINDER_UNION_HEADER[] =
+    R"(
+// +-----------------------+
+// |    union definition   |
+// +-----------------------+
+)";
 
-const char EMBINDER_TYPEALIAS_HEADER[] =
-    "\n"
-    "// +-----------------------+\n"
-    "// |    type definition    |\n"
-    "// +-----------------------+\n"
-    "\n";
+const char BINDER_FLAG_HEADER[] =
+    R"(
+// +-----------------------+
+// |    flag definition    |
+// +-----------------------+
+)";
+
+const char BINDER_GLOBAL_HEADER[] =
+    R"(
+// +-----------------------+
+// |   global definition   |
+// +-----------------------+
+)";
+
+const char BINDER_FUNCTION_HEADER[] =
+    R"(
+// +-----------------------+
+// |  function definition  |
+// +-----------------------+
+)";
+
+const char BINDER_ENTITY_HEADER[] =
+    R"(
+// +-----------------------+
+// |   entity definition   |
+// +-----------------------+
+)";
+
+const char BINDER_TYPEALIAS_HEADER[] =
+    R"(
+// +-----------------------+
+// |    type definition    |
+// +-----------------------+
+)";
+
+// %0 extern name
+const char BINDER_EXTERN_TEMPALTE[] = "extern \"%0\" {\n";
 
 // %0 name
 // %1 params
 // %2 return
-const char EMBINDER_EXTERN_FN_TEMPALTE[] =
-    "# extern\n"
-    "fn %0(%1) -> %2;\n";
+const char BINDER_EXTERN_FN_TEMPALTE[] = "fn %0(%1) -> %2;\n";
 
 // %0 pass mode
 // %1 name
 // %2 type
-const char EMBINDER_EXTERN_PARAM_TEMPALTE[] = "%0 %1: %2";
-
-const char EMBINDER_EXTERN_PARAM_VARIADIC[] = "args: addr ...";
+const char BINDER_EXTERN_PARAM_TEMPALTE[] = "%0 %1: %2";
 
 // %0 name
 // %1 underlying_type
 // %2 members
-const char EMBINDER_EXTERN_FLAG_TEMPLATE[] =
-    "# extern\n"
-    "flag %0 : %1 {\n"
-    "%2"
-    "}\n";
+const char BINDER_EXTERN_FLAG_TEMPLATE[] =
+    R"(
+flag %0 : %1 {
+  %2
+}
+)";
 
 // %0 name
 // %1 members
-const char EMBINDER_EXTERN_ENUM_TEMPLATE[] =
-    "# extern\n"
-    "enum %0 {\n"
-    "%1"
-    "}\n";
+const char BINDER_EXTERN_ENUM_TEMPLATE[] =
+    R"(
+enum %0 {
+  %1
+}
+)";
 
 // %0 name
 // %1 members
-const char EMBINDER_EXTERN_UNION_TEMPLATE[] =
-    "# extern\n"
-    "union %0 {\n"
-    "%1"
-    "}\n";
+const char BINDER_EXTERN_UNION_TEMPLATE[] =
+    R"(
+union %0 {
+  %1
+}
+)";
 
 // %0 name
 // %1 type
-const char EMBINDER_EXTERN_FIELD[] =
-    "# no default\n"
-    "%1: %2,\n";
+const char BINDER_EXTERN_FIELD[] =
+    R"(# no default
+%1: %2,)";
+
+// %0 type
+// %1 path
+const char BINDER_IMPORT_TEMPLATE[] = "import %0 %1";
 
 // %0 name
 // %1 members
-const char EMBINDER_EXTERN_COMP_TEMPLATE[] =
-    "# extern\n"
-    "comp %0 {\n"
-    "%1"
-    "}\n";
+const char BINDER_EXTERN_COMP_TEMPLATE[] =
+    R"(
+comp %0 {
+  %1
+}
+)";
 
 // %0 name
 // %1 members
-const char EMBINDER_EXTERN_ENTITY_TEMPLATE[] =
-    "# extern\n"
-    "entity %0 {\n"
-    "%1"
-    "}\n";
+const char BINDER_EXTERN_ENTITY_TEMPLATE[] =
+    R"(
+entity %0 {
+  %1
+}
+)";
 
 // %0 kind
 // %1 name
 // %2 type
-const char EMBINDER_EXTERN_GLOBAL_TEMPLATE[] =
-    "# extern\n"
-    "%0 %1: %2\n";
+const char BINDER_EXTERN_GLOBAL_TEMPLATE[] = "%0 %1: %2\n";
 
 // %0 name
 // %1 type
-const char EMBINDER_EXTERN_TYPEALIAS_TEMPLATE[] =
-    "# extern\n"
-    "type %0: %1\n";
+const char BINDER_EXTERN_TYPEALIAS_TEMPLATE[] = "type %0 = %1\n";
 
 // %0 parameters
 // %1 retuns
-const char EMBINDER_PROTOTYPE_TEMPLATE[] = "fn(%0) -> (%1)";
+const char BINDER_PROTOTYPE_TEMPLATE[] = "fn(%0) -> (%1)";
 
 } // namespace ffi

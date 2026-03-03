@@ -100,9 +100,7 @@ struct Function_Proto final : public AType {
   std::vector<std::unique_ptr<declaration::local::Generic_Parameter>> gen_parameters;
   std::unique_ptr<Tuple>                                              returnType;
 
-  bool                   isVariadic = false;
-  std::shared_ptr<AType> variadic_type;
-  size_t                 Variadic_start_pos = 0;
+  bool isVariadic = false;
 
   std::string mangle_type() const override
   {

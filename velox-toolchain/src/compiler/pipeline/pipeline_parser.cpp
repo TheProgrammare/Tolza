@@ -24,7 +24,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
     parser::Parser_Base inParser(*scr_info);
 
-    if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[parse]";
     std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_CYAN "... " << std::flush;
@@ -49,7 +49,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   }
 
   if (!parErrors.empty()) {
-    if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
     std::cerr << color_RED "[build] Parser failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
@@ -61,7 +61,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     for (auto& [path, fileError] : parErrors) {
       if (fileError.empty()) continue;
 
-      if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+      if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[parse] [error] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
@@ -83,7 +83,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     for (auto& [name, fileError] : declErrors) {
       if (fileError.empty()) continue;
 
-      if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+      if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[declaration] [error] [file] " color_MAGENTA << name << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
@@ -92,7 +92,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     }
   }
 
-  if (Config::in_binding_compilation) std::cout << color_YELLOW "[EMBinder] ";
+  if (Config::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 

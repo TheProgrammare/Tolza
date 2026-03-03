@@ -8,25 +8,32 @@
 #include <ostream>
 #include <set>
 
-#include "globals.hpp"
-
 #include "compiler/binder/binder_ffi.hpp"
+#include "toolchain/compilation.hpp"
 
 void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
 {
-  std::string tmp_file = "tmp_include.c";
+  fs::path tmp_path = COMP_CTX.get_build_dir() / "temp";
+  if (!fs::exists(tmp_path)) fs::create_directories(tmp_path);
+  tmp_path /= "tmp_include.c";
+
   {
-    std::ofstream ofs(tmp_file);
+    std::ofstream ofs(tmp_path);
+    ofs.clear();
     ofs << "#include <" << _bind.lib << ".h>\n";
   }
 
-  ffi::AST ast = parse_translation_unit(_bind, tmp_file, {});
+  ffi::AST ast = parse_translation_unit(_bind, tmp_path, {});
+  Import   imp;
+  imp.type = Import::EImportType::user;
+  imp.path = {"ffi"};
+  imp.name = "C";
 
-  auto dir = Config::get_binding_dir() / _bind.bind_name;
+  ast.imports = {imp};
 
-  ffi::write_ast(ast, dir.string());
+  ffi::write_ast(ast, _bind.path);
 
-  std::filesystem::remove(tmp_file);
+  std::filesystem::remove(tmp_path);
 }
 
 CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data)
@@ -43,6 +50,8 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, C
   std::set<std::string> gl_names;
 
   for (auto& item : ast->bind.items) {
+    if (item.scope.empty() || item.scope[0] != "C") continue;
+
     if (item.kind == Extern_Item::Kind::Function)
       fn_names.insert(item.name);
     else if (item.kind == Extern_Item::Kind::Global)
@@ -106,7 +115,7 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, C
   return CXChildVisit_Recurse; // continuer récursivement
 }
 
-ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& _bind, const std::string& filename,
+ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& _bind, const fs::path& file,
                                         const std::vector<std::string>& args = {})
 {
   CXIndex index = clang_createIndex(0, 0);
@@ -115,7 +124,7 @@ ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& _bind, const st
   for (const auto& s : args) cargs.push_back(s.c_str());
 
   CXTranslationUnit tu;
-  CXErrorCode error = clang_parseTranslationUnit2(index, filename.c_str(), cargs.data(), static_cast<int>(cargs.size()),
+  CXErrorCode error = clang_parseTranslationUnit2(index, file.c_str(), cargs.data(), static_cast<int>(cargs.size()),
                                                   nullptr, 0, CXTranslationUnit_None, &tu);
 
   assert(error == CXError_Success && "Failed to parse translation unit");

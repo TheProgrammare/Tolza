@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "compiler/ast/ast_codeblock_instruction.hpp"
+#include "compiler/ast/ast_declaration.hpp"
 #include "compiler/ast/ast_forward.hpp"
 
 struct ScriptInfo;
@@ -40,6 +41,7 @@ struct Parser_Base {
 
   [[nodiscard]] ModuleImportation*                        parse_import();
   [[nodiscard]] std::shared_ptr<ast::declaration::Export> parse_export();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Extern> parse_extern();
 
   [[nodiscard]] std::optional<ast::CodeBlock_instruction> parse_instruction();
 

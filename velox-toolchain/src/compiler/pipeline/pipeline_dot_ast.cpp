@@ -7,15 +7,17 @@
 #include "globals.hpp"
 
 #include "compiler/visitor/ast_viewer.hpp"
+#include "toolchain/compilation.hpp"
 
 void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  auto basePath = Config::get_project_dir() / "dot";
+  auto basePath = COMP_CTX.get_build_dir() / "dot";
   fs::create_directories(basePath);
 
   for (size_t i = 0; i < scr_infos.size(); i++) {
-    auto          scr_info = scr_infos[i].get();
-    fs::path      path     = basePath / scr_info->file_path.filename() / ".dot";
+    auto     scr_info = scr_infos[i].get();
+    fs::path path     = basePath / scr_info->file_path.filename();
+    path.replace_extension(".dot");
     std::ofstream f(path);
 
     if (!f) throw std::runtime_error("Impossible to open " + path.string());
@@ -29,8 +31,9 @@ void generate_AST_View(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos
 
   for (size_t i = 0; i < scr_infos.size(); i++) {
     auto     scr_info = scr_infos[i].get();
-    fs::path p_source = basePath / scr_info->file_path.filename() / ".dot";
-    fs::path p_gen    = p_source;
+    fs::path p_source = basePath / scr_info->file_path.filename();
+    p_source.replace_extension(".dot");
+    fs::path p_gen = p_source;
     p_gen.replace_extension(".pdf");
 
     std::string cmd = "dot -Tpdf \"" + p_source.string() + "\" -o \"" + p_gen.string() + "\"";

@@ -9,6 +9,7 @@ struct ADeclaration;      // abstract
 struct ALocal;            // abstract : ADeclaration
 struct AExpression;       // abstract with inferred type
 struct ALiteral;          // abstract with literal value
+struct AIdentifier;       // abstract
 struct Expr_ID;           // identifier expression
 struct Expr_ID_Qualified; // qualified identifier expression
 struct Expr_ID_Generic;   // identifier with generic arguments
@@ -22,6 +23,7 @@ struct Function; // fn add(a: i32, b: i32) -> i32 {...}
 
 struct Mod;    // mod Declaration { entity Global {...} } }
 struct Export; // export AST { mod Declaration {...} }
+struct Extern; // extern "C" {...}
 
 struct Enum;         // enum EItem { House(str, i32), City(str), None() }
 struct Enum_Element; // EItem::House(str, i32)

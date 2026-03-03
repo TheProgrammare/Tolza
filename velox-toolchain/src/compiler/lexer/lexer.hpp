@@ -17,10 +17,9 @@
 
 #pragma once
 
-#include <set>
 #include <string>
-#include <unordered_set>
 #include <vector>
+#include <set>
 
 #include "compiler/script_info.hpp"
 #include "stream_tracker.hpp"
@@ -29,10 +28,6 @@
 enum class ETokenType;
 using TokTy = ETokenType;
 
-const std::unordered_set<std::string> kScriptMeta = {
-    "author",   "title",   "version",     "description", "created",   "updated", "language_version",
-    "encoding", "license", "contributor", "contact",     "copyright", "wiki",    "doc",
-    "os"};
 
 class Lexer
 {

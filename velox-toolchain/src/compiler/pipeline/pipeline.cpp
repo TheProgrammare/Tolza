@@ -22,33 +22,48 @@
 
 
 static const std::string pipeline_info = color_BLUE
-    "[build] Pipeline: by stage\n"
-    "[front-end]\n"
-    "[1  ] [File system ] to find all scripts\n"
-    "[2  ] [Lexer       ] to tokenize the code\n"
-    "[3  ] [Preprocessor] to prepare the code according to metacode inscription\n"
-    "[4  ] [Parser      ] to generate the AST from the tokens preprocessed\n"
-    "[5  ] [EMBinder    ] external module binder to generate all external functions, types, globals used\n"
-    "[5.1] [sub-comp 1-4] the sub-compilation of binders generated then insert them in the main pipeline\n"
-    "[6  ] [Exporter    ] to export all code type and symbol imported in other scripts\n"
-    "[7  ] [Resolver    ] to resolve and audit the code before the LLVM IR generation\n"
-    "[7.1] [- symbol    ] to resolve symbols\n"
-    "[7.2] [- type      ] to resolve types\n"
-    "[7.3] [- semantic  ] to resolve semantics\n[mid-end]\n"
-    "[8  ] [LLVM IR     ] generate to LLVM Intermediate Representation\n[back-end]\n"
-    "[9  ] [Linker      ] link all .ll then .o scripts into one executable\n" color_RESET;
+    R"(
+===============================================================================
+ [Toolchain]->context->filesystem->[Compiler]
+===============================================================================
+ [Compiler]->lexer->preprocessor->parser->binder->exporter->resolver->[LLVM] 
+===============================================================================
+ [LLVM]->codegen->linker->[OUTPUT]
+===============================================================================
+)"
+    // too big ?
+    /*
+[build] Pipeline: by stage
+[front-end]
+[1  ] [File system ] to find all scripts
+[2  ] [Lexer       ] to tokenize the code
+[3  ] [Preprocessor] to prepare the code according to metacode inscription
+[4  ] [Parser      ] to generate the AST from the tokens preprocessed
+[5  ] [binder    ] external module binder to generate all external functions, types, globals used
+[5.1] [sub-comp 1-4] the sub-compilation of binders generated then insert them in the main pipeline
+[6  ] [Exporter    ] to export all code type and symbol imported in other scripts
+[7  ] [Resolver    ] to resolve and audit the code before the LLVM IR generation
+[7.1] [- symbol    ] to resolve symbols
+[7.2] [- type      ] to resolve types
+[7.3] [- semantic  ] to resolve semantics
+[mid-end]
+[8  ] [LLVM IR     ] generate to LLVM Intermediate Representation
+[back-end]
+[9  ] [Linker      ] link all .ll then .o scripts into one executable
+        */
+    color_RESET;
 
 bool start_compilation(const fs::path& target_file)
 {
   if (Config::in_binding_compilation)
-    std::cout << color_BLUE "[EMBinder] Binders Compilation Started\n" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] Binders Compilation Started\n" color_RESET << std::endl;
   else
-    std::cout << color_BLUE "[build] Compilation Started\n" color_RESET << pipeline_info << std::endl;
+    std::cout << color_BLUE "[build] Compilation Started" color_RESET << pipeline_info << std::endl;
 
 
   // filesystem
   if (Config::in_binding_compilation)
-    std::cout << color_BLUE "[EMBinder] [sub-build] [1/4] File system begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] [sub-build] [1/4] File system begins" color_RESET << std::endl;
   else
     std::cout << color_BLUE "[build] [1/9] File system begins" color_RESET << std::endl;
 
@@ -56,10 +71,10 @@ bool start_compilation(const fs::path& target_file)
 
   if (scr_infos.empty()) {
     if (Config::in_binding_compilation) {
-      std::cout << color_BLUE "[EMBinder] [sub-build] [info] no files found at the source folder path: " color_RESET
+      std::cout << color_BLUE "[binder] [sub-build] [info] no files found at the source folder path: " color_RESET
                 << target_file << "\n";
-      std::cout << color_BLUE "[EMBinder] [sub-build] [info] no sub-compilation need without any file binding" << "\n";
-      std::cout << color_BLUE "[EMBinder] [sub-build] Binders Compilation finish successfully !\n" color_RESET;
+      std::cout << color_BLUE "[binder] [sub-build] [info] no sub-compilation need without any file binding" << "\n";
+      std::cout << color_BLUE "[binder] [sub-build] Binders Compilation finish successfully !\n" color_RESET;
       return true;
     }
     std::cout << color_BLUE << "[build] [info] no files found at the source folder path: " << target_file << "\n";
@@ -74,7 +89,7 @@ bool start_compilation(const fs::path& target_file)
 
   // lexer
   if (Config::in_binding_compilation)
-    std::cout << color_BLUE "[EMBinder] [sub-build] [2/4] Lexer begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] [sub-build] [2/4] Lexer begins" color_RESET << std::endl;
   else
     std::cout << color_BLUE "[build] [2/9] Lexer begins" color_RESET << std::endl;
 
@@ -83,7 +98,7 @@ bool start_compilation(const fs::path& target_file)
 
   // preprocessor
   if (Config::in_binding_compilation)
-    std::cout << color_BLUE "[EMBinder] [sub-build] [3/4] Preprocessor begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] [sub-build] [3/4] Preprocessor begins" color_RESET << std::endl;
   else
     std::cout << color_BLUE "[build] [3/9] Preprocessor begins" color_RESET << std::endl;
 
@@ -92,7 +107,7 @@ bool start_compilation(const fs::path& target_file)
 
   // parser
   if (Config::in_binding_compilation)
-    std::cout << color_BLUE "[EMBinder] [sub-build] [4/4] Parser begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] [sub-build] [4/4] Parser begins" color_RESET << std::endl;
   else
     std::cout << color_BLUE "[build] [4/9] Parser begins" color_RESET << std::endl;
 
@@ -102,7 +117,7 @@ bool start_compilation(const fs::path& target_file)
   // debug dot print
   if (COMP_CTX.dot_ast) {
     if (Config::in_binding_compilation)
-      std::cout << color_BLUE "[EMBinder] [debug] AST viewer begins" color_RESET << std::endl;
+      std::cout << color_BLUE "[binder] [debug] AST viewer begins" color_RESET << std::endl;
     else
       std::cout << color_BLUE "[debug] AST viewer begins" color_RESET << std::endl;
 
@@ -114,8 +129,8 @@ bool start_compilation(const fs::path& target_file)
 
   // generate bindings
   if (!Config::in_binding_compilation) {
-    std::cout << color_BLUE "[build] [5/9] External Module Binder (EMBinder) begins" color_RESET << std::endl;
-    if (!pipeline_start_EMBinder(scr_infos)) return false;
+    std::cout << color_BLUE "[build] [5/9] External Module Binder (binder) begins" color_RESET << std::endl;
+    if (!pipeline_start_binder(scr_infos)) return false;
   } else {
     bind_files_info = scr_infos;
     // in binding generation return to the normal compilation with the bindings added
@@ -129,7 +144,7 @@ bool start_compilation(const fs::path& target_file)
   }
 
   if (!bind_files_info.empty()) {
-    std::cout << color_BLUE "[build] [EMBinder] " color_YELLOW "[summary]\n"
+    std::cout << color_BLUE "[build] [binder] " color_YELLOW "[summary]\n"
               << "  -> " color_YELLOW << scr_infos.size() - bind_files_info.size() << color_RESET " files in projects\n"
               << "  -> " color_YELLOW << bind_files_info.size()
               << color_RESET " binding files added to the main pipeline\n"

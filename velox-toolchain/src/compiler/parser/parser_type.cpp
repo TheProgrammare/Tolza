@@ -231,8 +231,8 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
   ctx.tok_v.expect<131>(TokTy::OPEN_PAREN, "Expected start parameter defintion '(' after function declaration.", hint);
   type->parameters = parameters();
   if (!type->parameters.empty() && type->parameters.back()->isVariadic) {
-    type->isVariadic    = true;
-    type->variadic_type = type->parameters.back()->type;
+    type->isVariadic = true;
+    type->parameters.pop_back();
   }
 
   // check
@@ -251,7 +251,7 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
       "\n  Rule: <pass_mode> <name>: <type> [= <default_value>]"
       "\n  - with a specific pass mode `[mut/copy/clone/move/addr] myName: i32`."
       "\n  - Note: copy pass mode can have a default value like `copy myName: i32 = 0`."
-      "\n  - variadic mode `[mut/copy/clone/move/addr] myName: T...`";
+      "\n  - variadic (only in externs for interop): `...`";
 
   static const std::string hint_passmode =
       "Parameters default by pass mode:\n  - Allowed default: `copy`, `clone`, `ref`\n  - Prohibied default: `mut`, "
@@ -262,7 +262,17 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
   std::vector<std::shared_ptr<ast::declaration::local::Parameter>> params;
 
   while (!ctx.tok_v.is_end()) {
-    auto param      = ctx.Create_Decl<ast::declaration::local::Parameter>(ctx.tok_v.peek());
+    auto param = ctx.Create_Decl<ast::declaration::local::Parameter>(ctx.tok_v.peek());
+
+    if (ctx.tok_v.match(TokTy::VARIADIC)) {
+      param->isVariadic = true;
+
+      ctx.tok_v.expect<154>(TokTy::CLOSE_PAREN,
+                            "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
+      params.push_back(std::move(param));
+      break;
+    }
+
     param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().type);
     if (param->passMode == EPassMode::NONE)
       ctx.tok_v.add_error<132>("Expected parameter pass mode before the parameter name.", hint);
@@ -271,8 +281,6 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
     // check pointer parameter type
     ctx.tok_v.expect<133>(TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
     param->type = ctx.p_type->parse_type();
-
-    param->isVariadic = ctx.tok_v.match(TokTy::VARIADIC);
 
     ctx.m_sym->add_decl(param);
 

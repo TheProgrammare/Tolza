@@ -2,6 +2,7 @@
 #include "globals.hpp"
 
 #include <filesystem>
+#include <initializer_list>
 #include <ios>
 #include <iomanip>
 #include <iostream>
@@ -111,7 +112,7 @@ void command::audit::audit_workspace(const fs::path& root)
  Enumerations    Functions     Generics       Unions        Flags      Exports
     %25    %26    %27    %28    %29    %30
 =============================================================================== 
- [Disk Size]     %31 Kb
+ [Disk Size]     %31 Ko
 ===============================================================================
   )";
 
@@ -226,7 +227,7 @@ void command::audit::audit_workspace(const fs::path& root)
   global.global_cat.blank_lines   = source_code.blank_lines + third_party.blank_lines + binder.blank_lines;
   global.global_cat.files         = source_code.files + third_party.files + binder.files;
 
-  double file_size = static_cast<double>(global.byte_size) / 1000.0;
+  double file_size = static_cast<double>(global.byte_size) / 1024.0;
 
   size_t population = global.comps + global.entities + global.enums + global.exports + global.flags + global.functions
                       + global.generics + global.imports + global.roles + global.sys + global.unions;
@@ -234,7 +235,7 @@ void command::audit::audit_workspace(const fs::path& root)
 
   std::string out = out_str;
 
-  std::vector<std::string> vars = {
+  std::initializer_list<std::string> vars = {
 
       fmt_number(source_code.files),
       fmt_number(source_code.lines),

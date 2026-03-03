@@ -21,8 +21,10 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <optional>
 
 namespace fs = std::filesystem;
+
 
 struct CompCtx {
   enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN };
@@ -74,16 +76,141 @@ struct CompCtx {
 
   // codegen
   EEmitMode codegen_emit_mode;
-  fs::path  codegen_output_dir;
-  fs::path  codegen_dest_file;
+  fs::path  codegen_build_dir;
 
   // project
   fs::path project_dir;
   fs::path source_dir;
   fs::path thrid_party_dir;
+  fs::path ffi_json_dir;
 
   // sub_configs
   std::map<std::string, fs::path> sub_configs;
+
+  const fs::path& get_project_dir() const
+  {
+    return project_dir;
+  }
+
+  const fs::path& get_source_dir() const
+  {
+    return source_dir;
+  }
+
+  const fs::path& get_3rd_party_dir() const
+  {
+    return thrid_party_dir;
+  }
+
+  const fs::path& get_build_dir() const
+  {
+    return codegen_build_dir;
+  }
+
+  const fs::path& get_preprocess_dir() const
+  {
+    static auto out = get_build_dir() / "preprocess";
+    return out;
+  }
+
+  const fs::path& get_binding_dir() const
+  {
+    static auto out = get_build_dir() / "binding";
+    return out;
+  }
+
+  const fs::path& get_debug_graph_dir() const
+  {
+    static auto out = get_build_dir() / "graph";
+    return out;
+  }
+
+  const fs::path& get_llvmir_dir() const
+  {
+    static auto out = get_build_dir() / "llvm-ir";
+    return out;
+  }
+
+  const fs::path& get_ffi_json_dir() const
+  {
+    return ffi_json_dir;
+  }
+};
+
+// for sub configuration
+struct CompCtx_Optional {
+  enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN };
+  // union: A{1,2} + A{1}B{2} = A{1,2}B{2}
+  // intersection: A{1,2} + A{1}B{2} = A{1}
+  // anti intersection: A{1,2} + A{1}B{2} = A{2}B{2}
+  // any copy overrided bu the children
+  enum class EMergeMode { _union, _intersection, _anti_intersection };
+
+
+  // target
+  std::optional<std::string> target_abi;
+  std::optional<std::string> target_arch;
+  std::optional<size_t>      target_bits;
+  std::optional<std::string> target_os;
+  std::optional<std::string> target_libc;
+  std::optional<std::string> target_config;
+
+  // profile
+  std::optional<bool>   profile_debug;
+  std::optional<size_t> profile_opt_level;
+  std::optional<bool>   profile_size_opt;
+
+  // logs
+  std::optional<bool> log_all;
+  std::optional<bool> log_filesystem;
+  std::optional<bool> log_lexer;
+  std::optional<bool> log_preprocessor;
+  std::optional<bool> log_parser;
+  std::optional<bool> log_binder;
+  std::optional<bool> log_exporter;
+  std::optional<bool> log_resolver;
+  std::optional<bool> log_LLVM_IR;
+  std::optional<bool> log_linker;
+
+  // warnings
+  std::optional<bool>   warn_all;
+  std::optional<bool>   warn_extra;
+  std::optional<bool>   warn_pedantic;
+  std::optional<size_t> warn_level;
+  std::optional<bool>   warn_unused;
+  std::optional<bool>   warn_dead_code;
+  std::optional<bool>   warn_as_error;
+
+  // dot
+  std::optional<bool> dot_ast;
+  std::optional<bool> dot_link;
+
+
+  // defines
+  std::map<std::string, std::string> defines;
+  EMergeMode                         defines_merge_mode;
+
+  // undefines
+  std::vector<std::string> undefines;
+  EMergeMode               undefines_merge_mode;
+
+  // codegen
+  std::optional<EEmitMode> codegen_emit_mode;
+  std::optional<fs::path>  codegen_build_dir;
+
+  // project
+  std::optional<fs::path> project_dir;
+  std::optional<fs::path> source_dir;
+  std::optional<fs::path> thrid_party_dir;
+  std::optional<fs::path> ffi_json_dir;
+
+  // sub_configs
+  std::map<std::string, fs::path> sub_configs;
+
+  fs::path get_project_dir() const
+  {
+    return project_dir.value();
+  }
 };
 
 

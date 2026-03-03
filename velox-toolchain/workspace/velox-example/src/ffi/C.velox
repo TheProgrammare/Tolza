@@ -1,5 +1,3 @@
-import extern C::stdlib
-
 export {
   # if os == windows
   type _char=         u8

@@ -56,16 +56,38 @@ struct Parser_Context {
   std::shared_ptr<ast::declaration::cop::Entity> current_entity;
   std::shared_ptr<ast::Node>                     current_other;
 
+  bool in_extern = false;
+
   // debug purpose on error
-  void attempt_recovery();
-
+  void                      attempt_recovery();
   // match separator, or end instruction or and error return true if end is encounter
-  [[nodiscard]] bool match_field_separator(TokTy separator = TokTy::COMMA, TokTy end = TokTy::CLOSE_BRACE);
-
+  [[nodiscard]] bool        match_field_separator(TokTy separator = TokTy::COMMA, TokTy end = TokTy::CLOSE_BRACE);
   // return true if end is encounter
   [[nodiscard]] bool        match_field_any_separator(TokTy                        separator = TokTy::COMMA,
                                                       std::initializer_list<TokTy> end       = {TokTy::CLOSE_BRACE});
   [[nodiscard]] std::string parse_name(const std::string& msg = "", const std::string& hint = "");
+  // MetaBlockManager shortcut for ASTNode
+  [[nodiscard]] bool        metablock_contains(const ast::Node& n, const std::string& s) const;
+  [[nodiscard]] bool        metablock_contains(const ast::Node& n, TokTy t) const;
+  [[nodiscard]] std::string get_export_name(const ast::Node& n) const;
+
+  [[nodiscard]] const META::MetaInstruct* get_instruct(const ast::Node&                          n,
+                                                       const std::initializer_list<std::string>& pattern) const;
+  [[nodiscard]] const META::MetaBlock*    get_metablock(const ast::Node&                          n,
+                                                        const std::initializer_list<std::string>& pattern);
+
+  // sub parsers accessible to all
+  Parser_Expression*        p_expr;
+  Parser_Type*              p_type;
+  Parser_Literal*           p_lit;
+  Parser_Declaration_Local* p_loc;
+  Parser_Operator*          p_op;
+  Parser_Memory*            p_mem;
+  Parser_Declaration*       p_decl;
+  Parser_Declaration_COP*   p_cop;
+  Parser_Statement*         p_state;
+  Parser_Base*              p_base;
+
 
   // to create node, set some data, store in resolvers
   template <DerivedFromNode NodeType, typename... Args>
@@ -88,26 +110,5 @@ struct Parser_Context {
     node_count++;
     return node;
   };
-
-  // MetaBlockManager shortcut for ASTNode
-  [[nodiscard]] bool                      metablock_contains(const ast::Node& n, const std::string& s) const;
-  [[nodiscard]] bool                      metablock_contains(const ast::Node& n, TokTy t) const;
-  [[nodiscard]] std::string               get_export_name(const ast::Node& n) const;
-  [[nodiscard]] const META::MetaInstruct* get_instruct(const ast::Node&                          n,
-                                                       const std::initializer_list<std::string>& pattern) const;
-  [[nodiscard]] const META::MetaBlock*    get_metablock(const ast::Node&                          n,
-                                                        const std::initializer_list<std::string>& pattern);
-
-  // sub parsers accessible to all
-  Parser_Expression*        p_expr;
-  Parser_Type*              p_type;
-  Parser_Literal*           p_lit;
-  Parser_Declaration_Local* p_loc;
-  Parser_Operator*          p_op;
-  Parser_Memory*            p_mem;
-  Parser_Declaration*       p_decl;
-  Parser_Declaration_COP*   p_cop;
-  Parser_Statement*         p_state;
-  Parser_Base*              p_base;
 };
 } // namespace parser

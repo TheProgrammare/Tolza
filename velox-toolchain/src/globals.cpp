@@ -1,11 +1,11 @@
 #include "globals.hpp"
 #include "toolchain/compilation.hpp"
 
+#include <initializer_list>
 #include <string>
 #include <vector>
 #include <filesystem>
 #include <stdexcept>
-#include <regex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -20,14 +20,15 @@
 #endif
 
 
-void fmt_template(std::string& templateStr, const std::vector<std::string>& args)
+void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args)
 {
-  for (size_t i = args.size(); i-- > 0;) { // parcours en sens inverse
-    std::string placeholder = "%" + std::to_string(i);
+  size_t count = 0;
+  for (auto& arg : args) { // parcours en sens inverse
+    std::string placeholder = "%" + std::to_string(count++);
     size_t      pos         = 0;
     while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
-      templateStr.replace(pos, placeholder.length(), args[i]);
-      pos += args[i].length();
+      templateStr.replace(pos, placeholder.length(), arg);
+      pos += arg.length();
     }
   }
 }
@@ -105,7 +106,7 @@ fs::path get_exe_dir()
   return dir;
 }
 
-fs::path get_stdlib_dir()
+fs::path Config::get_stdlib_dir()
 {
   static fs::path dir;
 
@@ -114,12 +115,11 @@ fs::path get_stdlib_dir()
   if (const char* env = std::getenv("VELOX_LIB_STANDARD")) {
     return dir = fs::path(env);
   } else {
-    dir        = get_exe_dir();
-    return dir = fs::weakly_canonical(dir / ".." / "lib" / "velox" / "standard");
+    return dir = fs::weakly_canonical(get_exe_dir() / "stdlib");
   }
 }
 
-fs::path Config::get_userlib_dir()
+fs::path Config::get_packages_dir()
 {
   static fs::path dir;
   if (!dir.empty()) return dir;
@@ -130,48 +130,14 @@ fs::path Config::get_userlib_dir()
 
 #ifdef _WIN32
   if (const char* appdata = std::getenv("APPDATA")) {
-    dir = fs::path(appdata) / "velox" / "libs";
+    dir = fs::path(appdata) / "velox" / VELOX_COMPILER_VERSION / "packages";
     return dir;
   }
-  return dir = get_home_dir() / ".velox" / "libs";
+  return dir = get_home_dir() / ".velox" / VELOX_COMPILER_VERSION / "packages";
 #else
-  return dir = get_home_dir() / ".velox" / "libs";
+  return dir = get_home_dir() / ".velox" / VELOX_COMPILER_VERSION / "packages";
 #endif
 }
-
-fs::path Config::get_project_dir()
-{
-  return fs::path(COMP_CTX.codegen_dest_file);
-}
-fs::path Config::get_src_dir()
-{
-  return get_project_dir() / "src";
-}
-fs::path Config::get_build_dir()
-{
-  return get_project_dir() / "build";
-}
-fs::path Config::get_postpreprocess_dir()
-{
-  return get_build_dir() / "post-preprocess";
-}
-fs::path Config::get_binding_dir()
-{
-  return get_build_dir() / "EMBinds";
-}
-fs::path Config::get_dot_dir()
-{
-  return get_build_dir() / "dot";
-}
-fs::path Config::get_LLVM_IR_dir()
-{
-  return get_build_dir() / "LLVM-IR";
-}
-fs::path Config::get_FFI_JSON_dir()
-{
-  return get_build_dir() / "FFI-JSON";
-}
-
 
 std::string Config::Phase_to_code(EPhase phase)
 {
@@ -180,7 +146,7 @@ std::string Config::Phase_to_code(EPhase phase)
   case Config::EPhase::lexer:             return "LEXE";
   case Config::EPhase::preprosessor:      return "PREP";
   case Config::EPhase::parser:            return "PARS";
-  case Config::EPhase::embinder:          return "EMBI";
+  case Config::EPhase::binder:            return "EMBI";
   case Config::EPhase::resolver_symbol:   return "SYMB";
   case Config::EPhase::resolver_type:     return "TYPE";
   case Config::EPhase::resolver_semantic: return "SEMA";
@@ -196,7 +162,7 @@ std::string Config::Phase_to_str(EPhase phase)
   case Config::EPhase::lexer:             return "lexer";
   case Config::EPhase::preprosessor:      return "preprocessor";
   case Config::EPhase::parser:            return "parser";
-  case Config::EPhase::embinder:          return "external module binder";
+  case Config::EPhase::binder:            return "external module binder";
   case Config::EPhase::resolver_symbol:   return "resolver symbol";
   case Config::EPhase::resolver_type:     return "resolver type";
   case Config::EPhase::resolver_semantic: return "resolver semantic";

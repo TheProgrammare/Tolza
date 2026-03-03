@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -41,8 +42,7 @@ Type   c_type_to_type(CXType cType);
 void c_lib_to_velox_lib(const Bind_Package& _bind);
 
 CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data);
-AST                parse_translation_unit(const Bind_Package& _bind, const std::string& filename,
-                                          const std::vector<std::string>& args);
+AST parse_translation_unit(const Bind_Package& _bind, const fs::path& file, const std::vector<std::string>& args);
 
 } // namespace c
 } // namespace ffi

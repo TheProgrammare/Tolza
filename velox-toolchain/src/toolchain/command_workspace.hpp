@@ -64,13 +64,13 @@ EXAMPLE
 [codegen]
 # LLVM | OBJ | ASM | BC | BIN
 emit_mode  = "BIN"
-output_dir = "./build"
-dest_file_dir  = "./build/app"
+build_dir = "./build"
 
 [project]
 project_dir = "./"
 source_dir  = "./src"
 thrid_party_dir = "./thirdparty"
+ffi_json_dir = "./ffi-json"
 
 [sub_configs]
 debug = "./config/debug.config"
@@ -78,10 +78,23 @@ debug = "./config/debug.config"
 
 inline constexpr const char* VELOX_MAIN_TEMPLATE =
     R"(
-import std::core
+import usr: core
 
 fn main() {
-  println("hello world!")
+  core::println("hello world!")
+}
+
+)";
+
+inline constexpr const char* VELOX_CORE_TEMPLATE =
+    R"(
+import ext: C::stdio
+import usr: ffi::C
+    
+export {
+  fn println(ref msg: str) {
+    C::printf(ffi::C::str_to_cstr(msg))
+  }
 }
 
 )";

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <string>
 #include <filesystem>
 #include <map>
@@ -29,7 +28,7 @@ static std::map<std::string, std::string> k_config_map = {
     {"logs",        "lexer"          },
     {"logs",        "preprocessor"   },
     {"logs",        "parser"         },
-    {"logs",        "embinder"       },
+    {"logs",        "binder"         },
     {"logs",        "exporter"       },
     {"logs",        "resolver"       },
     {"logs",        "llvm-ir"        },
@@ -37,16 +36,16 @@ static std::map<std::string, std::string> k_config_map = {
     {"defines",     ""               },
     {"undefines",   ""               },
     {"codegen",     "emit_mode"      },
-    {"codegen",     "output_dir"     },
-    {"codegen",     "dest_file_dir"  },
+    {"codegen",     "build_dir"      },
     {"project",     "project_dir"    },
     {"project",     "source_dir"     },
     {"project",     "thrid_party_dir"},
+    {"project",     "ffi-json_dir"   },
     {"sub_configs", ""               },
 };
 
-std::vector<std::string> check_velox_config_sanity(const fs::path& file, bool full_config);
-bool                     check_workspace_sanity(const fs::path& ws_path);
+bool check_velox_config_sanity(const fs::path& file, bool full_config, bool verbose = true);
+bool check_workspace_sanity(const fs::path& ws_path, bool verbose = true);
 
 } // namespace sanity
 } // namespace command

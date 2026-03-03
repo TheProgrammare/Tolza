@@ -18,7 +18,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
 {
   std::vector<std::tuple<fs::path, std::vector<std::string>>> llvmIRErrors;
 
-  std::filesystem::create_directories(Config::get_LLVM_IR_dir());
+  std::filesystem::create_directories(COMP_CTX.get_llvmir_dir());
 
   size_t count = 0;
   for (auto& scr_info : scr_infos) {

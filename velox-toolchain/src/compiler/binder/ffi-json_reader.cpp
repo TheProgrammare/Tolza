@@ -1,48 +1,11 @@
-/*
- *	The Velox programming language - Apache License, Version 2.0
- *  Copyright 2024-2026 Foz Florian
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+#include "ffi-json_reader.hpp"
 
-
-/*
- * This program include and use the nlohmann/json project
- * You can find this project at
- *
- *     https://json.nlohmann.me
- *
- * Used for the JSON file reading.
- */
-
-#pragma once
-
-#include <cstddef>
-#include <fstream>
 #include <nlohmann/json.hpp>
-#include <stdexcept>
 
-#include "binder_ffi.hpp"
-
-namespace ffi
-{
-namespace JSON
-{
-
-using json = nlohmann::json;
+#include <fstream>
 
 // Helpers pour convertir string → enum
-inline EType string_to_etype(const std::string& s)
+ffi::EType ffi::JSON::str_to_etype(const std::string& s)
 {
   static const std::unordered_map<std::string, EType> table = {
       {"",           EType::INVALID    },
@@ -114,7 +77,7 @@ inline EType string_to_etype(const std::string& s)
   return it != table.end() ? it->second : EType::INVALID;
 }
 
-inline EPassMode string_to_passmode(const std::string& s)
+ffi::EPassMode ffi::JSON::str_to_passmode(const std::string& s)
 {
   if (s == "copy") return EPassMode::copy;
   if (s == "ref") return EPassMode::ref;
@@ -124,10 +87,10 @@ inline EPassMode string_to_passmode(const std::string& s)
   return EPassMode::NONE;
 }
 
-inline Type json_to_type(const json& j)
+ffi::Type ffi::JSON::json_to_type(const json& j)
 {
   Type t;
-  t.base_type            = string_to_etype(j.value("base_type", ""));
+  t.base_type            = str_to_etype(j.value("base_type", ""));
   t.complex_type_name    = j.value("complex_type_name", "");
   t.is_pointer           = j.value("is_pointer", false);
   t.is_pointer_double    = j.value("is_pointer_double", false);
@@ -147,7 +110,7 @@ inline Type json_to_type(const json& j)
   return t;
 }
 
-inline Prototype json_to_prototype(const json& j)
+ffi::Prototype ffi::JSON::json_to_prototype(const json& j)
 {
   Prototype proto;
   if (j.contains("return_type")) {
@@ -162,7 +125,7 @@ inline Prototype json_to_prototype(const json& j)
 
   if (j.contains("params")) {
     for (auto& p : j["params"]) {
-      EPassMode pm            = string_to_passmode(p[0].get<std::string>());
+      EPassMode pm            = str_to_passmode(p[0].get<std::string>());
       Type      t             = json_to_type(p[1]);
       bool      restrict_flag = p[2].get<bool>();
       proto.params.emplace_back(pm, std::move(t), restrict_flag);
@@ -172,7 +135,7 @@ inline Prototype json_to_prototype(const json& j)
   return proto;
 }
 
-inline CallConvention str_to_callconvention(const std::string& s)
+ffi::CallConvention ffi::JSON::str_to_callconvention(const std::string& s)
 {
   if (s == "C") return CallConvention::C;
   if (s == "std_call") return CallConvention::Stdcall;
@@ -182,7 +145,7 @@ inline CallConvention str_to_callconvention(const std::string& s)
   return CallConvention::C;
 }
 
-inline Func json_to_func(const json& j)
+ffi::Func ffi::JSON::json_to_func(const json& j)
 {
   if (!(j.contains("name") || j.contains("param_names")))
     std::runtime_error("Invalid 'Function' JSON, must include a 'name' field and a 'param_names' field.");
@@ -198,13 +161,13 @@ inline Func json_to_func(const json& j)
   return f;
 }
 
-inline Flag json_to_flag(const json& j)
+ffi::Flag ffi::JSON::json_to_flag(const json& j)
 {
   if (!(j.contains("name"))) std::runtime_error("Invalid 'Flag' JSON, must include a 'name' field.");
 
   Flag f;
   f.name = j.value("name", "");
-  if (j.contains("underlying_type")) f.underlying_type = string_to_etype(j["underlying_type"]);
+  if (j.contains("underlying_type")) f.underlying_type = str_to_etype(j["underlying_type"]);
 
   if (j.contains("members")) {
     for (auto& n : j["members"]) f.members.emplace_back(n[0].get<std::string>(), n[1].get<size_t>());
@@ -212,7 +175,7 @@ inline Flag json_to_flag(const json& j)
   return f;
 }
 
-inline Union json_to_union(const json& j)
+ffi::Union ffi::JSON::json_to_union(const json& j)
 {
   if (!(j.contains("name"))) std::runtime_error("Invalid 'Union' JSON, must include a 'name' field.");
 
@@ -225,7 +188,7 @@ inline Union json_to_union(const json& j)
   return u;
 }
 
-inline Enum json_to_enum(const json& j)
+ffi::Enum ffi::JSON::json_to_enum(const json& j)
 {
   if (!(j.contains("name"))) std::runtime_error("Invalid 'Enum' JSON, must include a 'name' field.");
 
@@ -252,7 +215,7 @@ inline Enum json_to_enum(const json& j)
 }
 
 // size, align
-inline std::pair<size_t, size_t> EType_size_and_align(EType ty)
+std::pair<size_t, size_t> ffi::JSON::EType_size_and_align(EType ty)
 {
   switch (ty) {
   case EType::_i8:
@@ -298,7 +261,7 @@ inline std::pair<size_t, size_t> EType_size_and_align(EType ty)
 }
 
 // size, align
-inline std::pair<size_t, size_t> type_size_and_align(const Type& ty)
+std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
 {
   if (ty.is_pointer || ty.is_pointer_double) {
     return {8, 8}; // 64-bit ptr
@@ -376,7 +339,7 @@ inline std::pair<size_t, size_t> type_size_and_align(const Type& ty)
   return {size * table_product, align};
 }
 
-inline std::vector<FieldLayout> generate_layout(const std::vector<Type>& types)
+std::vector<ffi::FieldLayout> ffi::JSON::generate_layout(const std::vector<Type>& types)
 {
   std::vector<FieldLayout> layout;
   size_t                   offset       = 0;
@@ -403,7 +366,7 @@ inline std::vector<FieldLayout> generate_layout(const std::vector<Type>& types)
   return layout;
 }
 
-inline Comp json_to_comp(const json& j)
+ffi::Comp ffi::JSON::json_to_comp(const json& j)
 {
   if (!(j.contains("name"))) std::runtime_error("Invalid 'Component' JSON, must include a 'name' field.");
 
@@ -451,7 +414,7 @@ inline Comp json_to_comp(const json& j)
   return c;
 }
 
-inline Entity json_to_entity(const json& j)
+ffi::Entity ffi::JSON::json_to_entity(const json& j)
 {
   if (!(j.contains("name"))) std::runtime_error("Invalid 'Entity' JSON, must include a name field.");
 
@@ -469,7 +432,7 @@ inline Entity json_to_entity(const json& j)
   return e;
 }
 
-inline Global json_to_global(const json& j)
+ffi::Global ffi::JSON::json_to_global(const json& j)
 {
   if (!(j.contains("name") || j.contains("type")))
     std::runtime_error("Invalid 'Global' JSON, must include a 'name' field and a 'type' field.");
@@ -482,7 +445,7 @@ inline Global json_to_global(const json& j)
   return g;
 }
 
-inline TypeAlias json_to_typealias(const json& j)
+ffi::TypeAlias ffi::JSON::json_to_typealias(const json& j)
 {
   TypeAlias t;
   t.name = j.value("name", "");
@@ -491,7 +454,7 @@ inline TypeAlias json_to_typealias(const json& j)
   return t;
 }
 
-inline AST json_to_ast(const std::string& path)
+ffi::AST ffi::JSON::read_ffi_json_file(const fs::path& path)
 {
   std::ifstream f(path);
   if (!f.is_open()) throw std::runtime_error("Cannot open JSON AST file");
@@ -502,9 +465,9 @@ inline AST json_to_ast(const std::string& path)
   if (!j.contains("bind")) throw std::runtime_error("Invalid JSON file, expected 'bind' base field.");
 
   AST ast;
-  ast.bind.bind_name = j["bind"].value("bind_name", "");
-  ast.bind.lang      = j["bind"].value("lang", "");
-  ast.bind.lib       = j["bind"].value("lib", "");
+  ast.bind.lang = j["bind"].value("lang", "");
+  ast.bind.abi  = j["bind"].value("abi", "");
+  ast.bind.lib  = j["bind"].value("lib", "");
 
   if (j.contains("functions")) {
     for (auto& n : j["functions"]) ast.funcs.push_back(json_to_func(n));
@@ -540,6 +503,3 @@ inline AST json_to_ast(const std::string& path)
 
   return ast;
 }
-
-} // namespace JSON
-} // namespace ffi

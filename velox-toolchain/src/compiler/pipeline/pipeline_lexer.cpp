@@ -16,7 +16,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   size_t path_count = 0;
   for (auto& scr_info : scr_infos) {
     Lexer lexer(*scr_info.get());
-    if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[lex]";
     std::cout << color_CYAN " [" << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET << "... " << std::flush;
@@ -40,7 +40,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   }
 
   if (!lexErrors.empty()) {
-    if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
     std::cerr << color_RED "[build] Lexer failed\n" color_RESET;
     for (auto& errs : lexErrors) {
       auto [_, fileError] = errs;
@@ -54,7 +54,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  if (Config::in_binding_compilation) std::cout << color_YELLOW "[EMBinder] ";
+  if (Config::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
   std::cout << color_YELLOW "[lex] [summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
             << color_RESET << " | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
   std::cout << std::endl;

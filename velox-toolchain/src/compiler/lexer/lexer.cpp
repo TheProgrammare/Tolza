@@ -481,6 +481,20 @@ Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, const std::string& _k
 
 bool Lexer::is_valid_prefix(char prefix, const std::string& _current)
 {
+  auto kSortedKeywords = [&]() {
+    static std::vector<std::pair<std::string, ETokenType>> out;
+    if (!out.empty()) return out;
+
+    for (auto& [text, type] : kKeywords) {
+      out.push_back({text, type});
+    }
+
+    std::stable_sort(out.begin(), out.end(),
+                     [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
+
+    return out;
+  };
+
   for (auto& [val, type] : kSortedKeywords()) {
     if (val.size() <= _current.size()) continue;
     if (val.rfind(_current, 0) != 0) continue;
@@ -491,6 +505,20 @@ bool Lexer::is_valid_prefix(char prefix, const std::string& _current)
 
 void Lexer::tokenize_keyword()
 {
+  auto kSortedKeywords = [&]() {
+    static std::vector<std::pair<std::string, ETokenType>> out;
+    if (!out.empty()) return out;
+
+    for (auto& [text, type] : kKeywords) {
+      out.push_back({text, type});
+    }
+
+    std::stable_sort(out.begin(), out.end(),
+                     [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
+
+    return out;
+  };
+
   // if no start by id : buffer must have the current character
   if (buffer.empty()) buffer = ch;
 

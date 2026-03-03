@@ -25,6 +25,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration
   case TokTy::SYSTEM:    return std::static_pointer_cast<ast::ADeclaration>(ctx.p_cop->system());
   case TokTy::ENTITY:    return std::static_pointer_cast<ast::ADeclaration>(ctx.p_cop->entity());
   case TokTy::EXPORT:    return ctx.p_base->parse_export();
+  case TokTy::EXTERN:    return ctx.p_base->parse_extern();
   case TokTy::IMPORT:    {
     auto ignore = ctx.p_base->parse_import();
     return nullptr;
@@ -69,7 +70,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
         ctx.tok_v.add_error_tok<62>(ctx.tok_v.peek(), "Illegal nested module export/import instruction.", hint);
       }
 
-      node->elements.push_back(ctx.p_decl->parse_declaration());
+      node->declarations.push_back(ctx.p_decl->parse_declaration());
 
       if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
     }
@@ -204,7 +205,7 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   fn->isConst = ctx.metablock_contains(*fn, "const");
   fn->isPure  = ctx.metablock_contains(*fn, "pure");
 
-  fn->isExtern = ctx.metablock_contains(*fn, "extern");
+  fn->isExtern = ctx.in_extern;
   if (auto pattern = ctx.get_instruct(*fn, {"extern", "<*>"})) {
     fn->extern_call_convention = pattern->at_str(1, 0);
   }
@@ -344,7 +345,7 @@ std::shared_ptr<ast::declaration::Type_Alias> parser::Parser_Declaration::type_a
 
   tyAlias->name = ctx.parse_name();
 
-  ctx.tok_v.expect<77>(TokTy::COLON, "Expected '=' after type alias.",
+  ctx.tok_v.expect<77>(TokTy::ASSIGN, "Expected '=' after type alias.",
                        "define type alias like:"
                        "\n  - type `type myAlias = i32`."
                        "\n  - generic `type Vec<T> = core::container::vector<T>`."

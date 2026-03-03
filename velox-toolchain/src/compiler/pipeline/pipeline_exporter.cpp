@@ -10,13 +10,13 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
 {
   auto start = std::chrono::high_resolution_clock::now();
 
-  std::map<std::string, ScriptInfo*>                                exportations;
-  std::map<std::string, std::pair<ModuleImportation*, ScriptInfo*>> importations;
+  std::map<fs::path, ScriptInfo*>                                exportations;
+  std::map<fs::path, std::pair<ModuleImportation*, ScriptInfo*>> importations;
 
   for (auto& scr_info : scr_infos) {
-    size_t pos = scr_info->file_path.string().find("scr/");
+    size_t pos = scr_info->file_path.string().find("src/");
     if (pos == std::string::npos) {
-      std::cerr << "ERROR: script not in 'scr/' file !" << std::endl;
+      size_t pos = scr_info->file_path.string().find("bind/");
       return false;
     }
 
@@ -28,20 +28,8 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
     }
 
     for (auto& imp : scr_info->imported_mod) {
-      std::string imp_path;
-      if (auto ptr = dynamic_cast<ast::Expr_ID_Qualified*>(imp->name.get())) {
-        for (size_t i = 0; i < ptr->path.size(); ++i) {
-          auto& elem = ptr->path[i];
-          imp_path += elem;
-
-          if (i != ptr->path.size() - 1) imp_path += "/";
-        }
-      } else {
-        imp_path = imp->name->get_base_name();
-      }
-
       importations.insert({
-          imp_path, {imp.get(), scr_info.get()}
+          imp->get_path(), {imp.get(), scr_info.get()}
       });
     }
   }

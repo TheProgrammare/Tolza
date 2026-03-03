@@ -7,6 +7,7 @@
 
 #include "globals.hpp"
 #include "compiler/script_info.hpp"
+#include "toolchain/compilation.hpp"
 
 namespace
 {
@@ -17,12 +18,22 @@ bool hasTargetExtension(const fs::path& filePath)
   return ext == ".vel" || ext == ".vlx" || ext == ".velox" || ext == ".velb" || ext == ".vlxb" || ext == ".veloxb";
 }
 
-std::optional<std::vector<fs::path>> find_files(const std::string& target_path)
+ScriptInfo::Origin scriptOrigin_from_file(const fs::path& file)
+{
+  if (file.filename() == COMP_CTX.get_source_dir().filename()) return ScriptInfo::Origin::user;
+  if (file.filename() == COMP_CTX.get_binding_dir().filename()) return ScriptInfo::Origin::binding;
+  if (file.filename() == COMP_CTX.get_3rd_party_dir()) return ScriptInfo::Origin::third_lib;
+  if (file == get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
+  if (file == get_lib_dir()) return ScriptInfo::Origin::lib;
+  return ScriptInfo::Origin::user;
+}
+
+std::optional<std::vector<fs::path>> find_files(const fs::path& target_path)
 {
   std::vector<fs::path> filesFounds;
 
-  if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
-  std::cout << color_CYAN "[file] search scripts at source: " color_MAGENTA "\"" + target_path + "\"" color_RESET
+  if (Config::in_binding_compilation) std::cout << "[binder] ";
+  std::cout << color_CYAN "[file] search scripts at source: " color_MAGENTA "\"" << target_path << "\"" color_RESET
             << std::endl;
 
   bool error = false;
@@ -36,14 +47,14 @@ std::optional<std::vector<fs::path>> find_files(const std::string& target_path)
 
     size_t count = 0;
     for (const auto& lines : filesFounds) {
-      if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
+      if (Config::in_binding_compilation) std::cout << "[binder] ";
       std::cout << "[file]";
       std::cout << color_CYAN " [" << ++count << "/" << filesFounds.size() << "] " color_RESET;
       std::cout << color_MAGENTA << lines << color_RESET << "\n" << std::flush;
     }
 
   } catch (const fs::filesystem_error& e) {
-    if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[file] ";
     std::cerr << color_RED << "ERR reading " << e.what() << color_RESET << "\n";
     error = true;

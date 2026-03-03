@@ -5,10 +5,14 @@
 #include <filesystem>
 #include <set>
 
-#include "compiler/ast/ast_base.hpp"
 #include "compiler/ast/ast_forward.hpp"
-#include "globals.hpp"
 #include "compiler/lexer/token.hpp"
+
+namespace ast
+{
+struct Root;
+struct AExpression;
+} // namespace ast
 
 namespace fs = std::filesystem;
 
@@ -52,9 +56,10 @@ struct ModuleImportation {
   // project = default or ~
   // standard lib = $
   // user lib = @
-  enum class EImportSource { User, StandardLib, UserLib };
+  enum class EImportSource { Unknown, User, StandardLib, UserLib, Extern, Binding };
 
-  std::shared_ptr<ast::AIdentifier> name;
+  std::string              name;
+  std::vector<std::string> path;
 
   // if from another language or lib
   [[maybe_unused]]
@@ -62,21 +67,11 @@ struct ModuleImportation {
 
   EImportSource import_source = EImportSource::User;
 
-  // is from another language
-  bool is_extern = false;
-
   std::vector<ScriptInfo*> target_modules;
 
   std::vector<Extern_Item> extern_references;
 
-  fs::path get_path() const
-  {
-    switch (import_source) {
-    case EImportSource::User:        return Config::get_project_dir() / "src";
-    case EImportSource::StandardLib: return Config::get_stdlib_dir();
-    case EImportSource::UserLib:     return Config::get_userlib_dir();
-    }
-  }
+  fs::path get_path() const;
 
   bool is_external() const
   {
@@ -118,6 +113,9 @@ struct ScriptInfo {
   {
   }
 
+  enum class Origin { user, third_lib, stdlib, lib, binding };
+
+  Origin                  origin = Origin::user;
   fs::path                file_path;
   std::string             file_str;
   std::vector<Token>      tokens;

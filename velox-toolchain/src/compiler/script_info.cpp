@@ -1,7 +1,11 @@
 #include "compiler/script_info.hpp"
+
 #include "compiler/ast/ast_base.hpp"
 #include "compiler/ast/ast_expression.hpp"
 #include "compiler/ast/ast_literal.hpp"
+
+#include "globals.hpp"
+#include "toolchain/compilation.hpp"
 
 void ScriptInfo::add_export(const ModuleExportation& exp)
 {
@@ -25,10 +29,30 @@ ModuleExportation* ScriptInfo::get_export_module(const fs::path& path)
 ModuleImportation* ScriptInfo::get_import_module(const fs::path& path)
 {
   for (const auto& imp : imported_mod) {
-    if (imp->name->get_as_path() == path) return imp.get();
+    if (imp->get_path() == path) return imp.get();
   }
 
   return nullptr;
+}
+
+fs::path ModuleImportation::get_path() const
+{
+  fs::path p_out;
+  switch (import_source) {
+  case EImportSource::User:        return p_out = COMP_CTX.get_source_dir();
+  case EImportSource::StandardLib: return p_out = Config::get_stdlib_dir();
+  case EImportSource::UserLib:     return p_out = Config::get_packages_dir();
+  default:                         return p_out = COMP_CTX.get_source_dir();
+  }
+
+  for (auto& elem : path) {
+    p_out /= elem;
+  }
+
+  p_out /= name;
+  p_out.replace_extension(".vlxb");
+
+  return p_out;
 }
 
 std::set<ModuleImportation*> ScriptInfo::get_externs()
@@ -47,7 +71,7 @@ std::set<fs::path> ScriptInfo::get_extern_languages()
   std::set<fs::path> result;
   for (auto& imp : get_externs()) {
     if (imp->is_external()) {
-      result.insert(imp->name->get_as_path());
+      result.insert(imp->get_path());
     }
   }
   return result;

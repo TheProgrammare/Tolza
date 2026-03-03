@@ -22,7 +22,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
   for (auto scr_info : scr_infos) {
     Preprocessor pre(*scr_info);
 
-    if (Config::in_binding_compilation) std::cout << "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[preprocess]";
     std::cout << color_CYAN " [" << ++count << "/" << files_amount << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
@@ -49,7 +49,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
   }
 
   if (!errs.empty()) {
-    if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+    if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
     std::cerr << color_RED "[build] Preprocessor failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
@@ -61,7 +61,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
     for (auto& [path, fileError] : errs) {
       if (fileError.empty()) continue;
 
-      if (Config::in_binding_compilation) std::cout << color_RED "[EMBinder] ";
+      if (Config::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[preprocess] [error] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
@@ -70,7 +70,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
     }
   }
 
-  if (Config::in_binding_compilation) std::cout << color_YELLOW "[EMBinder] ";
+  if (Config::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
   std::cout << color_YELLOW "[preprocess] [summary] " << color_CYAN << "duration: " << color_YELLOW
             << std::chrono::duration<double, std::milli>(final_duration).count() << " ms" << color_RESET "\n"
             << std::endl;

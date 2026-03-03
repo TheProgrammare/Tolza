@@ -56,6 +56,7 @@ struct Visitor_Base {
 
   virtual void visit(ast::declaration::Mod& n)    = 0;
   virtual void visit(ast::declaration::Export& n) = 0;
+  virtual void visit(ast::declaration::Extern& n) = 0;
 
   virtual void visit(ast::declaration::Enum& n)         = 0;
   virtual void visit(ast::declaration::Enum_Element& n) = 0;

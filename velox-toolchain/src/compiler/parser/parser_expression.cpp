@@ -112,9 +112,9 @@ std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std:
   auto asCast = ctx.Create_Node<ast::operation::Cast_As>(ctx.tok_v.peek());
 
   switch (ctx.tok_v.peek().type) {
-  case TokTy::AS:             asCast->cast_type = ast::operation::Cast_As::ECastType::AS;
-  case TokTy::AS_REINTERPRET: asCast->cast_type = ast::operation::Cast_As::ECastType::AS_REINTERPRET;
-  case TokTy::AS_SAFE:        asCast->cast_type = ast::operation::Cast_As::ECastType::AS_SAFE;
+  case TokTy::AS:             asCast->cast_type = ast::operation::Cast_As::ECastType::AS; break;
+  case TokTy::AS_REINTERPRET: asCast->cast_type = ast::operation::Cast_As::ECastType::AS_REINTERPRET; break;
+  case TokTy::AS_SAFE:        asCast->cast_type = ast::operation::Cast_As::ECastType::AS_SAFE; break;
   default:                    ctx.tok_v.add_error<1000>("Unexpected token encounted in casting", "");
   }
 

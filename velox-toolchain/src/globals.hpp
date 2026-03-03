@@ -18,9 +18,9 @@
 #pragma once
 
 
-#include <string_view>
+#include <string>
 #include <filesystem>
-#include <vector>
+#include <initializer_list>
 
 // log color
 #define color_RESET         "\033[0m"
@@ -41,7 +41,7 @@
 namespace fs = std::filesystem;
 
 
-void fmt_template(std::string& templateStr, const std::vector<std::string>& args);
+void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args);
 
 [[nodiscard]] fs::path get_home_dir();
 [[nodiscard]] fs::path get_stdlib_dir();
@@ -61,7 +61,7 @@ struct Config {
     lexer,
     preprosessor,
     parser,
-    embinder,
+    binder,
     resolver_symbol,
     resolver_type,
     resolver_semantic,
@@ -72,17 +72,7 @@ struct Config {
 
 public:
   [[nodiscard]] static fs::path get_stdlib_dir();
-  [[nodiscard]] static fs::path get_userlib_dir();
-
-  [[nodiscard]] static fs::path get_project_dir();
-  [[nodiscard]] static fs::path get_src_dir();
-  [[nodiscard]] static fs::path get_build_dir();
-  [[nodiscard]] static fs::path get_postpreprocess_dir();
-  [[nodiscard]] static fs::path get_binding_dir();
-  [[nodiscard]] static fs::path get_dot_dir();
-  [[nodiscard]] static fs::path get_LLVM_IR_dir();
-  [[nodiscard]] static fs::path get_FFI_JSON_dir();
-
+  [[nodiscard]] static fs::path get_packages_dir();
 
   [[nodiscard]] static std::string Phase_to_code(EPhase phase);
   [[nodiscard]] static std::string Phase_to_str(EPhase phase);

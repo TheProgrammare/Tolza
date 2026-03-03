@@ -38,7 +38,6 @@ void command::workspace::generate_velox_workspace(const std::string& project_nam
   if (!dir_create(project_path / "build")) success = false;
   if (!dir_create(project_path / "build" / "debug")) success = false;
   if (!dir_create(project_path / "build" / "release")) success = false;
-  if (!dir_create(project_path / "build" / "app")) success = false;
   if (!dir_create(project_path / "config")) success = false;
 
   if (!write_config_file(project_path / "velox.config", project_name, false)) success = false;

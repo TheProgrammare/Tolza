@@ -65,6 +65,7 @@ struct Visitor_Default : public Visitor_Base {
 
   void visit(ast::declaration::Mod& n) override;
   void visit(ast::declaration::Export& n) override;
+  void visit(ast::declaration::Extern& n) override;
 
   void visit(ast::declaration::Enum& n) override;
   void visit(ast::declaration::Enum_Element& n) override;

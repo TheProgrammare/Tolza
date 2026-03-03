@@ -1,7 +1,5 @@
-import ffi::C
-import extern C::stdio
+import usr: core
 
 fn main() {
-  let c_msg = "hello world!" as ffi::c::_str
-  C::println("hello world!")
+  core::println("hello world!")
 }

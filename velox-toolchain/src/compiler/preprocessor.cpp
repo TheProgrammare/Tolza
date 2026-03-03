@@ -68,9 +68,9 @@ std::vector<Token> Preprocessor::preprocess()
 
 void Preprocessor::debug_write_postprocess_code_files(const std::vector<Token>& toks)
 {
-  std::filesystem::create_directories(Config::get_postpreprocess_dir());
+  std::filesystem::create_directories(COMP_CTX.get_preprocess_dir());
 
-  fs::path path = Config::get_postpreprocess_dir() / scr_info.file_path.filename();
+  fs::path path = COMP_CTX.get_preprocess_dir() / scr_info.file_path.filename();
   path.replace_extension(".txt");
 
   std::ofstream o_gen(path);

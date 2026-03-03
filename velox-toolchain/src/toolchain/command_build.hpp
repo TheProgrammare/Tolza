@@ -3,9 +3,11 @@
 #include <optional>
 #include <filesystem>
 
-#include "toolchain/compilation.hpp"
+#include "compilation.hpp"
 
 namespace fs = std::filesystem;
+
+std::string remove_quotes(const std::string& str);
 
 namespace command
 {

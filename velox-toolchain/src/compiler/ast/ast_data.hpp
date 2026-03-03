@@ -184,6 +184,7 @@ enum class ESymbolType {
   Role,
   Module,
   Export,
+  Extern,
   Goto_Label,
   Entity,
   Entity_Op,
@@ -197,8 +198,9 @@ enum class ESymbolType {
 
 enum class EScopeType {
   NONE,
-  Export,
   Mod,
+  Export,
+  Extern,
   Function,
   Lambda,
   Enum,
