@@ -2,7 +2,7 @@
   
   ![🇫🇷 Français](docs/CONTRIBUTING_FR.md)
 
-  # CONTRIBUTE
+  # CONTRIBUTING
 
 </div>
 
