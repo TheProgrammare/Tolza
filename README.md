@@ -14,7 +14,7 @@
 
 *Memory explicit, behavior predictable.*
 
-🏁 ![Getting Started](doc/getting-started.md) 
+🏁 ![Getting Started](CONTRIBUTE.md) 
 
 🛠️ ![Technical Implementation](MANIFEST.md)
 
