@@ -16,7 +16,7 @@ Before consedering to contribute to this project, please read some documentation
 ## Contribute to the code
 1. Clone this repository to your machine
 2. Follow ![Contribute Code](docs/CONTRIBUTE_CODE.md) software installation
-3. Contribute to the code by following ![Pull Request Rules](docs/CONTRIBUTE_CODE.md#Pull_Request_Rules)
+3. Contribute to the code by following ![Pull Request Rules](docs/CONTRIBUTE_CODE.md#Pull-Request-Rules)
 4. Write a ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) to explain the pull request
 >  If you make an innovation, add a ![RFC template](docs/RFC_TEMPLATE.md) to explain and justify the innovation
 5. Make your pull resquest
