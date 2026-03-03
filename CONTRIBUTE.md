@@ -61,6 +61,25 @@ Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas c
 - `velox.config` est le **fichier de référence**, indiquant le comportement du compilateur, les dossiers cibles, et définissant l’espace de travail par la localisation des dossiers.
 - La toolchain n’est pas basique mais doit demeurer **simple, pratique et intuitive**.
 
+**Summary** This project aims to address practical and concrete needs in a reasonable way, through both the Velox language and its toolchain. 
+
+### Language (Velox) 
+- A **deterministic, predictable, and explicit** programming language with a **simple and modern syntax**.
+- The language’s **native paradigms** should be useful without introducing excessive complexity.
+- **Abstraction** is valuable, but programmers must understand broadly what is happening. Abstraction is therefore achieved through **code simplicity and clarity**.
+
+### Feature Sectorization 
+- **Highly practical and widespread features** should be considered **native to the language**. Example: fixed-point floats (deci, udeci) for specialized domains can be included natively.
+- **Practical and widespread but complex features**, requiring intermediate scripts, should be included in the **stdlib** and integrated into the core to allow **pseudo-native usage**.
+- **Widespread and optimized features**, useful in general domains, should go into the **stdlib**.
+- **Specialized, heavy, or non-essential features** should be provided as **separate packages**.
+
+### Toolchain
+- Provide a **ready-to-use language**, suitable for **small projects** as well as **industrial-scale projects**.
+- The toolchain should preferably be used in a **workspace environment**.
+- velox.config is the **reference file**, specifying compiler behavior, target directories, and defining the workspace via folder locations.
+- The toolchain is not basic but must remain **simple, practical, and intuitive**.
+
 
 # Governance
 - **Founder**:  
