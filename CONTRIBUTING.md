@@ -80,6 +80,18 @@ Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas c
 - velox.config is the **reference file**, specifying compiler behavior, target directories, and defining the workspace via folder locations.
 - The toolchain is not basic but must remain **simple, practical, and intuitive**.
 
+# Project Structure
+This project contains several sub-projects:
+- Compiler
+  - Lexer
+  - Parser
+  - FFI Binder (and FFI JSON Reader)
+  - Resolver
+  - Codegen
+- Toolchain
+  - Commands
+  - Package Manager
+- Visual studio code plugin
 
 # Governance
 - **Founder**:  
