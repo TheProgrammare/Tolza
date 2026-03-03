@@ -1,14 +1,14 @@
 # Comment contribuer ?
 Avant de considérer de contribuer à ce projet, veuillez lire quelques documentations:
-- ![Contribute](CONTRIBUTE_FR.md) (ce document)
+- ![Contributing](CONTRIBUTING_FR.md) (ce document)
 - ![Project Presentation](docs/README_FR.md) (pour tous)
 - ![Technical Implementation](MANIFEST.md) (pour les paradgimes, concepts, syntax, comportement)
 - Le code source de manière liminaire (pour les contributeurs de code)
 
 ## Contribuer au code
 1. Cloner ce répertoire sur votre machine
-2. Suivez les instruction de ![Contribute Code](docs/CONTRIBUTE_CODE.md) pour l'intallation logiciel
-3. Contribuez au code en respectant ![Pull Request Rules](docs/CONTRIBUTE_CODE.md#Pull-Request-Rules)
+2. Suivez les instruction de ![Contributing Code](docs/CONTRIBUTING_CODE.md) pour l'intallation logiciel
+3. Contribuez au code en respectant ![Pull Request Rules](docs/CONTRIBUTING_CODE.md#Pull-Request-Rules)
 4. Rédigez (en anglais ou français) ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) pour expliquer le pull request
 > Si vous innovez, ajoutez ![RFC template](docs/RFC_TEMPLATE.md) pour expliquer et justifier l'innovation
 5. Réalisez votre pull request 
