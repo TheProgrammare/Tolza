@@ -1,3 +1,35 @@
+# How to contribute ?
+Before consedering to contribute to this project, please read some documentations:
+- ![Contribute](CONTRIBUTE.md) (this document)
+- ![Project Presentation](README.md) (for all)
+- ![Technical Implementation](MANIFEST.md) (for paradigms, concepts, syntax, behaviour)
+- The source code preliminarily (for code contributors)
+
+## Contribute to the code
+1. Clone this repository to your machine
+2. Follow ![🏁 Getting Started](🏁_Getting_Started) software installation
+3. Contribute to the code by following ![Pull Request Rules](Pull_Request_Rules)
+4. Write a ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) to explain the pull request
+>  If you make an innovation, add a ![RFC template](docs/RFC_TEMPLATE.md) to explain and justify the innovation
+5. Make your pull resquest
+
+## Contribute to the philosophy
+1. Makes sure that your suggestion is not duplicated or already rejected
+2. Write a ![Philosophical template](docs/PHILOSOPHICAL_TEMPLATE.md) to explain your suggestion
+3. Don't hesitate to integrate graphical representation, examples, pseudo code, ...
+4. Exchange ideas and discuss with the community to refine your proposal, or even turn it into a community proposal.
+
+# Who can contribute ?
+Any volunteer, but here are a few ideas on how you can make yourself useful based on your skills
+
+| my skill | my utility for velox |
+|-|-|
+| junior programmer | better innocent understanding of overly complex concepts, better simplified approach, closer to spontaneous understanding |
+| senior programmer | good for the code review, experience about paradigm and concepts, better user experience approach |
+| non programmer | good for educative/novice approach, for explicit documentation |
+| linguist | pertinent for the code syntax, the human readable approach |
+| manager | good view for scalable projects, pertinent workflow and workspace | 
+
 # 🏁 Getting Started
 
 To contribute to the Velox programming language, clone this repository and follow the instructions below.
@@ -94,19 +126,21 @@ or go to down-left cogwheel > Settings
 - "editor.formatOnSave": true
 - "editor.defaultFormatter": "xaver.clang-format"
 
-# Submissions
+# Pull Request Rules
+
+## General conventions
 Any pull request must be made with some minimal requirements:
 - No compilation errors
 - No compilation warnings (excepts some LLVM deprecated source code and false positive include unused `pipeline_headers.hpp` `parser_headers.hpp` `ast_headers.hpp`)
 - No undefined behavior under the C++23 standard.
 - No memory leak
-- No unformatted code (use `.clang-format` and the bash script `format-all-command.sh`)
-- No syntax and/or behaviour innovations without a ![rfc template](docs/RFC_TEMPLATE.md) to explain and justify the innovation
+- No unformatted code (use `.clang-format` by running the bash script `format-all-command.sh`)
+- No syntax and/or behaviour innovations without a ![RFC template](docs/RFC_TEMPLATE.md) to explain and justify the innovation
 - No mixed pull request: one pull request for one concept/innovation/domains, excepts necessary multi coverage
 - English only comments (or french with english version)
-- No pull request without a ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) to explain the code
+- No pull request without a ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) to explain your pull request
 
-# Code design
+## Code design
 - No reinterpret_cast without a strong justification
 - No unjustified and unlimited recursive call
 - No unjustified or dangerous macros
@@ -154,11 +188,6 @@ To see how the pipeline manage errors, check ![Compiler Pipeline](docs/Compiler_
 Currently, any error added will throw a runtime error to inspect any possible error misinterpretation
 
 # Project Objectives
-
-
-
-
-
 
 ## English
 **Summary**
