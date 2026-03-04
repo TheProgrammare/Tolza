@@ -53,6 +53,18 @@ Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas c
 - `velox.config` est le **fichier de référence**, indiquant le comportement du compilateur, les dossiers cibles, et définissant l’espace de travail par la localisation des dossiers.
 - La toolchain n’est pas basique mais doit demeurer **simple, pratique et intuitive**.
 
+# Structure du projet
+Ce projet contient quelques sous-projets:
+- Compiler
+  - Lexer
+  - Parser
+  - FFI Binder (and FFI JSON Reader)
+  - Resolver
+  - Codegen
+- Toolchain
+  - Commands
+  - Package Manager
+- Visual studio code plugin
 
 # Gouvernance
 - **Fondateur** :  
