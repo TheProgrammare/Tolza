@@ -1,0 +1,5 @@
+import usr: core
+
+fn main() {
+  core::println("hello world!")
+}

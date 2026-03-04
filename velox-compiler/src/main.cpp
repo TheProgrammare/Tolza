@@ -15,11 +15,11 @@
  *  limitations under the License.
  */
 
-#include "parser_command.hpp"
+#include "pipeline/pipeline.hpp"
 
 int main(int argc, const char* argv[])
 {
-  if (parse_commands(argc, argv))
+  if (start_compilation(argc, argv))
     return 0;
   else
     return 1;

@@ -1,0 +1,351 @@
+#include "compiler.hpp"
+
+#include <initializer_list>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <filesystem>
+#include <stdexcept>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#elif __APPLE__
+#include <mach-o/dyld.h>
+#elif __linux__
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <unistd.h>
+#endif
+
+
+void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const char* argv[])
+{
+  for (int i = 2; i < argc; ++i) {
+    const std::string& arg = argv[i];
+
+    // e.g. --debug
+    auto bool_arg = [&](bool& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
+      if (!arg_name.empty() && alt_arg_name.empty()) {
+        input = false;
+        return false;
+      }
+
+      if (!arg_name.empty() && arg.rfind("--" + arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(arg_name, "true");
+        input = true;
+      } else if (!arg_name.empty() && arg.rfind("--!" + arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(arg_name, "false");
+        input = false;
+      }
+      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, "true");
+        input = true;
+      } else if (!alt_arg_name.empty() && arg.rfind("-!" + alt_arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, "false");
+        input = false;
+      }
+      return true;
+    };
+
+    // e.g. --os="linux"
+    auto str_arg = [&](std::string& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
+      if (arg_name.empty() && alt_arg_name.empty()) {
+        return false;
+      }
+
+      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+      }
+      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+      }
+
+      input = arg;
+      return true;
+    };
+
+    // e.g. --dest="/mnt/data/my_project"
+    auto path_arg = [&](fs::path& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
+      if (arg_name.empty() && alt_arg_name.empty()) {
+        return false;
+      }
+
+      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+      }
+      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+      }
+
+      input = fs::weakly_canonical(arg);
+      return true;
+    };
+
+    // e.g. --opt-level=0
+    auto size_arg = [&](size_t& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
+      if (arg_name.empty() && alt_arg_name.empty()) {
+        return false;
+      }
+
+      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+      }
+      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+      }
+
+      input = std::stoul(arg);
+      return true;
+    };
+
+    // target
+    if (str_arg(ctx.target_abi, "abi")) continue;
+    if (str_arg(ctx.target_arch, "arch")) continue;
+    if (size_arg(ctx.target_bits, "bits")) continue;
+    if (str_arg(ctx.target_os, "os")) continue;
+    if (str_arg(ctx.target_libc, "libc")) continue;
+    if (str_arg(ctx.target_config, "config")) continue;
+
+    // profile
+    if (bool_arg(ctx.profile_debug, "debug", "d")) continue;
+    if (bool_arg(ctx.profile_debug, "release", "r")) {
+      ctx.profile_debug = false;
+      continue;
+    }
+    if (size_arg(ctx.profile_opt_level, "opt-level")) continue;
+    if (bool_arg(ctx.profile_size_opt, "size-opt")) continue;
+
+    // logs
+    if (bool_arg(ctx.log_all, "log-all", "lall")) continue;
+    if (bool_arg(ctx.log_filesystem, "log-filesystem", "lfs")) continue;
+    if (bool_arg(ctx.log_lexer, "log-lexer", "llex")) continue;
+    if (bool_arg(ctx.log_preprocessor, "log-pre", "lpre")) continue;
+    if (bool_arg(ctx.log_parser, "log-parser", "lpar")) continue;
+    if (bool_arg(ctx.log_binder, "log-binder", "lemb")) continue;
+    if (bool_arg(ctx.log_exporter, "log-exporter", "lexp")) continue;
+    if (bool_arg(ctx.log_resolver, "log-resolver", "lres")) continue;
+    if (bool_arg(ctx.log_LLVM_IR, "log-llvm", "lllvm")) continue;
+    if (bool_arg(ctx.log_linker, "log-linker", "llink")) continue;
+
+    // warnings
+    if (bool_arg(ctx.warn_all, "warn-all", "wall")) continue;
+    if (bool_arg(ctx.warn_extra, "warn-extra", "wextra")) continue;
+    if (bool_arg(ctx.warn_pedantic, "warn-pedantic", "wpedan")) continue;
+    if (size_arg(ctx.warn_level, "warn-level")) continue;
+    if (bool_arg(ctx.warn_unused, "warn-unused", "wun")) continue;
+    if (bool_arg(ctx.warn_dead_code, "warn-dead-code", "wdc")) continue;
+    if (bool_arg(ctx.warn_as_error, "warn-as-error", "wae")) continue;
+
+    // dot
+    if (bool_arg(ctx.dot_ast, "dot-ast")) continue;
+    if (bool_arg(ctx.dot_link, "dot-link")) continue;
+
+    // define macro
+    if (arg.rfind("-D", 0) == 0) {
+      auto def    = arg.substr(2);
+      auto eq_pos = def.find('=');
+
+      std::string name, value;
+
+      if (eq_pos != std::string::npos) {
+        name  = def.substr(0, eq_pos);
+        value = def.substr(eq_pos + 1);
+      } else {
+        name  = def;
+        value = "1"; // implicit value
+      }
+      ctx.COMPILATION_ARGS.emplace(name, value);
+      ctx.defines.emplace(name, value);
+
+      continue;
+    }
+
+    // undefine macro
+    if (arg.rfind("-U", 0) == 0) {
+      auto name = arg.substr(2);
+
+      ctx.COMPILATION_ARGS.emplace(name, ""); // no value for -UName
+      ctx.undefines.push_back(name);
+      continue;
+    }
+
+    // codegen
+    std::string emit_mode;
+    if (str_arg(emit_mode, "emit")) {
+      if (emit_mode == "obj")
+        ctx.codegen_emit_mode = CompCtx::EEmitMode::OBJ;
+      else if (emit_mode == "asm")
+        ctx.codegen_emit_mode = CompCtx::EEmitMode::ASM;
+      else if (emit_mode == "bc")
+        ctx.codegen_emit_mode = CompCtx::EEmitMode::BC;
+      else if (emit_mode == "bin")
+        ctx.codegen_emit_mode = CompCtx::EEmitMode::BIN;
+      else
+        std::cerr << "Invalid emit mode value --emit-mode=" << emit_mode << std::endl;
+      continue;
+    }
+    if (path_arg(ctx.codegen_build_dir, "build")) continue;
+
+    // project
+    if (path_arg(ctx.project_dir, "project")) continue;
+    if (path_arg(ctx.source_dir, "src")) continue;
+    if (path_arg(ctx.vendor_dir, "vendor")) continue;
+    if (path_arg(ctx.ffi_json_dir, "ffi-json")) continue;
+
+    std::cerr << "Warning: unknown argument '" << arg << "'" << std::endl;
+  }
+}
+
+
+void compiler::fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args)
+{
+  size_t count = 0;
+  for (auto& arg : args) { // parcours en sens inverse
+    std::string placeholder = "%" + std::to_string(count++);
+    size_t      pos         = 0;
+    while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
+      templateStr.replace(pos, placeholder.length(), arg);
+      pos += arg.length();
+    }
+  }
+}
+
+fs::path compiler::get_home_dir()
+{
+  static fs::path cached;
+  if (!cached.empty()) return cached;
+
+#ifdef _WIN32
+  // 1 - USERPROFILE
+  if (const char* userprofile = std::getenv("USERPROFILE")) return cached = fs::path(userprofile);
+
+  // 2 - HOME (MSYS / Git Bash / hybrid)
+  if (const char* home = std::getenv("HOME")) return cached = fs::path(home);
+
+  // 3 - official API Windows
+  PWSTR path = nullptr;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &path))) {
+    fs::path result(path);
+    CoTaskMemFree(path);
+    return cached = result;
+  }
+
+  // 4 - fallback legacy
+  const char* homeDrive = std::getenv("HOMEDRIVE");
+  const char* homePath  = std::getenv("HOMEPATH");
+  if (homeDrive && homePath) return cached = fs::path(std::string(homeDrive) + homePath);
+
+  throw std::runtime_error("Cannot determine home directory (Windows)");
+
+#else
+  // 1) HOME env var
+  if (const char* home = std::getenv("HOME")) return cached = fs::path(home);
+
+  // 2) POSIX fallback
+  if (struct passwd* pwd = getpwuid(getuid())) return cached = fs::path(pwd->pw_dir);
+
+  throw std::runtime_error("Cannot determine home directory (POSIX)");
+#endif
+}
+
+fs::path compiler::get_exe_path()
+{
+  static fs::path dir;
+
+  if (!dir.empty()) return dir;
+
+#ifdef _WIN32
+  wchar_t buffer[MAX_PATH];
+  DWORD   len = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+  if (len == 0) throw std::runtime_error("GetModuleFileNameW failed");
+  return dir = fs::path(buffer);
+
+#elif __APPLE__
+  uint32_t size = 0;
+  _NSGetExecutablePath(nullptr, &size); // get required size
+  std::string buf(size, '\0');
+  if (_NSGetExecutablePath(buf.data(), &size) != 0) throw std::runtime_error("_NSGetExecutablePath failed");
+  return dir = fs::canonical(buf);
+
+#elif __linux__
+  std::vector<char> buf(1024);
+  ssize_t           len = readlink("/proc/self/exe", buf.data(), buf.size());
+  if (len <= 0) throw std::runtime_error("readlink /proc/self/exe failed");
+  return dir = fs::canonical(std::string(buf.data(), len));
+#else
+#error Unsupported platform
+#endif
+}
+
+fs::path compiler::get_exe_dir()
+{
+  static fs::path dir = get_exe_path().parent_path();
+  return dir;
+}
+
+fs::path compiler::get_stdlib_dir()
+{
+  static fs::path dir;
+
+  if (!dir.empty()) return dir;
+
+  if (const char* env = std::getenv("VELOX_LIB_STANDARD")) {
+    return dir = fs::path(env);
+  } else {
+    return dir = fs::weakly_canonical(get_exe_dir() / "stdlib");
+  }
+}
+
+fs::path compiler::get_packages_dir()
+{
+  static fs::path dir;
+  if (!dir.empty()) return dir;
+
+  if (const char* env = std::getenv("VELOX_LIB_USER")) {
+    return dir = fs::path(env);
+  }
+
+#ifdef _WIN32
+  if (const char* appdata = std::getenv("APPDATA")) {
+    dir = fs::path(appdata) / "velox" / VELOX_COMPILER_VERSION / "packages";
+    return dir;
+  }
+  return dir = get_home_dir() / ".velox" / VELOX_COMPILER_VERSION / "packages";
+#else
+  return dir = get_home_dir() / ".velox" / VELOX_COMPILER_VERSION / "packages";
+#endif
+}
+
+std::string compiler::Phase_to_code(EPhase phase)
+{
+  switch (phase) {
+  case compiler::EPhase::filesystem:        return "FSYS";
+  case compiler::EPhase::lexer:             return "LEXE";
+  case compiler::EPhase::preprosessor:      return "PREP";
+  case compiler::EPhase::parser:            return "PARS";
+  case compiler::EPhase::binder:            return "EMBI";
+  case compiler::EPhase::resolver_symbol:   return "SYMB";
+  case compiler::EPhase::resolver_type:     return "TYPE";
+  case compiler::EPhase::resolver_semantic: return "SEMA";
+  case compiler::EPhase::llvmir:            return "LLVM";
+  case compiler::EPhase::linker:            return "LINK";
+  }
+}
+
+std::string compiler::Phase_to_str(EPhase phase)
+{
+  switch (phase) {
+  case compiler::EPhase::filesystem:        return "file system";
+  case compiler::EPhase::lexer:             return "lexer";
+  case compiler::EPhase::preprosessor:      return "preprocessor";
+  case compiler::EPhase::parser:            return "parser";
+  case compiler::EPhase::binder:            return "external module binder";
+  case compiler::EPhase::resolver_symbol:   return "resolver symbol";
+  case compiler::EPhase::resolver_type:     return "resolver type";
+  case compiler::EPhase::resolver_semantic: return "resolver semantic";
+  case compiler::EPhase::llvmir:            return "LLVM IR";
+  case compiler::EPhase::linker:            return "linker";
+  }
+}

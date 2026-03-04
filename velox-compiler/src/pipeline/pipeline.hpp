@@ -15,12 +15,6 @@
  *  limitations under the License.
  */
 
-#include "parser_command.hpp"
+#pragma once
 
-int main(int argc, const char* argv[])
-{
-  if (parse_commands(argc, argv))
-    return 0;
-  else
-    return 1;
-}
+bool start_compilation(int argc, const char* argv[]);

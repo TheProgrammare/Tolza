@@ -4,7 +4,7 @@ set(CMAKE_C_COMPILER "clang")
 set(CMAKE_CXX_COMPILER "clang++")
 
 
-project(velox-toolchain
+project(velox-compiler
     VERSION 2026.1.1
     LANGUAGES C CXX
 )
@@ -28,35 +28,51 @@ file(GLOB_RECURSE VELOX_SOURCES
     src/*.cpp
 )
 
-add_executable(velox-toolchain ${VELOX_SOURCES})
+add_executable(velox-compiler ${VELOX_SOURCES})
 
 # ----------------------------
 # Vendor
 # ----------------------------
-file(GLOB_RECURSE VENDOR_SOURCES
-    CONFIGURE_DEPENDS
-    vendor/*.cpp
-    vendor/*.c
-)
-
-add_library(velox_vendor ${VENDOR_SOURCES})
+# Header-only vendor library
+add_library(velox_vendor INTERFACE)
 
 # ----------------------------
 # Include directories
 # ----------------------------
 # Root for project includes
-target_include_directories(velox-toolchain
+target_include_directories(velox-compiler
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
 )
 
 target_include_directories(velox_vendor
-    SYSTEM PUBLIC
+    INTERFACE
         ${CMAKE_SOURCE_DIR}/vendor
 )
 
-target_link_libraries(velox-toolchain
+# ----------------------------
+# LLVM / Clang (portable way)
+# ----------------------------
+find_package(LLVM REQUIRED CONFIG)
+find_package(Clang REQUIRED CONFIG)
+
+# LLVM include dirs & defs
+target_include_directories(velox-compiler
     PRIVATE
+        ${LLVM_INCLUDE_DIRS}
+        ${CLANG_INCLUDE_DIRS}
+)
+
+target_compile_definitions(velox-compiler
+    PRIVATE
+        ${LLVM_DEFINITIONS}
+)
+
+# Link against LLVM + libclang
+target_link_libraries(velox-compiler
+    PRIVATE
+        LLVM
+        libclang
         velox_vendor
 )
 
