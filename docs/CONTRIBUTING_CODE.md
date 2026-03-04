@@ -103,10 +103,10 @@ Any pull request must be made with some minimal requirements:
 - No undefined behavior under the C++23 standard.
 - No memory leak
 - No unformatted code (use `.clang-format` by running the bash script `format-all-command.sh`)
-- No syntax and/or behaviour innovations without a ![RFC template](docs/RFC_TEMPLATE.md) to explain and justify the innovation
+- No syntax and/or behaviour innovations without a ![RFC template](RFC_TEMPLATE.md) to explain and justify the innovation
 - No mixed pull request: one pull request for one concept/innovation/domains, excepts necessary multi coverage
 - English only comments (or french with english version)
-- No pull request without a ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) to explain your pull request
+- No pull request without a ![pull request template](PULL_REQUEST_TEMPLATE.md) to explain your pull request
 
 ## Code design
 - No reinterpret_cast without a strong justification
@@ -150,7 +150,7 @@ For custom error report on code, use the class `Error_Diagnostic` from the scrip
 
 Keep in mind, that the toolchain and the compiler must never failed, they reports only the errors
 
-To see how the pipeline manage errors, check ![Compiler Pipeline](docs/Compiler_Pipeline.md)
+To see how the pipeline manage errors, check ![Compiler Pipeline](Compiler_Pipeline.md)
 
 ### Errors Currently
 Currently, any error added will throw a runtime error to inspect any possible error misinterpretation
