@@ -1,21 +1,21 @@
 # Comment contribuer ?
 Avant de considérer de contribuer à ce projet, veuillez lire quelques documentations:
 - ![Contributing](CONTRIBUTING_FR.md) (ce document)
-- ![Project Presentation](docs/README_FR.md) (pour tous)
+- ![Project Presentation](README_FR.md) (pour tous)
 - ![Technical Implementation](MANIFEST.md) (pour les paradgimes, concepts, syntax, comportement)
 - Le code source de manière liminaire (pour les contributeurs de code)
 
 ## Contribuer au code
 1. Cloner ce répertoire sur votre machine
-2. Suivez les instruction de ![Contributing Code](docs/CONTRIBUTING_CODE.md) pour l'intallation logiciel
-3. Contribuez au code en respectant ![Pull Request Rules](docs/CONTRIBUTING_CODE.md#Pull-Request-Rules)
-4. Rédigez (en anglais ou français) ![pull request template](docs/PULL_REQUEST_TEMPLATE.md) pour expliquer le pull request
-> Si vous innovez, ajoutez ![RFC template](docs/RFC_TEMPLATE.md) pour expliquer et justifier l'innovation
+2. Suivez les instruction de ![Contributing Code](CONTRIBUTING_CODE.md) pour l'intallation logiciel
+3. Contribuez au code en respectant ![Pull Request Rules](CONTRIBUTING_CODE.md#Pull-Request-Rules)
+4. Rédigez (en anglais ou français) ![pull request template](PULL_REQUEST_TEMPLATE.md) pour expliquer le pull request
+> Si vous innovez, ajoutez ![RFC template](RFC_TEMPLATE.md) pour expliquer et justifier l'innovation
 5. Réalisez votre pull request 
 
 ## Contribuer à la philosophie
 1. Assurez-vous que votre suggestion n'est pas dupliquée ou déjà rejettée
-2. Rédigez (en anglais ou français) ![Philosophical template](docs/PHILOSOPHICAL_TEMPLATE.md) pour expliquer votre suggestion
+2. Rédigez (en anglais ou français) ![Philosophical template](PHILOSOPHICAL_TEMPLATE.md) pour expliquer votre suggestion
 3. N'hésitez pas à intégrer des représentations graphiques, exemples, pseudo code, ...
 4. Échanger les idées et débattez avec la communauté pour parfaire votre proposition, ou même le transformer en suggestion de communauté.
 
