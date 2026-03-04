@@ -39,28 +39,6 @@ Any volunteer, but here are a few ideas on how you can make yourself useful base
 | manager | good view for scalable projects, pertinent workflow and workspace | 
 
 # Project Objectives
-**Résumé**
-
-Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas concrets et pratiques, à la fois via le langage Velox et sa toolchain.  
-
-### Langage (Velox)
-- Langage de programmation **déterministe, prévisible et explicite**, avec une **syntaxe simple et moderne**.
-- Les **paradigmes natifs** du langage doivent être utiles sans introduire une complexité excessive.
-- L’**abstraction** est appréciée, mais le programmeur doit pouvoir comprendre globalement ce qui se passe. L’abstraction passe donc par la **simplicité et la clarté du code**.
-
-### Sectorisation des fonctionnalités
-- Les fonctionnalités **très pratiques et répandues** doivent être considérées comme **natives au langage**.  
-  Exemple : les flottants fixes (`deci`, `udeci`) pour un domaine spécialisé peuvent être intégrés directement.
-- Les fonctionnalités **pratiques et répandues mais complexes**, nécessitant des scripts intermédiaires, doivent être intégrées dans la **stdlib** et **accessibles comme si elles étaient natives**.
-- Les fonctionnalités **répandues et optimisées**, utiles dans des domaines généraux, doivent être mises dans la **stdlib**.
-- Les fonctionnalités **spécialisées, lourdes ou non essentielles** doivent être mises dans des **packages séparés**.
-
-### Toolchain
-- Fournir un langage **clé en main**, adapté autant aux **petits projets** qu’aux **projets industriels**.
-- La toolchain est à utiliser de préférence dans un **espace de travail**.
-- `velox.config` est le **fichier de référence**, indiquant le comportement du compilateur, les dossiers cibles, et définissant l’espace de travail par la localisation des dossiers.
-- La toolchain n’est pas basique mais doit demeurer **simple, pratique et intuitive**.
-
 **Summary** This project aims to address practical and concrete needs in a reasonable way, through both the Velox language and its toolchain. 
 
 ### Language (Velox) 
