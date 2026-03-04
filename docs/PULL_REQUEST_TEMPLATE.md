@@ -2,6 +2,10 @@
 
 **Author:** [Your Name]  
 **Date:** [YYYY-MM-DD]
+**Domain:**
+- [ ] Compiler
+- [ ] Toolchain
+- [ ] VS Code plugin
 
 ## 1. Summary
 Briefly describe the purpose of this pull request:
@@ -9,11 +13,6 @@ Briefly describe the purpose of this pull request:
 - What feature or behavior is changed or added?
 
 ## 2. Scope
-Domain:
-- [ ] Compiler
-- [ ] Toolchain
-- [ ] VS Code plugin
-
 Type of change:
 - [ ] Bug fix
 - [ ] Refactoring
