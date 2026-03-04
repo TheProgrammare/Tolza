@@ -2,7 +2,7 @@
 Avant de considérer de contribuer à ce projet, veuillez lire quelques documentations:
 - ![Contributing](CONTRIBUTING_FR.md) (ce document)
 - ![Project Presentation](README_FR.md) (pour tous)
-- ![Technical Implementation](MANIFEST.md) (pour les paradgimes, concepts, syntax, comportement)
+- ![Technical Implementation](/MANIFEST.md) (pour les paradgimes, concepts, syntax, comportement)
 - Le code source de manière liminaire (pour les contributeurs de code)
 
 ## Contribuer au code
