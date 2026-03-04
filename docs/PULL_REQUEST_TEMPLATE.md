@@ -9,6 +9,11 @@ Briefly describe the purpose of this pull request:
 - What feature or behavior is changed or added?
 
 ## 2. Scope
+Domain:
+- [ ] Compiler
+- [ ] Toolchain
+- [ ] VS Code plugin
+
 Type of change:
 - [ ] Bug fix
 - [ ] Refactoring
