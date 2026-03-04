@@ -2,6 +2,10 @@
 
 **Author:** [Your Name]  
 **Date:** [YYYY-MM-DD]
+**Domain:**
+- [ ] Compiler
+- [ ] Toolchain
+- [ ] VS Code plugin
 
 ## 1. Title
 Clear and concise title of the proposed change.
