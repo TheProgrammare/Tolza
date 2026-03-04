@@ -1,5 +1,12 @@
 # Philosophical Contribution
 
+**Author:** [Your Name]  
+**Date:** [YYYY-MM-DD]  
+**Domain:**
+- [ ] Compiler
+- [ ] Toolchain
+- [ ] VS Code plugin
+
 ## Proposal Title
 *(Clear and concise summary of the idea, e.g., “Immutable Variables by Default”)*
 
