@@ -1,8 +1,8 @@
 <div align = "center">
 
-🇬🇧🇺🇸 ![English](README.md)
+🇬🇧🇺🇸 ![English](/README.md)
 
-![Velox logo title](logo/velox-logo-title.svg)
+![Velox logo title](/logo/velox-logo-title.svg)
 
 **Une composition statique, des possibilitées dynamiques.**
 
@@ -13,9 +13,9 @@
 
 *Une mémoire explicite, un comportement prévisible.*
 
-🏁 ![Démarrer](doc/getting-started.md) 
+🏁 ![Démarrer](CONTRIBUTING_FR.md) 
 
-🛠️ ![Implémentation Technique](MANIFEST.md)
+🛠️ ![Implémentation Technique](/MANIFEST.md)
 
 </div>
 
@@ -26,7 +26,7 @@ moteur de jeu, simulation, système embaqué, exécution temps réel et une dors
 
 Velox évite les comportements implicites pour des raisons de clarté, prédictibilité et des granranties vérifié à la compilation.
 
-> Pour plus de détail sur l'implémentation techniques, consultez le ![MANIFEST](MANIFEST.md) 
+> Pour plus de détail sur l'implémentation techniques, consultez le ![MANIFEST](/MANIFEST.md) 
 
 ## Pourquoi Velox ?
 
@@ -172,7 +172,7 @@ Les zones d'explorations majeurs incluent:
 - Les systèmes d'asynchronisation 
 
 Documentation
-- 📘 Manifeste du langage et détail technique: ![MANIFEST](MANIFEST.md)
+- 📘 Manifeste du langage et détail technique: ![MANIFEST](/MANIFEST.md)
 - 📄 Exemples: plus tard
 - 🛠️ Compilation premier-plan: en cours (écrit en C++)
 - 🖥️ Compilation arriège-plan: génération LLVM-IR en cours
