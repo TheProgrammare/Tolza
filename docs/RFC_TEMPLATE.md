@@ -1,7 +1,7 @@
 # Design Proposal (RFC)
 
 **Author:** [Your Name]  
-**Date:** [YYYY-MM-DD]
+**Date:** [YYYY-MM-DD]  
 **Domain:**
 - [ ] Compiler
 - [ ] Toolchain
