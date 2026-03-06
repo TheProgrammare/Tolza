@@ -154,3 +154,10 @@ To see how the pipeline manage errors, check ![Compiler Pipeline](Compiler_Pipel
 
 ### Errors Currently
 Currently, any error added will throw a runtime error to inspect any possible error misinterpretation
+
+# Projet Coding Pattern
+There is some convention to code properly.
+
+To build `velox-toolchain` or `velox-compiler`, please use the  designed bash script `build-velox-debug.sh` or `build-velox-release.sh` for debug or release build. Located at the root of each sub-project.
+
+To test your code, please use the designed `launch.json` script, or create your custom .json launch event.
