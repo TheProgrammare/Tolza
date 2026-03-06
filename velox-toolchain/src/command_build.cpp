@@ -10,6 +10,7 @@
 #include "command_build.hpp"
 
 #include <cstdlib>
+#include <expected>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -18,8 +19,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "command_sanity.hpp"
+#include "command_check.hpp"
+#include "parser_command.hpp"
 #include "toolchain.hpp"
+
+void command::build::err(const std::string& msg)
+{
+  std::cerr << "[build] [ERROR] " << msg << std::endl;
+}
 
 
 std::string remove_quotes(const std::string& str)
@@ -42,12 +49,20 @@ std::string remove_quotes(const std::string& str)
 
 std::optional<toolchain::CompCtx> command::build::init_compilation_context(const fs::path& path)
 {
-  // check the workspace sanity
-  std::cout << "[velox-toolchain] Welcome to the Velox toolchain !"
-            << "\n  Version: " << toolchain::VELOX_TOOLCHAIN_VERSION << "\n  Toolchain launched at: " << path
-            << std::endl;
+  static const std::string welcome =
+      R"([velox-toolchain]
+Welcome to the Velox toolchain !
+  Version: %0
+  Toolchain launched at: %1 
+)";
+
+  std::string wel = welcome;
+  fmt_template(wel, {toolchain::VELOX_TOOLCHAIN_VERSION, path});
+  std::cout << wel << std::endl;
+
   fs::path config_path = path / "velox.config";
-  if (!command::sanity::check_workspace_sanity(path, false)) {
+  if (auto result = command::check::check_workspace(path, false); !result) {
+    err("The velox.config at " + path.string() + " is invalid.");
     return std::nullopt;
   }
 
@@ -61,20 +76,18 @@ std::optional<toolchain::CompCtx> command::build::init_compilation_context(const
 
     auto sub_config_path = remove_quotes(reader.GetString("sub_configs", target_config, ""));
     if (sub_config_path.empty() && target_config != "self") {
-      std::cerr << "[velox-toolchain] [config] [error] The specified config " + target_config
-                       + " is not defined in [sub_configs] section."
-                << std::endl;
+      err("The specified config at " + sub_config_path + " is not defined in [sub_configs] section.");
       return std::nullopt;
     }
 
     if (!fs::exists(sub_config_path)) {
-      std::cerr << "[velox-toolchain] [config] [error] The specified config " + target_config
-                       + " defined in [sub_configs] section, the file located at \n"
-                << "  " << sub_config_path << " doesn't exists." << std::endl;
+      err("The specified condig defined in [sub_configs] section located at " + sub_config_path + " dosen't exists.");
       return std::nullopt;
     }
 
-    if (!command::sanity::check_velox_config_sanity(sub_config_path, false)) return std::nullopt;
+    if (auto result = command::check::check_velox_config(sub_config_path, false); !result)
+      err("The velox.config at " + sub_config_path + " is invalid.");
+    return std::nullopt;
 
     return parse_compilation_context(sub_config_path);
   }
@@ -92,6 +105,8 @@ toolchain::CompCtx command::build::parse_compilation_context(const fs::path& con
   };
 
   toolchain::CompCtx result;
+
+  result.config_path = config_path;
 
   INIReader reader(config_path);
 
@@ -137,6 +152,16 @@ toolchain::CompCtx command::build::parse_compilation_context(const fs::path& con
   result.source_dir   = resolve_path(remove_quotes(reader.GetString("project", "source_dir", "./src")));
   result.vendor_dir   = resolve_path(remove_quotes(reader.GetString("project", "vendor_dir", "./vendor")));
   result.ffi_json_dir = resolve_path(remove_quotes(reader.GetString("project", "ffi_json_dir", "./ffi-json")));
+
+  fs::path default_compiler_file;
+
+  result.compiler_file = resolve_path(remove_quotes(reader.GetString("project", "compiler_file", "")));
+
+  if (result.compiler_file.empty()) {
+    if (auto comp = toolchain::find_lastest_compiler()) result.compiler_file = comp.value();
+
+    result.compiler_file = "";
+  }
 
   for (auto& sub_config : reader.Keys("sub_configs")) {
     result.sub_configs[sub_config] = resolve_path(remove_quotes(reader.GetString("sub_configs", sub_config, "")));
@@ -320,6 +345,7 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
     if (path_arg(ctx.source_dir, "src")) continue;
     if (path_arg(ctx.vendor_dir, "vendor")) continue;
     if (path_arg(ctx.ffi_json_dir, "ffi-json")) continue;
+    if (path_arg(ctx.compiler_file, "compiler")) continue;
 
     std::cerr << "Warning: unknown argument '" << arg << "'" << std::endl;
   }
@@ -328,11 +354,13 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
 bool command::build::generate_ffi_json(const fs::path& compiler_file, const fs::path& target_dir,
                                        const fs::path& dest_dir)
 {
-  std::string cmd = compiler_file;
-  cmd += " velox-compiler gen-ffi ";
-  cmd += fs::weakly_canonical(target_dir).c_str();
-  cmd += " ";
-  cmd += fs::weakly_canonical(dest_dir).c_str();
+  // %0 target executable
+  // %1 target dir
+  // %2 destination dir
+  static const std::string base_cmd = R"("%0" velox-compiler gen-ffi "%1" "%2")";
+
+  std::string cmd;
+  fmt_template(cmd, {compiler_file, target_dir, dest_dir});
 
   int res = std::system(cmd.c_str());
   // 0 == no error
@@ -342,13 +370,20 @@ bool command::build::generate_ffi_json(const fs::path& compiler_file, const fs::
 
 bool command::build::start_compilation(const toolchain::CompCtx& ctx)
 {
-  // file args
-  std::string cmd = ctx.get_compiler_file();
-  cmd += " velox-compiler build ";
-  for (auto arg : ctx.to_args()) {
-    cmd += arg;
-    cmd += " ";
+  // %0 target executable
+  // %1 args
+  static const std::string base_cmd = R"("%0" build %1)";
+
+  std::string cmd = base_cmd;
+  std::string args;
+  for (const auto& arg : ctx.to_args()) {
+    args += arg;
+    args += " ";
   }
+
+  fmt_template(cmd, {ctx.get_compiler_file(), args + "-fvt"});
+
+  log("Compiler command launched: \n" + cmd);
 
   int res = std::system(cmd.c_str());
   // 0 == no error

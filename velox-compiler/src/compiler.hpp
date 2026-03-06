@@ -45,11 +45,12 @@ namespace compiler
 {
 
 constexpr const char* VELOX_COMPILER_VERSION = "2026.2.0b";
-inline static bool    in_binding_compilation = false; // mutable
+extern bool           in_binding_compilation;
+extern bool           command_from_velox_toolchain;
 
 
 constexpr const char* k_comp_abort =
-    R"([build] Compilation aborted
+    R"([velox-compiler] Compilation aborted
 [note] You must resolve all stage errors before to pass to the next stage!"
 Please see above to locate all errors.
 )";
@@ -116,6 +117,7 @@ struct CompCtx {
   fs::path source_dir;
   fs::path vendor_dir;
   fs::path ffi_json_dir;
+  fs::path binding_dir;
 
   // sub_configs
   std::map<std::string, fs::path> sub_configs;
@@ -148,7 +150,7 @@ struct CompCtx {
 
   const fs::path& get_binding_dir() const
   {
-    static auto out = get_build_dir() / "binding";
+    static auto out = binding_dir;
     return out;
   }
 

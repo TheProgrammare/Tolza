@@ -21,6 +21,7 @@ bool new_velox_workspace();
 // %3 bits
 // %4 os
 // %5 debug
+// %6 compiler file
 inline constexpr const char* VELOX_CONFIG_TEMPLATE =
     R"(
 # main velox toolchain config
@@ -71,6 +72,7 @@ project_dir = "./"
 source_dir  = "./src"
 vendor_dir = "./vendor"
 ffi_json_dir = "./ffi-json"
+compiler_file = "%6"
 
 [sub_configs]
 debug = "./config/debug.config"

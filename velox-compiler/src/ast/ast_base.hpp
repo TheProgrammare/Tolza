@@ -116,8 +116,7 @@ struct ALocal : ADeclaration {
 };
 
 struct AExpression : virtual Node {
-  INFERRED_TYPE
-  inferred_type;
+  INFERRED_TYPE inferred_type;
   virtual ~AExpression() = default;
 };
 

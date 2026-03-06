@@ -17,8 +17,8 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   for (auto& scr_info : scr_infos) {
     Lexer lexer(*scr_info.get());
     if (compiler::in_binding_compilation) std::cout << "[binder] ";
-    std::cout << "[lex]";
-    std::cout << color_CYAN " [" << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << "[lex:";
+    std::cout << color_CYAN << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET << "... " << std::flush;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -41,7 +41,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
   if (!lexErrors.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[build] Lexer failed\n" color_RESET;
+    std::cerr << color_RED "[velox-compiler] Lexer failed\n" color_RESET;
     for (auto& errs : lexErrors) {
       auto [_, fileError] = errs;
       for (const auto& f_err : fileError) {

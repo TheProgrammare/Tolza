@@ -19,6 +19,8 @@
 #include <unistd.h>
 #endif
 
+bool compiler::in_binding_compilation       = false;
+bool compiler::command_from_velox_toolchain = false;
 
 void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const char* argv[])
 {
@@ -32,21 +34,28 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
         return false;
       }
 
+      bool valid_arg = false;
+
       if (!arg_name.empty() && arg.rfind("--" + arg_name, 0) == 0) {
+        valid_arg = true;
         ctx.COMPILATION_ARGS.emplace(arg_name, "true");
         input = true;
       } else if (!arg_name.empty() && arg.rfind("--!" + arg_name, 0) == 0) {
+        valid_arg = true;
         ctx.COMPILATION_ARGS.emplace(arg_name, "false");
         input = false;
       }
       if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
+        valid_arg = true;
         ctx.COMPILATION_ARGS.emplace(alt_arg_name, "true");
         input = true;
       } else if (!alt_arg_name.empty() && arg.rfind("-!" + alt_arg_name, 0) == 0) {
+        valid_arg = true;
         ctx.COMPILATION_ARGS.emplace(alt_arg_name, "false");
         input = false;
       }
-      return true;
+
+      return valid_arg;
     };
 
     // e.g. --os="linux"
@@ -55,15 +64,25 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
         return false;
       }
 
+      bool valid_arg = false;
+
       if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+        std::size_t pos = arg.find('=');
+        if (pos != std::string::npos) {
+          valid_arg         = true;
+          std::string value = arg.substr(pos + 1);
+          ctx.COMPILATION_ARGS.emplace(arg_name, value);
+          input = value;
+        }
       }
       if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+        valid_arg         = true;
+        std::string value = arg.substr(1 + alt_arg_name.size()); // tout après "-o"
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, value);
+        input = value;
       }
 
-      input = arg;
-      return true;
+      return valid_arg;
     };
 
     // e.g. --dest="/mnt/data/my_project"
@@ -72,15 +91,25 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
         return false;
       }
 
+      bool valid_arg = false;
+
       if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+        std::size_t pos = arg.find('=');
+        if (pos != std::string::npos) {
+          valid_arg         = true;
+          std::string value = arg.substr(pos + 1);
+          ctx.COMPILATION_ARGS.emplace(arg_name, value);
+          input = fs::weakly_canonical(value);
+        }
       }
       if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+        valid_arg         = true;
+        std::string value = arg.substr(1 + alt_arg_name.size());
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, value);
+        input = fs::weakly_canonical(value);
       }
 
-      input = fs::weakly_canonical(arg);
-      return true;
+      return valid_arg;
     };
 
     // e.g. --opt-level=0
@@ -89,15 +118,25 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
         return false;
       }
 
+      bool valid_arg = false;
+
       if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(arg_name, arg);
+        std::size_t pos = arg.find('=');
+        if (pos != std::string::npos) {
+          std::string value = arg.substr(pos + 1);
+          ctx.COMPILATION_ARGS.emplace(arg_name, value);
+          valid_arg = true;
+          input     = std::stoul(value);
+        }
       }
       if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        ctx.COMPILATION_ARGS.emplace(alt_arg_name, arg);
+        std::string value = arg.substr(1 + alt_arg_name.size());
+        ctx.COMPILATION_ARGS.emplace(alt_arg_name, value);
+        valid_arg = true;
+        input     = std::stoul(value);
       }
 
-      input = std::stoul(arg);
-      return true;
+      return valid_arg;
     };
 
     // target
@@ -193,8 +232,14 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
     if (path_arg(ctx.source_dir, "src")) continue;
     if (path_arg(ctx.vendor_dir, "vendor")) continue;
     if (path_arg(ctx.ffi_json_dir, "ffi-json")) continue;
+    if (path_arg(ctx.binding_dir, "binding")) continue;
 
-    std::cerr << "Warning: unknown argument '" << arg << "'" << std::endl;
+    if (arg == "--from-velox-toolchain" || arg == "-fvt") {
+      command_from_velox_toolchain = true;
+      continue;
+    }
+
+    std::cerr << "[velox-compiler] [warning] Unknown argument '" << arg << "'" << std::endl;
   }
 }
 

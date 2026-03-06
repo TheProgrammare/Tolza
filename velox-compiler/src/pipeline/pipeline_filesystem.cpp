@@ -48,8 +48,8 @@ std::optional<std::vector<fs::path>> find_files(const fs::path& target_path)
     size_t count = 0;
     for (const auto& lines : filesFounds) {
       if (compiler::in_binding_compilation) std::cout << "[binder] ";
-      std::cout << "[file]";
-      std::cout << color_CYAN " [" << ++count << "/" << filesFounds.size() << "] " color_RESET;
+      std::cout << "[file:";
+      std::cout << color_CYAN << ++count << "/" << filesFounds.size() << "] " color_RESET;
       std::cout << color_MAGENTA << lines << color_RESET << "\n" << std::flush;
     }
 

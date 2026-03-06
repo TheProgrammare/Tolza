@@ -35,14 +35,20 @@ ModuleImportation* ScriptInfo::get_import_module(const fs::path& path)
   return nullptr;
 }
 
+fs::path ModuleImportation::get_normalized_path() const
+{
+  return get_path().parent_path() / get_path().stem();
+}
+
 fs::path ModuleImportation::get_path() const
 {
   fs::path p_out;
   switch (import_source) {
-  case EImportSource::User:        return p_out = compiler::COMP_CTX.get_source_dir();
-  case EImportSource::StandardLib: return p_out = compiler::get_stdlib_dir();
-  case EImportSource::UserLib:     return p_out = compiler::get_packages_dir();
-  default:                         return p_out = compiler::COMP_CTX.get_source_dir();
+  case EImportSource::User:        p_out = compiler::COMP_CTX.get_source_dir(); break;
+  case EImportSource::StandardLib: p_out = compiler::get_stdlib_dir(); break;
+  case EImportSource::UserLib:     p_out = compiler::get_packages_dir(); break;
+  case EImportSource::Extern:      p_out = compiler::COMP_CTX.get_binding_dir(); break;
+  default:                         p_out = compiler::COMP_CTX.get_source_dir(); break;
   }
 
   for (auto& elem : path) {
@@ -50,7 +56,8 @@ fs::path ModuleImportation::get_path() const
   }
 
   p_out /= name;
-  p_out.replace_extension(".vlxb");
+  if (!extern_lib.empty()) p_out /= extern_lib;
+  p_out.replace_extension(".velox");
 
   return p_out;
 }

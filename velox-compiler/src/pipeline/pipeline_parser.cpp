@@ -25,8 +25,8 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     parser::Parser_Base inParser(*scr_info);
 
     if (compiler::in_binding_compilation) std::cout << "[binder] ";
-    std::cout << "[parse]";
-    std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << "[parse:";
+    std::cout << color_CYAN << ++count << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_CYAN "... " << std::flush;
 
     auto                      start       = std::chrono::high_resolution_clock::now();
@@ -50,7 +50,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   if (!parErrors.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[build] Parser failed\n" color_RESET;
+    std::cerr << color_RED "[velox-compiler] Parser failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
     for (auto& [_, fileError] : parErrors) {
@@ -71,7 +71,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   }
 
   if (!declErrors.empty()) {
-    std::cerr << color_RED "[build] Declaration failed\n";
+    std::cerr << color_RED "[velox-compiler] Declaration failed\n";
     // sum of errors
     size_t err_count = 0;
     for (auto& p_err : declErrors) {

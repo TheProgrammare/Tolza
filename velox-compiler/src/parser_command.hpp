@@ -28,10 +28,9 @@ constexpr const char* HELP_LIST_COMMANDS =
 USAGE: velox-compiler <command> [options]
 
 Available commands:
-  build [path] [options]    
-                            Compile the project.
+  build [options]           Compile the project.
   b [options]               (alias)
-  > If no path is provided, the current directory will be used.
+  > If no --src= is provided, the current directory will be used.
 
   generate-ffi-json <target_dir> <dest_dir> 
                             Translate .json ast ffi to .vlxb wrappers.
@@ -91,6 +90,7 @@ Project options:
   --src=<dir>               Set the source code directory.
   --vendor=<dir>            Set the vendor source code directory.
   --ffi-json=<dir>          Set the interop json ast directory.
+  --binding=<dir>           Set the binding directory.
 
 Options:        
   --help      | -h          Display this help message and exit.

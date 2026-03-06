@@ -54,8 +54,10 @@ struct MetablockManager;
 
 struct ModuleImportation {
   // project = default or ~
-  // standard lib = $
-  // user lib = @
+  // standard lib = std:
+  // user lib = lib:
+  // extern = ext:
+  // binding = ext:
   enum class EImportSource { Unknown, User, StandardLib, UserLib, Extern, Binding };
 
   std::string              name;
@@ -72,6 +74,7 @@ struct ModuleImportation {
   std::vector<Extern_Item> extern_references;
 
   fs::path get_path() const;
+  fs::path get_normalized_path() const;
 
   bool is_external() const
   {
@@ -142,6 +145,11 @@ struct ScriptInfo {
   [[nodiscard]] std::set<ModuleImportation*> get_externs();
 
   [[nodiscard]] std::set<fs::path> get_extern_languages();
+
+  [[nodiscard]] fs::path get_normalized_path() const
+  {
+    return file_path.parent_path() / file_path.stem();
+  }
 
   // start at 1
   [[nodiscard]] std::string get_line(size_t line) const

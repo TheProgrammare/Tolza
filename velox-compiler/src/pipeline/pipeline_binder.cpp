@@ -45,7 +45,7 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
 
   size_t count = 0;
   for (const auto& bind : binds) {
-    std::cout << "[binder]" color_CYAN " [" << ++count << "/" << binds.size() << "] " color_RESET;
+    std::cout << "[binder:" color_CYAN << ++count << "/" << binds.size() << "] " color_RESET;
 
     bool success = generate_script(bind);
 
@@ -126,8 +126,8 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   // affect all symbols imported according to the imported module name
   size_t count = 1;
   for (auto& scr_info : scr_infos) {
-    std::cout << "[binder]";
-    std::cout << color_CYAN " [" << count++ << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << "[binder:";
+    std::cout << color_CYAN << count++ << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
     std::filesystem::create_directories(compiler::COMP_CTX.get_binding_dir());

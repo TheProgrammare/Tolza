@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <ostream>
+#include <stdexcept>
 
 #include "cli_wrapper.hpp"
 #include "toolchain.hpp"
@@ -80,10 +81,18 @@ bool command::workspace::write_config_file(const fs::path& path, const std::stri
     }
   };
 
+  fs::path compiler_file;
+  auto     result = toolchain::find_lastest_compiler();
+  if (!result) {
+    compiler_file = "velox-compiler not found!";
+  } else {
+    compiler_file = result.value();
+  }
+
   std::string fmt_config = VELOX_CONFIG_TEMPLATE;
   fmt_template(fmt_config, {name, std::string(toolchain::DETECTED_ABI), std::string(toolchain::DETECTED_ARCH),
                             std::string(toolchain::DETECTED_BITS), std::string(toolchain::DETECTED_OS_NAME),
-                            file_debug_mode ? "true" : "false"});
+                            file_debug_mode ? "true" : "false", compiler_file});
 
   return write_file(path, fmt_config);
 }

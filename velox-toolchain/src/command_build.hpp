@@ -14,6 +14,8 @@ namespace command
 namespace build
 {
 
+void err(const std::string& msg);
+
 std::optional<toolchain::CompCtx> init_compilation_context(const fs::path& path);
 toolchain::CompCtx                parse_compilation_context(const fs::path& config_path);
 void parse_args_for_compilation_context(toolchain::CompCtx& ctx, int start_arg, int argc, const char* argv[]);

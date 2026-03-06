@@ -254,8 +254,7 @@ struct Table_Population final : public ALiteral {
   std::unique_ptr<AExpression>              map_expression_value;
 
   // can be a ex nihilo node (for primitive types)
-  INFERRED_TYPE
-  element_definition;
+  INFERRED_TYPE element_definition;
 
   std::string debug_str() const override
   {
@@ -277,8 +276,7 @@ struct Table final : public ALiteral {
   std::unique_ptr<Table_Population> population;
 
   // can be a ex nihilo node (for primitive types)
-  INFERRED_TYPE
-  element_type;
+  INFERRED_TYPE element_type;
 
   std::vector<size_t> resolved_size;
 
@@ -308,10 +306,8 @@ struct Map final : public ALiteral {
 
   size_t size = 1;
 
-  INFERRED_TYPE
-  key_type;
-  INFERRED_TYPE
-  value_type;
+  INFERRED_TYPE key_type;
+  INFERRED_TYPE value_type;
 
   // key + value (no alignment need because it's translated to 2 arrays)
   size_t ty_sizeByte = 0;

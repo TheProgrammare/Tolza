@@ -39,8 +39,7 @@ struct CodeBlock final : public Node {
 struct Variable_Binding final : public ALocal {
   ECapability capability = ECapability::NONE;
 
-  INFERRED_TYPE
-  type;
+  INFERRED_TYPE type;
 
   std::string debug_str() const override
   {

@@ -7,6 +7,9 @@ namespace command
 namespace package
 {
 
+void err(const std::string& msg);
+void log(const std::string& msg);
+
 bool install(const std::string& pkg_name);
 bool remove(const std::string& pkg_name);
 bool info(const std::string& pkg_name);

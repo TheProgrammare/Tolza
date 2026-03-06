@@ -21,8 +21,15 @@
 
 void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args);
 
+namespace command
+{
+
+void err(const std::string& msg);
+void log(const std::string& msg, bool sub_log = false);
+
 bool parse_commands(int argc, const char* argv[]);
 
+bool parse_find_compiler();
 bool parse_package(int argc, const char* argv[]);
 bool parse_create(bool short_command, int argc, const char* argv[]);
 bool parse_gui(int argc, const char* argv[]);
@@ -75,11 +82,14 @@ Available commands:
   pkg clean                 Clean package cache list.
   pkg --help | pkg -h       Display package command helper.
 
-  check workspace [path]    Check the sanity of the workspace.
+  find                      Search of velox-compiler.
+  f                         (alias)
+
+  check workspace [path]    Check the check of the workspace.
   chw [path]                (alias)
   > If no path is provided, the current directory will be inspected.
 
-  check config [file]       Check the sanity of the config file.
+  check config [file]       Check the check of the config file.
   chc [file]                (alias)
   > If no file is provided, the first .config will be inspected.
 
@@ -143,7 +153,7 @@ Project options:
   --ffi-json=<dir>          Set the interop json ast directory.
 
 Sanity options:
-  --full                    Set the sanity checker in full mode.
+  --full                    Set the check checker in full mode.
   > (will inspect all sections and keys presence)
 
 Options:        
@@ -188,3 +198,5 @@ Examples:
   $ velox pkg install scientific
   $ velox pkg list --upgradable
 )";
+
+} // namespace command

@@ -44,7 +44,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
   std::cout << std::endl;
 
   if (!llvmIRErrors.empty()) {
-    std::cerr << color_RED "[build] LLVM IR Generation failed !" color_RESET "\n";
+    std::cerr << color_RED "[velox-compiler] LLVM IR Generation failed !" color_RESET "\n";
     for (auto& [path, fileError] : llvmIRErrors) {
 
       std::cerr << color_RED "[LLVM IR] [error] [file] " << path << color_RESET "\n";

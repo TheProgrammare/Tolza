@@ -34,7 +34,7 @@ static const std::string pipeline_info = color_BLUE
 )"
     // too big ?
     /*
-[build] Pipeline: by stage
+[velox-compiler] Pipeline: by stage
 [front-end]
 [1  ] [File system ] to find all scripts
 [2  ] [Lexer       ] to tokenize the code
@@ -54,22 +54,36 @@ static const std::string pipeline_info = color_BLUE
         */
     color_RESET;
 
+static const std::string binder_info =
+    R"(
+%0 files + %1 binding files = %3 total files in the main pipeline
+)";
+
 bool start_compilation(int argc, const char* argv[])
 {
   // if command == src/ build ...
-  if (argc > 2) compiler::parse_args_for_compilation_context(compiler::COMP_CTX, argc, argv);
+  if (!compiler::in_binding_compilation && argc > 2)
+    compiler::parse_args_for_compilation_context(compiler::COMP_CTX, argc, argv);
 
   if (compiler::in_binding_compilation)
     std::cout << color_BLUE "[binder] Binders Compilation Started\n" color_RESET << std::endl;
-  else
-    std::cout << color_BLUE "[build] Compilation Started" color_RESET << pipeline_info << std::endl;
+  else {
+    if (!compiler::command_from_velox_toolchain) {
+      std::cout << color_BLUE
+          "\n[build:warning] Raw compilation command detected, "
+          "please use 'velox-toolchain' to develop proprely with the Velox programming language.\n"
+                << std::endl;
+    }
+
+    std::cout << color_BLUE "[velox-compiler] Compilation Started" color_RESET << pipeline_info << std::endl;
+  }
 
 
   // filesystem
   if (compiler::in_binding_compilation)
-    std::cout << color_BLUE "[binder] [sub-build] [1/4] File system begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder:1/4] File system begins" color_RESET << std::endl;
   else
-    std::cout << color_BLUE "[build] [1/9] File system begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:1/9] File system begins" color_RESET << std::endl;
 
   fs::path target_dir =
       compiler::in_binding_compilation ? compiler::COMP_CTX.get_binding_dir() : compiler::COMP_CTX.get_source_dir();
@@ -77,14 +91,13 @@ bool start_compilation(int argc, const char* argv[])
 
   if (scr_infos.empty()) {
     if (compiler::in_binding_compilation) {
-      std::cout << color_BLUE "[binder] [sub-build] [info] no files found at the source folder path: " color_RESET
-                << target_dir << "\n";
-      std::cout << color_BLUE "[binder] [sub-build] [info] no sub-compilation need without any file binding" << "\n";
-      std::cout << color_BLUE "[binder] [sub-build] Binders Compilation finish successfully !\n" color_RESET;
+      std::cout << color_BLUE "[binder] No files found at the source folder path: " color_RESET << target_dir << "\n";
+      std::cout << color_BLUE "[binder] No sub-compilation need without any file binding" << "\n";
+      std::cout << color_BLUE "[binder] Binders Compilation finish successfully !\n" color_RESET;
       return true;
     }
-    std::cout << color_BLUE << "[build] [info] no files found at the source folder path: " << target_dir << "\n";
-    std::cout << color_BLUE << "[build] [hint] Check if the source folder path is correct." << target_dir << "\n";
+    std::cout << color_BLUE << "[build] No files found at the source folder path: " << target_dir << "\n";
+    std::cout << color_BLUE << "[build] Check if the source folder path is correct." << target_dir << "\n";
     std::cout << color_BLUE
               << "Or start your project by creating your first script in the source "
                  "folder path."
@@ -95,27 +108,27 @@ bool start_compilation(int argc, const char* argv[])
 
   // lexer
   if (compiler::in_binding_compilation)
-    std::cout << color_BLUE "[binder] [sub-build] [2/4] Lexer begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder:2/4] Lexer begins" color_RESET << std::endl;
   else
-    std::cout << color_BLUE "[build] [2/9] Lexer begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:2/9] Lexer begins" color_RESET << std::endl;
 
   if (!pipeline_start_lexer(scr_infos)) return false;
 
 
   // preprocessor
   if (compiler::in_binding_compilation)
-    std::cout << color_BLUE "[binder] [sub-build] [3/4] Preprocessor begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder:3/4] Preprocessor begins" color_RESET << std::endl;
   else
-    std::cout << color_BLUE "[build] [3/9] Preprocessor begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:3/9] Preprocessor begins" color_RESET << std::endl;
 
   if (!pipeline_start_preprocessor(scr_infos)) return false;
 
 
   // parser
   if (compiler::in_binding_compilation)
-    std::cout << color_BLUE "[binder] [sub-build] [4/4] Parser begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder:4/4] Parser begins" color_RESET << std::endl;
   else
-    std::cout << color_BLUE "[build] [4/9] Parser begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:4/9] Parser begins" color_RESET << std::endl;
 
   if (!pipeline_start_parser(scr_infos)) return false;
 
@@ -123,7 +136,7 @@ bool start_compilation(int argc, const char* argv[])
   // debug dot print
   if (compiler::COMP_CTX.dot_ast) {
     if (compiler::in_binding_compilation)
-      std::cout << color_BLUE "[binder] [debug] AST viewer begins" color_RESET << std::endl;
+      std::cout << color_BLUE "[binder] AST viewer begins" color_RESET << std::endl;
     else
       std::cout << color_BLUE "[debug] AST viewer begins" color_RESET << std::endl;
 
@@ -135,7 +148,7 @@ bool start_compilation(int argc, const char* argv[])
 
   // generate bindings
   if (!compiler::in_binding_compilation) {
-    std::cout << color_BLUE "[build] [5/9] External Module Binder (binder) begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:5/9] External Module Binder (binder) begins" color_RESET << std::endl;
     if (!pipeline_start_binder(scr_infos)) return false;
   } else {
     bind_files_info = scr_infos;
@@ -150,35 +163,38 @@ bool start_compilation(int argc, const char* argv[])
   }
 
   if (!bind_files_info.empty()) {
-    std::cout << color_BLUE "[build] [binder] " color_YELLOW "[summary]\n"
-              << "  -> " color_YELLOW << scr_infos.size() - bind_files_info.size() << color_RESET " files in projects\n"
-              << "  -> " color_YELLOW << bind_files_info.size()
-              << color_RESET " binding files added to the main pipeline\n"
-              << "  -> " color_YELLOW << scr_infos.size() << color_RESET " total files in main pipeline\n\n";
-    std::cout << color_YELLOW "[build] [info] return to the main pipeline flow\n" << std::endl;
+    auto   bind_txt = binder_info;
+    size_t src_size = scr_infos.size() - bind_files_info.size();
+    compiler::fmt_template(bind_txt, {color_YELLOW + std::to_string(src_size) + color_RED,
+                                      color_YELLOW + std::to_string(bind_files_info.size()) + color_RESET,
+                                      color_YELLOW + std::to_string(scr_infos.size()) + color_RESET});
+    std::cout << color_BLUE "[build:binder] " color_YELLOW "[summary] " color_RESET << bind_txt << std::endl;
+    std::cout << color_YELLOW "[build] return to the main pipeline flow\n" color_RESET << std::endl;
   }
 
   // exporter
-  std::cout << color_BLUE "[build] [6/9] Exportation begins\n" color_RESET;
+  std::cout << color_BLUE "[build:6/9] Exportation begins\n" color_RESET;
   // import and export modules (to have all symbols for the resolution)
   if (!pipeline_start_exporter(scr_infos)) return false;
 
   // resolvers
-  std::cout << color_BLUE "[build] [7/9] Resolver begins\n" color_RESET;
+  std::cout << color_BLUE "[build:7/9] Resolver begins\n" color_RESET;
   // resolve symbols
   if (!pipeline_start_resolvers(scr_infos)) return false;
 
   // LLVM IR
-  std::cout << color_BLUE "[build] [8/9] LLVM IR begins\n" color_RESET;
+  std::cout << color_BLUE "[build:8/9] LLVM IR begins\n" color_RESET;
   // generate LLVM IR code
   if (!pipeline_start_LLVM_IR(scr_infos)) return false;
 
   // linker
-  std::cout << color_BLUE "[build] [9/9] Linker begins\n" color_RESET;
+  std::cout << color_BLUE "[build:9/9] Linker begins\n" color_RESET;
   // link data
   if (!pipeline_start_linker(scr_infos)) return false;
 
-  std::cout << color_BLUE "\n[build] Compilation finish successfully !\n" color_RESET;
+  std::cout << color_BLUE R"(
+[velox-compiler] Compilation finish successfully !
+)" color_RESET;
 
   return true;
 }

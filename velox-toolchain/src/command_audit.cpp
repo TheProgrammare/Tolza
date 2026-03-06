@@ -15,6 +15,7 @@
 #include <thread>
 #include <atomic>
 
+
 bool command::audit::is_blank(const std::string& line)
 {
   for (char c : line)
@@ -128,7 +129,7 @@ void command::audit::audit_workspace(const fs::path& root)
     os << std::fixed << std::setprecision(2) << std::setw(9) << std::setfill(' ') << num;
     return os.str();
   };
-  std::cout << "[velox-toolchain] starting audit..." << std::endl;
+  command::log("Starting audit...");
 
   CategoryStats source_code;
   CategoryStats vendor;
@@ -220,7 +221,7 @@ void command::audit::audit_workspace(const fs::path& root)
   done = true;
   progress_thread.join();
 
-  std::cout << "\r\033[K[velox-toolchain] audit complete." << std::endl;
+  log("\r\033[K[velox-toolchain] audit complete.");
 
   global.global_cat.lines         = source_code.lines + vendor.lines + binder.lines;
   global.global_cat.code_lines    = source_code.code_lines + vendor.code_lines + binder.code_lines;

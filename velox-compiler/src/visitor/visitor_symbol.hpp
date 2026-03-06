@@ -5,9 +5,6 @@
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration.hpp"
 #include "ast/ast_declaration_cop.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_statement.hpp"
 #include "visitor_default.hpp"
 
 struct Visitor_Symbol : public Visitor_Default {

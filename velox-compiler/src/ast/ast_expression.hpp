@@ -86,10 +86,8 @@ struct Call_Argument final : public AExpression {
   [[maybe_unused]] std::string name;
   std::unique_ptr<AExpression> expression;
   // resolved by superior node
-  INFERRED_TYPE
-  fn_type;
-  INFERRED_TYPE
-  param_type;
+  INFERRED_TYPE                fn_type;
+  INFERRED_TYPE                param_type;
 
   void accept(Visitor_Base& v) override
   {

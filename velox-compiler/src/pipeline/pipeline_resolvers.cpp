@@ -25,7 +25,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
 
     std::vector<std::tuple<fs::path, std::vector<std::string>>> resErrors;
 
-    std::cout << color_BLUE "[build] [resolver] stage ";
+    std::cout << color_BLUE "[velox-compiler] [resolver] stage ";
     std::cout << color_CYAN "[" << k + 1 << "/3] " color_RESET;
     std::cout << name << " Resolver begins" << std::endl;
 
@@ -72,7 +72,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     std::cout << std::endl;
 
     if (!resErrors.empty()) {
-      std::cerr << color_RED "[build] " << name << " Resolver failed" color_RESET << std::endl;
+      std::cerr << color_RED "[velox-compiler] " << name << " Resolver failed" color_RESET << std::endl;
       for (auto& [path, fileError] : resErrors) {
         std::cerr << color_RED "[resolver] [error] [file] " color_MAGENTA << path << color_MAGENTA "\n";
         for (auto& error : fileError) {

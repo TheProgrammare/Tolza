@@ -19,7 +19,7 @@
 
 int main(int argc, const char* argv[])
 {
-  if (parse_commands(argc, argv))
+  if (command::parse_commands(argc, argv))
     return 0;
   else
     return 1;

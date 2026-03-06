@@ -1,35 +1,46 @@
 #include "command_package.hpp"
+#include "toolchain.hpp"
 
 #include <iostream>
 
+void command::package::err(const std::string& msg)
+{
+  std::cerr << "[pkg] [ERROR] " << msg << std::endl;
+}
+
+void command::package::log(const std::string& msg)
+{
+  std::cout << "[pkg] " << msg << std::endl;
+}
+
 bool command::package::install(const std::string& pkg_name)
 {
-  std::cout << "[pkg] installing " << pkg_name << " ..." << std::endl;
+  log("Installing " + pkg_name + " ...");
   return true;
 }
 bool command::package::remove(const std::string& pkg_name)
 {
-  std::cout << "[pkg] removing " << pkg_name << " ..." << std::endl;
+  log("Removing " + pkg_name + " ...");
   return true;
 }
 bool command::package::info(const std::string& pkg_name)
 {
-  std::cout << "[pkg] info of " << pkg_name << " ..." << std::endl;
+  log("Info of " + pkg_name + " ...");
   return true;
 }
 bool command::package::purge(const std::string& pkg_name)
 {
-  std::cout << "[pkg] purging " << pkg_name << " ..." << std::endl;
+  log("Purging " + pkg_name + " ...");
   return true;
 }
 bool command::package::check(const std::string& pkg_name)
 {
-  std::cout << "[pkg] checking " << pkg_name << " ..." << std::endl;
+  log("Checking " + pkg_name + " ...");
   return true;
 }
 bool command::package::list(bool only_installed, bool only_upgradable)
 {
-  std::cout << "[pkg] listing";
+  std::cout << "Listing";
   if (only_installed) std::cout << " (installed)";
   if (only_upgradable) std::cout << " (upgradable)";
   std::cout << std::endl;
@@ -37,16 +48,16 @@ bool command::package::list(bool only_installed, bool only_upgradable)
 }
 bool command::package::update()
 {
-  std::cout << "[pkg] updating the package cache list ..." << std::endl;
+  log("Updating the package cache list ...");
   return true;
 }
 bool command::package::upgrade()
 {
-  std::cout << "[pkg] check for upgrades ..." << std::endl;
+  log("Check for upgrades ...");
   return true;
 }
 bool command::package::clean()
 {
-  std::cout << "[pkg] cleaning the package cache list ..." << std::endl;
+  log("Cleaning the package cache list ...");
   return true;
 }

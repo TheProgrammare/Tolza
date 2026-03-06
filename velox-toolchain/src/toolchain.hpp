@@ -22,11 +22,16 @@
 #include <string>
 #include <filesystem>
 #include <optional>
+#include <expected>
 
 namespace fs = std::filesystem;
 
+
 namespace toolchain
 {
+
+void log(const std::string& msg);
+void err(const std::string& msg);
 
 struct CompCtx {
   enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN };
@@ -41,45 +46,47 @@ struct CompCtx {
     }
   };
 
+  fs::path config_path;
+
   std::map<std::string, std::string> COMPILATION_ARGS;
 
   // target
   std::string target_abi;
   std::string target_arch;
-  size_t      target_bits;
+  size_t      target_bits = 64;
   std::string target_os;
   std::string target_libc;
   std::string target_config;
 
   // profile
-  bool   profile_debug;
-  size_t profile_opt_level;
-  bool   profile_size_opt;
+  bool   profile_debug     = false;
+  size_t profile_opt_level = 0;
+  bool   profile_size_opt  = false;
 
   // logs
-  bool log_all;
-  bool log_filesystem;
-  bool log_lexer;
-  bool log_preprocessor;
-  bool log_parser;
-  bool log_binder;
-  bool log_exporter;
-  bool log_resolver;
-  bool log_LLVM_IR;
-  bool log_linker;
+  bool log_all          = false;
+  bool log_filesystem   = false;
+  bool log_lexer        = false;
+  bool log_preprocessor = false;
+  bool log_parser       = false;
+  bool log_binder       = false;
+  bool log_exporter     = false;
+  bool log_resolver     = false;
+  bool log_LLVM_IR      = false;
+  bool log_linker       = false;
 
   // warnings
-  bool   warn_all;
-  bool   warn_extra;
-  bool   warn_pedantic;
-  size_t warn_level;
-  bool   warn_unused;
-  bool   warn_dead_code;
-  bool   warn_as_error;
+  bool   warn_all       = false;
+  bool   warn_extra     = false;
+  bool   warn_pedantic  = false;
+  size_t warn_level     = 0;
+  bool   warn_unused    = false;
+  bool   warn_dead_code = false;
+  bool   warn_as_error  = false;
 
   // dot
-  bool dot_ast;
-  bool dot_link;
+  bool dot_ast  = false;
+  bool dot_link = false;
 
 
   // defines
@@ -89,7 +96,7 @@ struct CompCtx {
   std::vector<std::string> undefines;
 
   // codegen
-  EEmitMode codegen_emit_mode;
+  EEmitMode codegen_emit_mode = EEmitMode::BIN;
   fs::path  codegen_build_dir;
 
   // project
@@ -97,10 +104,22 @@ struct CompCtx {
   fs::path source_dir;
   fs::path vendor_dir;
   fs::path ffi_json_dir;
+  fs::path binding_dir;
   fs::path compiler_file;
 
   // sub_configs
   std::map<std::string, fs::path> sub_configs;
+
+  const fs::path& get_config_file() const
+  {
+    static fs::path out;
+    if (!out.empty()) return out;
+
+    if (target_config.empty() || target_config == "self") return out = config_path;
+    if (auto find = sub_configs.find(target_config); find != sub_configs.end()) return out = find->second;
+
+    return out = config_path;
+  }
 
   const fs::path& get_project_dir() const
   {
@@ -135,7 +154,7 @@ struct CompCtx {
 
   const fs::path& get_binding_dir() const
   {
-    static auto out = get_build_dir() / "binding";
+    static auto out = binding_dir;
     return out;
   }
 
@@ -155,7 +174,7 @@ struct CompCtx {
   {
     return ffi_json_dir;
   }
-  std::vector<const char*> to_args() const;
+  std::vector<std::string> to_args() const;
 };
 
 // for sub configuration
@@ -209,11 +228,11 @@ struct CompCtx_Optional {
 
   // defines
   std::map<std::string, std::string> defines;
-  EMergeMode                         defines_merge_mode;
+  EMergeMode                         defines_merge_mode = EMergeMode::_union;
 
   // undefines
   std::vector<std::string> undefines;
-  EMergeMode               undefines_merge_mode;
+  EMergeMode               undefines_merge_mode = EMergeMode::_union;
 
   // codegen
   std::optional<EEmitMode> codegen_emit_mode;
@@ -235,9 +254,9 @@ struct CompCtx_Optional {
   }
 };
 
-inline constexpr const char* VELOX_TOOLCHAIN_VERSION = "2026.2.0b";
+inline constexpr std::string VELOX_TOOLCHAIN_VERSION = "2026.2.0b";
 
-inline constexpr const char* DETECTED_OS_NAME =
+inline constexpr std::string DETECTED_OS_NAME =
 #ifdef _WIN32
     "windows";
 #elif __APPLE__
@@ -248,7 +267,7 @@ inline constexpr const char* DETECTED_OS_NAME =
     "unknown";
 #endif
 
-inline constexpr const char* DETECTED_ARCH =
+inline constexpr std::string DETECTED_ARCH =
 #if defined(__x86_64__) || defined(_M_X64)
     "amd64";
 #elif defined(__i386) || defined(_M_IX86)
@@ -261,7 +280,7 @@ inline constexpr const char* DETECTED_ARCH =
         "unknown";
 #endif
 
-inline constexpr const char* DETECTED_BITS =
+inline constexpr std::string DETECTED_BITS =
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
     "64";
 #elif defined(__i386) || defined(_M_IX86) || defined(__arm__)
@@ -270,7 +289,7 @@ inline constexpr const char* DETECTED_BITS =
     "0";
 #endif
 
-inline constexpr const char* DETECTED_ABI =
+inline constexpr std::string DETECTED_ABI =
 #if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__)
     "LP64";
 #elif defined(__ILP32__) || defined(__i386)
@@ -278,5 +297,50 @@ inline constexpr const char* DETECTED_ABI =
 #else
     "unknown";
 #endif
+
+
+namespace fs = std::filesystem;
+
+struct Version {
+  int  year, month, day;
+  char suffix; // '\0' = stable, 'b' = beta, 'p' = preview
+
+  Version(const std::string& str, const std::string& separator = "-")
+  {
+    suffix        = '\0';
+    size_t first  = str.find(separator);
+    size_t second = str.find(separator, first + 1);
+    if (first == std::string::npos || second == std::string::npos)
+      throw std::invalid_argument("Invalid format version: " + str);
+
+    year  = std::stoi(str.substr(0, first));
+    month = std::stoi(str.substr(first + 1, second - first - 1));
+
+    std::string dayPart = str.substr(second + 1);
+    if (!dayPart.empty() && !isdigit(dayPart.back())) {
+      suffix = dayPart.back();
+      dayPart.pop_back();
+    }
+    day = std::stoi(dayPart);
+  }
+
+  bool operator<(const Version& other) const
+  {
+    if (year != other.year) return year < other.year;
+    if (month != other.month) return month < other.month;
+    if (day != other.day) return day < other.day;
+    // Stable > preview > beta
+    return suffix > other.suffix;
+  }
+
+  bool operator==(const Version& other) const
+  {
+    return year == other.year && month == other.month && day == other.day && suffix == other.suffix;
+  }
+};
+
+std::vector<std::pair<Version, fs::path>> find_all_compilers();
+std::optional<fs::path>                   find_compiler_version(const std::string& version);
+std::optional<fs::path>                   find_lastest_compiler();
 
 } // namespace toolchain

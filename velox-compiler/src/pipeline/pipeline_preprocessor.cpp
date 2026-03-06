@@ -23,8 +23,8 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
     Preprocessor pre(*scr_info);
 
     if (compiler::in_binding_compilation) std::cout << "[binder] ";
-    std::cout << "[preprocess]";
-    std::cout << color_CYAN " [" << ++count << "/" << files_amount << "] " color_RESET;
+    std::cout << "[preprocess:";
+    std::cout << color_CYAN << ++count << "/" << files_amount << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
     auto                      start      = std::chrono::high_resolution_clock::now();
@@ -50,7 +50,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
   if (!errs.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[build] Preprocessor failed\n" color_RESET;
+    std::cerr << color_RED "[velox-compiler] Preprocessor failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
     for (auto& [_, fileError] : errs) {

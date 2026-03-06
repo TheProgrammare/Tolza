@@ -1,16 +1,18 @@
 #pragma once
 
+#include <expected>
 #include <string>
 #include <filesystem>
 #include <map>
 
 namespace fs = std::filesystem;
 
-
 namespace command
 {
-namespace sanity
+namespace check
 {
+void err(const std::string& msg);
+void log(const std::string& ms, bool sub_log = false);
 
 // key: section | key: field
 static std::map<std::string, std::string> k_config_map = {
@@ -41,11 +43,12 @@ static std::map<std::string, std::string> k_config_map = {
     {"project",     "source_dir"     },
     {"project",     "thrid_party_dir"},
     {"project",     "ffi-json_dir"   },
+    {"project",     "compiler_file"  },
     {"sub_configs", ""               },
 };
 
-bool check_velox_config_sanity(const fs::path& file, bool full_config, bool verbose = true);
-bool check_workspace_sanity(const fs::path& ws_path, bool verbose = true);
+bool check_velox_config(const fs::path& file, bool full_config, bool verbose = true);
+bool check_workspace(const fs::path& ws_path, bool verbose = true);
 
-} // namespace sanity
+} // namespace check
 } // namespace command

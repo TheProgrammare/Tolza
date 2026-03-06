@@ -9,11 +9,12 @@
 
 #include "command_audit.hpp"
 #include "command_build.hpp"
-#include "command_sanity.hpp"
+#include "command_check.hpp"
 #include "command_workspace.hpp"
 #include "command_package.hpp"
 
 #include "toolchain.hpp"
+
 
 void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args)
 {
@@ -28,55 +29,81 @@ void fmt_template(std::string& templateStr, const std::initializer_list<std::str
   }
 }
 
-bool parse_commands(int argc, const char* argv[])
+void command::err(const std::string& msg)
+{
+  std::cerr << "[command] [ERROR] " << msg << std::endl;
+}
+
+void command::log(const std::string& msg, bool sub_log)
+{
+  if (sub_log)
+    std::cout << "  " << msg << std::endl;
+  else
+    std::cout << "[command] " << msg << std::endl;
+}
+
+
+bool command::parse_commands(int argc, const char* argv[])
 {
   if (argc < 2) {
     invalid_command();
     return false;
   }
 
+  auto exec = [](bool valid_command) {
+    if (!valid_command) {
+      invalid_command();
+      return false;
+    }
+    return true;
+  };
+
   const std::string command = argv[1];
 
   if (command == "create") {
-    parse_create(false, argc, argv);
-    return true;
+    return exec(parse_create(false, argc, argv));
+  } else if (command == "find" | command == "f") {
+    return exec(parse_find_compiler());
   } else if (command == "crw" | command == "crc") {
-    parse_create(true, argc, argv);
-    return true;
+    return exec(parse_create(true, argc, argv));
   } else if (command == "gui" || command == "ui") {
-    parse_gui(argc, argv);
-    return true;
+    return exec(parse_gui(argc, argv));
   } else if (command == "build" | command == "b") {
-    parse_build(argc, argv);
-    return true;
+    return exec(parse_build(argc, argv));
   } else if (command == "generate-ffi-json" | command == "gen-ffi") {
-    parse_generate_ffi_json(argc, argv);
-    return true;
+    return exec(parse_generate_ffi_json(argc, argv));
   } else if (command == "check") {
-    parse_check(false, argc, argv);
-    return true;
+    return exec(parse_check(false, argc, argv));
   } else if (command == "chw" || command == "chc") {
-    parse_check(true, argc, argv);
-    return true;
+    return exec(parse_check(true, argc, argv));
   } else if (command == "--help" || command == "-h") {
-    help_command();
-    return true;
+    return exec(help_command());
   } else if (command == "--version" || command == "-v") {
-    version_command();
-    return true;
+    return exec(version_command());
   } else if (command == "audit" || command == "a") {
-    parse_audit(argc, argv);
-    return true;
+    return exec(parse_audit(argc, argv));
   } else if (command == "package" || command == "pkg") {
-    parse_package(argc, argv);
-    return true;
+    return exec(parse_package(argc, argv));
   }
 
   invalid_command();
   return false;
 }
 
-bool parse_package(int argc, const char* argv[])
+bool command::parse_find_compiler()
+{
+  log("[velox-compiler] Searching a compiler on your machine...");
+
+  if (auto result = toolchain::find_lastest_compiler(); result) {
+    log("Compiler found at : " + result.value().string() + ".", true);
+    return true;
+  } else {
+    log("Please install a velox-compiler to use properly velox-toolchain.");
+    return false;
+  }
+}
+
+bool command::parse_package(int argc, const char* argv[])
 {
   if (argc < 3) return false;
 
@@ -146,12 +173,11 @@ bool parse_package(int argc, const char* argv[])
   return false;
 }
 
-bool parse_create(bool short_command, int argc, const char* argv[])
+bool command::parse_create(bool short_command, int argc, const char* argv[])
 {
   if (short_command) {
     const std::string command = argv[1];
     if (command == "cw") {
-      std::cout << "test" << std::endl;
       if (argc >= 3) {
         const std::string name         = argv[2];
         const fs::path    path         = (argc >= 4) ? fs::weakly_canonical(argv[3]) : fs::current_path();
@@ -197,37 +223,37 @@ bool parse_create(bool short_command, int argc, const char* argv[])
   return false;
 }
 
-bool parse_gui(int argc, const char* argv[])
+bool command::parse_gui(int argc, const char* argv[])
 {
-  std::cout << "[velox-toolchain] Opening the velox toolchain graphical user interface" << std::endl;
+  command::err("Opening the velox toolchain graphical user interface");
   return true;
 }
 
-bool parse_build(int argc, const char* argv[])
+bool command::parse_build(int argc, const char* argv[])
 {
   const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
-  if (auto ctx = command::build::init_compilation_context(path)) {
+  if (auto ctx = command::build::init_compilation_context(path); ctx) {
     if (argc > 3) command::build::parse_args_for_compilation_context(ctx.value(), 3, argc, argv);
 
     if (!fs::exists(ctx->compiler_file)) {
-      std::cerr << "[velox-toolchain] the compiler path at " << ctx->compiler_file << " dosen't exists." << std::endl;
+      command::err("The velox-compiler path at " + ctx->compiler_file.string() + " dosen't exists.");
       return true;
     }
 
-    command::build::start_compilation(ctx.value());
+    if (!command::build::start_compilation(ctx.value())) command::err("The compiler failed.");
 
     return true;
   }
   return false;
 }
 
-bool parse_generate_ffi_json(int argc, const char* argv[])
+bool command::parse_generate_ffi_json(int argc, const char* argv[])
 {
   const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
-  if (auto ctx = command::build::init_compilation_context(path)) {
+  if (auto ctx = command::build::init_compilation_context(path); ctx) {
     if (!fs::exists(ctx->compiler_file)) {
-      std::cerr << "[velox-toolchain] the compiler path at " << ctx->compiler_file << " dosen't exists." << std::endl;
-      return true;
+      command::err("The velox-compiler path at " + ctx->compiler_file.string() + " dosen't exists.");
+      return false;
     }
 
     command::build::generate_ffi_json(ctx.value().get_build_dir(), ctx->get_ffi_json_dir(), ctx->get_binding_dir());
@@ -237,19 +263,21 @@ bool parse_generate_ffi_json(int argc, const char* argv[])
   return false;
 }
 
-bool parse_check(bool short_command, int argc, const char* argv[])
+bool command::parse_check(bool short_command, int argc, const char* argv[])
 {
   if (short_command) {
     const std::string command = argv[1];
     if (command == "sw") {
       const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
-      command::sanity::check_workspace_sanity(path);
+
+      command::check::check_workspace(path);
 
       return true;
     } else if (command == "sc") {
       const fs::path path         = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
       const bool     in_full_mode = (argc >= 4) ? strcmp(argv[3], "--full") : false;
-      command::sanity::check_velox_config_sanity(path, in_full_mode);
+
+      command::check::check_velox_config(path, in_full_mode);
 
       return true;
     }
@@ -259,43 +287,44 @@ bool parse_check(bool short_command, int argc, const char* argv[])
 
   if (command == "workspace") {
     const fs::path path = (argc >= 4) ? fs::weakly_canonical(argv[3]) : fs::current_path();
-    command::sanity::check_workspace_sanity(path);
+
+    command::check::check_workspace(path);
 
     return true;
   } else if (command == "config") {
     const fs::path path         = (argc >= 4) ? fs::weakly_canonical(argv[3]) : fs::current_path();
     const bool     in_full_mode = (argc >= 5) ? strcmp(argv[4], "--full") : false;
-    command::sanity::check_velox_config_sanity(path, in_full_mode);
+    command::check::check_velox_config(path, in_full_mode);
 
     return true;
   }
 
   const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
-  command::sanity::check_workspace_sanity(path);
+  command::check::check_workspace(path);
 
   return true;
 }
 
-bool help_command()
+bool command::help_command()
 {
-  std::cout << "The Velox Toolchain " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
+  std::cout << "The Velox Toolchain version " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
   std::cout << HELP_LIST_COMMANDS << std::endl;
   return true;
 }
 
-bool version_command()
+bool command::version_command()
 {
-  std::cout << "[velox-toolchain] version " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
+  std::cout << "Velox Toolchain version " + toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
   return true;
 }
 
-void invalid_command()
+void command::invalid_command()
 {
-  std::cerr << "[velox-toolchain] Invalid command!" << std::endl;
-  std::cout << "[velox-toolchain] Type --help or -h to see available commands." << std::endl;
+  err("Invalid command!");
+  log("Type --help or -h to see available commands.");
 }
 
-bool parse_audit(int argc, const char* argv[])
+bool command::parse_audit(int argc, const char* argv[])
 {
   const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
   command::audit::audit_workspace(path);
