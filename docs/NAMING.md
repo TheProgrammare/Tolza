@@ -74,7 +74,7 @@ use this for too long names and for most used local variable or temporary variab
 | uptr | `wp` |
 | deci | `d_<integral_size>_<decimal_size>` ->   `102.56d`->    `d_3_2` |
 | udeci | `ud_<integral_size>_<decimal_size>`  ->  `50.2555ud` ->  `ud_2_4` |
-| static array | `arr<size>_<type>` |
+| static array | `arr<size>_<type>` `arr<size1>_<size2>_<type>` |
 | dynamic array | `list_<type>` |
 | tuple |`tu<size>_<type>`
 | string | `str` |
