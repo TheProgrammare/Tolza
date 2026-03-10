@@ -71,7 +71,7 @@ std::vector<std::string> str_files(const std::vector<fs::path>& fPaths)
   for (auto& path : fPaths) {
     std::ifstream if_stream(path);
     if (!if_stream) {
-      std::cerr << color_RED << "[error] [file] " color_MAGENTA << fPaths[i] << color_RESET << std::endl;
+      std::cerr << color_RED << "[file:error] " color_MAGENTA << fPaths[i] << color_RESET << std::endl;
     }
     std::ostringstream content;
     content << if_stream.rdbuf(); // read all the file content
@@ -112,7 +112,7 @@ std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const fs::pat
   if (!filesResult.has_value()) return {};
   auto filesFounds = filesResult.value();
 
-  std::cout << color_YELLOW "[file] [summary] " color_CYAN "files found: " color_YELLOW
+  std::cout << color_YELLOW "[file:summary] " color_CYAN "files found: " color_YELLOW
                    + std::to_string(filesFounds.size()) + color_RESET "\n"
             << std::endl;
 

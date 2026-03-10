@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -18,22 +19,27 @@
 
 bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  std::string passName[3] = {"Symbol", "Type", "Semantic"};
+  const static std::string resolver_head_str =
+      color_BLUE "[resolver:%0/3] " color_YELLOW "%1 " color_RESET "resolver begins";
+  const static std::string resolver_section_str =
+      color_BLUE "[" color_YELLOW "%0" color_BLUE ":%1/%2] " color_RESET "\"%3\"...";
+
+  std::string passName[3] = {"symbol", "type", "semantic"};
 
   for (size_t k = 0; k < 3; k++) {
-    std::string name = passName[k];
+    std::string name       = passName[k];
+    std::string header_txt = resolver_head_str;
+    compiler::fmt_template(header_txt, {std::to_string(k + 1), name});
+    std::cout << header_txt << std::endl;
 
     std::vector<std::tuple<fs::path, std::vector<std::string>>> resErrors;
 
-    std::cout << color_BLUE "[velox-compiler] [resolver] stage ";
-    std::cout << color_CYAN "[" << k + 1 << "/3] " color_RESET;
-    std::cout << name << " Resolver begins" << std::endl;
-
     size_t count = 0;
     for (auto scr_info : scr_infos) {
-      std::cout << "[resolver] ";
-      std::cout << color_CYAN "[" << ++count << "/" << scr_infos.size() << "] " color_RESET;
-      std::cout << name << " for " color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
+      std::string section_txt = resolver_section_str;
+      compiler::fmt_template(section_txt,
+                             {name, std::to_string(++count), std::to_string(scr_infos.size()), scr_info->file_path});
+      std::cout << section_txt << std::flush;
 
       auto                     start = std::chrono::high_resolution_clock::now();
       std::vector<std::string> errs;
@@ -72,9 +78,9 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     std::cout << std::endl;
 
     if (!resErrors.empty()) {
-      std::cerr << color_RED "[velox-compiler] " << name << " Resolver failed" color_RESET << std::endl;
+      std::cerr << color_RED "[" << name << "] Failed" color_RESET << std::endl;
       for (auto& [path, fileError] : resErrors) {
-        std::cerr << color_RED "[resolver] [error] [file] " color_MAGENTA << path << color_MAGENTA "\n";
+        std::cerr << color_RED "[resolver:ERROR] [file] " color_MAGENTA << path << color_MAGENTA "\n";
         for (auto& error : fileError) {
           std::cerr << error << "\n";
         }

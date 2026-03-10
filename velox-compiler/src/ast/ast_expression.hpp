@@ -13,10 +13,10 @@ namespace expression
 {
 
 struct If_Ternary final : public AExpression {
-  Evaluator             evaluator;
-  std::unique_ptr<Node> true_line;
+  Evaluator                    evaluator;
+  std::unique_ptr<AExpression> true_line;
   [[maybe_unused]]
-  std::unique_ptr<Node> false_line;
+  std::unique_ptr<AExpression> false_line;
 
   void accept(Visitor_Base& v) override
   {
@@ -28,20 +28,6 @@ struct If_Ternary final : public AExpression {
   }
 };
 
-struct Enum final : public AExpression {
-  std::string                               name;
-  std::vector<std::unique_ptr<AExpression>> member_values;
-
-  std::string debug_str() const override
-  {
-    return "literal enum \"" + name + "\"";
-  }
-
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-};
 
 struct Member_Access final : public AExpression {
   std::unique_ptr<AExpression> left;
@@ -49,7 +35,7 @@ struct Member_Access final : public AExpression {
 
   std::string debug_str() const override
   {
-    return left->debug_str() + "." + right->debug_str();
+    return "access " + left->debug_str() + "." + right->debug_str();
   }
   void accept(Visitor_Base& v) override
   {
@@ -95,33 +81,23 @@ struct Call_Argument final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return name;
+    std::string out;
+    if (!name.empty()) out += name + " = ";
+
+    return out + expression->debug_str();
   }
 };
 
 struct Call : public AExpression {
-  std::unique_ptr<AIdentifier>                callee;
+  std::unique_ptr<AExpression>                callee;
   std::vector<std::unique_ptr<AType>>         gen_args;
   std::vector<std::unique_ptr<Call_Argument>> param_args;
 
-  std::string debug_str() const override
-  {
-    return "call \"" + callee->debug_str() + "\"";
-  }
+  std::string debug_str() const override;
 
   void accept(Visitor_Base& v) override
   {
     v.visit(*this);
-  }
-
-  bool to_lit_enum(Enum& lit_enum)
-  {
-    lit_enum.name = callee->get_base_name();
-    lit_enum.member_values.reserve(param_args.size());
-    for (auto& param : param_args) {
-      lit_enum.member_values.push_back(std::move(param->expression));
-    }
-    return true;
   }
 };
 
@@ -134,12 +110,12 @@ struct Call_System final : public Call {
   }
   std::string debug_str() const override
   {
-    return "run";
+    return "run[" + target_entity->debug_str() + "::&gt;" + callee->debug_str() + "]";
   }
 };
 
 struct Call_Pipe final : public AExpression {
-  std::unique_ptr<AIdentifier>                             name;
+  std::unique_ptr<AIdentifier>                             callee;
   std::vector<std::unique_ptr<AType>>                      base_gen_args;
   std::vector<std::vector<std::unique_ptr<AType>>>         gen_args;
   std::vector<std::vector<std::unique_ptr<Call_Argument>>> arguments;
@@ -148,7 +124,7 @@ struct Call_Pipe final : public AExpression {
 
   std::string debug_str() const override
   {
-    return "pipecall \"" + name->debug_str() + "\"";
+    return "pipecall[" + callee->debug_str() + "]";
   }
   void accept(Visitor_Base& v) override
   {
@@ -156,9 +132,11 @@ struct Call_Pipe final : public AExpression {
   }
 };
 
+// a[i]
 struct Table_Access final : public AExpression {
   // most of time only one arg
-  std::unique_ptr<Node> selector;
+  std::unique_ptr<AExpression> target;
+  std::unique_ptr<AExpression> selector;
 
   std::string debug_str() const override
   {
@@ -210,7 +188,7 @@ struct Ptr_Val final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return "val'";
+    return "val of";
   }
 };
 
@@ -224,7 +202,7 @@ struct Addr_Of final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return "addr'";
+    return "addr of";
   }
 };
 
@@ -238,7 +216,7 @@ struct Size_Of final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return "<mem> size(" + std::to_string(size) + ")";
+    return "size of (" + std::to_string(size) + ")";
   }
 };
 

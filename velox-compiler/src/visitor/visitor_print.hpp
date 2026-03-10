@@ -1,47 +1,16 @@
 #pragma once
 
-#include <vector>
-
-#include "ast/ast_base.hpp"
-#include "ast/ast_memory.hpp"
-#include "error_output.hpp"
-#include "compiler.hpp"
+#include "ast/ast_forward.hpp"
 #include "visitor_base.hpp"
+#include <sstream>
+#include <filesystem>
 
-struct Visitor_Default : public Visitor_Base {
+namespace fs = std::filesystem;
+
+struct Visitor_Print : public Visitor_Base {
   using Visitor_Base::Visitor_Base;
 
-  template <size_t Code>
-  void error_add(const ast::Node& n, const std::string& msg, const std::string& hint)
-  {
-    auto error = Error_Diagnostic<Code>(scr_info, n._token, {}, current_EPhase(), EErrorSeverity::error, {}, msg, hint);
-
-    errors.push_back(error.print_error());
-  }
-
-  template <size_t Code>
-  void error_two_lines(const ast::Node& first, const ast::Node& second, const std::string& msg, const std::string& hint)
-  {
-    auto first_error = Error_Diagnostic<Code>(*first._scr_info, first._token, {}, current_EPhase(),
-                                              EErrorSeverity::error, {}, msg, hint);
-
-    auto second_error = Error_Diagnostic<Code>(*second._scr_info, second._token, {}, current_EPhase(),
-                                               EErrorSeverity::error, {}, msg, hint);
-
-    std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
-    out += first_error.print_line() + color_RESET "\n";
-    out += "[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
-    out += second_error.print_line() + color_RESET "\n";
-
-    out += first_error.print_messages();
-    errors.push_back(out);
-  }
-
-  compiler::EPhase current_EPhase()
-  {
-    return compiler::EPhase::resolver_symbol;
-  }
-
+  std::ostringstream sstr;
 
   // ============ AST ============
   void visit(ast::Node& n) override;
@@ -215,4 +184,11 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::memory::Del& n) override;
   void visit(ast::memory::Align& n) override;
   void visit(ast::memory::Drop& n) override;
+
+  fs::path get_file_path() const;
 };
+
+// %0 velox-compiler version
+// %1 file path
+// %2 ast view
+extern const char* PRINT_FILE_HTLM_TEMPLATE;

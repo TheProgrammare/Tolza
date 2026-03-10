@@ -12,7 +12,7 @@ struct ALiteral;          // abstract with literal value
 struct AIdentifier;       // abstract
 struct Expr_ID;           // identifier expression
 struct Expr_ID_Qualified; // qualified identifier expression
-struct Expr_ID_Generic;   // identifier with generic arguments
+struct Expr_ID_Type;      // identifier with generic arguments
 
 struct Root; // file root
 
@@ -43,8 +43,9 @@ struct Lambda;         // lam name[self](a: i32) -> i32 {...} / lam {...}
 struct Lambda_Capture; // [self] / [mut] / [copy] / [ref] / [Var1, Var2]
 struct Capture_Member; // self / mut / copy / ref / Var1, Var2
 
-struct Parameter;         // a: i32 = ... / copy a: i32 / mut a: i32 / ref a: i32 /  ptr'void...
-struct Generic_Parameter; // <T: Movable + Physic, U: Copyable>
+struct Parameter;                 // a: i32 = ... / copy a: i32 / mut a: i32 / ref a: i32 /  ptr'void...
+struct Generic_Parameter_Element; // T: Movable + Physic
+struct Generic_Parameters;        // <T: Movable + Physic, U: Copyable>
 
 struct Pattern;
 struct Pattern_Enum;      // let EItem::House(name, number) = building
@@ -113,13 +114,13 @@ struct Decimal;  // deci udeci
 struct Floating; // float double longdouble
 
 struct ASCII; // "a"ascii -> 8 bits character
-struct UFT32; // "⚜"utf32 "⚜" -> 32 bits character
+struct UTF32; // "⚜"utf32 "⚜" -> 32 bits character
 
-struct Text;             // fat pointer of utf32 "Hello World!"
-struct Text_Lerp;        // "{expression}" "{expression:spec}"
-struct Textual_Element;  // Text or Text_Lerp
-struct Textual_Format;   // "name is {name}"
-struct Format_Specifier; // "{name:format_specifier}"
+struct Text;               // fat pointer of utf32 "Hello World!"
+struct Text_Interpolation; // "{expression}" "{expression:spec}"
+struct Textual_Element;    // Text or Text_Lerp
+struct Textual_Format;     // "name is {name}"
+struct Format_Specifier;   // "{name:format_specifier}"
 
 struct Table;            // { 0, 1, 2 } // {{1, 2},{1, 2}}
 struct Table_Population; // { [0..3] => 5 } -> { 5, 5, 5 } // { [0..3] => @i +
@@ -130,6 +131,9 @@ struct Map; // { 10 -> "hello", 20 -> "world" }
 struct Tuple; // ("my", 10, value)
 
 struct Range; // [0..10] // [1..=10]
+struct Iterator;
+
+struct Enum; // EItem::House(name, number)
 
 struct Component; // CPosition{x= 10, y= 10, z= 10}
 struct Entity;    // CPlayer{CPosition.x= 10} // CPlayer{CPosition{x= 10, y= 10, z=
@@ -141,7 +145,6 @@ namespace expression
 {
 struct If_Ternary; // x = if a > b then a else math::abs(b)
 
-struct Enum; // EItem::House(name, number)
 
 struct Member_Access; // Player.CPosition.x // CPosition.x
 

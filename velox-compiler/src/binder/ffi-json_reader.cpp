@@ -292,6 +292,7 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
       }
       break;
     }
+    break;
   }
   case EType::_comp: {
     if (ty.comp_type) {
@@ -301,6 +302,7 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
         align += m_align;
       }
     }
+    break;
   }
   case EType::_entity: {
     if (ty.entity_type) {
@@ -311,6 +313,7 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
         }
       }
     }
+    break;
   }
   case EType::_union: {
     if (ty.union_type) {
@@ -321,6 +324,7 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
       }
       break;
     }
+    break;
   }
   case EType::_flag: {
     if (ty.flag_type) {
@@ -330,6 +334,7 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
         align                  = m_align;
       }
     }
+    break;
   }
   case EType::_alias: {
   }

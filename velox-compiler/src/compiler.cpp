@@ -29,7 +29,7 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
 
     // e.g. --debug
     auto bool_arg = [&](bool& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
-      if (!arg_name.empty() && alt_arg_name.empty()) {
+      if (arg_name.empty() && alt_arg_name.empty()) {
         input = false;
         return false;
       }
@@ -177,9 +177,8 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
     if (bool_arg(ctx.warn_dead_code, "warn-dead-code", "wdc")) continue;
     if (bool_arg(ctx.warn_as_error, "warn-as-error", "wae")) continue;
 
-    // dot
-    if (bool_arg(ctx.dot_ast, "dot-ast")) continue;
-    if (bool_arg(ctx.dot_link, "dot-link")) continue;
+    // printer
+    if (bool_arg(ctx.print_ast, "print-ast")) continue;
 
     // define macro
     if (arg.rfind("-D", 0) == 0) {
@@ -239,7 +238,7 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
       continue;
     }
 
-    std::cerr << "[velox-compiler] [warning] Unknown argument '" << arg << "'" << std::endl;
+    std::cerr << "[velox-compiler:warning] Unknown argument '" << arg << "'" << std::endl;
   }
 }
 

@@ -56,6 +56,19 @@ resolver        = %5
 LLVM_IR         = %5
 Linker          = %5
 
+[warnings]
+# override all warning options
+all              = true  
+extra            = true    
+pedantic         = true        
+level            = 3    
+unused           = true      
+dead_code        = true        
+as_error         = true        
+
+[printer]
+ast = false
+
 [defines]
 VERSION = "1.0"
 
@@ -72,6 +85,7 @@ project_dir = "./"
 source_dir  = "./src"
 vendor_dir = "./vendor"
 ffi_json_dir = "./ffi-json"
+binding_dir = "./binding"
 compiler_file = "%6"
 
 [sub_configs]

@@ -41,7 +41,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
   if (!lexErrors.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[velox-compiler] Lexer failed\n" color_RESET;
+    std::cerr << color_RED "[lex:ERROR] Lexer failed\n" color_RESET;
     for (auto& errs : lexErrors) {
       auto [_, fileError] = errs;
       for (const auto& f_err : fileError) {
@@ -55,7 +55,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
   if (compiler::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
-  std::cout << color_YELLOW "[lex] [summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
+  std::cout << color_YELLOW "[lex:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
             << color_RESET << " | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
   std::cout << std::endl;
 

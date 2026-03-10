@@ -5,6 +5,7 @@
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration.hpp"
 #include "ast/ast_declaration_cop.hpp"
+#include "visitor/symbol_manager.hpp"
 #include "visitor_default.hpp"
 
 struct Visitor_Symbol : public Visitor_Default {
@@ -22,7 +23,11 @@ struct Visitor_Symbol : public Visitor_Default {
   std::shared_ptr<ast::declaration::cop::System>    current_system;
   std::shared_ptr<ast::declaration::local::Lambda>  current_lambda;
 
-  bool resolve_sym(ast::AIdentifier& expr, std::weak_ptr<Symbol_Data>& target_resolution, bool silentError = false);
+  bool resolve_sym(ast::AIdentifier& expr, Symbol_Data*& target_resolution, bool silentError = false);
+
+  void visit(ast::Expr_ID& n) override;
+  void visit(ast::Expr_ID_Qualified& n) override;
+  void visit(ast::Expr_ID_Type& n) override;
 };
 
 inline const std::string SYM_HINT =

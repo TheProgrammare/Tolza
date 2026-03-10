@@ -33,20 +33,24 @@ void Visitor_Default::visit(ast::ALocal& n)
 void Visitor_Default::visit(ast::AExpression& n)
 {
 }
-
+void Visitor_Default::visit(ast::AIdentifier& n)
+{
+}
 void Visitor_Default::visit(ast::Expr_ID& n)
 {
 }
 void Visitor_Default::visit(ast::Expr_ID_Qualified& n)
 {
 }
-void Visitor_Default::visit(ast::Expr_ID_Generic& n)
+void Visitor_Default::visit(ast::Expr_ID_Type& n)
 {
+  n.name->accept(*this);
   for (auto& elem : n.gen_args) elem->accept(*this);
 }
 
 void Visitor_Default::visit(ast::Root& n)
 {
+  for (auto& elem : n.global_nodes) elem->accept(*this);
 }
 
 // ============ DECLARATION ============
@@ -58,7 +62,7 @@ void Visitor_Default::visit(ast::declaration::Global& n)
 void Visitor_Default::visit(ast::declaration::Function& n)
 {
   n.prototype->accept(*this);
-  n.codeblock->accept(*this);
+  if (n.codeblock) n.codeblock->accept(*this);
 }
 
 void Visitor_Default::visit(ast::declaration::Mod& n)
@@ -127,11 +131,15 @@ void Visitor_Default::visit(ast::declaration::local::Capture_Member& n)
 void Visitor_Default::visit(ast::declaration::local::Parameter& n)
 {
   n.type->accept(*this);
-  n.defaultValue->accept(*this);
+  if (n.defaultValue) n.defaultValue->accept(*this);
 }
-void Visitor_Default::visit(ast::declaration::local::Generic_Parameter& n)
+void Visitor_Default::visit(ast::declaration::local::Generic_Parameter_Element& n)
 {
   for (auto& elem : n.generic_references) elem->accept(*this);
+}
+void Visitor_Default::visit(ast::declaration::local::Generic_Parameters& n)
+{
+  for (auto& elem : n.parameters) elem->accept(*this);
 }
 
 void Visitor_Default::visit(ast::declaration::local::Pattern& n)
@@ -179,7 +187,7 @@ void Visitor_Default::visit(ast::declaration::local::Variable_Unpack& n)
 void Visitor_Default::visit(ast::declaration::local::Variable& n)
 {
   if (n.type) n.type->accept(*this);
-  if (n.expression) n.expression.value()->accept(*this);
+  if (n.expression) n.expression->accept(*this);
 }
 
 void Visitor_Default::visit(ast::declaration::local::Capability& n)
@@ -313,14 +321,14 @@ void Visitor_Default::visit(ast::literal::Floating& n)
 void Visitor_Default::visit(ast::literal::ASCII& n)
 {
 }
-void Visitor_Default::visit(ast::literal::UFT32& n)
+void Visitor_Default::visit(ast::literal::UTF32& n)
 {
 }
 
 void Visitor_Default::visit(ast::literal::Text& n)
 {
 }
-void Visitor_Default::visit(ast::literal::Text_Lerp& n)
+void Visitor_Default::visit(ast::literal::Text_Interpolation& n)
 {
   if (n.expression) n.expression->accept(*this);
   if (n.spec) n.spec->accept(*this);
@@ -331,9 +339,7 @@ void Visitor_Default::visit(ast::literal::Textual_Element& n)
 }
 void Visitor_Default::visit(ast::literal::Textual_Format& n)
 {
-  for (auto& elem : n.values) {
-    elem.val->accept(*this);
-  }
+  for (auto& elem : n.values) elem.val->accept(*this);
 }
 void Visitor_Default::visit(ast::literal::Format_Specifier& n)
 {
@@ -373,6 +379,18 @@ void Visitor_Default::visit(ast::literal::Range& n)
   if (n.step) n.step->accept(*this);
 }
 
+void Visitor_Default::visit(ast::literal::Iterator& n)
+{
+  if (n.collection) n.collection->accept(*this);
+}
+
+void Visitor_Default::visit(ast::literal::Enum& n)
+{
+  n.name->accept(*this);
+  for (auto& elem : n.member_values) elem->accept(*this);
+}
+
+
 void Visitor_Default::visit(ast::literal::Component& n)
 {
   n.name->accept(*this);
@@ -390,10 +408,6 @@ void Visitor_Default::visit(ast::expression::If_Ternary& n)
   n.evaluator.node()->accept(*this);
   n.true_line->accept(*this);
   n.false_line->accept(*this);
-}
-void Visitor_Default::visit(ast::expression::Enum& n)
-{
-  for (auto& elem : n.member_values) elem->accept(*this);
 }
 
 void Visitor_Default::visit(ast::expression::Member_Access& n)
@@ -428,7 +442,7 @@ void Visitor_Default::visit(ast::expression::Call_System& n)
 }
 void Visitor_Default::visit(ast::expression::Call_Pipe& n)
 {
-  n.name->accept(*this);
+  n.callee->accept(*this);
   for (auto& elem : n.base_gen_args) elem->accept(*this);
   for (auto& elem : n.gen_args) {
     for (auto& elem1 : elem) elem1->accept(*this);

@@ -15,8 +15,8 @@ struct Parser_Literal {
   {
   }
 
-  [[nodiscard]] std::optional<std::unique_ptr<ast::ALiteral>> try_literal(bool is_silent_error = false);
-  [[nodiscard]] std::unique_ptr<ast::literal::Range>          literal_range(std::unique_ptr<ast::AExpression> start);
+  [[nodiscard]] std::unique_ptr<ast::ALiteral>       try_literal(bool is_silent_error = false);
+  [[nodiscard]] std::unique_ptr<ast::literal::Range> literal_range(std::unique_ptr<ast::AExpression> start);
 
 
 private:

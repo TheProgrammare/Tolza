@@ -192,7 +192,8 @@ enum class ESymbolType {
   Entity_Cast,
   Entity_New,
   Entity_Del,
-  Alias,
+  Type_Alias,
+  Mod_Alias,
   Generic,
 };
 

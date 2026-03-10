@@ -20,7 +20,7 @@ private:
   [[nodiscard]] std::unique_ptr<ast::type::Table>          table(bool isConst, bool isOptional, bool isVolatile);
   [[nodiscard]] std::unique_ptr<ast::type::Ptr>            pointer(bool isConst, bool isOptional, bool isVolatile);
   [[nodiscard]] std::unique_ptr<ast::type::Primitive>      primitive(bool isConst, bool isOptional, bool isVolatile);
-  [[nodiscard]] std::unique_ptr<ast::Expr_ID_Generic>      id_type(bool isConst, bool isOptional, bool isVolatile);
+  [[nodiscard]] std::unique_ptr<ast::Expr_ID_Type>         id_type(bool isConst, bool isOptional, bool isVolatile);
   [[nodiscard]] std::unique_ptr<ast::type::Tuple>          tuple(bool isConst, bool isOptional, bool isVolatile);
   [[nodiscard]] std::unique_ptr<ast::type::Function_Proto> function_proto(bool isConst, bool isOptional,
                                                                           bool isVolatile);

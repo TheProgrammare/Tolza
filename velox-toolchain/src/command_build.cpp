@@ -132,6 +132,16 @@ toolchain::CompCtx command::build::parse_compilation_context(const fs::path& con
   result.log_LLVM_IR      = reader.GetBoolean("logs", "llvm-ir", false);
   result.log_linker       = reader.GetBoolean("logs", "linker", false);
 
+  result.warn_all       = reader.GetBoolean("warnings", "all", true);
+  result.warn_extra     = reader.GetBoolean("warnings", "extra", true);
+  result.warn_pedantic  = reader.GetBoolean("warnings", "pedantic", true);
+  result.warn_level     = reader.GetInteger("warnings", "level", 3);
+  result.warn_unused    = reader.GetBoolean("warnings", "unused", true);
+  result.warn_dead_code = reader.GetBoolean("warnings", "dead_code", true);
+  result.warn_as_error  = reader.GetBoolean("warnings", "as_error", true);
+
+  result.print_ast = reader.GetBoolean("printer", "ast", false);
+
   for (auto& define : reader.Keys("defines")) {
     auto val               = remove_quotes(reader.GetString("defines", define, ""));
     result.defines[define] = val;
@@ -152,6 +162,7 @@ toolchain::CompCtx command::build::parse_compilation_context(const fs::path& con
   result.source_dir   = resolve_path(remove_quotes(reader.GetString("project", "source_dir", "./src")));
   result.vendor_dir   = resolve_path(remove_quotes(reader.GetString("project", "vendor_dir", "./vendor")));
   result.ffi_json_dir = resolve_path(remove_quotes(reader.GetString("project", "ffi_json_dir", "./ffi-json")));
+  result.binding_dir  = resolve_path(remove_quotes(reader.GetString("project", "binding_dir", "./binding")));
 
   fs::path default_compiler_file;
 
@@ -290,9 +301,8 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
     if (bool_arg(ctx.warn_dead_code, "warn-dead-code", "wdc")) continue;
     if (bool_arg(ctx.warn_as_error, "warn-as-error", "wae")) continue;
 
-    // dot
-    if (bool_arg(ctx.dot_ast, "dot-ast")) continue;
-    if (bool_arg(ctx.dot_link, "dot-link")) continue;
+    // printer
+    if (bool_arg(ctx.print_ast, "print-ast")) continue;
 
     // define macro
     if (arg.rfind("-D", 0) == 0) {
@@ -343,6 +353,7 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
     // project
     if (path_arg(ctx.project_dir, "project")) continue;
     if (path_arg(ctx.source_dir, "src")) continue;
+    if (path_arg(ctx.binding_dir, "binding")) continue;
     if (path_arg(ctx.vendor_dir, "vendor")) continue;
     if (path_arg(ctx.ffi_json_dir, "ffi-json")) continue;
     if (path_arg(ctx.compiler_file, "compiler")) continue;

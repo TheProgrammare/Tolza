@@ -3,8 +3,15 @@
 
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration.hpp"
-#include "ast/ast_headers.hpp"
-#include "parser_headers.hpp"
+#include "parser_context.hpp"
+#include "parser_expression.hpp"
+#include "parser_type.hpp"
+#include "parser_declaration_local.hpp"
+#include "parser_declaration_cop.hpp"
+#include "parser_base.hpp"
+#include "ast/ast_generic.hpp"
+
+#include "lexer/token.hpp"
 
 #include "metacode.hpp"
 #include "visitor/symbol_manager.hpp"
@@ -144,7 +151,7 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   var->kind = kind;
   var->name = ctx.parse_name("", hint);
 
-  var->isExtern = ctx.metablock_contains(*var, "extern");
+  var->isExtern = ctx.in_extern;
 
   ctx.m_sym->add_decl(var);
 

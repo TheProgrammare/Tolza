@@ -40,7 +40,7 @@ bool ast::generic::Use_Component::type_isValid(const AType& type) const
 bool ast::generic::Have_Role::type_isValid(const AType& type) const
 {
   for (auto& comp : resolved_role_sym->components) {
-    if (comp->inferred_type == &type) return true;
+    // if (comp->inferred_type == &type) return true;
   }
   return false;
 }

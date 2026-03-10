@@ -3,6 +3,7 @@
 #include "error_output.hpp"
 
 #include "ast_type.hpp"
+#include <cstddef>
 
 std::string mangle_id(const std::string& inId)
 {
@@ -81,16 +82,31 @@ std::string ast::Node::mangle_scope() const
   return out;
 }
 
-std::string ast::Expr_ID_Generic::mangle_types() const
+bool ast::Node::is_visible_in(const std::span<const std::string>& other_scope) const
+{
+  if (_scope.empty() && other_scope.empty()) return true;
+  if (other_scope.empty()) return true;
+
+  if (_scope.size() > other_scope.size()) return false;
+
+  for (size_t i = 1; i < _scope.size(); i++) {
+    if (_scope[i] != other_scope[i]) return false;
+  }
+
+  return true;
+}
+
+
+std::string ast::Expr_ID_Type::mangle_types() const
 {
   std::string out;
   for (auto& elem : gen_args) out += elem->mangle_scope();
   return out;
 }
 
-std::string ast::Expr_ID_Generic::mangle_type() const
+std::string ast::Expr_ID_Type::mangle_type() const
 {
-  std::string out = mangle_qualified_name();
+  std::string out;
 
   size_t count = 0;
   for (auto& ty : gen_args) {
@@ -98,5 +114,17 @@ std::string ast::Expr_ID_Generic::mangle_type() const
     if (count++ != gen_args.size() - 1) out += "_";
   }
 
+  return out;
+}
+
+std::string ast::Expr_ID_Type::debug_str() const
+{
+  std::string out = name->debug_str();
+  if (!gen_args.empty()) out += "&lt;";
+  for (size_t i = 0; i < gen_args.size(); i++) {
+    out += gen_args[i]->debug_str();
+    if (i != gen_args.size() - 1) out += ", ";
+  }
+  if (!gen_args.empty()) out += "&gt;";
   return out;
 }

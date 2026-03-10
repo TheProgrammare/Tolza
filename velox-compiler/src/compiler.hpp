@@ -97,9 +97,8 @@ struct CompCtx {
   bool   warn_dead_code = false;
   bool   warn_as_error  = false;
 
-  // dot
-  bool dot_ast  = false;
-  bool dot_link = false;
+  // print
+  bool print_ast = false;
 
 
   // defines

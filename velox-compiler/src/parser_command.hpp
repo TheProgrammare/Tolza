@@ -73,9 +73,8 @@ Warnings options:
   --warn-dead-code | -wdc   Warn dead code, never used...
   --warn-as-error  | -wae   All warnings treated as errors.
 
-Dot options:
-  --dot-ast                 Generate graphviz for AST view.
-  --dot-link                Generate graphviz for files linked.
+AST options:
+  --print-ast               Generate a file view of ast.
 
 Preprocessor options:       
   -D<name>[=value]          Define a macro (value defaults to 1).

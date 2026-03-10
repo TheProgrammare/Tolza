@@ -48,9 +48,9 @@ bool generate_ffi_json_command(int argc, const char* argv[])
   fs::path dest   = argv[4];
 
   if (!fs::exists(target))
-    std::cerr << "[gen-ffi] [error] The file target at " << target << " dosen't exists." << std::endl;
+    std::cerr << "[gen-ffi:ERROR] The file target at " << target << " dosen't exists." << std::endl;
   if (!fs::exists(dest) || fs::is_directory(dest)) {
-    std::cerr << "[gen-ffi] [error] The destination at " << dest << " is invalid or dosen't exists." << std::endl;
+    std::cerr << "[gen-ffi:ERROR] The destination at " << dest << " is invalid or dosen't exists." << std::endl;
     return true;
   }
 
@@ -65,7 +65,7 @@ bool generate_ffi_json_command(int argc, const char* argv[])
       }
     }
   } else {
-    std::cerr << "[gen-ffi] [error] Unsopported special case at " << target << "." << std::endl;
+    std::cerr << "[gen-ffi:ERROR] Unsopported special case at " << target << "." << std::endl;
   }
 
   return true;
@@ -73,14 +73,14 @@ bool generate_ffi_json_command(int argc, const char* argv[])
 
 bool help_command()
 {
-  std::cout << "The Velox Compiler " << compiler::VELOX_COMPILER_VERSION << std::endl;
+  std::cout << "Velox Compiler version " << compiler::VELOX_COMPILER_VERSION << std::endl;
   std::cout << HELP_LIST_COMMANDS << std::endl;
   return true;
 }
 
 bool version_command()
 {
-  std::cout << "[velox-compiler] version " << compiler::VELOX_COMPILER_VERSION << std::endl;
+  std::cout << "Velox Compiler version " << compiler::VELOX_COMPILER_VERSION << std::endl;
   return true;
 }
 

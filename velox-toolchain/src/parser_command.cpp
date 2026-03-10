@@ -307,7 +307,7 @@ bool command::parse_check(bool short_command, int argc, const char* argv[])
 
 bool command::help_command()
 {
-  std::cout << "The Velox Toolchain version " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
+  std::cout << "Velox Toolchain version " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
   std::cout << HELP_LIST_COMMANDS << std::endl;
   return true;
 }
@@ -320,8 +320,8 @@ bool command::version_command()
 
 void command::invalid_command()
 {
-  err("Invalid command!");
-  log("Type --help or -h to see available commands.");
+  std::cout << "[velox-toolchain] Invalid command!" << std::endl;
+  std::cout << "[velox-toolchain] Type --help or -h to see available commands." << std::endl;
 }
 
 bool command::parse_audit(int argc, const char* argv[])

@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "ast/ast_data.hpp"
-#include "ast/ast_declaration.hpp"
 #include "ast_base.hpp"
 #include "ast_codeblock_instruction.hpp"
+#include "script_info.hpp"
 
 namespace ast
 {
@@ -25,7 +25,7 @@ struct CodeBlock final : public Node {
   }
   std::string debug_str() const override
   {
-    return "codeblock";
+    return "codeblock {...}";
   }
 };
 
@@ -43,7 +43,7 @@ struct Variable_Binding final : public ALocal {
 
   std::string debug_str() const override
   {
-    return "bind[" + name + "]";
+    return "bind " + ECapability_to_str(capability) + " " + name + "";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -109,7 +109,7 @@ struct Pattern_Enum final : public Pattern {
   }
   std::string debug_str() const override
   {
-    return "enum pattern \"" + name->debug_str() + "\"";
+    return "enum pattern[" + name->debug_str() + "]";
   }
 };
 
@@ -144,7 +144,7 @@ struct Pattern_Entity final : public Pattern {
   }
   std::string debug_str() const override
   {
-    return "entity pattern \"" + name->debug_str() + "\"";
+    return "entity pattern[" + name->debug_str() + "]";
   }
 };
 
@@ -162,7 +162,7 @@ struct Pattern_Component final : public Pattern {
   }
   std::string debug_str() const override
   {
-    return "component pattern \"" + name->debug_str() + "\"";
+    return "component pattern[" + name->debug_str() + "]";
   }
 };
 
@@ -201,10 +201,8 @@ struct Lambda final : public ALocal, ICallable {
   {
     v.visit(*this);
   }
-  std::string debug_str() const override
-  {
-    return "lam \"" + name + "\"";
-  };
+  std::string debug_str() const override;
+
   type::Function_Proto* get_signature() override
   {
     return prototype.get();
@@ -217,8 +215,8 @@ struct Lambda final : public ALocal, ICallable {
 
 // let/var a: ptr'type?$ = expression;
 struct Variable final : public ALocal {
-  [[maybe_unused]] std::shared_ptr<AType>               type;       // infered if nullptr
-  [[maybe_unused]] std::optional<std::unique_ptr<Node>> expression; // affectation
+  [[maybe_unused]] std::shared_ptr<AType> type;       // infered if nullptr
+  [[maybe_unused]] std::unique_ptr<Node>  expression; // affectation
 
   EAssignmentType assignment = EAssignmentType::Copy; // assign type
   EVariableKind   kind       = EVariableKind::Const;
@@ -228,10 +226,7 @@ struct Variable final : public ALocal {
   {
     v.visit(*this);
   }
-  std::string debug_str() const override
-  {
-    return EVariableKind_to_str(kind) + " " + name;
-  }
+  std::string debug_str() const override;
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Local;
@@ -251,7 +246,7 @@ struct Capability final : public ALocal {
   std::string debug_str() const override
   {
     std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
-    return str_kind + name;
+    return "capability " + str_kind + name;
   }
   ESymbolType get_symbol_type() const override
   {
@@ -266,7 +261,7 @@ struct Capture_Member final : public Node {
 
   std::string debug_str() const override
   {
-    return "capture by " + ECapability_to_str(capability) + " \"" + name->debug_str() + "\"";
+    return ECapability_to_str(capability) + " [" + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override
@@ -287,7 +282,7 @@ struct Lambda_Capture final : public Node {
   }
   std::string debug_str() const override
   {
-    return "<def> capture";
+    return "capture";
   }
 };
 
@@ -305,12 +300,12 @@ struct Parameter final : public ALocal {
   {
     v.visit(*this);
   }
-  std::string debug_str() const override
+  std::string debug_str() const override;
+  bool        is_same(const Parameter& other) const
   {
-    if (isVariadic)
-      return EPassMode_to_str(passMode) + " " + name + "...";
-    else
-      return EPassMode_to_str(passMode) + " " + name;
+    if (isVariadic != other.isVariadic) return false;
+    if (passMode != other.passMode) return false;
+    return type->is_same(*other.type);
   }
   ESymbolType get_symbol_type() const override
   {
@@ -318,7 +313,7 @@ struct Parameter final : public ALocal {
   }
 };
 
-struct Generic_Parameter final : public ALocal {
+struct Generic_Parameter_Element final : public ALocal {
   std::vector<std::unique_ptr<AType>> generic_references;
 
   std::string name;
@@ -327,19 +322,25 @@ struct Generic_Parameter final : public ALocal {
   {
     v.visit(*this);
   }
-  std::string debug_str() const override
-  {
-    std::string out = generic_references.empty() ? name : name + ": ";
-    for (size_t i = 0; i < generic_references.size(); i++) {
-      out += generic_references[i]->debug_str();
-      if (i != generic_references.size() - 1) out += " + ";
-    }
-    return out;
-  }
+  std::string debug_str() const override;
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Generic_Parameter;
   };
+};
+
+struct Generic_Parameters final : public ALocal {
+  std::vector<std::shared_ptr<Generic_Parameter_Element>> parameters;
+
+  void accept(Visitor_Base& v) override
+  {
+    v.visit(*this);
+  }
+  std::string debug_str() const override;
+  ESymbolType get_symbol_type() const override
+  {
+    return ESymbolType::Generic_Parameter;
+  }
 };
 
 } // namespace local

@@ -33,11 +33,18 @@ std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool is_sil
   case TokTy::DO_WHILE: return while_statement();
   case TokTy::LOOP:     return loop_statement();
   case TokTy::MATCH:    return match_statement();
-  case TokTy::BREAK:    ctx.tok_v.match(TokTy::BREAK); return ctx.Create_Node<ast::statement::Break>(ctx.tok_v.peek(-1));
-  case TokTy::END:      ctx.tok_v.match(TokTy::END); return ctx.Create_Node<ast::statement::Return>(ctx.tok_v.peek(-1));
-  case TokTy::CONTINUE:
+  case TokTy::BREAK:    {
+    ctx.tok_v.match(TokTy::BREAK);
+    return ctx.Create_Node<ast::statement::Break>(ctx.tok_v.peek(-1));
+  }
+  case TokTy::END: {
+    ctx.tok_v.match(TokTy::END);
+    return ctx.Create_Node<ast::statement::Return>(ctx.tok_v.peek(-1));
+  }
+  case TokTy::CONTINUE: {
     ctx.tok_v.match(TokTy::CONTINUE);
     return ctx.Create_Node<ast::statement::Continue>(ctx.tok_v.peek(-1));
+  }
   case TokTy::RETURN:     return return_flow();
   case TokTy::GOTO:       return goto_statement();
   case TokTy::GOTO_LABEL: return goto_label_statement();

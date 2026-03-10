@@ -20,13 +20,13 @@
 #include <memory>
 #include <string>
 #include <filesystem>
+#include <vector>
+#include <span>
 
 #include "ast_data.hpp"
 #include "ast_forward.hpp"
 #include "lexer/token.hpp"
 #include "visitor/visitor_base.hpp"
-
-struct Visitor_Base;
 
 struct ScriptInfo;
 struct Symbol_Data;
@@ -48,6 +48,7 @@ struct ICallable {
 // node in
 // AST
 struct Node {
+  ScriptInfo*              _scr_info = nullptr;
   Token                    _token;
   std::vector<std::string> _scope;
 
@@ -75,6 +76,7 @@ struct Node {
     return _token.span.pos;
   }
   [[nodiscard]] std::string         mangle_scope() const;
+  [[nodiscard]] bool                is_visible_in(const std::span<const std::string>& other_scope) const;
   [[nodiscard]] virtual std::string debug_str() const       = 0;
   virtual void                      accept(Visitor_Base& v) = 0;
 };
@@ -88,16 +90,28 @@ struct AType : virtual Node {
 
   [[nodiscard]] virtual std::string mangle_type() const = 0;
 
+  [[nodiscard]] virtual bool compare_with(const AType& other) const = 0;
+
+  [[nodiscard]] bool is_same(const AType& other) const
+  {
+    if (type_isOptional != other.type_isOptional || type_isConst != other.type_isConst
+        || type_isVolatile != other.type_isVolatile || typeid(*this) == typeid(other))
+      return false;
+
+    return compare_with(other);
+  }
+
   AType()          = default;
   virtual ~AType() = default;
 };
 
 using INFERRED_TYPE = AType*;
+using SYM_REF       = Symbol_Data*;
 
 struct ADeclaration : virtual Node {
   std::string name;
 
-  std::weak_ptr<Symbol_Data> symbol;
+  SYM_REF symbol = nullptr;
 
   ADeclaration() = default;
 
@@ -106,7 +120,7 @@ struct ADeclaration : virtual Node {
   ADeclaration(ADeclaration&&)                 = delete;
   ADeclaration& operator=(ADeclaration&&)      = delete;
 
-  virtual ESymbolType get_symbol_type() const = 0;
+  [[nodiscard]] virtual ESymbolType get_symbol_type() const = 0;
 
   virtual ~ADeclaration() = default;
 };
@@ -116,8 +130,8 @@ struct ALocal : ADeclaration {
 };
 
 struct AExpression : virtual Node {
-  INFERRED_TYPE inferred_type;
-  virtual ~AExpression() = default;
+  INFERRED_TYPE inferred_type = nullptr;
+  virtual ~AExpression()      = default;
 };
 
 // for every node who contains a value coded
@@ -126,15 +140,23 @@ struct ALiteral : virtual AExpression {
 };
 
 struct AIdentifier : virtual AExpression {
+  SYM_REF symbol = nullptr;
+
   // A::B::C -> C mod A { B } -> B
-  [[nodiscard]] virtual std::string get_base_name() const            = 0;
+  [[nodiscard]] virtual const std::string&           get_base_name() const            = 0;
   // mod E { A::B::C } -> 1E1C
-  [[nodiscard]] virtual std::string mangle_local_name() const        = 0;
+  [[nodiscard]] virtual std::string                  mangle_local_name() const        = 0;
   // mod E { A::B::C } -> 1A1B1C
-  [[nodiscard]] virtual std::string mangle_qualified_name() const    = 0;
-  [[nodiscard]] virtual fs::path    get_as_path() const              = 0;
-  [[nodiscard]] virtual bool        is_qualified_id() const          = 0;
-  [[nodiscard]] virtual std::string get_supposed_import_name() const = 0;
+  [[nodiscard]] virtual std::string                  mangle_qualified_name() const    = 0;
+  [[nodiscard]] virtual fs::path                     get_as_path() const              = 0;
+  [[nodiscard]] virtual bool                         is_qualified_id() const          = 0;
+  [[nodiscard]] virtual std::string                  get_supposed_import_name() const = 0;
+  [[nodiscard]] virtual std::span<const std::string> get_qualification_path() const   = 0;
+
+  bool operator==(const AIdentifier& other) const
+  {
+    return get_base_name() == other.get_base_name() && mangle_qualified_name() == other.mangle_qualified_name();
+  }
 
   virtual ~AIdentifier() = default;
 };
@@ -156,7 +178,7 @@ struct Expr_ID final : virtual AIdentifier {
   {
     return false;
   }
-  std::string get_base_name() const override
+  const std::string& get_base_name() const override
   {
     return name;
   }
@@ -175,12 +197,17 @@ struct Expr_ID final : virtual AIdentifier {
 
   std::string debug_str() const override
   {
-    return "identifier \"" + name + "\"";
+    return name;
   }
   void accept(Visitor_Base& v) override
   {
     v.visit(*this);
   }
+  std::span<const std::string> get_qualification_path() const override
+  {
+    static const std::span<const std::string> out;
+    return out;
+  };
 };
 
 struct Expr_ID_Qualified final : virtual AIdentifier {
@@ -213,7 +240,7 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   {
     return true;
   }
-  std::string get_base_name() const override
+  const std::string& get_base_name() const override
   {
     return name;
   }
@@ -229,15 +256,19 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
     return out / name;
   }
 
-  [[nodiscard]] std::string debug_str() const override;
-  void                      accept(Visitor_Base& v) override
+  std::string debug_str() const override;
+  void        accept(Visitor_Base& v) override
   {
     v.visit(*this);
   }
+  std::span<const std::string> get_qualification_path() const override
+  {
+    return path;
+  };
 };
 
 // for every node who need a type resolution
-struct Expr_ID_Generic final : public AIdentifier, AType {
+struct Expr_ID_Type final : public AIdentifier, AType {
   std::unique_ptr<AIdentifier>                         name;
   [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
@@ -252,7 +283,7 @@ struct Expr_ID_Generic final : public AIdentifier, AType {
   {
     return name->is_qualified_id();
   }
-  std::string get_base_name() const override
+  const std::string& get_base_name() const override
   {
     return name->get_base_name();
   }
@@ -262,7 +293,10 @@ struct Expr_ID_Generic final : public AIdentifier, AType {
   }
   std::string mangle_qualified_name() const override
   {
-    return name->mangle_qualified_name() + "_" + mangle_type();
+    if (gen_args.empty())
+      return name->mangle_qualified_name();
+    else
+      return name->mangle_qualified_name() + "_" + mangle_type();
   }
   fs::path get_as_path() const override
   {
@@ -270,11 +304,19 @@ struct Expr_ID_Generic final : public AIdentifier, AType {
   }
 
   std::string mangle_type() const override;
-
-  std ::string debug_str() const override
+  bool        compare_with(const AType& other) const override
   {
-    return "identifier type";
+    // ID type is compared according to his type inferred
+    return inferred_type->is_same(other);
   }
+
+  std::span<const std::string> get_qualification_path() const override
+  {
+    return name->get_qualification_path();
+  };
+
+  std ::string debug_str() const override;
+
   void accept(Visitor_Base& v) override
   {
     v.visit(*this);

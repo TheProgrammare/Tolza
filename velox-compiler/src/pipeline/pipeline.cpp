@@ -10,7 +10,6 @@
 
 #include "script_info.hpp"
 
-#include "pipeline_dot_ast.hpp"
 #include "pipeline_binder.hpp"
 #include "pipeline_exporter.hpp"
 #include "pipeline_filesystem.hpp"
@@ -20,6 +19,7 @@
 #include "pipeline_parser.hpp"
 #include "pipeline_preprocessor.hpp"
 #include "pipeline_resolvers.hpp"
+#include "visitor/visitor_print.hpp"
 
 
 static const std::string pipeline_info = color_BLUE
@@ -54,10 +54,7 @@ static const std::string pipeline_info = color_BLUE
         */
     color_RESET;
 
-static const std::string binder_info =
-    R"(
-%0 files + %1 binding files = %3 total files in the main pipeline
-)";
+static const std::string binder_info = "%0 files + %1 binding files = %2 total files in the main pipeline";
 
 bool start_compilation(int argc, const char* argv[])
 {
@@ -66,7 +63,7 @@ bool start_compilation(int argc, const char* argv[])
     compiler::parse_args_for_compilation_context(compiler::COMP_CTX, argc, argv);
 
   if (compiler::in_binding_compilation)
-    std::cout << color_BLUE "[binder] Binders Compilation Started\n" color_RESET << std::endl;
+    std::cout << color_BLUE "[binder] Binders Generated Compilation Started\n" color_RESET << std::endl;
   else {
     if (!compiler::command_from_velox_toolchain) {
       std::cout << color_BLUE
@@ -93,7 +90,7 @@ bool start_compilation(int argc, const char* argv[])
     if (compiler::in_binding_compilation) {
       std::cout << color_BLUE "[binder] No files found at the source folder path: " color_RESET << target_dir << "\n";
       std::cout << color_BLUE "[binder] No sub-compilation need without any file binding" << "\n";
-      std::cout << color_BLUE "[binder] Binders Compilation finish successfully !\n" color_RESET;
+      std::cout << color_BLUE "[binder] Binders Generated Compilation finish successfully !\n" color_RESET << std::endl;
       return true;
     }
     std::cout << color_BLUE << "[build] No files found at the source folder path: " << target_dir << "\n";
@@ -133,14 +130,18 @@ bool start_compilation(int argc, const char* argv[])
   if (!pipeline_start_parser(scr_infos)) return false;
 
 
-  // debug dot print
-  if (compiler::COMP_CTX.dot_ast) {
+  // printer
+  if (compiler::COMP_CTX.print_ast) {
     if (compiler::in_binding_compilation)
-      std::cout << color_BLUE "[binder] AST viewer begins" color_RESET << std::endl;
+      std::cout << color_BLUE "[binder:debug] Printing AST view at " << compiler::COMP_CTX.get_debug_graph_dir()
+                << color_RESET "\n"
+                << std::endl;
     else
-      std::cout << color_BLUE "[debug] AST viewer begins" color_RESET << std::endl;
+      std::cout << color_BLUE "[debug] Printing AST view at " << compiler::COMP_CTX.get_debug_graph_dir()
+                << color_RESET "\n"
+                << std::endl;
 
-    generate_AST_View(scr_infos);
+    for (auto& info : scr_infos) Visitor_Print(*info).visit(*info->rootNode);
   }
 
   // get binded scripts from bindings compilation to the main compilation workflow
@@ -148,7 +149,7 @@ bool start_compilation(int argc, const char* argv[])
 
   // generate bindings
   if (!compiler::in_binding_compilation) {
-    std::cout << color_BLUE "[build:5/9] External Module Binder (binder) begins" color_RESET << std::endl;
+    std::cout << color_BLUE "[build:5/9] External Module Binder begins" color_RESET << std::endl;
     if (!pipeline_start_binder(scr_infos)) return false;
   } else {
     bind_files_info = scr_infos;
@@ -165,36 +166,37 @@ bool start_compilation(int argc, const char* argv[])
   if (!bind_files_info.empty()) {
     auto   bind_txt = binder_info;
     size_t src_size = scr_infos.size() - bind_files_info.size();
-    compiler::fmt_template(bind_txt, {color_YELLOW + std::to_string(src_size) + color_RED,
+    compiler::fmt_template(bind_txt, {color_YELLOW + std::to_string(src_size) + color_RESET,
                                       color_YELLOW + std::to_string(bind_files_info.size()) + color_RESET,
                                       color_YELLOW + std::to_string(scr_infos.size()) + color_RESET});
-    std::cout << color_BLUE "[build:binder] " color_YELLOW "[summary] " color_RESET << bind_txt << std::endl;
-    std::cout << color_YELLOW "[build] return to the main pipeline flow\n" color_RESET << std::endl;
+    std::cout << color_YELLOW "[build:binder:summary] " color_RESET << bind_txt << std::endl;
+    std::cout << color_YELLOW "[build] Return to the main pipeline flow" color_RESET << std::endl;
   }
 
   // exporter
-  std::cout << color_BLUE "[build:6/9] Exportation begins\n" color_RESET;
+  std::cout << color_BLUE "[build:6/9] Exportation begins" color_RESET << std::endl;
   // import and export modules (to have all symbols for the resolution)
   if (!pipeline_start_exporter(scr_infos)) return false;
 
   // resolvers
-  std::cout << color_BLUE "[build:7/9] Resolver begins\n" color_RESET;
-  // resolve symbols
+  std::cout << color_BLUE "[build:7/9] Resolver begins" color_RESET << std::endl;
+  // resolve symbols - resolve types - semantic analyzer
   if (!pipeline_start_resolvers(scr_infos)) return false;
 
   // LLVM IR
-  std::cout << color_BLUE "[build:8/9] LLVM IR begins\n" color_RESET;
+  std::cout << color_BLUE "[build:8/9] LLVM IR begins" color_RESET << std::endl;
   // generate LLVM IR code
   if (!pipeline_start_LLVM_IR(scr_infos)) return false;
 
   // linker
-  std::cout << color_BLUE "[build:9/9] Linker begins\n" color_RESET;
+  std::cout << color_BLUE "[build:9/9] Linker begins" color_RESET << std::endl;
   // link data
   if (!pipeline_start_linker(scr_infos)) return false;
 
   std::cout << color_BLUE R"(
 [velox-compiler] Compilation finish successfully !
-)" color_RESET;
+)" color_RESET
+            << std::endl;
 
   return true;
 }

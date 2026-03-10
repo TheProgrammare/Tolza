@@ -1,11 +1,9 @@
 #include "parser_declaration_local.hpp"
 
 #include <memory>
-#include <tuple>
 #include <vector>
 
 #include "ast/ast_base.hpp"
-#include "ast/ast_codeblock_instruction.hpp"
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "parser_base.hpp"
@@ -45,7 +43,7 @@ std::shared_ptr<ast::ALocal> parser::Parser_Declaration_Local::parse_local(bool 
 ast::declaration::local::Pattern_Element parser::Parser_Declaration_Local::pattern_mapping(ECapability capa)
 {
   if (auto lit = ctx.p_lit->try_literal(true)) {
-    return ast::declaration::local::Pattern_Element(std::move(lit.value()));
+    return ast::declaration::local::Pattern_Element(std::move(lit));
   } else {
     auto bind        = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
     bind->capability = capa;
@@ -307,8 +305,6 @@ parser::Parser_Declaration_Local::component_pattern(ECapability capa, std::uniqu
   if (dynamic_cast<ast::AType*>(comp_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
 
-  ctx.m_sym->add_external_symbol(*comp_id, Extern_Item::Kind::Component);
-
   auto comp_pat = ctx.Create_Node<ast::declaration::local::Pattern_Component>(ctx.tok_v.peek());
 
   comp_pat->name       = std::move(comp_id);
@@ -349,8 +345,6 @@ parser::Parser_Declaration_Local::entity_pattern(ECapability capa, std::unique_p
   if (dynamic_cast<ast::AType*>(entity_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
 
-  ctx.m_sym->add_external_symbol(*entity_id, Extern_Item::Kind::Entity);
-
   auto entity_pat        = ctx.Create_Node<ast::declaration::local::Pattern_Entity>(ctx.tok_v.peek());
   entity_pat->name       = std::move(entity_id);
   entity_pat->capability = capa;
@@ -358,8 +352,6 @@ parser::Parser_Declaration_Local::entity_pattern(ECapability capa, std::unique_p
   while (!ctx.tok_v.is_end()) {
     auto pattern_comp = ctx.Create_Node<ast::declaration::local::Pattern_Component>(ctx.tok_v.peek(-2));
     auto comp_id      = ctx.p_expr->identifier();
-
-    ctx.m_sym->add_external_symbol(*comp_id, Extern_Item::Kind::Component);
 
     pattern_comp->name = std::move(comp_id);
 
@@ -448,8 +440,6 @@ parser::Parser_Declaration_Local::enum_pattern(ECapability capa, std::unique_ptr
 
   if (dynamic_cast<ast::AType*>(enum_id.get()) != nullptr)
     throw std::runtime_error("Illegal identifier, impossible to use a type ");
-
-  ctx.m_sym->add_external_symbol(*enum_id, Extern_Item::Kind::Enum);
 
   auto pat  = ctx.Create_Node<ast::declaration::local::Pattern_Enum>(ctx.tok_v.peek());
   pat->name = std::move(enum_id);

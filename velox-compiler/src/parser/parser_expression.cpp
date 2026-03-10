@@ -25,87 +25,122 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression()
 
   return ctx.p_op->try_operation();
 }
-
 std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression_term()
 {
   if (ctx.tok_v.check(TokTy::VAL_OF)) return ptr_val();
   if (ctx.tok_v.check(TokTy::ADDR_OF)) return addr_of();
   if (ctx.tok_v.check(TokTy::SIZE_OF)) return size_of();
 
-  std::unique_ptr<ast::AExpression> term;
+  auto term = base_expression();
+  term      = suffix_expression(std::move(term));
+
+  if (auto ptr = dynamic_cast<ast::AIdentifier*>(term.get()))
+    ctx.m_sym->try_add_extern_sym_to_generate(*ptr, Extern_Item::Kind::Global);
+
+  return term;
+}
+
+std::unique_ptr<ast::AExpression> parser::Parser_Expression::base_expression()
+{
+  std::unique_ptr<ast::AExpression> base_expr;
 
   EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().type);
   if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
   if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
-    term = parse_expression();
+    base_expr = parse_expression();
     ctx.tok_v.expect<78>(TokTy::CLOSE_PAREN, "Expected end of nested expression ')'", "");
   }
 
   if (auto lit = ctx.p_lit->try_literal(true)) {
-    term = std::move(lit.value());
+    base_expr = std::move(lit);
   } else if (ctx.tok_v.check_any(kStartIdentifier)) {
-    auto id = identifier();
-    if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
-      auto call = function_call();
-
-      ctx.m_sym->add_external_symbol(*id, Extern_Item::Kind::Function);
-
-      call->callee = std::move(id);
-      term         = std::move(call);
-    } else {
-      term = std::move(id);
-    }
-
-    if (dynamic_cast<ast::Expr_ID*>(id.get())) {
-      while (!ctx.tok_v.is_end()) {
-        if (ctx.tok_v.check(TokTy::DOT)) {
-          auto access  = member_access();
-          access->left = std::move(term);
-          term         = std::move(access);
-        } else if (ctx.tok_v.match(TokTy::RUN_SYSTEM)) {
-          auto base_tok   = ctx.tok_v.peek(-1);
-          auto sys_callee = identifier();
-
-          ctx.m_sym->add_external_symbol(*sys_callee, Extern_Item::Kind::System);
-
-          auto sys_call           = ctx.Create_Node<ast::expression::Call_System>(base_tok);
-          sys_call->callee        = std::move(sys_callee);
-          sys_call->target_entity = std::move(term);
-          term                    = std::move(sys_call);
-        } else {
-          break;
-        }
-      }
-    } else {
-      ctx.m_sym->add_external_symbol(*id, Extern_Item::Kind::Global);
-    }
-
-
-    if (ctx.tok_v.check(TokTy::TILDE))
-      term = getbits(std::move(term));
-    else if (ctx.tok_v.check(TokTy::PTR_AT))
-      term = ptr_at(std::move(term));
-    else if (ctx.tok_v.match(TokTy::PTR_OFFSET))
-      term = ptr_offset(std::move(term));
+    base_expr = identifier();
   }
 
-  if (!term)
+  if (!base_expr)
     ctx.tok_v.add_error<79>("Unexpected '" + ctx.tok_v.peek().val + "' keyword.",
                             "define a term with literal, identifier, ternary if, tuple, nested "
                             "expression '()', literal array '{}' or nothing '_'.");
 
-  if (ctx.tok_v.check_any({TokTy::RANGE, TokTy::RANGE_INCLUSIVE})) {
-    term = ctx.p_lit->literal_range(std::move(term));
+  return base_expr;
+}
+
+
+std::unique_ptr<ast::AExpression>
+parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> base_expr)
+{
+  // is a literal expression, no suffix allowed
+  if (dynamic_cast<ast::ALiteral*>(base_expr.get())) return base_expr;
+
+
+  // supported access operators:
+  // member access : a.b
+  // function call : a(b)
+  // run system : a::>b()
+  // ptr at : a'at(b)
+  // ptr offset : a'offset(b)
+  // table access : a[i]
+  // These operators can be chained:
+  // a.b'at(1).c'offset(2)[5].e::>run_sys(1, 2).u(10).v
+  // (highly not recommended :( )
+
+  while (!ctx.tok_v.is_end()) {
+    // member access
+    if (ctx.tok_v.check(TokTy::DOT)) {
+      base_expr = member_access(std::move(base_expr));
+    }
+    // function call
+    else if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
+      base_expr = function_call(std::move(base_expr));
+    }
+    // run system
+    else if (ctx.tok_v.check(TokTy::RUN_SYSTEM)) {
+      base_expr = system_call(std::move(base_expr));
+    }
+    // ptr at
+    else if (ctx.tok_v.check(TokTy::PTR_AT)) {
+      base_expr = ptr_at(std::move(base_expr));
+    }
+    // ptr offset
+    else if (ctx.tok_v.match(TokTy::PTR_OFFSET)) {
+      base_expr = ptr_offset(std::move(base_expr));
+    }
+    // table access
+    else if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
+      base_expr = table_access(std::move(base_expr));
+    }
+    // end of access operator
+    else {
+      break;
+    }
+  }
+
+  // final access operator:
+  // no more access allowed after this operations
+  // specials cases
+
+  // get bits
+  // a~[0..8]
+  if (ctx.tok_v.check(TokTy::TILDE)) {
+    base_expr = getbits(std::move(base_expr));
+    // table access on bits
+    // a~[0..8][5]
+    if (ctx.tok_v.check(TokTy::OPEN_SQUARE)) {
+      base_expr = table_access(std::move(base_expr));
+    }
+  }
+  // it's a range expression !
+  else if (ctx.tok_v.check_any({TokTy::RANGE, TokTy::RANGE_INCLUSIVE})) {
+    base_expr = ctx.p_lit->literal_range(std::move(base_expr));
   }
 
   // if cast
-  if (ctx.tok_v.check_any(kCastType)) {
-    term = cast_as(std::move(term));
-  }
+  if (ctx.tok_v.check_any(kCastType)) base_expr = cast_as(std::move(base_expr));
 
-  return term;
+  return base_expr;
 }
+
 
 std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std::unique_ptr<ast::AExpression> expr)
 {
@@ -167,22 +202,40 @@ std::vector<std::unique_ptr<ast::expression::Call_Argument>> parser::Parser_Expr
   return params;
 }
 
-std::unique_ptr<ast::expression::Call> parser::Parser_Expression::function_call()
+std::unique_ptr<ast::expression::Call>
+parser::Parser_Expression::function_call(std::unique_ptr<ast::AExpression> callee)
 {
   ctx.tok_v.match(TokTy::OPEN_PAREN);
 
   auto call        = ctx.Create_Node<ast::expression::Call>(ctx.tok_v.peek());
+  call->callee     = std::move(callee);
   call->param_args = call_arguments();
+
+  if (auto ptr = dynamic_cast<ast::AIdentifier*>(call->callee.get()))
+    ctx.m_sym->try_add_extern_sym_to_generate(*ptr, Extern_Item::Kind::Function);
 
   return call;
 }
 
-ModuleImportation* parser::Parser_Expression::get_external_source(const std::string&              name,
-                                                                  const std::vector<std::string>& path)
+[[nodiscard]] std::unique_ptr<ast::expression::Call_System>
+parser::Parser_Expression::system_call(std::unique_ptr<ast::AExpression> target_entity)
+{
+  ctx.tok_v.match(TokTy::RUN_SYSTEM);
+
+  auto base_tok = ctx.tok_v.peek(-1);
+
+  auto sys_call           = ctx.Create_Node<ast::expression::Call_System>(base_tok);
+  sys_call->target_entity = std::move(target_entity);
+  sys_call->callee        = identifier();
+  sys_call->param_args    = call_arguments();
+
+  return sys_call;
+}
+
+std::shared_ptr<ModuleImportation> parser::Parser_Expression::get_external_source(const std::vector<std::string>& path)
 {
   if (path.empty()) return nullptr;
-  const std::string& base = path[0];
-  return ctx.scr_info.get_import_module(base);
+  return ctx.scr_info.get_import_module(path);
 }
 
 std::unique_ptr<ast::expression::If_Ternary> parser::Parser_Expression::if_ternary()
@@ -190,10 +243,10 @@ std::unique_ptr<ast::expression::If_Ternary> parser::Parser_Expression::if_terna
   auto ternary = ctx.Create_Node<ast::expression::If_Ternary>(ctx.tok_v.peek());
 
   ternary->evaluator = ctx.p_loc->parse_evaluator(nullptr);
-  ternary->true_line = ctx.p_loc->code_block_instruction();
+  ternary->true_line = ctx.p_expr->parse_expression();
 
   if (ctx.tok_v.match(TokTy::ELSE)) {
-    ternary->false_line = ctx.p_loc->code_block_instruction();
+    ternary->false_line = ctx.p_expr->parse_expression();
   }
 
   return ternary;
@@ -255,11 +308,11 @@ std::unique_ptr<ast::AIdentifier> parser::Parser_Expression::identifier(bool no_
   return id;
 }
 
-std::unique_ptr<ast::Expr_ID_Generic> parser::Parser_Expression::identifier_typed()
+std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Expression::identifier_typed()
 {
   ctx.tok_v.match_any({TokTy::TURBO_FISH, TokTy::OPEN_BRACE});
 
-  auto id_type = ctx.Create_Node<ast::Expr_ID_Generic>(ctx.tok_v.peek(-2));
+  auto id_type = ctx.Create_Node<ast::Expr_ID_Type>(ctx.tok_v.peek(-2));
 
   if (ctx.tok_v.match(TokTy::CLOSE_BRACKETS)) return id_type;
 
@@ -269,24 +322,30 @@ std::unique_ptr<ast::Expr_ID_Generic> parser::Parser_Expression::identifier_type
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACKETS)) break;
   }
 
+  ctx.m_sym->try_add_extern_sym_to_generate(*id_type, Extern_Item::Kind::Type);
+
   return id_type;
 }
 
-std::unique_ptr<ast::expression::Member_Access> parser::Parser_Expression::member_access()
+std::unique_ptr<ast::expression::Member_Access>
+parser::Parser_Expression::member_access(std::unique_ptr<ast::AExpression> left)
 {
   ctx.tok_v.match(TokTy::DOT);
 
   auto access   = ctx.Create_Node<ast::expression::Member_Access>(ctx.tok_v.peek(-2));
+  access->left  = std::move(left);
   access->right = identifier(true);
 
   return access;
 }
 
-std::unique_ptr<ast::expression::Table_Access> parser::Parser_Expression::table_access()
+std::unique_ptr<ast::expression::Table_Access>
+parser::Parser_Expression::table_access(std::unique_ptr<ast::AExpression> target)
 {
   ctx.tok_v.match(TokTy::OPEN_SQUARE);
 
   auto table_access      = ctx.Create_Node<ast::expression::Table_Access>(ctx.tok_v.peek(-1));
+  table_access->target   = std::move(target);
   table_access->selector = ctx.p_expr->parse_expression();
 
   ctx.tok_v.expect<115>(TokTy::CLOSE_SQUARE, "Expected end of table access '[' after expression.", "");

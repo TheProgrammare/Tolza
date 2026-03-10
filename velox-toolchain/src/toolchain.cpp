@@ -52,8 +52,7 @@ std::vector<std::string> toolchain::CompCtx::to_args() const
   if (warn_dead_code) out.push_back("--warn-dead-code");
   if (warn_as_error) out.push_back("--warn-as-error");
 
-  if (dot_ast) out.push_back("--dot-ast");
-  if (dot_link) out.push_back("--dot-link");
+  if (print_ast) out.push_back("--print-ast");
 
   for (auto [name, val] : defines) {
     out.push_back("-D" + name + "=" + val);

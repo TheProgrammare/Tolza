@@ -1,11 +1,12 @@
-
 #include "parser_type.hpp"
+
+#include <sys/types.h>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_data.hpp"
-#include "ast/ast_headers.hpp"
-#include "parser_headers.hpp"
-#include <sys/types.h>
+
+#include "parser_context.hpp"
+#include "parser_expression.hpp"
 
 // const, optional, volatile
 std::tuple<bool, bool, bool> parser::Parser_Type::get_type_annotation()
@@ -88,21 +89,19 @@ std::unique_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool isCons
   return pri;
 }
 
-std::unique_ptr<ast::Expr_ID_Generic> parser::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
+std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
 {
-  std::unique_ptr<ast::Expr_ID_Generic> result;
+  std::unique_ptr<ast::Expr_ID_Type> result;
 
   auto base_tok = ctx.tok_v.peek();
   auto id       = ctx.p_expr->identifier();
-
-  ctx.m_sym->add_external_symbol(*id.get(), Extern_Item::Kind::Type);
 
   if (ctx.tok_v.match_any({TokTy::OPEN_BRACKETS, TokTy::TURBO_FISH})) {
     result       = ctx.p_expr->identifier_typed();
     result->name = std::move(id);
 
   } else {
-    result       = ctx.Create_Node<ast::Expr_ID_Generic>(base_tok);
+    result       = ctx.Create_Node<ast::Expr_ID_Type>(base_tok);
     result->name = std::move(id);
   }
 

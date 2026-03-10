@@ -99,6 +99,7 @@ struct Parser_Context {
     node->_token = token;
     node->_scope = m_sym->get_current_path();
     node_count++;
+    node->_scr_info = &scr_info;
     return node;
   }
   template <DerivedFromDecl NodeType, typename... Args>
@@ -108,6 +109,7 @@ struct Parser_Context {
     node->_token = token;
     node->_scope = m_sym->get_current_path();
     node_count++;
+    node->_scr_info = &scr_info;
     return node;
   };
 };

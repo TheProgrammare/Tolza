@@ -17,18 +17,22 @@ struct Parser_Expression {
 
   [[nodiscard]] std::unique_ptr<ast::AExpression>        parse_expression();
   [[nodiscard]] std::unique_ptr<ast::AExpression>        parse_expression_term();
+  [[nodiscard]] std::unique_ptr<ast::AExpression>        base_expression();
+  [[nodiscard]] std::unique_ptr<ast::AExpression>        suffix_expression(std::unique_ptr<ast::AExpression> base_expr);
   [[nodiscard]] std::unique_ptr<ast::operation::Cast_As> cast_as(std::unique_ptr<ast::AExpression> expr);
 
   void check_reference_external(const std::string& name, const std::vector<std::string>& path, Extern_Item::Kind kind);
 
   //[[nodiscard]] std::unique_ptr<ast::expression::Call_Pipe> function_call_pipe();
 
-  [[nodiscard]] std::unique_ptr<ast::AIdentifier>                            identifier(bool no_qualified_id = false,
-                                                                                        bool keyword_allowed = false);
-  [[nodiscard]] std::unique_ptr<ast::Expr_ID_Generic>                        identifier_typed();
-  [[nodiscard]] std::unique_ptr<ast::expression::Member_Access>              member_access();
-  [[nodiscard]] std::unique_ptr<ast::expression::Table_Access>               table_access();
-  [[nodiscard]] std::unique_ptr<ast::expression::Call>                       function_call();
+  [[nodiscard]] std::unique_ptr<ast::AIdentifier>               identifier(bool no_qualified_id = false,
+                                                                           bool keyword_allowed = false);
+  [[nodiscard]] std::unique_ptr<ast::Expr_ID_Type>              identifier_typed();
+  [[nodiscard]] std::unique_ptr<ast::expression::Member_Access> member_access(std::unique_ptr<ast::AExpression> left);
+  [[nodiscard]] std::unique_ptr<ast::expression::Table_Access>  table_access(std::unique_ptr<ast::AExpression> target);
+  [[nodiscard]] std::unique_ptr<ast::expression::Call>          function_call(std::unique_ptr<ast::AExpression> callee);
+  [[nodiscard]] std::unique_ptr<ast::expression::Call_System>
+  system_call(std::unique_ptr<ast::AExpression> target_entity);
   [[nodiscard]] std::vector<std::unique_ptr<ast::expression::Call_Argument>> call_arguments();
   [[nodiscard]] std::unique_ptr<ast::expression::If_Ternary>                 if_ternary();
 
@@ -42,7 +46,7 @@ struct Parser_Expression {
   [[nodiscard]] std::unique_ptr<ast::expression::Ptr_At>     ptr_at(std::unique_ptr<ast::AExpression> ref);
   [[nodiscard]] std::unique_ptr<ast::expression::Ptr_Offset> ptr_offset(std::unique_ptr<ast::AExpression> ref);
 
-  [[nodiscard]] ModuleImportation* get_external_source(const std::string& name, const std::vector<std::string>& path);
+  [[nodiscard]] std::shared_ptr<ModuleImportation> get_external_source(const std::vector<std::string>& path);
 
   Parser_Context& ctx;
 };

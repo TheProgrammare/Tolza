@@ -50,19 +50,20 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   if (!parErrors.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[velox-compiler] Parser failed\n" color_RESET;
+    std::cerr << color_RED "[parse] Failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
     for (auto& [_, fileError] : parErrors) {
       err_count += fileError.size();
     }
-    std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
+    std::cerr << color_YELLOW "[parse:summary] " << color_RED << err_count
+              << " errors, build failed\n" color_RESET "\n";
 
     for (auto& [path, fileError] : parErrors) {
       if (fileError.empty()) continue;
 
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-      std::cerr << color_RED "[parse] [error] [file] " color_MAGENTA << path << color_RESET "\n\n";
+      std::cerr << color_RED "[parse:ERROR] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
@@ -71,20 +72,20 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   }
 
   if (!declErrors.empty()) {
-    std::cerr << color_RED "[velox-compiler] Declaration failed\n";
+    std::cerr << color_RED "[parse] Declaration failed\n";
     // sum of errors
     size_t err_count = 0;
     for (auto& p_err : declErrors) {
       err_count += std::get<1>(p_err).size();
     }
-    std::cerr << color_YELLOW "[parse] [summary] " << color_RED << err_count
+    std::cerr << color_YELLOW "[parse:summary] " << color_RED << err_count
               << " errors, build failed\n" color_RESET "\n";
 
     for (auto& [name, fileError] : declErrors) {
       if (fileError.empty()) continue;
 
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-      std::cerr << color_RED "[declaration] [error] [file] " color_MAGENTA << name << color_RESET "\n\n";
+      std::cerr << color_RED "[declaration:ERROR] [file] " color_MAGENTA << name << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
@@ -96,7 +97,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  std::cout << color_YELLOW "[parse] [summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
+  std::cout << color_YELLOW "[parse:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
             << color_RESET << " | nodes: " << color_YELLOW << final_node_count << color_RESET << "\n";
   std::cout << std::endl;
 

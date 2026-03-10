@@ -14,7 +14,7 @@
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 
-std::optional<std::unique_ptr<ast::ALiteral>> parser::Parser_Literal::try_literal(bool is_silent_error)
+std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silent_error)
 {
   switch (ctx.tok_v.peek().type) {
   case TokTy::TRUE:
@@ -64,7 +64,7 @@ std::optional<std::unique_ptr<ast::ALiteral>> parser::Parser_Literal::try_litera
     ctx.tok_v.add_error<80>("Expected literal value", "");
   }
 
-  return std::nullopt;
+  return nullptr;
 }
 
 std::unique_ptr<ast::literal::Boolean> parser::Parser_Literal::literal_boolean()
@@ -154,6 +154,9 @@ std::unique_ptr<ast::literal::Floating> parser::Parser_Literal::literal_floating
 
 std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral()
 {
+  static const char* hint =
+      "define literal integral like:\n  - decimal: 1234\n  - bin: 0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2";
+
   auto literalTok = ctx.tok_v.next();
   auto literal    = ctx.Create_Node<ast::literal::Integral>(literalTok);
 
@@ -163,26 +166,26 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
 
   try {
     switch (literalTok.type) {
-    case TokTy::L_BIN:
+    case TokTy::L_BIN: {
       api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
       literal->type = EPrimType::b64;
       break;
-
-    case TokTy::L_OCT:
+    }
+    case TokTy::L_OCT: {
       api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 8);
       literal->type = EPrimType::b64;
       break;
-
-    case TokTy::L_HEX:
+    }
+    case TokTy::L_HEX: {
       api           = llvm::APInt(bitWidth, literalTok.val, 16);
       literal->type = EPrimType::b64;
       break;
-
-    case TokTy::L_I:
+    }
+    case TokTy::L_I: {
       api           = llvm::APInt(bitWidth, literalTok.val, 10);
       literal->type = EPrimType::b64;
       break;
-
+    }
     default: throw std::runtime_error("Token literal non supporté");
     }
 
@@ -195,14 +198,10 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
       literal->type = EPrimType::i128;
     }
   } catch (const std::invalid_argument&) {
-    ctx.tok_v.add_error<82>("Impossible to parse literal integral",
-                            "define literal integral like:\n  - decimal: 1234\n  - bin: "
-                            "0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
+    ctx.tok_v.add_error<82>("Impossible to parse literal integral", hint);
     throw std::runtime_error("Impossible to parse APInt literal");
   } catch (const std::out_of_range&) {
-    ctx.tok_v.add_error<83>("Integral literal too big for 128 bits",
-                            "define literal integral like:\n  - decimal: 1234\n  - bin: "
-                            "0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2");
+    ctx.tok_v.add_error<83>("Integral literal too big for 128 bits", hint);
   }
 
   // post literal type like 10i8 0u32
@@ -234,7 +233,7 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
       ftext->values.push_back(std::move(text));
       continue;
     } else if (ctx.tok_v.match(TokTy::S_TEXTUAL_EXPR_START)) {
-      auto lerp        = ctx.Create_Node<ast::literal::Text_Lerp>(ctx.tok_v.peek(-1));
+      auto lerp        = ctx.Create_Node<ast::literal::Text_Interpolation>(ctx.tok_v.peek(-1));
       lerp->expression = ctx.p_expr->parse_expression();
 
       // if format specifier detected
@@ -521,8 +520,6 @@ std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std
 
   while (!ctx.tok_v.is_end()) {
     auto comp_name = ctx.p_expr->identifier(true);
-
-    ctx.m_sym->add_external_symbol(*comp_name.get(), Extern_Item::Kind::Component);
 
     if (ctx.tok_v.check(TokTy::OPEN_BRACE)) {
       lit_entity->comp_args.push_back(literal_component(std::move(comp_name)));

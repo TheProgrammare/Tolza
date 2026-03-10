@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 #include "ast/ast_base.hpp"
 #include "compiler.hpp"
@@ -9,20 +10,29 @@
 
 bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  // %0 current file count
+  // %1 total files count
+  // %2 error inscription
+  // %3 importation name
+  // %4 target script
+  static const char* log_str = color_GREEN "[export:%0/%1%2] " color_RESET " import " color_MAGENTA
+                                           "\"%3\" " color_RESET "to " color_MAGENTA "\"%4\"" color_RESET;
+
   auto start = std::chrono::high_resolution_clock::now();
 
-  std::map<fs::path, ScriptInfo*>                                exportations;
-  std::map<fs::path, std::pair<ModuleImportation*, ScriptInfo*>> importations;
+  std::map<fs::path, std::shared_ptr<ScriptInfo>> exportations;
+  std::vector<std::pair<fs::path, std::pair<std::shared_ptr<ModuleImportation>, std::shared_ptr<ScriptInfo>>>>
+      importations;
 
   for (auto& scr_info : scr_infos) {
     for (auto& exp : scr_info->exported_mod) {
       if (exp->is_external()) continue;
-      exportations[scr_info->get_normalized_path()] = scr_info.get();
+      exportations[scr_info->get_normalized_path()] = scr_info;
     }
 
     for (auto& imp : scr_info->imported_mod) {
-      importations.insert({
-          imp->get_normalized_path(), {imp.get(), scr_info.get()}
+      importations.push_back({
+          imp->get_normalized_path(), {imp, scr_info}
       });
     }
   }
@@ -32,22 +42,21 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
   bool   success = true;
   size_t count   = 0;
 
-  for (auto& [name, pair] : importations) {
+  for (auto& [path, pair] : importations) {
     auto& [imp, imp_scr] = pair;
 
-    if (auto it = exportations.find(name); it != exportations.end()) {
+    if (auto it = exportations.find(path); it != exportations.end()) {
       imp->target_modules.push_back(it->second);
 
-      std::cout << color_GREEN "[Export:" << ++count << "/" << importations.size()
-                << "] " color_RESET "importation of '" color_MAGENTA << name << color_RESET "' "
-                << "resolved ! From: " color_YELLOW << imp->target_modules.size()
-                << color_RESET " reference(s) to: " color_MAGENTA << imp_scr->file_path.filename() << color_RESET
-                << std::endl;
+      std::string log_txt = log_str;
+      compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
+                                       imp->debug_name(), imp_scr->file_path.filename()});
+      std::cout << log_txt << std::endl;
     } else {
-      std::cout << color_RED "[Export:" << ++count << "/" << importations.size()
-                << "] [error] importation of '" color_MAGENTA << name << color_RESET "' "
-                << "symbol not found ! From: " color_YELLOW "0" color_RESET " reference(s) to: " color_MAGENTA
-                << imp_scr->file_path.filename() << color_RESET << std::endl;
+      std::string log_txt = log_str;
+      compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
+                                       imp->debug_name(), imp_scr->file_path.filename()});
+      std::cerr << log_txt << std::endl;
       success = false;
     }
   }
@@ -57,11 +66,11 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
   double milli          = std::chrono::duration<double, std::milli>(final_duration).count();
 
   if (success)
-    std::cout << color_YELLOW "[export] [summary] " color_RESET << "duration: " color_YELLOW << milli
+    std::cout << color_YELLOW "[export:summary] " color_RESET << "duration: " color_YELLOW << milli
               << " ms\n" color_RESET << std::endl;
   else
-    std::cout << color_RED "[export] [failed] " color_RESET << "duration: " color_YELLOW << milli << " ms\n" color_RESET
-              << std::endl;
+    std::cout << color_RED "[export:ERROR] Exportation failed " color_RESET << "duration: " color_YELLOW << milli
+              << " ms\n" color_RESET << std::endl;
 
   return success;
 }

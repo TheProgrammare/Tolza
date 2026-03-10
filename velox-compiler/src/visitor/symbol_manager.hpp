@@ -2,11 +2,10 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
-#include "ast/ast_base.hpp"
+#include "ast/ast_forward.hpp"
 #include "script_info.hpp"
 
 struct ScriptInfo;
@@ -43,16 +42,19 @@ struct Symbols_Manager {
   ScriptInfo& scr_info;
 
   std::vector<std::shared_ptr<Symbol_Data>> declarations;
+  std::vector<std::shared_ptr<Symbol_Data>> exportations;
   std::vector<ScopeData>                    current_scope_path;
   std::vector<std::string>                  decl_errors;
 
-  std::string                            get_current_export_name() const;
-  std::shared_ptr<Symbol_Data>           add_decl(std::shared_ptr<ast::ADeclaration> declaration);
-  std::shared_ptr<Symbol_Data>           add_decl_ex_nihilo(std::shared_ptr<ast::ADeclaration> declaration);
-  bool                                   is_external_symbol(const ast::AIdentifier& sym) const;
-  void                                   add_external_symbol(const ast::AIdentifier& sym, Extern_Item::Kind kind);
-  void                                   enter_scope(const std::string& name, EScopeType type, size_t depth = 0);
-  void                                   exit_scope();
+  bool in_export = false;
+
+  std::string                  get_current_export_name() const;
+  std::shared_ptr<Symbol_Data> add_decl(std::shared_ptr<ast::ADeclaration> declaration);
+  bool                         is_external_symbol(const ast::AIdentifier& sym) const;
+  void                         try_add_extern_sym_to_generate(const ast::AIdentifier& sym, Extern_Item::Kind kind);
+  void                         enter_scope(const std::string& name, EScopeType type, size_t depth = 0);
+  void                         exit_scope();
   [[nodiscard]] std::vector<std::string> get_current_path() const;
-  [[nodiscard]] std::optional<std::shared_ptr<Symbol_Data>> find_symbol(const std::string& full_name);
+  [[nodiscard]] Symbol_Data* find_local_symbol(const std::span<const std::string>& scope, const std::string& name);
+  [[nodiscard]] Symbol_Data* find_exported_symbol(const std::span<const std::string>& scope, const std::string& name);
 };

@@ -1,6 +1,6 @@
 #include "ast_declaration_cop.hpp"
 
-#include "ast_declaration.hpp"
+#include "ast_expression.hpp"
 
 bool ast::declaration::cop::System_Case::manage_entity(const Entity& entity) const
 {
@@ -56,6 +56,14 @@ bool ast::declaration::cop::Entity::contains_comp(const ast::declaration::cop::C
   return false;
 }
 
+bool ast::declaration::cop::Entity::compare_with(const AType& other) const
+{
+  if (auto ptr = dynamic_cast<const Entity*>(&other)) {
+    return name == ptr->name;
+  }
+  return false;
+}
+
 bool ast::declaration::cop::System::manage_entity(const ast::declaration::cop::Entity& entity) const
 {
   for (auto& with : cases) {
@@ -70,4 +78,12 @@ bool ast::declaration::cop::System::manage_component(const ast::declaration::cop
     if (with->manage_component(comp)) return true;
   }
   return false;
+}
+
+std::string ast::declaration::cop::Component::debug_str() const
+{
+  std::string out;
+  out += "comp " + name;
+  if (gen_where) out += gen_where->debug_str();
+  return out;
 }

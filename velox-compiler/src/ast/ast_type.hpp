@@ -2,6 +2,8 @@
 
 #include "ast/ast_data.hpp"
 #include "ast_base.hpp"
+#include <cstddef>
+#include <memory>
 #include <string>
 #include "ast/ast_declaration_local.hpp"
 
@@ -20,9 +22,16 @@ struct Ptr final : public AType {
   {
     return EPtrType_to_mangle(pointer_type) + inner->mangle_type();
   }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Ptr*>(&other)) {
+      return inner->is_same(*ptr->inner) && pointer_type == ptr->pointer_type;
+    }
+    return false;
+  }
   std::string debug_str() const override
   {
-    return EPtrType_to_str(pointer_type);
+    return "type " + EPtrType_to_str(pointer_type);
   }
   void accept(Visitor_Base& v) override
   {
@@ -41,9 +50,24 @@ struct Table final : public AType {
     if (table_size) return "list_" + inner->mangle_type();
     return "arr" + std::to_string(table_size.value()) + "_" + inner->mangle_type();
   }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Table*>(&other)) {
+      if (table_size.has_value() != table_size.has_value()) return false;
+
+      if (table_size) {
+        if (table_size.value() != ptr->table_size.value()) return false;
+      }
+
+      return inner->is_same(*ptr->inner);
+    }
+    return false;
+  }
   std::string debug_str() const override
   {
-    return "<type> table";
+    if (table_size)
+      return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size.value()) + "]";
+    return "type table[" + sizeSymbol->debug_str() + "]";
   }
   void accept(Visitor_Base& v) override
   {
@@ -64,9 +88,16 @@ struct Primitive final : public AType {
   {
     return EPrimTy_to_mangle(type);
   }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Primitive*>(&other)) {
+      return type == ptr->type;
+    }
+    return false;
+  }
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(type);
+    return "type " + EPrimTy_to_str(type);
   }
   void accept(Visitor_Base& v) override
   {
@@ -75,7 +106,7 @@ struct Primitive final : public AType {
 };
 
 struct Tuple final : public AType {
-  std::vector<std::unique_ptr<AType>> types;
+  std::vector<std::shared_ptr<AType>> types;
   std::vector<std::string>            name_fields;
 
   std::string mangle_type() const override
@@ -86,8 +117,19 @@ struct Tuple final : public AType {
   }
   std::string debug_str() const override
   {
-    if (name_fields.empty()) return "<type> tuple(" + std::to_string(types.size()) + ")";
-    return "<type> named tuple(" + std::to_string(types.size()) + ")";
+    if (name_fields.empty()) return "type tuple(" + std::to_string(types.size()) + ")";
+    return "type named tuple(" + std::to_string(types.size()) + ")";
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Tuple*>(&other)) {
+      if (types.size() != ptr->types.size()) return false;
+      for (size_t i = 0; i < types.size(); i++) {
+        if (!types[i]->is_same(*ptr->types[i])) return false;
+      }
+      return true;
+    }
+    return false;
   }
   void accept(Visitor_Base& v) override
   {
@@ -96,33 +138,33 @@ struct Tuple final : public AType {
 };
 
 struct Function_Proto final : public AType {
-  std::vector<std::shared_ptr<declaration::local::Parameter>>         parameters;
-  std::vector<std::unique_ptr<declaration::local::Generic_Parameter>> gen_parameters;
-  std::unique_ptr<Tuple>                                              returnType;
+  [[maybe_unused]] std::vector<std::shared_ptr<declaration::local::Parameter>>                 parameters;
+  [[maybe_unused]] std::vector<std::unique_ptr<declaration::local::Generic_Parameter_Element>> gen_parameters;
+  [[maybe_unused]] std::unique_ptr<Tuple>                                                      returnType;
 
   bool isVariadic = false;
 
-  std::string mangle_type() const override
+  std::string mangle_type() const override;
+  bool        compare_with(const AType& other) const override
   {
-    std::string out   = "fn" + std::to_string(parameters.size());
-    size_t      count = 0;
-    for (auto& param : parameters) {
-      out += param->type->mangle_type();
-      if (count++ != parameters.size() - 1) out += "_";
+    if (auto ptr = dynamic_cast<const Function_Proto*>(&other)) {
+      if (isVariadic != ptr->isVariadic) return false;
+      if (parameters.size() != ptr->parameters.size()) return false;
+      if ((returnType == nullptr) != (ptr->returnType == nullptr)) return false;
+
+      if (returnType) {
+        if (!returnType->is_same(*ptr->returnType)) return false;
+      }
+
+      for (size_t i = 0; i < parameters.size(); i++) {
+        if (!parameters[i]->is_same(*ptr->parameters[i])) return false;
+      }
     }
-
-    if (returnType)
-      out += "_" + returnType->mangle_type();
-    else
-      out += "_u0";
-
-    return out;
+    return false;
   }
-  std::string debug_str() const override
-  {
-    return "<type> fn";
-  }
-  void accept(Visitor_Base& v) override
+
+  std::string debug_str() const override;
+  void        accept(Visitor_Base& v) override
   {
     v.visit(*this);
   }
@@ -135,10 +177,15 @@ struct Get_Expr_Type final : public AType {
   {
     return target->inferred_type->mangle_type();
   }
+  bool compare_with(const AType& other) const override
+  {
+    return target->inferred_type->is_same(other);
+  }
   std::string debug_str() const override
   {
-    return "<type> comptime";
-  };
+    return "type get expression type";
+  }
+
   void accept(Visitor_Base& v) override
   {
     v.visit(*this);

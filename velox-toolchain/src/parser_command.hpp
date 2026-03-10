@@ -43,9 +43,9 @@ void invalid_command();
 
 constexpr const char* HELP_LIST_COMMANDS =
     R"(
-USAGE: velox <command> [path|name|file] [options]
+usage: velox <command> [path/name/file] [--options/-options]
 
-Available commands:
+Compiler commands:
   build [path] [options]    Compile the project.
   b [path] [options]        (alias)
   > If no path is provided, the current directory will be used.
@@ -56,6 +56,10 @@ Available commands:
   gen-ffi <target_dir> <dest_dir> 
                             (alias)
 
+  find                      Search of velox-compiler.
+  f                         (alias)
+  
+Workspace commands:                          
   create workspace [name] [path]
   crw [name] [path]         (alias)
                             Create a new workspace directory with name.
@@ -71,20 +75,6 @@ Available commands:
   ui [path]                 (alias)
   > If no path is provided, the current directory will be used.
 
-  pkg install [package]     Install package from the velox repository.
-  pkg remove [package]      Remove package.
-  pkg info [package]        Show package description, version, ...
-  pkg purge [package]       Remove package configuration.
-  pkg check [package]       Check package integrity.
-  pkg list                  Show all packages.
-  pkg update                Update package cache.
-  pkg upgrade               Update all packages.
-  pkg clean                 Clean package cache list.
-  pkg --help | pkg -h       Display package command helper.
-
-  find                      Search of velox-compiler.
-  f                         (alias)
-
   check workspace [path]    Check the check of the workspace.
   chw [path]                (alias)
   > If no path is provided, the current directory will be inspected.
@@ -98,7 +88,20 @@ Available commands:
   > If no path is provided, the current directory will be used.
   > (recommended to be used inside a valid workspace)
 
-Target options:     
+Package manager commands:
+  pkg install [package]     Install package from the velox repository.
+  pkg remove [package]      Remove package.
+  pkg info [package]        Show package description, version, ...
+  pkg purge [package]       Remove package configuration.
+  pkg check [package]       Check package integrity.
+  pkg list                  Show all packages.
+  pkg update                Update package cache.
+  pkg upgrade               Update all packages.
+  pkg clean                 Clean package cache list.
+  pkg --help | pkg -h       Display package command helper.
+
+
+Compiler target options:     
   --abi=<abi>               Set the target ABI.
   --arch=<arch>             Set the target architecture.
   --bits=<number>           Set the target bits (e.g., 32, 64).
@@ -107,13 +110,13 @@ Target options:
   --config=<path>           Set the config source file. 
   --config=self             Set the config on velox.config
 
-Profile options:        
+Compiler profile options:        
   --debug          | -d     Compile in debug mode.
   --release        | -r     Compile in release mode.
   --opt-level=0..3          Set optimization level.
   --size-opt       | -sopt  Enable size optimizations.
 
-Logs options:       
+Compiler logs options:       
   --log-all        | -lall  Log all passes.
   --log-filesystem | -lfs   Log the filesystem pass.
   --log-lexer      | -llex  Log the lexer pass.
@@ -125,7 +128,7 @@ Logs options:
   --log-llvm       | -lllvm Log the LLVM IR code generation pass.
   --log-linker     | -llink Log the Linker pass.
 
-Warnings options:
+Compiler warnings options:
   --warn-all       | -wall  Warn all cases (override all).
   --warn-extra     | -wext  Warn more specific cases.
   --warn-pedantic  | -wpe   Warn standard derivation.
@@ -134,34 +137,33 @@ Warnings options:
   --warn-dead-code | -wdc   Warn dead code, never used...
   --warn-as-error  | -wae   All warnings treated as errors.
 
-Dot options:
-  --dot-ast                 Generate graphviz for AST view.
-  --dot-link                Generate graphviz for files linked.
+AST options:
+  --print-ast               Generate a file view of ast.
 
-Preprocessor options:       
+Compiler preprocessor options:       
   -D<name>[=value]          Define a macro (value defaults to 1).
   -U<name>                  Undefine a macro.
 
-Code generation options:        
+Compiler code generation options:        
   --emit=<obj|asm|bc|bin>   Set the output format.
   --build=<dir>             Set the build directory.
 
-Project options:        
+Compiler project options:        
   --project=<dir>           Set the project directory.
   --src=<dir>               Set the source code directory.
   --vendor=<dir>            Set the vendor source code directory.
   --ffi-json=<dir>          Set the interop json ast directory.
 
-Sanity options:
+Workspace check options:
   --full                    Set the check checker in full mode.
   > (will inspect all sections and keys presence)
 
-Options:        
+Toolchain options:        
   --help      | -h          Display this help message and exit.
   --version   | -v          Display the current version of the toolchain.
   --!<option> | -!<option>  Desactivate a bool/flag option.
 
-package options:
+Package manager options:
   --installed               Show only installed package in list.
   --upgradable              Show only upgradable package in list.
 

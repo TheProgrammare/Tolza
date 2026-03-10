@@ -40,12 +40,14 @@ bool generate_script(const ffi::Bind_Package& bind)
 
 bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
 {
+  std::cout << color_BLUE "[binder:generation] External Module Binder code Generation begins" color_RESET << std::endl;
+
   auto                          start = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> final_duration;
 
   size_t count = 0;
   for (const auto& bind : binds) {
-    std::cout << "[binder:" color_CYAN << ++count << "/" << binds.size() << "] " color_RESET;
+    std::cout << "[generation:" color_CYAN << ++count << "/" << binds.size() << "] " color_RESET;
 
     bool success = generate_script(bind);
 
@@ -62,7 +64,7 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
 
   auto milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  std::cout << color_YELLOW "[binder] [summary] " color_RESET << "duration: " color_YELLOW << milli << " ms"
+  std::cout << color_YELLOW "[generation:summary] " color_RESET << "duration: " color_YELLOW << milli << " ms"
             << color_RESET << " | bind files: " color_YELLOW << binds.size() << color_RESET << "\n";
   std::cout << std::endl;
 
@@ -77,7 +79,7 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
 
   milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-  std::cout << color_YELLOW "[binder] [summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
+  std::cout << color_YELLOW "[generation:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
             << color_RESET << "\n";
   std::cout << std::endl;
 
@@ -162,7 +164,7 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  std::cout << color_YELLOW "[binder] [summary" << color_RESET << "] duration: " << color_YELLOW << milli << " ms"
+  std::cout << color_YELLOW "[binder:summary" << color_RESET << "] duration: " << color_YELLOW << milli << " ms"
             << color_RESET << " | binds: " << color_YELLOW << final_binds << color_RESET << "\n";
   std::cout << std::endl;
 

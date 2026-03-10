@@ -5,8 +5,20 @@
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration.hpp"
 #include "ast/ast_expression.hpp"
-#include "ast/ast_headers.hpp"
-#include "parser_headers.hpp"
+#include "ast/ast_operation.hpp"
+#include "ast/ast_memory.hpp"
+
+#include "parser_context.hpp"
+#include "parser_declaration.hpp"
+#include "parser_declaration_cop.hpp"
+#include "parser_declaration_local.hpp"
+#include "parser_context.hpp"
+#include "parser_expression.hpp"
+#include "parser_literal.hpp"
+#include "parser_memory.hpp"
+#include "parser_operation.hpp"
+#include "parser_statement.hpp"
+#include "parser_type.hpp"
 
 #include "script_info.hpp"
 #include "visitor/symbol_manager.hpp"
@@ -160,9 +172,12 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 
   ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
-  ctx->m_sym->enter_scope("", EScopeType::Export, 0);
+  ctx->m_sym->in_export = true;
 
-  if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) return exp_node;
+  if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
+    ctx->m_sym->in_export = false;
+    return exp_node;
+  }
 
   while (!ctx->tok_v.is_end()) {
     if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
@@ -175,6 +190,8 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
     if (ctx->match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
+
+  ctx->m_sym->in_export = false;
 
   return exp_node;
 }
@@ -194,7 +211,6 @@ std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
   ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
   ctx->in_extern = true;
-  ctx->m_sym->enter_scope("", EScopeType::Extern, 0);
 
   if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
     ctx->in_extern = false;

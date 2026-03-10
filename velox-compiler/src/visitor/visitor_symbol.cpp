@@ -1,7 +1,9 @@
 #include "visitor_symbol.hpp"
 
-#include <memory>
+#include <span>
 #include <string>
+#include <span>
+#include <iostream>
 
 #include "ast/ast_base.hpp"
 #include "script_info.hpp"
@@ -9,36 +11,59 @@
 
 Visitor_Symbol::~Visitor_Symbol() = default;
 
-bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, std::weak_ptr<Symbol_Data>& target_resolution, bool silentError)
+bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, Symbol_Data*& target_resolution, bool silentError)
 {
-  if (!target_resolution.expired()) return true;
+  auto local_search = [&](std::span<const std::string> scope, const std::string& name) {
+    if (auto sym = scr_info.m_sym->find_local_symbol(scope, name)) {
+      target_resolution = sym;
+      return true;
+    }
+    return false;
+  };
 
-  const std::string name         = id.mangle_local_name();
-  const std::string absolue_name = id.mangle_qualified_name();
+  // from qualification
+  if (id.is_qualified_id()) {
+    // search on qualification
+    if (local_search(id.get_qualification_path(), id.get_base_name())) {
+      return true;
+    }
+    // search in imported modules
+    else {
+      if (auto imp = scr_info.get_import_module(id.get_qualification_path())) {
+        std::span<const std::string> sub_qualification =
+            std::span<const std::string>(id.get_qualification_path().begin(), id.get_qualification_path().size() - 1);
 
-  // get local symbol
-  if (auto sym = scr_info.m_sym->find_symbol(name)) {
-    target_resolution = sym.value();
-    return true;
-  } else if (auto sym = scr_info.m_sym->find_symbol(absolue_name)) {
-    target_resolution = sym.value();
-    return true;
-  }
-  // get imported symbol
-  else if (!id.is_qualified_id()) {
-    const std::string supposed_import_name = id.get_supposed_import_name();
-
-    if (auto imp = scr_info.get_import_module(supposed_import_name)) {
-      for (auto& mod : imp->target_modules) {
-        if (auto sym = mod->m_sym->find_symbol(absolue_name)) {
-          target_resolution = sym.value();
-          return true;
+        for (auto& mod : imp->target_modules) {
+          if (auto sym = mod->m_sym->find_exported_symbol(sub_qualification, id.get_base_name())) {
+            target_resolution = sym;
+            return true;
+          }
         }
       }
     }
+
+    // qualification is invalid
+    if (!silentError) error_add<152>(id, "Qualified symbol [" + id.debug_str() + "] definition not found!", "");
+    return false;
   }
 
-  if (!silentError) error_add<152>(id, "Symbol '" + id.debug_str() + "' definition not found!", "");
+  // from contextual scope
+  if (local_search(id._scope, id.get_base_name())) return true;
 
+  if (!silentError) error_add<165>(id, "Symbol [" + id.get_base_name() + "] definition not found!", "");
   return false;
+}
+
+void Visitor_Symbol::visit(ast::Expr_ID& n)
+{
+  resolve_sym(n, n.symbol, false);
+}
+void Visitor_Symbol::visit(ast::Expr_ID_Qualified& n)
+{
+  resolve_sym(n, n.symbol, false);
+}
+void Visitor_Symbol::visit(ast::Expr_ID_Type& n)
+{
+  resolve_sym(n, n.symbol, false);
+  n.name->symbol = n.symbol;
 }

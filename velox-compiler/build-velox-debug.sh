@@ -4,11 +4,6 @@
 
 set -e
 
-# Determine the number of threads based on available CPU cores
-NUM_CORES=$(nproc --all)
-
-echo "Building with $JOBS threads..."
-
 # Build directory
 BUILD_DIR=build/debug
 
@@ -17,8 +12,9 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR" || exit 1
 
 # Configure CMake with the Ninja generator and C++23 standard
+#cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_FLAGS="-ftime-report" ../../
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 ../../
 
 # Build in parallel using Ninja
-echo "Building Velox with $NUM_CORES cores..."
-time ninja -j $NUM_CORES
+echo "Building Velox with $(( $(nproc) * 3 / 2 )) threads..."
+time ninja -j $(( $(nproc) * 3 / 2 ))

@@ -116,7 +116,7 @@ struct Return final : public Node {
 
   std::string debug_str() const override
   {
-    return "<inst> return";
+    return "return";
   }
 
   void accept(Visitor_Base& v) override

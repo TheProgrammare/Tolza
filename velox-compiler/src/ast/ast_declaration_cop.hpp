@@ -16,13 +16,15 @@ namespace cop
 struct Component_Field final : public ADeclaration {
   std::shared_ptr<Component> parent_component;
 
-  std::unique_ptr<AType>       type;
+  std::shared_ptr<AType>       type;
   std::unique_ptr<AExpression> default_value;
   bool                         isNoDefault = false;
 
   std::string debug_str() const override
   {
-    return "field \"" + name + "\"";
+    std::string out = "field " + name + ": " + type->debug_str();
+    if (default_value) out += " = " + default_value->debug_str();
+    return out;
   }
   ESymbolType get_symbol_type() const override
   {
@@ -35,18 +37,27 @@ struct Component_Field final : public ADeclaration {
   }
 };
 
-struct Component final : public ADeclaration {
+struct Component final : public ADeclaration, AType {
   [[maybe_unused]]
-  std::shared_ptr<local::Generic_Parameter>     gen_where;
-  std::vector<std::shared_ptr<Component_Field>> fields;
+  std::shared_ptr<local::Generic_Parameter_Element> gen_where;
+  std::vector<std::shared_ptr<Component_Field>>     fields;
 
-  std::string debug_str() const override
-  {
-    return "declaration component \"" + name + "\"";
-  }
+  std::string debug_str() const override;
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Component;
+  }
+
+  std::string mangle_type() const override
+  {
+    return "cp_" + mangle_id(name);
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Component*>(&other)) {
+      return name == ptr->name;
+    }
+    return false;
   }
 
   void accept(Visitor_Base& v) override
@@ -55,7 +66,7 @@ struct Component final : public ADeclaration {
   }
 };
 
-struct Role final : public ADeclaration {
+struct Role final : public ADeclaration, AType {
   std::vector<std::unique_ptr<AExpression>> components;
 
   std::string debug_str() const override
@@ -65,6 +76,18 @@ struct Role final : public ADeclaration {
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Role;
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Role*>(&other)) {
+      return name == ptr->name;
+    }
+    return false;
+  }
+
+  std::string mangle_type() const override
+  {
+    return "rl_" + mangle_id(name);
   }
 
   void accept(Visitor_Base& v) override
@@ -76,16 +99,16 @@ struct Role final : public ADeclaration {
 struct Entity_Op;
 struct Entity_Cast;
 
-struct Entity final : public ADeclaration {
+struct Entity final : public ADeclaration, AType {
   std::vector<std::unique_ptr<literal::Component>> comps;
 
   // fn type, lines
   std::vector<std::tuple<std::shared_ptr<type::Function_Proto>, std::unique_ptr<local::CodeBlock>>> constructors;
   std::vector<std::unique_ptr<Node>>                                                                destructor;
 
-  std::shared_ptr<local::Generic_Parameter> gen_params;
-  std::vector<std::shared_ptr<Entity_Op>>   operators;
-  std::vector<std::shared_ptr<Entity_Cast>> casts;
+  std::shared_ptr<local::Generic_Parameter_Element> gen_params;
+  std::vector<std::shared_ptr<Entity_Op>>           operators;
+  std::vector<std::shared_ptr<Entity_Cast>>         casts;
 
   bool isDestructible = true;
   bool isMoveable     = true;
@@ -104,6 +127,12 @@ struct Entity final : public ADeclaration {
   {
     return ESymbolType::Entity;
   }
+
+  std::string mangle_type() const override
+  {
+    return "et_" + mangle_id(name);
+  }
+  bool compare_with(const AType& other) const override;
 
   void accept(Visitor_Base& v) override
   {

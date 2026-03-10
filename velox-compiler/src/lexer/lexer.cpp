@@ -590,7 +590,7 @@ void Lexer::tokenize_keyword()
   else {
     add_error<7>("Unexpected token symbol",
                  "define keywords like:"
-                 "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-Z_][a-Z0-9_]"
+                 "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-zA-Z_][a-zA-Z0-9_]"
                  "\n  - Reserved keyword: please, refer to the language documentation.");
   }
 }

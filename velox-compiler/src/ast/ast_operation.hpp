@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast/ast_type.hpp"
+#include "ast_type.hpp"
 #include "ast_base.hpp"
 #include <memory>
 
@@ -23,9 +23,9 @@ struct Cast_As final : public AExpression {
   std::string debug_str() const override
   {
     switch (cast_type) {
-    case ECastType::AS:             return "as";
-    case ECastType::AS_REINTERPRET: return "as!";
-    case ECastType::AS_SAFE:        return "as?";
+    case ECastType::AS:             return "cast as";
+    case ECastType::AS_REINTERPRET: return "cast as! unsafe";
+    case ECastType::AS_SAFE:        return "cast as? safe";
     }
   }
 };
@@ -78,7 +78,7 @@ struct Assignment final : public Node {
     case EAssignmentType::Copy:         return "copy=";
     case EAssignmentType::Clone:        return "clone=";
     case EAssignmentType::MoveSemantic: return "move=";
-    case EAssignmentType::NONE:         return "NO ASSIGNMENT TYPE";
+    case EAssignmentType::NONE:         return "=";
     }
   }
 };
@@ -95,7 +95,7 @@ struct Binary final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return "<op> bin(" + EBinOpType_to_str(op) + ")";
+    return "op bin(" + EBinOpType_to_str(op) + ")";
   }
 };
 
@@ -116,7 +116,7 @@ struct Unary final : public AExpression {
   }
   std::string debug_str() const override
   {
-    return "<op> unary(" + EUnaryOpType_to_str(unitaryOp) + ")";
+    return "op unary(" + EUnaryOpType_to_str(unitaryOp) + ")";
   }
 };
 

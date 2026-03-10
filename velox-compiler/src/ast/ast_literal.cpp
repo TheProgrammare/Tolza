@@ -5,16 +5,36 @@
 #include "ast_inferred_type_singleton.hpp"
 
 #include "visitor/symbol_manager.hpp"
+#include <memory>
+
+
+std::string ast::literal::Table::mangle_type() const
+{
+  std::string out = "arr";
+  std::string ty;
+
+  if (!values.empty())
+    ty = values[0]->inferred_type->mangle_type();
+  else if (!population)
+    ty = population->inferred_type->mangle_type();
+
+  for (auto dimension : resolved_size) out += std::to_string(dimension) + "_";
+
+  if (resolved_size.empty())
+    return out + "_" + ty;
+  else
+    return out + ty;
+}
 
 std::string ast::literal::Table::debug_str() const
 {
-  if (!element_type) return "";
+  if (!element_type) return "table empty {}";
   std::string out;
-  out = "table[" + std::to_string(resolved_size.size()) + ":";
+  out = "literal table[" + std::to_string(resolved_size.size()) + ":";
   for (size_t i = 0; i < resolved_size.size(); i++) {
     out += std::to_string(resolved_size[i]) + "x";
   }
-  out += " -> " + element_type->mangle_type() + "]";
+  out += " -&gt; " + element_type->mangle_type() + "]";
   return out;
 }
 
@@ -90,4 +110,16 @@ ast::literal::Text::Text()
     inferred_type = type::get_str_type();
   else
     inferred_type = type::get_text_type();
+}
+
+
+std::string ast::literal::Textual_Format::debug_str() const
+{
+  std::string out;
+  for (auto& val : values) {
+    if (val.kind == Textual_Element::Kind::Lerp) out += "{";
+    out += val.val->debug_str();
+    if (val.kind == Textual_Element::Kind::Lerp) out += "}";
+  }
+  return out;
 }

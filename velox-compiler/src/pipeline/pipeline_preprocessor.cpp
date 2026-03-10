@@ -50,19 +50,20 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
   if (!errs.empty()) {
     if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-    std::cerr << color_RED "[velox-compiler] Preprocessor failed\n" color_RESET;
+    std::cerr << color_RED "[preprocess] Failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
     for (auto& [_, fileError] : errs) {
       err_count += fileError.size();
     }
-    std::cerr << color_YELLOW "[summary] " << color_RED << err_count << " errors, build failed\n" color_RESET "\n";
+    std::cerr << color_YELLOW "[preprocess:summary] " << color_RED << err_count
+              << " errors, build failed\n" color_RESET "\n";
 
     for (auto& [path, fileError] : errs) {
       if (fileError.empty()) continue;
 
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
-      std::cerr << color_RED "[preprocess] [error] [file] " color_MAGENTA << path << color_RESET "\n\n";
+      std::cerr << color_RED "[preprocess:ERROR] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << f_err << "\n";
       }
@@ -71,7 +72,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
   }
 
   if (compiler::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
-  std::cout << color_YELLOW "[preprocess] [summary] " << color_CYAN << "duration: " << color_YELLOW
+  std::cout << color_YELLOW "[preprocess:summary] " << color_CYAN << "duration: " << color_YELLOW
             << std::chrono::duration<double, std::milli>(final_duration).count() << " ms" << color_RESET "\n"
             << std::endl;
 

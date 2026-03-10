@@ -44,9 +44,10 @@ struct Visitor_Base {
   virtual void visit(ast::ADeclaration& n)      = 0;
   virtual void visit(ast::ALocal& n)            = 0;
   virtual void visit(ast::AExpression& n)       = 0;
+  virtual void visit(ast::AIdentifier& n)       = 0;
   virtual void visit(ast::Expr_ID& n)           = 0;
   virtual void visit(ast::Expr_ID_Qualified& n) = 0;
-  virtual void visit(ast::Expr_ID_Generic& n)   = 0;
+  virtual void visit(ast::Expr_ID_Type& n)      = 0;
 
   virtual void visit(ast::Root& n) = 0;
 
@@ -75,8 +76,9 @@ struct Visitor_Base {
   virtual void visit(ast::declaration::local::Lambda_Capture& n) = 0;
   virtual void visit(ast::declaration::local::Capture_Member& n) = 0;
 
-  virtual void visit(ast::declaration::local::Parameter& n)         = 0;
-  virtual void visit(ast::declaration::local::Generic_Parameter& n) = 0;
+  virtual void visit(ast::declaration::local::Parameter& n)                 = 0;
+  virtual void visit(ast::declaration::local::Generic_Parameter_Element& n) = 0;
+  virtual void visit(ast::declaration::local::Generic_Parameters& n)        = 0;
 
   virtual void visit(ast::declaration::local::Pattern& n)           = 0;
   virtual void visit(ast::declaration::local::Pattern_Enum& n)      = 0;
@@ -128,13 +130,13 @@ struct Visitor_Base {
   virtual void visit(ast::literal::Floating& n) = 0;
 
   virtual void visit(ast::literal::ASCII& n) = 0;
-  virtual void visit(ast::literal::UFT32& n) = 0;
+  virtual void visit(ast::literal::UTF32& n) = 0;
 
-  virtual void visit(ast::literal::Text& n)             = 0;
-  virtual void visit(ast::literal::Text_Lerp& n)        = 0;
-  virtual void visit(ast::literal::Textual_Element& n)  = 0;
-  virtual void visit(ast::literal::Textual_Format& n)   = 0;
-  virtual void visit(ast::literal::Format_Specifier& n) = 0;
+  virtual void visit(ast::literal::Text& n)               = 0;
+  virtual void visit(ast::literal::Text_Interpolation& n) = 0;
+  virtual void visit(ast::literal::Textual_Element& n)    = 0;
+  virtual void visit(ast::literal::Textual_Format& n)     = 0;
+  virtual void visit(ast::literal::Format_Specifier& n)   = 0;
 
   virtual void visit(ast::literal::Table& n)            = 0;
   virtual void visit(ast::literal::Table_Population& n) = 0;
@@ -143,14 +145,16 @@ struct Visitor_Base {
 
   virtual void visit(ast::literal::Tuple& n) = 0;
 
-  virtual void visit(ast::literal::Range& n) = 0;
+  virtual void visit(ast::literal::Range& n)    = 0;
+  virtual void visit(ast::literal::Iterator& n) = 0;
+
+  virtual void visit(ast::literal::Enum& n) = 0;
 
   virtual void visit(ast::literal::Component& n) = 0;
   virtual void visit(ast::literal::Entity& n)    = 0;
 
   // ============ Expression ============
   virtual void visit(ast::expression::If_Ternary& n) = 0;
-  virtual void visit(ast::expression::Enum& n)       = 0;
 
   virtual void visit(ast::expression::Member_Access& n) = 0;
 

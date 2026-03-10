@@ -21,7 +21,7 @@ struct Boolean final : public ALiteral {
   }
   std::string debug_str() const override
   {
-    return "bool(" + std::to_string(val) + ")";
+    return "literal bool(" + std::to_string(val) + ")";
   }
 };
 
@@ -37,7 +37,7 @@ struct Integral final : public ALiteral {
   }
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
+    return "literal " + EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
   }
 };
 
@@ -59,8 +59,8 @@ struct Decimal final : public ALiteral {
 
   std::string debug_str() const override
   {
-    if (is_unsigned) return "udeci(" + val.i128_to_string() + ")";
-    return "deci(" + val.i128_to_string() + ")";
+    if (is_unsigned) return "literal udeci(" + val.i128_to_string() + ")";
+    return "literal deci(" + val.i128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override
@@ -77,7 +77,7 @@ struct Floating final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
+    return "literal " + EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override
@@ -94,7 +94,7 @@ struct ASCII final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "ascii('" + std::to_string(val) + "')";
+    return "literal ascii('" + std::to_string(val) + "')";
   }
 
   void accept(Visitor_Base& v) override
@@ -110,7 +110,7 @@ struct UTF32 final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "utf32('" + codePoints + "')";
+    return "literal utf32('" + codePoints + "')";
   }
 
   void accept(Visitor_Base& v) override
@@ -128,7 +128,7 @@ struct Text final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "text(\"" + std::string(val.begin(), val.end()) + "\")";
+    return "\"" + std::string(val.begin(), val.end()) + "\"";
   }
 
   void accept(Visitor_Base& v) override
@@ -189,7 +189,7 @@ struct Format_Specifier final : public Node {
 
   std::string debug_str() const override
   {
-    return "<format> specifier \":" + src_Str + "\"";
+    return "format specifier \":" + src_Str + "\"";
   }
 
   void accept(Visitor_Base& v) override
@@ -200,13 +200,13 @@ struct Format_Specifier final : public Node {
 
 // "{expression}"
 // "{expression:spec}"
-struct Text_Lerp final : public AExpression {
+struct Text_Interpolation final : public AExpression {
   std::unique_ptr<AExpression>      expression;
   std::unique_ptr<Format_Specifier> spec;
 
   std::string debug_str() const override
   {
-    return "text_lerp";
+    return "text interpolation";
   }
 
   void accept(Visitor_Base& v) override
@@ -226,7 +226,7 @@ struct Textual_Element final {
     , kind(Kind::Text)
   {
   }
-  Textual_Element(std::unique_ptr<Text_Lerp> lerp)
+  Textual_Element(std::unique_ptr<Text_Interpolation> lerp)
     : val(std::move(lerp))
     , kind(Kind::Lerp)
   {
@@ -237,10 +237,7 @@ struct Textual_Element final {
 struct Textual_Format final : public ALiteral {
   std::vector<Textual_Element> values;
 
-  std::string debug_str() const override
-  {
-    return "format_text";
-  }
+  std::string debug_str() const override;
 
   void accept(Visitor_Base& v) override
   {
@@ -258,7 +255,7 @@ struct Table_Population final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "<table population>";
+    return "table population";
   }
 
   void accept(Visitor_Base& v) override
@@ -267,7 +264,7 @@ struct Table_Population final : public ALiteral {
   }
 };
 
-struct Table final : public ALiteral {
+struct Table final : public ALiteral, AType {
   // for explicit specified values like: { 0, 1, 2, 3 }
   [[maybe_unused]]
   std::vector<std::unique_ptr<AExpression>> values;
@@ -287,6 +284,15 @@ struct Table final : public ALiteral {
   bool is_table_population() const
   {
     return population.get();
+  }
+
+  std::string mangle_type() const override;
+  bool        compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Table*>(&other)) {
+      return element_type->is_same(*ptr->element_type) && resolved_size == ptr->resolved_size;
+    }
+    return false;
   }
 
   std::string debug_str() const override;
@@ -318,7 +324,24 @@ struct Map final : public ALiteral {
   }
   std::string debug_str() const override
   {
-    return "map[" + std::to_string(keys.size()) + "]";
+    return "literal map[" + std::to_string(keys.size()) + "]";
+  }
+};
+
+struct Enum final : public ALiteral {
+  // path = enum name
+  // base_name = enum element
+  std::unique_ptr<ast::AIdentifier>         name;
+  std::vector<std::unique_ptr<AExpression>> member_values;
+
+  std::string debug_str() const override
+  {
+    return "literal enum[" + name->debug_str() + "]";
+  }
+
+  void accept(Visitor_Base& v) override
+  {
+    v.visit(*this);
   }
 };
 
@@ -330,8 +353,8 @@ struct Tuple final : public ALiteral {
 
   std::string debug_str() const override
   {
-    if (name_fields.empty()) return "tuple(" + std::to_string(values.size()) + ")";
-    return "named tuple(" + std::to_string(values.size()) + ")";
+    if (name_fields.empty()) return "literal tuple(" + std::to_string(values.size()) + ")";
+    return "literal named tuple(" + std::to_string(values.size()) + ")";
   }
 
   void accept(Visitor_Base& v) override
@@ -365,7 +388,7 @@ struct Component final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "literal component \"" + name->debug_str() + "\"";
+    return "literal component[" + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override
@@ -382,7 +405,7 @@ struct Entity final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "literal entity \"" + name->debug_str() + "\"";
+    return "literal entity[" + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override

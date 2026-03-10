@@ -3,12 +3,17 @@
 #include <memory>
 #include <vector>
 
-#include "ast/ast_base.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
-#include "ast/ast_headers.hpp"
-#include "ast/ast_literal.hpp"
-#include "parser_headers.hpp"
+#include "ast/ast_expression.hpp"
+#include "ast/ast_statement.hpp"
+
+#include "parser_context.hpp"
+#include "parser_expression.hpp"
+#include "parser_literal.hpp"
+#include "parser_declaration_local.hpp"
+#include "parser_type.hpp"
+
 #include "visitor/symbol_manager.hpp"
 
 std::shared_ptr<ast::declaration::cop::Component> parser::Parser_Declaration_COP::component()
@@ -129,7 +134,6 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
     std::unique_ptr<ast::AIdentifier> comp_id;
 
     auto comp_name = ctx.p_expr->identifier();
-    ctx.m_sym->add_external_symbol(*comp_name, Extern_Item::Kind::Component);
 
     if (auto ty = ctx.p_expr->identifier_typed()) {
       ty->name = std::move(comp_name);

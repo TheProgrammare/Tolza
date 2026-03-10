@@ -18,6 +18,7 @@
                 "--opt-level=0",
                 "--warn-level=0",
                 "-Dversion=1.0",
+                "--print-ast",
                 "--emit=bin",
                 "--build=${workspaceFolder}/../velox-workspace/velox-example/build",
                 "--project=${workspaceFolder}/../velox-workspace/velox-example",

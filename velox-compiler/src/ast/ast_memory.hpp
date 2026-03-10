@@ -21,7 +21,7 @@ struct Del final : public Node {
   }
   std::string debug_str() const override
   {
-    return "delete";
+    return "delete ptr";
   }
 };
 
@@ -35,7 +35,7 @@ struct Align final : public Node {
   }
   std::string debug_str() const override
   {
-    return "<mem> align(" + std::to_string(align) + ")";
+    return "align(" + std::to_string(align) + ")";
   }
 };
 

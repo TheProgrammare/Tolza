@@ -69,7 +69,7 @@ struct ModuleImportation {
 
   EImportSource import_source = EImportSource::User;
 
-  std::vector<ScriptInfo*> target_modules;
+  std::vector<std::shared_ptr<ScriptInfo>> target_modules;
 
   std::vector<Extern_Item> extern_references;
 
@@ -85,6 +85,13 @@ struct ModuleImportation {
   {
     extern_references.push_back(ext_item);
   }
+
+  std::string debug_name() const
+  {
+    std::string out;
+    for (auto& elem : path) out += elem + "::";
+    return out + name;
+  }
 };
 
 struct ModuleExportation {
@@ -92,10 +99,10 @@ struct ModuleExportation {
   [[maybe_unused]]
   std::string extern_lib;
 
-  ScriptInfo* script_exported = nullptr;
+  std::shared_ptr<ScriptInfo> script_exported = nullptr;
 
   [[maybe_unused]]
-  ScriptInfo* script_mirror = nullptr;
+  std::shared_ptr<ScriptInfo> script_mirror = nullptr;
 
   bool is_mirror = false;
 
@@ -139,8 +146,8 @@ struct ScriptInfo {
   void add_export(const ModuleExportation& exp);
   void add_import(const ModuleImportation& imp);
 
-  [[nodiscard]] ModuleExportation* get_export_module(const fs::path& path);
-  [[nodiscard]] ModuleImportation* get_import_module(const fs::path& path);
+  [[nodiscard]] std::shared_ptr<ModuleExportation> get_export_module(const fs::path& path);
+  [[nodiscard]] std::shared_ptr<ModuleImportation> get_import_module(std::span<const std::string> path);
 
   [[nodiscard]] std::set<ModuleImportation*> get_externs();
 
@@ -154,7 +161,8 @@ struct ScriptInfo {
   // start at 1
   [[nodiscard]] std::string get_line(size_t line) const
   {
-    if (line - 1 > file_lines.size() || line - 1 < 0) return "LINE OVER MAX SIZE";
+    if (line - 1 > file_lines.size() - 1) return file_lines.back();
+    if (line - 1 < 0) return file_lines[0];
     return file_lines[line - 1];
   }
 

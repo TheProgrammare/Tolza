@@ -22,8 +22,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
 
   size_t count = 0;
   for (auto& scr_info : scr_infos) {
-    std::cout << "[LLVM IR]";
-    std::cout << color_CYAN " [" << ++count << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << "[llvm-ir:" << ++count << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
     auto            start = std::chrono::high_resolution_clock::now();
@@ -44,10 +43,10 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
   std::cout << std::endl;
 
   if (!llvmIRErrors.empty()) {
-    std::cerr << color_RED "[velox-compiler] LLVM IR Generation failed !" color_RESET "\n";
+    std::cerr << color_RED "[llvm-ir] Generation failed !" color_RESET "\n";
     for (auto& [path, fileError] : llvmIRErrors) {
 
-      std::cerr << color_RED "[LLVM IR] [error] [file] " << path << color_RESET "\n";
+      std::cerr << color_RED "[llvm-ir] [ERROR] [file] " << path << color_RESET "\n";
       for (auto& error : fileError) {
         std::cerr << error << "\n";
       }

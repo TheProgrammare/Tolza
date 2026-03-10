@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pipeline.hpp"
-#include "pipeline_dot_ast.hpp"
 #include "pipeline_binder.hpp"
 #include "pipeline_exporter.hpp"
 #include "pipeline_filesystem.hpp"
