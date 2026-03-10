@@ -181,6 +181,7 @@ void Visitor_Type::visit(ast::expression::Call_Pipe& n)
 }
 void Visitor_Type::visit(ast::expression::Table_Access& n)
 {
+
   Visitor_Default::visit(n);
 }
 void Visitor_Type::visit(ast::expression::Ptr_At& n)
