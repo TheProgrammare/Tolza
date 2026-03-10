@@ -18,13 +18,11 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
-#include "ast/ast_codeblock_instruction.hpp"
-#include "ast/ast_declaration.hpp"
 #include "ast/ast_forward.hpp"
+#include "ast/ast_codeblock_instruction.hpp"
 
 struct ScriptInfo;
 struct ModuleImportation;
@@ -43,7 +41,7 @@ struct Parser_Base {
   [[nodiscard]] std::shared_ptr<ast::declaration::Export> parse_export();
   [[nodiscard]] std::shared_ptr<ast::declaration::Extern> parse_extern();
 
-  [[nodiscard]] std::optional<ast::CodeBlock_instruction> parse_instruction();
+  [[nodiscard]] ast::CodeBlock_instruction parse_instruction();
 
   Parser_Context* ctx;
 };

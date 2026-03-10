@@ -1,43 +1,19 @@
 #pragma once
 
-#include <vector>
+#include <string>
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_memory.hpp"
-#include "error_output.hpp"
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "visitor_base.hpp"
 
 struct Visitor_Default : public Visitor_Base {
   using Visitor_Base::Visitor_Base;
 
-  template <size_t Code>
-  void error_add(const ast::Node& n, const std::string& msg, const std::string& hint)
-  {
-    auto error = Error_Diagnostic<Code>(scr_info, n._token, {}, current_EPhase(), EErrorSeverity::error, {}, msg, hint);
+  void error_add(ErrorCode code, const ast::Node& n, const std::string& msg, const std::string& hint) const;
 
-    errors.push_back(error.print_error());
-  }
+  void error_two_lines(ErrorCode, const ast::Node& first, const ast::Node& second, const std::string& msg,
+                       const std::string& hint) const;
 
-  template <size_t Code>
-  void error_two_lines(const ast::Node& first, const ast::Node& second, const std::string& msg, const std::string& hint)
-  {
-    auto first_error = Error_Diagnostic<Code>(*first._scr_info, first._token, {}, current_EPhase(),
-                                              EErrorSeverity::error, {}, msg, hint);
-
-    auto second_error = Error_Diagnostic<Code>(*second._scr_info, second._token, {}, current_EPhase(),
-                                               EErrorSeverity::error, {}, msg, hint);
-
-    std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
-    out += first_error.print_line() + color_RESET "\n";
-    out += "[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
-    out += second_error.print_line() + color_RESET "\n";
-
-    out += first_error.print_messages();
-    errors.push_back(out);
-  }
-
-  compiler::EPhase current_EPhase()
+  compiler::EPhase current_EPhase() const
   {
     return compiler::EPhase::resolver_symbol;
   }

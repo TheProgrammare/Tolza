@@ -5,9 +5,20 @@
 #include <span>
 #include <iostream>
 
-#include "ast/ast_base.hpp"
 #include "script_info.hpp"
 #include "symbol_manager.hpp"
+
+#include "ast/ast_base.hpp"
+#include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_cop.hpp"
+#include "ast/ast_generic.hpp"
+#include "ast/ast_literal.hpp"
+#include "ast/ast_memory.hpp"
+#include "ast/ast_operation.hpp"
+#include "ast/ast_statement.hpp"
+#include "ast/ast_expression.hpp"
+#include "ast/ast_type.hpp"
 
 Visitor_Symbol::~Visitor_Symbol() = default;
 
@@ -43,14 +54,14 @@ bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, Symbol_Data*& target_reso
     }
 
     // qualification is invalid
-    if (!silentError) error_add<152>(id, "Qualified symbol [" + id.debug_str() + "] definition not found!", "");
+    if (!silentError) error_add(152, id, "Qualified symbol [" + id.debug_str() + "] definition not found!", "");
     return false;
   }
 
   // from contextual scope
   if (local_search(id._scope, id.get_base_name())) return true;
 
-  if (!silentError) error_add<165>(id, "Symbol [" + id.get_base_name() + "] definition not found!", "");
+  if (!silentError) error_add(165, id, "Symbol [" + id.get_base_name() + "] definition not found!", "");
   return false;
 }
 

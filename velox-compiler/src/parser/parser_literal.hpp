@@ -1,9 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
-#include "ast/ast_base.hpp"
 #include "ast/ast_forward.hpp"
 
 namespace parser

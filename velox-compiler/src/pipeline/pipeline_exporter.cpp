@@ -1,12 +1,16 @@
 #include "pipeline_exporter.hpp"
 
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 
 #include "ast/ast_base.hpp"
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "script_info.hpp"
+
+namespace fs = std::filesystem;
+
 
 bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
@@ -50,12 +54,12 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
 
       std::string log_txt = log_str;
       compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
-                                       imp->debug_name(), imp_scr->file_path.filename()});
+                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
       std::cout << log_txt << std::endl;
     } else {
       std::string log_txt = log_str;
       compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
-                                       imp->debug_name(), imp_scr->file_path.filename()});
+                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
       std::cerr << log_txt << std::endl;
       success = false;
     }

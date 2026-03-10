@@ -61,7 +61,7 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silen
   }
 
   if (!is_silent_error) {
-    ctx.tok_v.add_error<80>("Expected literal value", "");
+    ctx.tok_v.add_error(80, "Expected literal value", "");
   }
 
   return nullptr;
@@ -88,9 +88,9 @@ std::unique_ptr<ast::literal::Decimal> parser::Parser_Literal::literal_decimal()
     // Part after comma (no point)
     after_comma  = ctx.tok_v.peek().val.substr(decimal_pos + 1);
   } else
-    ctx.tok_v.add_error<81>("Expected an point '.' in lietral decimal.",
-                            "define literal decimal like:\n  - `0000.00d`\n  - `520.15d`\n  - "
-                            "`10.544ud`\n  - `10.25deci`\n  - `20.54udeci`");
+    ctx.tok_v.add_error(81, "Expected an point '.' in lietral decimal.",
+                        "define literal decimal like:\n  - `0000.00d`\n  - `520.15d`\n  - "
+                        "`10.544ud`\n  - `10.25deci`\n  - `20.54udeci`");
 
   literal->integral_num = before_comma.length();
   literal->decimal_num  = after_comma.length();
@@ -198,10 +198,10 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
       literal->type = EPrimType::i128;
     }
   } catch (const std::invalid_argument&) {
-    ctx.tok_v.add_error<82>("Impossible to parse literal integral", hint);
+    ctx.tok_v.add_error(82, "Impossible to parse literal integral", hint);
     throw std::runtime_error("Impossible to parse APInt literal");
   } catch (const std::out_of_range&) {
-    ctx.tok_v.add_error<83>("Integral literal too big for 128 bits", hint);
+    ctx.tok_v.add_error(83, "Integral literal too big for 128 bits", hint);
   }
 
   // post literal type like 10i8 0u32
@@ -242,8 +242,8 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
       }
       ftext->values.push_back(std::move(lerp));
 
-      ctx.tok_v.expect<84>(TokTy::S_TEXTUAL_EXPR_END, "Expected end expression '}' in format string.",
-                           "define format string like: `f\"you age is {now - birthday} years\"`.");
+      ctx.tok_v.expect(84, TokTy::S_TEXTUAL_EXPR_END, "Expected end expression '}' in format string.",
+                       "define format string like: `f\"you age is {now - birthday} years\"`.");
       continue;
     }
     break;
@@ -318,7 +318,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
 
   // prefix numeric
   if (ctx.tok_v.match(TokTy::HASHTAG)) {
-    ctx.tok_v.expect<85>(TokTy::L_ASCII, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
+    ctx.tok_v.expect(85, TokTy::L_ASCII, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
     char prefix = ctx.tok_v.peek(-1).val[0];
 
     switch (prefix) {
@@ -342,7 +342,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
   // width from variable
   if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
     format->width = ctx.p_expr->parse_expression_term();
-    ctx.tok_v.expect<86>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
+    ctx.tok_v.expect(86, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
   }
   // width from literal
   else if (ctx.tok_v.check(TokTy::L_U)) {
@@ -360,7 +360,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
     // precision from variable
     if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
       format->precision = ctx.p_expr->parse_expression_term();
-      ctx.tok_v.expect<87>(TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
+      ctx.tok_v.expect(87, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
     }
     // precision from literal
     else if (ctx.tok_v.check(TokTy::L_U)) {
@@ -391,7 +391,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
   }
 
   if (!ctx.tok_v.check(TokTy::S_TEXTUAL_EXPR_END)) {
-    ctx.tok_v.add_error<88>("Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
+    ctx.tok_v.add_error(88, "Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
   }
 
   return format;
@@ -412,7 +412,7 @@ std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::
   range->start = std::move(start);
 
   auto range_tok =
-      ctx.tok_v.expect_any<89>({TokTy::RANGE, TokTy::RANGE_INCLUSIVE}, "Expected range kind '..' or '..='", hint);
+      ctx.tok_v.expect_any(89, {TokTy::RANGE, TokTy::RANGE_INCLUSIVE}, "Expected range kind '..' or '..='", hint);
 
   range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
 
@@ -529,8 +529,8 @@ std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std
 
       lit_entity->comp_args.push_back(std::move(lit_comp));
     } else {
-      ctx.tok_v.add_error_tok<91>(comp_name->_token, "Unexpected literal reference",
-                                  "define literal components only in literal entity");
+      ctx.tok_v.add_error_tok(91, comp_name->_token, "Unexpected literal reference",
+                              "define literal components only in literal entity");
     }
 
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
@@ -576,7 +576,7 @@ std::unique_ptr<ast::expression::Call_Argument> parser::Parser_Literal::literal_
   auto field_arg  = ctx.Create_Node<ast::expression::Call_Argument>(ctx.tok_v.peek());
   field_arg->name = ctx.parse_name("", hint);
 
-  ctx.tok_v.expect<94>(TokTy::ASSIGN, "Expected field assignation '=' after field name", hint);
+  ctx.tok_v.expect(94, TokTy::ASSIGN, "Expected field assignation '=' after field name", hint);
 
   field_arg->expression = ctx.p_expr->parse_expression();
 
@@ -594,8 +594,8 @@ std::unique_ptr<ast::literal::Tuple> parser::Parser_Literal::literal_tuple()
     if (isNamedTuple) {
       tuple->name_fields.push_back(ctx.parse_name("", hint));
 
-      ctx.tok_v.expect<96>(TokTy::ASSIGN,
-                           "Expected field value assignation ':' after filed name in named tuple instance.", hint);
+      ctx.tok_v.expect(96, TokTy::ASSIGN,
+                       "Expected field value assignation ':' after filed name in named tuple instance.", hint);
 
       tuple->values.push_back(ctx.p_expr->parse_expression());
     } else {

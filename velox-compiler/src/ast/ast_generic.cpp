@@ -1,7 +1,65 @@
 #include "ast_generic.hpp"
 
 #include "ast_declaration_cop.hpp"
-#include "ast_expression.hpp"
+
+#include "visitor/visitor_base.hpp"
+#include "visitor/visitor_codegen.hpp"
+
+
+void ast::generic::Is_Type::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Is_Type::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::generic::Can_Cast::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Can_Cast::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::generic::Have_Op::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Have_Op::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::generic::Have_Role::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Have_Role::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::generic::Use_Component::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Use_Component::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::generic::Compatible_System::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::generic::Compatible_System::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 bool ast::generic::Have_Op::type_isValid(const AType& type) const
 {

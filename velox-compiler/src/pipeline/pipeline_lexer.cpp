@@ -1,14 +1,16 @@
 #include "pipeline_lexer.hpp"
 
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 
-#include "compiler.hpp"
+#include "script_info.hpp"
+#include "compiler_data.hpp"
 #include "lexer/lexer.hpp"
 
 bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  std::vector<std::tuple<fs::path, std::vector<std::string>>> lexErrors;
+  std::vector<std::tuple<std::string, std::vector<std::string>>> lexErrors;
 
   std::chrono::duration<double> final_duration;
   size_t                        final_toks = 0;
@@ -45,7 +47,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
     for (auto& errs : lexErrors) {
       auto [_, fileError] = errs;
       for (const auto& f_err : fileError) {
-        std::cerr << f_err << "\n";
+        std::cerr << "\"" << f_err << "\"\n";
       }
     }
 

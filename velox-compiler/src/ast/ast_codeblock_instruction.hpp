@@ -1,16 +1,22 @@
 #pragma once
 
-#include <variant>
-
-#include "ast_base.hpp"
+#include <memory>
 
 namespace ast
 {
+struct Node;
+struct ALocal;
 
 struct CodeBlock_instruction {
-  std::variant<std::shared_ptr<ALocal>, std::unique_ptr<Node>> data;
+  enum class EKind { None, Shared_local, Unique_base };
 
-  CodeBlock_instruction() = default;
+  CodeBlock_instruction();
+  CodeBlock_instruction(std::shared_ptr<ALocal> _data_local);
+  CodeBlock_instruction(std::unique_ptr<Node> _data_base);
+
+  EKind                   kind = EKind::None;
+  std::shared_ptr<ALocal> data_local;
+  std::unique_ptr<Node>   data_base;
 
   // no copy
   CodeBlock_instruction(const CodeBlock_instruction&)            = delete;
@@ -20,9 +26,14 @@ struct CodeBlock_instruction {
   CodeBlock_instruction(CodeBlock_instruction&&) noexcept            = default;
   CodeBlock_instruction& operator=(CodeBlock_instruction&&) noexcept = default;
 
-  Node* node() const
+  Node* node() const;
+  bool  is_valid() const
   {
-    return std::visit([](auto const& v) -> Node* { return v.get(); }, data);
+    switch (kind) {
+    case EKind::None:         return false;
+    case EKind::Shared_local: return data_local.get();
+    case EKind::Unique_base:  return data_base.get();
+    }
   }
 };
 

@@ -1,11 +1,12 @@
 #pragma once
 
+#include <array>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "lexer/token.hpp"
-#include "script_info.hpp"
 
 namespace ast
 {
@@ -23,7 +24,6 @@ enum class EErrorSeverity { debug, warning, error, fatal };
 [[nodiscard]] std::string trim(const std::string& str);
 
 
-template <size_t Code>
 struct Error_Diagnostic {
   const ScriptInfo& scr_info;
 
@@ -32,27 +32,26 @@ struct Error_Diagnostic {
   compiler::EPhase         phase    = compiler::EPhase::parser;
   EErrorSeverity           severity = EErrorSeverity::error;
   // classic error 0000 - 0999 internal error 1000 - 1999
-  size_t                   code     = 0000;
+  ErrorCode                code     = 0;
   std::vector<std::string> context;
   std::string              msg;
   std::string              hint;
 
-  Error_Diagnostic<Code>() = delete;
+  Error_Diagnostic() = delete;
 
-  Error_Diagnostic<Code>(const ScriptInfo& _scr_info, const Token& _token, const std::vector<Token>& _tokens,
-                         compiler::EPhase _phase, EErrorSeverity _severity, const std::vector<std::string>& _context,
-                         const std::string& _msg, const std::string& _hint)
+  Error_Diagnostic(ErrorCode _code, const ScriptInfo& _scr_info, const Token& _token, const std::vector<Token>& _tokens,
+                   compiler::EPhase _phase, EErrorSeverity _severity, const std::vector<std::string>& _context,
+                   const std::string& _msg, const std::string& _hint)
     : scr_info(_scr_info)
     , token(_token)
     , tokens_inpacted(_tokens)
     , phase(_phase)
     , severity(_severity)
-    , code(Code)
+    , code(_code)
     , context(_context)
     , msg(_msg)
     , hint(_hint)
   {
-    static_assert(Code < 9999, "The Error code is higher than 9999 maximum permitted.");
   }
 
   // [file] file:LL:CC
@@ -66,11 +65,7 @@ struct Error_Diagnostic {
     return print_source() + print_line() + print_messages();
   }
 
-  std::string print_code() const
-  {
-    return "[" + ESeverity_to_color(severity) + compiler::Phase_to_code(phase) + std::format("{:04}", code)
-           + color_RESET "] ";
-  }
+  std::string print_code() const;
 
   std::string print_messages() const
   {
@@ -93,36 +88,9 @@ struct Error_Diagnostic {
     return str_msg;
   }
 
-  std::string print_line() const
-  {
-    size_t finalCursorSize = token.span.size == 0 ? 1 : token.span.size;
-    // Trim
-    // code
-    if (token.span.line - 1 < 0 || token.span.line - 1 > scr_info.get_line_size()) return "NO VALID LINE INDEX";
+  std::string print_line() const;
 
-    std::string line_source = scr_info.get_line(token.span.line);
-    std::string trimmedLine = line_source.empty() ? "NO LINE FOUND" : trim(line_source);
-    size_t      trimSize    = abs(int(trimmedLine.size() - line_source.size()));
-
-    // cursor
-    std::string line_offset_str = std::string(6 - std::to_string(token.span.line).size(), ' ');
-    std::string cursor          = std::string(finalCursorSize, '^');
-    size_t      cursor_offset =
-        token.span.col < token.span.size + trimSize ? 0 : token.span.col - (token.span.size + trimSize);
-    std::string cursor_offset_str = std::string(cursor_offset, ' ');
-
-    // final
-    return line_offset_str + std::to_string(token.span.line) + " | " + trimmedLine +
-           "\n"
-           "       | " color_RED
-           + cursor_offset_str + cursor + color_RESET "\n";
-  }
-
-  std::string print_source() const
-  {
-    return "[file] " + scr_info.file_path.string() + ":" + std::to_string(token.span.line) + ":"
-           + std::to_string(token.span.col) + "\n" color_RESET;
-  }
+  std::string print_source() const;
 
   std::string print_link_error() const
   {

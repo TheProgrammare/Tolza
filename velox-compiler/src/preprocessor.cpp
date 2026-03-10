@@ -5,29 +5,33 @@
 #include <fstream>
 #include <iostream>
 
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 
 #include "ast/ast_data.hpp"
 #include "lexer/token.hpp"
 #include "lexer/token_viewer.hpp"
 #include "script_info.hpp"
+#include "metacode.hpp"
 
-#include "compiler.hpp"
 
 Preprocessor::Preprocessor(ScriptInfo& _scr_info)
   : scr_info(_scr_info)
   , tok_v(new TokenViewer(_scr_info))
 {
-  m_meta       = new META::MetablockManager;
+  m_meta       = new meta::MetablockManager;
   tok_v->phase = compiler::EPhase::preprosessor;
 }
 
-template <META::DerivedFromMeta MetaNode>
-inline std::unique_ptr<MetaNode> Preprocessor::Create_Meta(const Token& tok, size_t start_scope_pos)
+
+template <typename MetaNode>
+std::unique_ptr<MetaNode> Preprocessor::Create_Meta(const Token& tok, size_t start_scope_pos)
 {
+  static_assert(std::derived_from<MetaNode, meta::Metablock>, "MetaNode must derive from meta::Metablock");
+
   std::unique_ptr<MetaNode> node = std::make_unique<MetaNode>();
 
-  if (auto ptr = dynamic_cast<META::MetaBlock*>(node.get())) {
+  if (auto ptr = dynamic_cast<meta::Metablock*>(node.get())) {
     ptr->debug_str                   = tok_v->get_line_str_at(tok.span.line);
     ptr->position                    = tok.span.anteprocess_pos;
     ptr->_scope.start_scope_position = start_scope_pos;
@@ -70,7 +74,8 @@ void Preprocessor::debug_write_postprocess_code_files(const std::vector<Token>& 
 {
   std::filesystem::create_directories(compiler::COMP_CTX.get_preprocess_dir());
 
-  fs::path path = compiler::COMP_CTX.get_preprocess_dir() / scr_info.file_path.filename();
+  auto path = std::filesystem::path(compiler::COMP_CTX.get_preprocess_dir())
+              / std::filesystem::path(scr_info.file_path).filename();
   path.replace_extension(".txt");
 
   std::ofstream o_gen(path);
@@ -89,7 +94,7 @@ void Preprocessor::debug_write_postprocess_code_files(const std::vector<Token>& 
   o_gen.close();
 }
 
-bool Preprocessor::process_any_meta(META::MetaBlock& parent)
+bool Preprocessor::process_any_meta(meta::Metablock& parent)
 {
   // check if special metacode case
   if (process_if(parent)) {
@@ -97,19 +102,19 @@ bool Preprocessor::process_any_meta(META::MetaBlock& parent)
   } else if (process_expand(parent)) {
     return true;
   } else if (match_metacode({"end", "<!>"})) {
-    tok_v->add_error_tok<135>(tok_v->peek(-2), "Unexpected metacode scope end instruction.",
-                              "It's might be a excessive end instruction.");
+    tok_v->add_error_tok(135, tok_v->peek(-2), "Unexpected metacode scope end instruction.",
+                         "It's might be a excessive end instruction.");
     return false;
   } else {
     return process_metablock(parent);
   }
 }
 
-bool Preprocessor::process_metablock(META::MetaBlock& parent)
+bool Preprocessor::process_metablock(meta::Metablock& parent)
 {
   if (!tok_v->check(TokTy::METACODE)) return false;
 
-  auto metablock = Create_Meta<META::MetaBlock>(tok_v->peek(), 0);
+  auto metablock = Create_Meta<meta::Metablock>(tok_v->peek(), 0);
 
   while (!tok_v->is_end()) {
     // no more metacode to process in one block
@@ -120,11 +125,11 @@ bool Preprocessor::process_metablock(META::MetaBlock& parent)
       break;
     }
 
-    std::vector<META::MetaWord> instruct_words;
+    std::vector<meta::MetaWord> instruct_words;
     while (!tok_v->is_end()) {
       if (tok_v->check(TokTy::S_METACODE_END)) break;
 
-      META::MetaWord word({tok_v->next()});
+      meta::MetaWord word({tok_v->next()});
 
       if (tok_v->match(TokTy::PIPE)) {
 
@@ -137,7 +142,7 @@ bool Preprocessor::process_metablock(META::MetaBlock& parent)
       instruct_words.push_back(word);
     }
 
-    META::MetaInstruct instruct(metablock.get(), instruct_words);
+    meta::MetaInstruct instruct(metablock.get(), instruct_words);
 
     metablock->_instructions.push_back(instruct);
   }
@@ -150,7 +155,7 @@ bool Preprocessor::process_metablock(META::MetaBlock& parent)
   return true;
 }
 
-void Preprocessor::process_scope(META::MetaBlock& meta)
+void Preprocessor::process_scope(meta::Metablock& meta)
 {
   static const std::string hint =
       "define scope like:"
@@ -186,7 +191,7 @@ void Preprocessor::process_scope(META::MetaBlock& meta)
     meta.tokens_to_generate.push_back(tok_v->next().span.anteprocess_pos);
   }
 
-  tok_v->add_error<136>("Expected end of metacode scope (`# end` is never encounted).", hint);
+  tok_v->add_error(136, "Expected end of metacode scope (`# end` is never encounted).", hint);
 }
 
 static const std::string metacode_if_hint =
@@ -197,56 +202,50 @@ static const std::string metacode_if_hint =
     "\n  - if-elif-...-else `# if <condition> ...code lines... # elif <condition> ...code lines... # else ...code "
     "lines... # end if`";
 
-bool Preprocessor::process_if(META::MetaBlock& parent)
+bool Preprocessor::process_if(meta::Metablock& parent)
 {
   // # if
   // ...
   if (check_metacode({"elif"})) {
-    tok_v->add_error<137>("Unexpected '# elif' metacode without a start metacode condition '# if ...' before.",
-                          metacode_if_hint);
+    tok_v->add_error(137, "Unexpected '# elif' metacode without a start metacode condition '# if ...' before.",
+                     metacode_if_hint);
     return false;
   }
   if (check_metacode({"end", "if", "<!>"})) {
-    tok_v->add_error<138>(
-        "Unexpected '# end if' metacode without a start metacode condition '# if "
-        "... # elif ... # else ...' before.",
-        metacode_if_hint);
+    tok_v->add_error(138,
+                     "Unexpected '# end if' metacode without a start metacode condition '# if "
+                     "... # elif ... # else ...' before.",
+                     metacode_if_hint);
     return false;
   }
   if (!match_metacode({"if"})) return false;
 
-  auto if_meta                         = Create_Meta<META::MetaBlock_If>(tok_v->peek(-1), 0);
+  auto if_meta                         = Create_Meta<meta::Metablock_If>(tok_v->peek(-1), 0);
   if_meta->condition                   = process_condition();
   if_meta->_scope.start_scope_position = tok_v->position();
 
   while (!tok_v->is_end()) {
-    // end
-    // of
-    // flow
+    // end of flow
     if (_if_end_metacode(*if_meta) || _else_metacode(*if_meta) || _elif_metacode(*if_meta)) {
       parent.add_children(std::move(if_meta));
       return true;
     }
 
-    // if
-    // sub-meta
-    // found
-    // (other
-    // directive)
+    // if sub-meta found (other directive)
     if (!process_any_meta(*if_meta)) {
       // keep token to generate
       if_meta->tokens_to_generate.push_back(tok_v->next().span.anteprocess_pos);
     }
   }
 
-  tok_v->add_error<139>(
-      "Expected end of metacode condition `# if ...` (`# end` or `# elif ...` or `# else` are never encounted)",
+  tok_v->add_error(
+      139, "Expected end of metacode condition `# if ...` (`# end` or `# elif ...` or `# else` are never encounted)",
       metacode_if_hint);
 
   return false;
 }
 
-bool Preprocessor::_if_end_metacode(META::MetaBlock_If& end_wait)
+bool Preprocessor::_if_end_metacode(meta::Metablock_If& end_wait)
 {
   if (match_metacode({"end", "if", "<!>"})) {
     end_wait._scope.end_scope_position = tok_v->peek(-4).span.anteprocess_pos;
@@ -255,11 +254,11 @@ bool Preprocessor::_if_end_metacode(META::MetaBlock_If& end_wait)
   return false;
 }
 
-bool Preprocessor::_else_metacode(META::MetaBlock_If& before_else)
+bool Preprocessor::_else_metacode(meta::Metablock_If& before_else)
 {
   if (match_metacode({"else", "<!>"})) {
-    auto else_meta       = Create_Meta<META::MetaBlock_If>(tok_v->peek(-2), tok_v->position());
-    else_meta->flow_type = META::MetaBlock_If::EFlowType::ELSE;
+    auto else_meta       = Create_Meta<meta::Metablock_If>(tok_v->peek(-2), tok_v->position());
+    else_meta->flow_type = meta::Metablock_If::EFlowType::ELSE;
 
     bool correct_else_exit = false;
     while (!tok_v->is_end()) {
@@ -276,17 +275,17 @@ bool Preprocessor::_else_metacode(META::MetaBlock_If& before_else)
       }
     }
 
-    tok_v->add_error<140>("Expected end of metacode condition `# else ...` (`# end if` is never encounted)",
-                          metacode_if_hint);
+    tok_v->add_error(140, "Expected end of metacode condition `# else ...` (`# end if` is never encounted)",
+                     metacode_if_hint);
   }
   return false;
 }
 
-bool Preprocessor::_elif_metacode(META::MetaBlock_If& before_elif)
+bool Preprocessor::_elif_metacode(meta::Metablock_If& before_elif)
 {
   if (match_metacode({"elif"})) {
-    auto elif_meta       = Create_Meta<META::MetaBlock_If>(tok_v->peek(-1), tok_v->position());
-    elif_meta->flow_type = META::MetaBlock_If::EFlowType::ELIF;
+    auto elif_meta       = Create_Meta<meta::Metablock_If>(tok_v->peek(-1), tok_v->position());
+    elif_meta->flow_type = meta::Metablock_If::EFlowType::ELIF;
     elif_meta->condition = process_condition();
 
     while (!tok_v->is_end()) {
@@ -302,10 +301,10 @@ bool Preprocessor::_elif_metacode(META::MetaBlock_If& before_elif)
       }
     }
 
-    tok_v->add_error<141>(
-        "Expected end of metacode condition `# elif ...` (`# end if` or `# elif "
-        "...` is never encounted)",
-        metacode_if_hint);
+    tok_v->add_error(141,
+                     "Expected end of metacode condition `# elif ...` (`# end if` or `# elif "
+                     "...` is never encounted)",
+                     metacode_if_hint);
   }
 
   return false;
@@ -322,17 +321,15 @@ static const std::string expand_hint =
     "\n     # end expand if"
     "\n   # end each`";
 
-std::unique_ptr<META::MetaBlock_Expand> Preprocessor::_expand_header()
+std::unique_ptr<meta::Metablock_Expand> Preprocessor::_expand_header()
 {
-  // #
-  // expand
-  auto  expansion_meta = Create_Meta<META::MetaBlock_Expand>(tok_v->peek(-2), 0);
+  // # expand
+  auto  expansion_meta = Create_Meta<meta::Metablock_Expand>(tok_v->peek(-2), 0);
   auto& phs            = expansion_meta->placeholders;
   auto& phs_pos        = expansion_meta->placeholders_pos;
 
   bool clean_end = false;
-  // parse
-  // for(s)
+  // parse for(s)
   while (!tok_v->is_end()) {
     if (tok_v->check(TokTy::METACODE)) {
       if (match_metacode({"for", "<a>", "as"})) {
@@ -350,27 +347,27 @@ std::unique_ptr<META::MetaBlock_Expand> Preprocessor::_expand_header()
         clean_end                                   = true;
         break;
       } else {
-        tok_v->add_error<142>("Expected metacode expand instruction.", expand_hint);
+        tok_v->add_error(142, "Expected metacode expand instruction.", expand_hint);
         return nullptr;
       }
     } else {
-      tok_v->add_error<143>("Unexpected symbol in metacode expand instruction.", expand_hint);
+      tok_v->add_error(143, "Unexpected symbol in metacode expand instruction.", expand_hint);
       return nullptr;
     }
   }
 
   if (!clean_end) {
-    tok_v->add_error<144>(
-        "Expected start of metacode `# each [<name>]` instruction at the end of "
-        "metacode expand instruction.",
-        expand_hint);
+    tok_v->add_error(144,
+                     "Expected start of metacode `# each [<name>]` instruction at the end of "
+                     "metacode expand instruction.",
+                     expand_hint);
     return nullptr;
   }
 
   return expansion_meta;
 }
 
-void Preprocessor::_expand_body(META::MetaBlock_Expand& expansion_meta)
+void Preprocessor::_expand_body(meta::Metablock_Expand& expansion_meta)
 {
   bool clean_end = false;
 
@@ -400,11 +397,11 @@ void Preprocessor::_expand_body(META::MetaBlock_Expand& expansion_meta)
   }
 
   if (!clean_end) {
-    tok_v->add_error<145>("Expected end of expand metacode scope `# end expand if`.", expand_hint);
+    tok_v->add_error(145, "Expected end of expand metacode scope `# end expand if`.", expand_hint);
   }
 }
 
-bool Preprocessor::_expand_placeholder(META::MetaBlock_Expand& expansion_meta)
+bool Preprocessor::_expand_placeholder(meta::Metablock_Expand& expansion_meta)
 {
   if (!tok_v->check(TokTy::S_METACODE_PLACEHOLDER)) return false;
 
@@ -413,22 +410,22 @@ bool Preprocessor::_expand_placeholder(META::MetaBlock_Expand& expansion_meta)
   if (placeholder_id.empty()) return false;
 
   if (!expansion_meta.is_valid_placeholder_name(placeholder_id)) {
-    tok_v->add_error_tok<146>(tok_v->peek(-2),
-                              "Expected valid placeholder identifier '" + placeholder_id
-                                  + "' dosen't exists in the expansion declaration.",
-                              expand_hint);
+    tok_v->add_error_tok(146, tok_v->peek(-2),
+                         "Expected valid placeholder identifier '" + placeholder_id
+                             + "' dosen't exists in the expansion declaration.",
+                         expand_hint);
     return false;
   }
 
   // push flag to prevent placeholder calculation
-  expansion_meta.tokens_to_generate.push_back(META::MetaBlock_Expand::k_placeholder_flag);
+  expansion_meta.tokens_to_generate.push_back(meta::Metablock_Expand::k_placeholder_flag);
   // push the placeholder identifier
   expansion_meta.tokens_to_generate.push_back(tok_v->next().span.anteprocess_pos);
 
   return true;
 }
 
-bool Preprocessor::process_expand(META::MetaBlock& parent)
+bool Preprocessor::process_expand(meta::Metablock& parent)
 {
   if (!match_metacode({"expand", "<!>"})) return false;
 
@@ -441,7 +438,7 @@ bool Preprocessor::process_expand(META::MetaBlock& parent)
   return true;
 }
 
-std::unique_ptr<META::Cond_Base> Preprocessor::_cond_atom()
+std::unique_ptr<meta::Cond_Base> Preprocessor::_cond_atom()
 {
   static const std::string hint =
       "define metacode condition like:"
@@ -452,12 +449,12 @@ std::unique_ptr<META::Cond_Base> Preprocessor::_cond_atom()
   if (tok_v->match(TokTy::OPEN_PAREN)) {
     auto node = process_condition();
     if (!tok_v->match(TokTy::CLOSE_PAREN)) {
-      tok_v->add_error<147>("Expected ')'", "");
+      tok_v->add_error(147, "Expected ')'", "");
     }
     return node;
   } else if (tok_v->match(TokTy::NOT)) {
     auto child = _cond_atom();
-    return std::make_unique<META::Cond_Not>(std::move(child));
+    return std::make_unique<meta::Cond_Not>(std::move(child));
   }
 
   std::string placeholder = tok_v->next().val;
@@ -467,18 +464,18 @@ std::unique_ptr<META::Cond_Base> Preprocessor::_cond_atom()
   if (tok_v->check_any({TokTy::OP_EQ, TokTy::OP_NEQ})) {
     isNot = tok_v->next().type == TokTy::OP_NEQ;
   } else if (tok_v->check(TokTy::S_METACODE_END)) {
-    return std::make_unique<META::Cond_Eq>(placeholder, "1", isNot);
+    return std::make_unique<meta::Cond_Eq>(placeholder, "1", isNot);
   } else {
-    tok_v->add_error<148>("Expect only equal '==' or not equal '!=' in metacode comparison.", hint);
+    tok_v->add_error(148, "Expect only equal '==' or not equal '!=' in metacode comparison.", hint);
   }
   // technically any token possible
   right = tok_v->next().val;
 
-  return std::make_unique<META::Cond_Eq>(placeholder, right, isNot);
+  return std::make_unique<meta::Cond_Eq>(placeholder, right, isNot);
 }
 
 // Expression avec AND / OR
-std::unique_ptr<META::Cond_Base> Preprocessor::process_condition()
+std::unique_ptr<meta::Cond_Base> Preprocessor::process_condition()
 {
   auto lhs = _cond_atom();
 
@@ -488,9 +485,9 @@ std::unique_ptr<META::Cond_Base> Preprocessor::process_condition()
       auto  rhs = _cond_atom();
 
       if (op == TokTy::AND)
-        lhs = std::make_unique<META::Cond_And>(std::move(lhs), std::move(rhs));
+        lhs = std::make_unique<meta::Cond_And>(std::move(lhs), std::move(rhs));
       else
-        lhs = std::make_unique<META::Cond_Or>(std::move(lhs), std::move(rhs));
+        lhs = std::make_unique<meta::Cond_Or>(std::move(lhs), std::move(rhs));
     } else {
       break; // pas un opérateur → fin
     }
@@ -582,35 +579,35 @@ size_t Preprocessor::get_line_last_tok_pos(size_t line)
   return last_pos;
 }
 
-bool Preprocessor::_expand_if(META::MetaBlock_Expand& expansion_meta)
+bool Preprocessor::_expand_if(meta::Metablock_Expand& expansion_meta)
 {
   // check if metacode expansion condition '# expand if [[placeholder]]... == / !='
 
   if (!match_metacode({"expand", "if"})) return false;
 
-  std::unique_ptr<META::Expand_If> base_cond = Create_Meta<META::Expand_If>(tok_v->peek(-2), 0);
+  std::unique_ptr<meta::Expand_If> base_cond = Create_Meta<meta::Expand_If>(tok_v->peek(-2), 0);
 
-  tok_v->expect<149>(TokTy::S_METACODE_PLACEHOLDER,
-                     "The conditional expansion metacode must be declared with a placeholder comparison."
-                     "\nOtherwise, use simply the conditional compilation metacode `# if <condition> ... # end`",
-                     "Define expansion metacode like:"
-                     "\n  - `# expand if [[placeholder_identifier]] == / != <condition symbol> ... # end`");
+  tok_v->expect(149, TokTy::S_METACODE_PLACEHOLDER,
+                "The conditional expansion metacode must be declared with a placeholder comparison."
+                "\nOtherwise, use simply the conditional compilation metacode `# if <condition> ... # end`",
+                "Define expansion metacode like:"
+                "\n  - `# expand if [[placeholder_identifier]] == / != <condition symbol> ... # end`");
 
   tok_v->prev();
   base_cond->condition = process_condition();
   tok_v->match(TokTy::S_METACODE_END);
 
-  META::Expand_If* current_cond = base_cond.get();
+  meta::Expand_If* current_cond = base_cond.get();
   while (!tok_v->is_end()) {
     // expand if alternative
     if (match_metacode({"expand", "elif"}) || match_metacode({"expand", "else", "<!>"})) {
-      std::unique_ptr<META::Expand_If> sub_cond = Create_Meta<META::Expand_If>(tok_v->peek(-1), 0);
+      std::unique_ptr<meta::Expand_If> sub_cond = Create_Meta<meta::Expand_If>(tok_v->peek(-1), 0);
       if (tok_v->peek(-1).val == "elif") sub_cond->condition = process_condition();
       current_cond->_scope.start_scope_position = tok_v->position();
       current_cond->alternative                 = std::move(sub_cond);
       current_cond                              = current_cond->alternative.get();
     } else if (match_metacode({"expand", "<!>"})) {
-      tok_v->add_error<150>("Unexepected a nested '# expand'.", "did you want to write '# expand if' ?");
+      tok_v->add_error(150, "Unexepected a nested '# expand'.", "did you want to write '# expand if' ?");
       break;
     }
     // if block ended

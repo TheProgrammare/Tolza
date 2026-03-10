@@ -1,20 +1,22 @@
 #include "pipeline_parser.hpp"
 
-#include "compiler.hpp"
+#include <chrono>
+#include <iostream>
+#include <string>
+
+#include "compiler_data.hpp"
 
 #include "parser/parser_base.hpp"
 #include "parser/parser_context.hpp"
 #include "pipeline.hpp"
 #include "visitor/symbol_manager.hpp"
+#include "script_info.hpp"
 
-#include <chrono>
-#include <iostream>
-#include <string>
 
 bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  std::vector<std::tuple<fs::path, std::vector<std::string>>> parErrors;
-  std::vector<std::tuple<fs::path, std::vector<std::string>>> declErrors;
+  std::vector<std::tuple<std::string, std::vector<std::string>>> parErrors;
+  std::vector<std::tuple<std::string, std::vector<std::string>>> declErrors;
 
   std::chrono::duration<double> final_duration;
   size_t                        final_node_count = 0;
@@ -27,7 +29,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     if (compiler::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[parse:";
     std::cout << color_CYAN << ++count << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA << scr_info->file_path << color_CYAN "... " << std::flush;
+    std::cout << color_MAGENTA "\"" << scr_info->file_path << "\"" color_CYAN "... " << std::flush;
 
     auto                      start       = std::chrono::high_resolution_clock::now();
     std::vector<std::string>  out_par_err = inParser.start_parsing();
@@ -65,7 +67,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[parse:ERROR] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
-        std::cerr << f_err << "\n";
+        std::cerr << "\"" << f_err << "\"\n";
       }
       std::cerr << std::endl;
     }
@@ -87,7 +89,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[declaration:ERROR] [file] " color_MAGENTA << name << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
-        std::cerr << f_err << "\n";
+        std::cerr << "\"" << f_err << "\"\n";
       }
       std::cerr << std::endl;
     }

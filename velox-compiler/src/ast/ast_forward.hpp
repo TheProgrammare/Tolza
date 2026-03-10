@@ -48,6 +48,7 @@ struct Generic_Parameter_Element; // T: Movable + Physic
 struct Generic_Parameters;        // <T: Movable + Physic, U: Copyable>
 
 struct Pattern;
+struct Pattern_Element;
 struct Pattern_Enum;      // let EItem::House(name, number) = building
 struct Pattern_Tuple;     // let (a, b, c) = triple
 struct Pattern_Entity;    // let Player{ CId.name: name, CId.id: 10 } // let Player{ CId{ name: name, id: 10 } }

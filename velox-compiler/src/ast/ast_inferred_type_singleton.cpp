@@ -1,5 +1,6 @@
 #include "ast_inferred_type_singleton.hpp"
 
+#include "ast/ast_base.hpp"
 #include "ast_type.hpp"
 
 
@@ -168,6 +169,12 @@ ast::AType* ast::type::get_void_type()
 {
   static ast::AType* prim = new Primitive(EPrimType::Void);
   return prim;
+}
+
+ast::type::Tuple* ast::type::get_void_return_type()
+{
+  static ast::type::Tuple* tuple = new Tuple();
+  return tuple;
 }
 
 ast::AType* ast::type::get_ascii_type()

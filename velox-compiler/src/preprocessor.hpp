@@ -17,7 +17,17 @@
 
 #pragma once
 
-#include "metacode.hpp"
+#include <memory>
+#include <vector>
+
+namespace meta
+{
+struct MetablockManager;
+struct Metablock;
+struct Metablock_If;
+struct Metablock_Expand;
+struct Cond_Base;
+} // namespace meta
 
 struct Token;
 struct ScriptInfo;
@@ -28,7 +38,7 @@ public:
   Preprocessor(ScriptInfo& scr_info);
 
   ScriptInfo&             scr_info;
-  META::MetablockManager* m_meta = nullptr;
+  meta::MetablockManager* m_meta = nullptr;
   TokenViewer*            tok_v  = nullptr;
 
   [[nodiscard]] std::vector<Token> preprocess();
@@ -36,27 +46,27 @@ public:
 private:
   void debug_write_postprocess_code_files(const std::vector<Token>& toks);
 
-  template <META::DerivedFromMeta MetaNode>
+  template <typename MetaNode>
   [[nodiscard]] std::unique_ptr<MetaNode> Create_Meta(const Token& tok, size_t start_scope_pos);
 
-  [[nodiscard]] bool process_any_meta(META::MetaBlock& parent);
-  [[nodiscard]] bool process_metablock(META::MetaBlock& parent);
-  void               process_scope(META::MetaBlock& meta);
-  [[nodiscard]] bool process_if(META::MetaBlock& parent);
+  [[nodiscard]] bool process_any_meta(meta::Metablock& parent);
+  [[nodiscard]] bool process_metablock(meta::Metablock& parent);
+  void               process_scope(meta::Metablock& meta);
+  [[nodiscard]] bool process_if(meta::Metablock& parent);
 
-  bool _if_end_metacode(META::MetaBlock_If& end_wait);
+  bool _if_end_metacode(meta::Metablock_If& end_wait);
 
-  bool _else_metacode(META::MetaBlock_If& before_else);
+  bool _else_metacode(meta::Metablock_If& before_else);
 
-  bool _elif_metacode(META::MetaBlock_If& before_elif);
+  bool _elif_metacode(meta::Metablock_If& before_elif);
 
-  [[nodiscard]] bool                                    process_expand(META::MetaBlock& parent);
-  [[nodiscard]] std::unique_ptr<META::MetaBlock_Expand> _expand_header();
-  void                                                  _expand_body(META::MetaBlock_Expand& expansion_meta);
-  [[nodiscard]] bool                                    _expand_placeholder(META::MetaBlock_Expand& expansion_meta);
-  [[nodiscard]] bool                                    _expand_if(META::MetaBlock_Expand& expansion_meta);
-  [[nodiscard]] std::unique_ptr<META::Cond_Base>        process_condition();
-  [[nodiscard]] std::unique_ptr<META::Cond_Base>        _cond_atom();
+  [[nodiscard]] bool                                    process_expand(meta::Metablock& parent);
+  [[nodiscard]] std::unique_ptr<meta::Metablock_Expand> _expand_header();
+  void                                                  _expand_body(meta::Metablock_Expand& expansion_meta);
+  [[nodiscard]] bool                                    _expand_placeholder(meta::Metablock_Expand& expansion_meta);
+  [[nodiscard]] bool                                    _expand_if(meta::Metablock_Expand& expansion_meta);
+  [[nodiscard]] std::unique_ptr<meta::Cond_Base>        process_condition();
+  [[nodiscard]] std::unique_ptr<meta::Cond_Base>        _cond_atom();
 
   [[nodiscard]] bool check_metacode(std::initializer_list<std::string> pattern);
   [[nodiscard]] bool match_metacode(std::initializer_list<std::string> pattern);

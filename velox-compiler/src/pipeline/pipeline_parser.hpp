@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "script_info.hpp"
+struct ScriptInfo;
+
 
 bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos);

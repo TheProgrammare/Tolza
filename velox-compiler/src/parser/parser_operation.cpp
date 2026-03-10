@@ -195,7 +195,7 @@ std::unique_ptr<ast::AExpression> parser::Parser_Operator::memory_distance()
 
 std::unique_ptr<ast::operation::Assignment> parser::Parser_Operator::assignment(std::unique_ptr<ast::AExpression> left)
 {
-  auto assign_tok = ctx.tok_v.expect_any<110>(kAssignationTokens, "Expected assignation token.", "");
+  auto assign_tok = ctx.tok_v.expect_any(110, kAssignationTokens, "Expected assignation token.", "");
 
   auto assign            = ctx.Create_Node<ast::operation::Assignment>(assign_tok);
   assign->left           = std::move(left);

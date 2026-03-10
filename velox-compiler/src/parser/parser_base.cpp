@@ -118,7 +118,7 @@ ModuleImportation* parser::Parser_Base::parse_import()
     // import from external code e.g. import extern C::stdio
     mod_imp.import_source = ModuleImportation::EImportSource::Extern;
     mod_imp.name          = ctx->parse_name();
-    ctx->tok_v.expect<8>(TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
+    ctx->tok_v.expect(8, TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
     mod_imp.extern_lib = ctx->tok_v.next().val;
   } else {
     mod_imp.import_source = ModuleImportation::EImportSource::Unknown;
@@ -170,7 +170,7 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 
   ctx->scr_info.exported_mod.push_back(uptr_exp);
 
-  ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+  ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
   ctx->m_sym->in_export = true;
 
@@ -181,7 +181,7 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 
   while (!ctx->tok_v.is_end()) {
     if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-      ctx->tok_v.add_error_tok<10>(ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+      ctx->tok_v.add_error_tok(10, ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
     }
 
     exp_node->declarations.push_back(ctx->p_decl->parse_declaration());
@@ -205,10 +205,10 @@ std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
   auto ext_tok = ctx->tok_v.peek(-1);
 
   auto ext_node  = ctx->Create_Decl<ast::declaration::Extern>(ext_tok);
-  ext_node->name = ctx->tok_v.expect<153>(TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
+  ext_node->name = ctx->tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
 
 
-  ctx->tok_v.expect<9>(TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+  ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
   ctx->in_extern = true;
 
@@ -219,7 +219,7 @@ std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
 
   while (!ctx->tok_v.is_end()) {
     if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-      ctx->tok_v.add_error_tok<10>(ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+      ctx->tok_v.add_error_tok(10, ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
     }
 
     ext_node->declarations.push_back(ctx->p_decl->parse_declaration());
@@ -233,7 +233,7 @@ std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
   return ext_node;
 }
 
-std::optional<ast::CodeBlock_instruction> parser::Parser_Base::parse_instruction()
+ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
 {
   static const std::string hint =
       R"(define insutrction like:
@@ -248,39 +248,29 @@ std::optional<ast::CodeBlock_instruction> parser::Parser_Base::parse_instruction
 
   // if elif else for ...
   if (auto statement = ctx->p_state->parse_statement(true)) {
-    ast::CodeBlock_instruction cb;
-    cb.data = std::move(statement);
-    return cb;
+    return ast::CodeBlock_instruction(std::move(statement));
   }
   // local variable + lambda
   else if (auto local = ctx->p_loc->parse_local(true)) {
-    ast::CodeBlock_instruction cb;
-    cb.data = local;
-    return cb;
+    return ast::CodeBlock_instruction(local);
   }
   // del
   else if (ctx->tok_v.check(TokTy::DEL)) {
-    auto                       del = ctx->p_mem->del();
-    ast::CodeBlock_instruction cb;
-    cb.data = std::move(del);
-    return cb;
+    auto del = ctx->p_mem->del();
+    return ast::CodeBlock_instruction(std::move(del));
   } else if (auto expr = ctx->p_expr->parse_expression()) {
     // assignation and operator assignment
     if (ctx->tok_v.check_any(kAssignationTokens)) {
       auto assign = ctx->p_op->assignment(std::move(expr));
 
-      ast::CodeBlock_instruction cb;
-      cb.data = std::move(assign);
-      return cb;
+      return ast::CodeBlock_instruction(std::move(assign));
     }
     // call and sys_call
     else if (dynamic_cast<ast::expression::Call*>(expr.get())) {
-      ast::CodeBlock_instruction cb;
-      cb.data = std::move(expr);
-      return cb;
+      return ast::CodeBlock_instruction(std::move(expr));
     }
   }
 
-  ctx->tok_v.add_error_tok<11>(ctx->tok_v.peek(), "Unexpected instruction", hint);
-  return std::nullopt;
+  ctx->tok_v.add_error_tok(11, ctx->tok_v.peek(), "Unexpected instruction", hint);
+  return ast::CodeBlock_instruction{};
 }

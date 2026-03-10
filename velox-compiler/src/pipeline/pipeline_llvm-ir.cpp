@@ -3,12 +3,11 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
-#include <llvm-19/llvm/IR/Instructions.h>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 
 #include "script_info.hpp"
@@ -16,7 +15,7 @@
 
 bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  std::vector<std::tuple<fs::path, std::vector<std::string>>> llvmIRErrors;
+  std::vector<std::tuple<std::string, std::vector<std::string>>> llvmIRErrors;
 
   std::filesystem::create_directories(compiler::COMP_CTX.get_llvmir_dir());
 
@@ -46,7 +45,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
     std::cerr << color_RED "[llvm-ir] Generation failed !" color_RESET "\n";
     for (auto& [path, fileError] : llvmIRErrors) {
 
-      std::cerr << color_RED "[llvm-ir] [ERROR] [file] " << path << color_RESET "\n";
+      std::cerr << color_RED "[llvm-ir:ERROR] [file] " << path << color_RESET "\n";
       for (auto& error : fileError) {
         std::cerr << error << "\n";
       }

@@ -13,9 +13,9 @@ std::unique_ptr<ast::memory::Align> parser::Parser_Memory::align()
   static const std::string hint = "define value memory alignment like: `align(a)`";
   auto                     node = ctx.Create_Node<ast::memory::Align>(ctx.tok_v.peek(-1));
 
-  ctx.tok_v.expect<106>(TokTy::OPEN_PAREN, "Expected start arg '('.", hint);
+  ctx.tok_v.expect(106, TokTy::OPEN_PAREN, "Expected start arg '('.", hint);
   node->target = ctx.p_expr->parse_expression();
-  ctx.tok_v.expect<107>(TokTy::CLOSE_PAREN, "Expected end arg ')'.", hint);
+  ctx.tok_v.expect(107, TokTy::CLOSE_PAREN, "Expected end arg ')'.", hint);
 
   return node;
 }

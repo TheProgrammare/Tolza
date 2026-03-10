@@ -1,5 +1,66 @@
 #include "ast_type.hpp"
+
 #include <string>
+
+#include "ast_declaration_local.hpp"
+
+#include "visitor/visitor_base.hpp"
+#include "visitor/visitor_codegen.hpp"
+
+void ast::type::Ptr::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Ptr::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::type::Table::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Table::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::type::Primitive::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Primitive::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::type::Tuple::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Tuple::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::type::Function_Proto::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Function_Proto::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::type::Get_Expr_Type::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::type::Get_Expr_Type::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 std::string ast::type::Function_Proto::mangle_type() const
 {
@@ -45,3 +106,23 @@ std::string ast::type::Function_Proto::debug_str() const
 
   return out + ret;
 }
+
+bool ast::type::Function_Proto::compare_with(const AType& other) const
+{
+  if (auto ptr = dynamic_cast<const Function_Proto*>(&other)) {
+    if (isVariadic != ptr->isVariadic) return false;
+    if (parameters.size() != ptr->parameters.size()) return false;
+    if ((returnType == nullptr) != (ptr->returnType == nullptr)) return false;
+
+    if (returnType) {
+      if (!returnType->is_same(*ptr->returnType)) return false;
+    }
+
+    for (size_t i = 0; i < parameters.size(); i++) {
+      if (!parameters[i]->is_same(*ptr->parameters[i])) return false;
+    }
+  }
+  return false;
+}
+
+ast::type::Function_Proto::~Function_Proto() = default;

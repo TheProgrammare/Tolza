@@ -1,9 +1,12 @@
 #include "parser_type.hpp"
 
+#include <memory>
 #include <sys/types.h>
 
 #include "ast/ast_base.hpp"
-#include "ast/ast_data.hpp"
+#include "ast/ast_type.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_inferred_type_singleton.hpp"
 
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
@@ -65,9 +68,9 @@ std::unique_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool 
   ptr->type_isConst    = isConst ? true : isConstP;
   ptr->type_isOptional = isOptional ? true : isOptionalP;
   ptr->type_isVolatile = isVolatile ? true : isVolatileP;
-  ctx.tok_v.expect<124>(TokTy::TICK, "Expected tick ''' after pointer specification.",
-                        "define pointer like:"
-                        "  - `ptr'T` `std::unique_ptr'T` `std::shared_ptr'T` `std::weak_ptr'T`");
+  ctx.tok_v.expect(124, TokTy::TICK, "Expected tick ''' after pointer specification.",
+                   "define pointer like:"
+                   "  - `ptr'T` `std::unique_ptr'T` `std::shared_ptr'T` `std::weak_ptr'T`");
   ptr->inner = ctx.p_type->parse_type();
   return ptr;
 }
@@ -167,12 +170,12 @@ std::unique_ptr<ast::AType> parser::Parser_Type::parse_type()
 
   if (ctx.tok_v.check(TokTy::IDENTIFIER)) return id_type(isConst, isOptional, isVolatile);
 
-  ctx.tok_v.add_error<126>("Unexpected type definition '" + ctx.tok_v.peek().val + "'.",
-                           "define type like:"
-                           "  - primitives `i32`, `f32`, `bool`, `char`, `addr`, ..."
-                           "  - user type `identifier`, `_id32`, `T`, ..."
-                           "  - generic args `T<i32, U>`, `T<gen_args>`, `T<gen_args>::U`, ..."
-                           "  - from module/namespace `A::B::T`, `A::B<U, V>`, `A::B<U, V>::T`, ...");
+  ctx.tok_v.add_error(126, "Unexpected type definition '" + ctx.tok_v.peek().val + "'.",
+                      "define type like:"
+                      "  - primitives `i32`, `f32`, `bool`, `char`, `addr`, ..."
+                      "  - user type `identifier`, `_id32`, `T`, ..."
+                      "  - generic args `T<i32, U>`, `T<gen_args>`, `T<gen_args>::U`, ..."
+                      "  - from module/namespace `A::B::T`, `A::B<U, V>`, `A::B<U, V>::T`, ...");
   return nullptr;
 };
 
@@ -187,7 +190,7 @@ std::unique_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
   while (!ctx.tok_v.is_end()) {
     if (isNamedTuple) {
       tuple->name_fields.push_back(ctx.parse_name("", hint));
-      ctx.tok_v.expect<128>(TokTy::COLON, "Expected a name type separator ':' after an filed name keyword.", hint);
+      ctx.tok_v.expect(128, TokTy::COLON, "Expected a name type separator ':' after an filed name keyword.", hint);
       tuple->types.push_back(ctx.p_type->parse_type());
     } else {
       tuple->types.push_back(ctx.p_type->parse_type());
@@ -206,11 +209,11 @@ std::unique_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
 std::unique_ptr<ast::type::Get_Expr_Type> parser::Parser_Type::expr_get_expr_type()
 {
   auto node = ctx.Create_Node<ast::type::Get_Expr_Type>(ctx.tok_v.peek(-1));
-  ctx.tok_v.expect<129>(TokTy::OPEN_PAREN, "Expected start arg '('.",
-                        "define get type at compilation time like: `comptime::type(var)`");
+  ctx.tok_v.expect(129, TokTy::OPEN_PAREN, "Expected start arg '('.",
+                   "define get type at compilation time like: `comptime::type(var)`");
   node->target = ctx.p_expr->parse_expression();
-  ctx.tok_v.expect<130>(TokTy::OPEN_PAREN, "Expected end arg ')'.",
-                        "define get type at compilation time like: `comptime::type(var)`");
+  ctx.tok_v.expect(130, TokTy::OPEN_PAREN, "Expected end arg ')'.",
+                   "define get type at compilation time like: `comptime::type(var)`");
   return node;
 }
 
@@ -227,7 +230,7 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
 
   // check
   // parameters
-  ctx.tok_v.expect<131>(TokTy::OPEN_PAREN, "Expected start parameter defintion '(' after function declaration.", hint);
+  ctx.tok_v.expect(131, TokTy::OPEN_PAREN, "Expected start parameter defintion '(' after function declaration.", hint);
   type->parameters = parameters();
   if (!type->parameters.empty() && type->parameters.back()->isVariadic) {
     type->isVariadic = true;
@@ -238,6 +241,8 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
   // return
   if (ctx.tok_v.match(TokTy::ARROW)) {
     type->returnType = ctx.p_type->explicit_tuple();
+  } else {
+    type->returnType = std::unique_ptr<ast::type::Tuple>(ast::type::get_void_return_type());
   }
 
   return type;
@@ -266,19 +271,19 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
     if (ctx.tok_v.match(TokTy::VARIADIC)) {
       param->isVariadic = true;
 
-      ctx.tok_v.expect<154>(TokTy::CLOSE_PAREN,
-                            "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
+      ctx.tok_v.expect(154, TokTy::CLOSE_PAREN,
+                       "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
       params.push_back(std::move(param));
       break;
     }
 
     param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().type);
     if (param->passMode == EPassMode::NONE)
-      ctx.tok_v.add_error<132>("Expected parameter pass mode before the parameter name.", hint);
+      ctx.tok_v.add_error(132, "Expected parameter pass mode before the parameter name.", hint);
 
     param->name = ctx.parse_name("", hint);
     // check pointer parameter type
-    ctx.tok_v.expect<133>(TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
+    ctx.tok_v.expect(133, TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
     param->type = ctx.p_type->parse_type();
 
     ctx.m_sym->add_decl(param);
@@ -286,9 +291,9 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
     // check parameter default value
     if (ctx.tok_v.match(TokTy::ASSIGN)) {
       if (!EPassMode_Can_Default(param->passMode))
-        ctx.tok_v.add_error_tok<134>(
-            ctx.tok_v.peek(-1), "Unexpected defaut value for pass mode '" + EPassMode_to_str(param->passMode) + "'.",
-            hint_passmode);
+        ctx.tok_v.add_error_tok(134, ctx.tok_v.peek(-1),
+                                "Unexpected defaut value for pass mode '" + EPassMode_to_str(param->passMode) + "'.",
+                                hint_passmode);
       param->defaultValue = ctx.p_expr->parse_expression();
     }
 

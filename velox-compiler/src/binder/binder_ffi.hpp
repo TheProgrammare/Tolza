@@ -32,7 +32,7 @@ struct Bind_Package {
   std::string                 lang;
   std::string                 lib;
   std::string                 abi;
-  fs::path                    path;
+  std::string                 path;
 };
 
 enum class EPassMode {
@@ -257,7 +257,7 @@ struct AST {
 [[nodiscard]] std::string typealias_to_str(const TypeAlias& _ty_alias);
 
 
-void write_ast(const AST& ast, const fs::path& target_path);
+void write_ast(const AST& ast, const std::string& target_path);
 
 
 // %0 language

@@ -4,10 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "ast/ast_data.hpp"
 #include "ast_base.hpp"
 #include "ast_codeblock_instruction.hpp"
-#include "script_info.hpp"
 
 namespace ast
 {
@@ -19,11 +17,9 @@ namespace local
 struct CodeBlock final : public Node {
   std::vector<CodeBlock_instruction> elements;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "codeblock {...}";
   }
@@ -50,10 +46,8 @@ struct Variable_Binding final : public ALocal {
     return ESymbolType::Bind;
   };
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Pattern_Element final {
@@ -100,14 +94,12 @@ struct Pattern : public AExpression {
 
 // e.g. [if/elif/while] let Some(a) = value {...}
 struct Pattern_Enum final : public Pattern {
-  std::unique_ptr<AIdentifier> name;
-  std::vector<Pattern_Element> mapping;
+  std::unique_ptr<AIdentifier>                  name;
+  std::vector<std::unique_ptr<Pattern_Element>> mapping;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "enum pattern[" + name->debug_str() + "]";
   }
@@ -115,13 +107,11 @@ struct Pattern_Enum final : public Pattern {
 
 // e.g. [if/while/for] let (a, b, 10) in triple_collection {...}
 struct Pattern_Tuple final : public Pattern {
-  std::vector<Pattern_Element> mapping;
+  std::vector<std::unique_ptr<Pattern_Element>> mapping;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "tuple pattern";
   }
@@ -138,11 +128,9 @@ struct Pattern_Entity final : public Pattern {
   // pattern_element
   std::vector<std::unique_ptr<Pattern_Component>> mapping;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "entity pattern[" + name->debug_str() + "]";
   }
@@ -154,13 +142,11 @@ struct Pattern_Component final : public Pattern {
 
   // field_name,
   // pattern_element
-  std::vector<std::tuple<std::string, Pattern_Element>> mapping;
+  std::vector<std::tuple<std::string, std::unique_ptr<Pattern_Element>>> mapping;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "component pattern[" + name->debug_str() + "]";
   }
@@ -174,12 +160,10 @@ struct Variable_Unpack final : public ALocal {
   EVariableKind kind     = EVariableKind::Const;
   bool          isStatic = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
+  ESymbolType  get_symbol_type() const override
   {
     return ESymbolType::Local;
   };
@@ -197,11 +181,9 @@ struct Lambda final : public ALocal, ICallable {
   bool isLambdaConstexpr = false;
   bool isConstexpr       = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
 
   type::Function_Proto* get_signature() override
   {
@@ -222,12 +204,10 @@ struct Variable final : public ALocal {
   EVariableKind   kind       = EVariableKind::Const;
   bool            isStatic   = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
+  ESymbolType  get_symbol_type() const override
   {
     return ESymbolType::Local;
   };
@@ -239,11 +219,9 @@ struct Capability final : public ALocal {
 
   ECapability kind = ECapability::NONE;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
     return "capability " + str_kind + name;
@@ -264,10 +242,8 @@ struct Capture_Member final : public Node {
     return ECapability_to_str(capability) + " [" + name->debug_str() + "]";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Lambda_Capture final : public Node {
@@ -276,11 +252,9 @@ struct Lambda_Capture final : public Node {
   bool isAllRef      = false;
   bool isCaptureSelf = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "capture";
   }
@@ -296,12 +270,10 @@ struct Parameter final : public ALocal {
   bool      isVariadic = false;
 
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
-  bool        is_same(const Parameter& other) const
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
+  bool         is_same(const Parameter& other) const
   {
     if (isVariadic != other.isVariadic) return false;
     if (passMode != other.passMode) return false;
@@ -318,12 +290,10 @@ struct Generic_Parameter_Element final : public ALocal {
 
   std::string name;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
+  ESymbolType  get_symbol_type() const override
   {
     return ESymbolType::Generic_Parameter;
   };
@@ -332,12 +302,10 @@ struct Generic_Parameter_Element final : public ALocal {
 struct Generic_Parameters final : public ALocal {
   std::vector<std::shared_ptr<Generic_Parameter_Element>> parameters;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
+  ESymbolType  get_symbol_type() const override
   {
     return ESymbolType::Generic_Parameter;
   }

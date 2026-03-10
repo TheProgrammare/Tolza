@@ -1,15 +1,17 @@
 #pragma once
 
-#include <type_traits>
+#include <memory>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_forward.hpp"
-#include "ast/ast_literal.hpp"
 #include "visitor_default.hpp"
-#include "symbol_manager.hpp"
 
-template <typename T>
-concept DerivedFromType = std::is_base_of_v<ast::AType, T>;
+struct Symbol_Data;
+
+namespace ast
+{
+using SYM_REF = Symbol_Data*;
+}
 
 struct Visitor_Type : public Visitor_Default {
   // keep
@@ -17,37 +19,13 @@ struct Visitor_Type : public Visitor_Default {
   // constructor
   using Visitor_Default::Visitor_Default;
 
-  bool                        is_same_type(const ast::AType& p_type_1, const ast::AType& p_type_2);
+  bool                        is_same_type(const ast::AType& p_type_1, const ast::AType& p_type_2) const;
   std::shared_ptr<ast::AType> resolve_type(ast::Node& n, ast::AType& input_type, bool silentError = false);
 
 
-  template <DerivedFromType T>
-  T* get_inferred_type(ast::INFERRED_TYPE& ty)
-  {
-    if (auto ptr = dynamic_cast<T*>(ty)) return ptr;
-    return nullptr;
-  }
+  ast::AType* get_inferred_type(ast::Node& node) const;
 
-  template <typename T>
-  T* get_symbol(ast::Node& n, ast::SYM_REF sym_data)
-  {
-    if (!sym_data) {
-      error_add<163>(n, "Unresolved symbol.", "");
-      return nullptr;
-    }
-    if (!sym_data->symbol) {
-      error_add<164>(n, "Invalid symbol origin", "");
-      return nullptr;
-    }
-
-    if (auto ptr = dynamic_cast<T*>(sym_data->symbol.get())) {
-      return ptr;
-    } else {
-      error_add<167>(*sym_data->symbol, "Unexpected symbol type of [" + sym_data->symbol->debug_str() + "]", "");
-      return nullptr;
-    }
-  }
-
+  ast::AType* get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const;
 
   // expression inferred type;
   void visit(ast::Expr_ID& n) override;

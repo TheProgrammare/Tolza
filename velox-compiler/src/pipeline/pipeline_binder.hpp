@@ -1,13 +1,14 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include <vector>
 
-#include "script_info.hpp"
-#include "binder/binder_ffi.hpp"
+namespace ffi
+{
+struct Bind_Package;
+}
 
-struct PipelineScripts;
+struct ScriptInfo;
 
 bool generate_script(const ffi::Bind_Package& bind);
 

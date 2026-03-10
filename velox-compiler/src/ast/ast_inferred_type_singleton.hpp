@@ -9,6 +9,8 @@ struct AType;
 namespace type
 {
 
+struct Tuple;
+
 ast::AType* get_bool_type();
 ast::AType* get_i8_type();
 ast::AType* get_i16_type();
@@ -45,11 +47,12 @@ ast::AType* get_deci_type();
 ast::AType* get_udeci_type();
 
 // other types
-ast::AType* get_void_type();
-ast::AType* get_ascii_type();
-ast::AType* get_utf32_type();
-ast::AType* get_str_type();
-ast::AType* get_text_type();
+ast::AType*       get_void_type();
+ast::type::Tuple* get_void_return_type();
+ast::AType*       get_ascii_type();
+ast::AType*       get_utf32_type();
+ast::AType*       get_str_type();
+ast::AType*       get_text_type();
 
 } // namespace type
   // Type

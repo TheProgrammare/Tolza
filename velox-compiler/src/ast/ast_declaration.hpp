@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "ast_base.hpp"
-#include "ast_forward.hpp"
-#include "ast/ast_data.hpp"
 
 struct ModuleExportation;
 
@@ -35,10 +33,8 @@ struct Enum_Element final : public AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Enum final : public ADeclaration, AType {
@@ -69,10 +65,8 @@ struct Enum final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Flag final : public ADeclaration, AType {
@@ -99,10 +93,8 @@ struct Flag final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // e.g. mod name {}
@@ -118,10 +110,8 @@ struct Mod : public ADeclaration {
     return ESymbolType::Module;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Export final : public Mod {
@@ -131,11 +121,9 @@ struct Export final : public Mod {
   {
     return "export";
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  ESymbolType get_symbol_type() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  ESymbolType  get_symbol_type() const override
   {
     return ESymbolType::Export;
   }
@@ -151,13 +139,13 @@ struct Extern final : public Mod {
   {
     return ESymbolType::Extern;
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Function final : public ADeclaration, ICallable {
+  ~Function();
+
   std::shared_ptr<type::Function_Proto> prototype;
   std::unique_ptr<local::CodeBlock>     codeblock;
   bool                                  isDefinition  = false;
@@ -178,10 +166,8 @@ struct Function final : public ADeclaration, ICallable {
     return ESymbolType::Function;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Mod_Alias final : public ADeclaration {
@@ -196,13 +182,11 @@ struct Mod_Alias final : public ADeclaration {
     return ESymbolType::Mod_Alias;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
-struct Type_Alias final : public ADeclaration {
+struct Type_Alias final : public ADeclaration, AType {
   std::shared_ptr<AType> type;
 
   std::string debug_str() const override
@@ -213,11 +197,17 @@ struct Type_Alias final : public ADeclaration {
   {
     return ESymbolType::Type_Alias;
   }
-
-  void accept(Visitor_Base& v) override
+  std::string mangle_type() const override
   {
-    v.visit(*this);
+    return type->mangle_type();
   }
+  bool compare_with(const AType& other) const override
+  {
+    return type->is_same(other);
+  }
+
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // gen name<T, U,...> { condition }
@@ -247,10 +237,8 @@ struct Generic final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // let/var a: ptr'type#tableSize = expression;
@@ -269,10 +257,8 @@ struct Global final : public ADeclaration {
     return ESymbolType::Global;
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
 private:
   bool type_already_checked = false;

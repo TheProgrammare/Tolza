@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ast/ast_declaration.hpp"
-#include "ast_base.hpp"
 #include <memory>
+
+#include "ast_base.hpp"
 
 namespace ast
 {
@@ -22,10 +22,8 @@ struct Is_Type final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   bool type_isValid(const AType& type) const override
   {
@@ -49,10 +47,8 @@ struct Can_Cast final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   bool type_isValid(const AType& type) const override
   {
@@ -72,10 +68,8 @@ struct Have_Op final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   bool        type_isValid(const AType& type) const override;
   std::string debug_str() const override
@@ -90,10 +84,8 @@ struct Have_Role final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::shared_ptr<declaration::cop::Role> resolved_role_sym;
 
@@ -110,10 +102,8 @@ struct Use_Component final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::shared_ptr<declaration::cop::Component> resolved_comp_sym;
 
@@ -130,10 +120,8 @@ struct Compatible_System final : IGenCond {
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::shared_ptr<declaration::cop::System> resolved_system_sym;
 

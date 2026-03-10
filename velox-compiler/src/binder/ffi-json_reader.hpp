@@ -38,7 +38,7 @@ namespace ffi
 namespace JSON
 {
 
-AST read_ffi_json_file(const fs::path& path);
+AST read_ffi_json_file(const std::string& path);
 
 Type      json_to_type(const json& j);
 Prototype json_to_prototype(const json& j);

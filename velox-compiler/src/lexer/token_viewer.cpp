@@ -5,6 +5,46 @@
 #include "error_output.hpp"
 #include "script_info.hpp"
 
+
+Token TokenViewer::expect(ErrorCode code, TokTy type, const std::string& msg, const std::string& hint)
+{
+  if (!check(type)) {
+    add_error(code, msg, hint);
+  }
+  return next();
+}
+
+Token TokenViewer::expect_any(ErrorCode code, const std::initializer_list<ETokenType>& types, const std::string& msg,
+                              const std::string& hint)
+{
+  for (ETokenType type : types) {
+    if (check(type)) {
+      return next();
+    }
+  }
+  add_error(code, msg, hint);
+  return Token();
+}
+
+void TokenViewer::add_error(ErrorCode code, const std::string& msg, const std::string& hint)
+{
+  auto error_diag =
+      Error_Diagnostic(code, scr_info, peek(), {}, compiler::EPhase::parser, EErrorSeverity::error, {}, msg, hint);
+
+  errors.push_back(error_diag.print_error());
+
+  throw std::runtime_error("");
+}
+
+void TokenViewer::add_error_tok(ErrorCode code, const Token& tok, const std::string& msg, const std::string& hint)
+{
+  auto error_diag =
+      Error_Diagnostic(code, scr_info, tok, {}, compiler::EPhase::parser, EErrorSeverity::error, {}, msg, hint);
+  errors.push_back(error_diag.print_error());
+
+  throw std::runtime_error("");
+}
+
 void TokenViewer::jump(size_t newPosition)
 {
   if (newPosition < scr_info.tokens.size()) {

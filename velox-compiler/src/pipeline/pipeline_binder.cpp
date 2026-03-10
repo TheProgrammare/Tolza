@@ -11,13 +11,13 @@
 #include <vector>
 
 #include "binder/binder_ffi.hpp"
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 
 #include "binder/c_binder.hpp"
 #include "pipeline.hpp"
 #include "binder/ffi-json_reader.hpp"
 #include "script_info.hpp"
-#include "compiler.hpp"
 
 bool generate_script(const ffi::Bind_Package& bind)
 {
@@ -27,7 +27,7 @@ bool generate_script(const ffi::Bind_Package& bind)
     ffi::Bind_Package _bind_w_abi = bind;
     _bind_w_abi.abi               = "C";
     ffi::c::c_lib_to_velox_lib(_bind_w_abi);
-  } else if (fs::exists(bind.path)) {
+  } else if (std::filesystem::exists(bind.path)) {
     auto ast = ffi::JSON::read_ffi_json_file(bind.path);
     ffi::write_ast(ast, bind.path);
   } else {
@@ -109,8 +109,9 @@ void binder_generate_FFI_JSON()
   }
 
   for (auto& json_f : json_files) {
-    auto     ast  = ffi::JSON::read_ffi_json_file(json_f);
-    fs::path path = compiler::COMP_CTX.get_ffi_json_dir() / ast.bind.lang / ast.bind.lib;
+    auto                  ast = ffi::JSON::read_ffi_json_file(json_f);
+    std::filesystem::path path =
+        std::filesystem::path(compiler::COMP_CTX.get_ffi_json_dir()) / ast.bind.lang / ast.bind.lib;
     path.replace_filename(".vlxb");
     ffi::write_ast(ast, path);
   }
@@ -136,8 +137,9 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     size_t bind_count = 0;
 
     for (const auto& extern_imp : scr_info->get_externs()) {
-      ffi::Bind_Package bind;
-      fs::path          path = compiler::COMP_CTX.get_binding_dir() / extern_imp->name / extern_imp->extern_lib;
+      ffi::Bind_Package     bind;
+      std::filesystem::path path =
+          std::filesystem::path(compiler::COMP_CTX.get_binding_dir()) / extern_imp->name / extern_imp->extern_lib;
       path.replace_extension(".vlxb"); // same as .velox but for wrapper/headers
       std::ofstream f(path);
       f.clear();

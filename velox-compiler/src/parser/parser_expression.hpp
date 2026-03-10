@@ -4,7 +4,8 @@
 #include <vector>
 
 #include "ast/ast_forward.hpp"
-#include "script_info.hpp"
+
+enum class EExtern_Kind;
 
 namespace parser
 {
@@ -21,7 +22,7 @@ struct Parser_Expression {
   [[nodiscard]] std::unique_ptr<ast::AExpression>        suffix_expression(std::unique_ptr<ast::AExpression> base_expr);
   [[nodiscard]] std::unique_ptr<ast::operation::Cast_As> cast_as(std::unique_ptr<ast::AExpression> expr);
 
-  void check_reference_external(const std::string& name, const std::vector<std::string>& path, Extern_Item::Kind kind);
+  void check_reference_external(const std::string& name, const std::vector<std::string>& path, EExtern_Kind kind);
 
   //[[nodiscard]] std::unique_ptr<ast::expression::Call_Pipe> function_call_pipe();
 
@@ -45,8 +46,6 @@ struct Parser_Expression {
   [[nodiscard]] std::unique_ptr<ast::expression::GetBits>    getbits(std::unique_ptr<ast::AExpression> expr);
   [[nodiscard]] std::unique_ptr<ast::expression::Ptr_At>     ptr_at(std::unique_ptr<ast::AExpression> ref);
   [[nodiscard]] std::unique_ptr<ast::expression::Ptr_Offset> ptr_offset(std::unique_ptr<ast::AExpression> ref);
-
-  [[nodiscard]] std::shared_ptr<ModuleImportation> get_external_source(const std::vector<std::string>& path);
 
   Parser_Context& ctx;
 };

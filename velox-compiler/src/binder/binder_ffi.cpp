@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 
 ffi::EPassMode ffi::type_to_passMode(const Type& ty)
 {
@@ -303,12 +303,12 @@ std::string ffi::typealias_to_str(const TypeAlias& _ty_alias)
 }
 
 
-void ffi::write_ast(const ffi::AST& ast, const fs::path& target_path)
+void ffi::write_ast(const ffi::AST& ast, const std::string& target_path)
 {
-  fs::create_directories(target_path.parent_path());
+  std::filesystem::create_directories(std::filesystem::path(target_path).parent_path());
   std::ofstream os(target_path);
 
-  if (!os) throw std::runtime_error("Cannot open file: \"" + target_path.string() + "\"");
+  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(target_path).string() + "\"");
 
   os.clear();
 

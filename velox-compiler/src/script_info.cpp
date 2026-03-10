@@ -1,13 +1,22 @@
 #include "script_info.hpp"
 
+#include <cstddef>
+#include <filesystem>
+#include <memory>
+
 #include "ast/ast_base.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"
 
+#include "compiler_data.hpp"
 #include "compiler.hpp"
-#include "compiler.hpp"
-#include <cstddef>
-#include <memory>
+
+
+std::string ScriptInfo::get_normalized_path() const
+{
+  std::filesystem::path path = file_path;
+  return std::filesystem::path(path).parent_path() / path.stem();
+}
 
 void ScriptInfo::add_export(const ModuleExportation& exp)
 {
@@ -19,7 +28,7 @@ void ScriptInfo::add_import(const ModuleImportation& imp)
   imported_mod.push_back(std::make_unique<ModuleImportation>(imp));
 }
 
-std::shared_ptr<ModuleExportation> ScriptInfo::get_export_module(const fs::path& path)
+std::shared_ptr<ModuleExportation> ScriptInfo::get_export_module(const std::string& path)
 {
   for (const auto& exp : exported_mod) {
     if (exp->script_exported->file_path == path) return exp;
@@ -68,14 +77,16 @@ std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const
   return last_imp_found;
 }
 
-fs::path ModuleImportation::get_normalized_path() const
+std::string ModuleImportation::get_normalized_path() const
 {
-  return get_path().parent_path() / get_path().stem();
+
+  std::filesystem::path path = get_path();
+  return path.parent_path() / path.stem();
 }
 
-fs::path ModuleImportation::get_path() const
+std::string ModuleImportation::get_path() const
 {
-  fs::path p_out;
+  std::filesystem::path p_out;
   switch (import_source) {
   case EImportSource::User:        p_out = compiler::COMP_CTX.get_source_dir(); break;
   case EImportSource::StandardLib: p_out = compiler::get_stdlib_dir(); break;
@@ -92,7 +103,7 @@ fs::path ModuleImportation::get_path() const
   if (!extern_lib.empty()) p_out /= extern_lib;
   p_out.replace_extension(".velox");
 
-  return p_out;
+  return p_out.string();
 }
 
 std::set<ModuleImportation*> ScriptInfo::get_externs()
@@ -106,9 +117,9 @@ std::set<ModuleImportation*> ScriptInfo::get_externs()
   return result;
 }
 
-std::set<fs::path> ScriptInfo::get_extern_languages()
+std::set<std::string> ScriptInfo::get_extern_languages()
 {
-  std::set<fs::path> result;
+  std::set<std::string> result;
   for (auto& imp : get_externs()) {
     if (imp->is_external()) {
       result.insert(imp->get_path());
@@ -117,16 +128,16 @@ std::set<fs::path> ScriptInfo::get_extern_languages()
   return result;
 }
 
-Extern_Item::Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
+EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
 {
-  if (dynamic_cast<const ast::literal::Enum*>(&n)) return Extern_Item::Kind::Enum;
-  if (dynamic_cast<const ast::expression::Call*>(&n)) return Extern_Item::Kind::Function;
-  if (dynamic_cast<const ast::expression::Call_Pipe*>(&n)) return Extern_Item::Kind::Function;
-  if (dynamic_cast<const ast::literal::Component*>(&n)) return Extern_Item::Kind::Component;
-  if (dynamic_cast<const ast::literal::Entity*>(&n)) return Extern_Item::Kind::Entity;
-  if (dynamic_cast<const ast::Expr_ID*>(&n)) return Extern_Item::Kind::Global;
-  if (dynamic_cast<const ast::Expr_ID_Qualified*>(&n)) return Extern_Item::Kind::Global;
-  if (dynamic_cast<const ast::Expr_ID_Type*>(&n)) return Extern_Item::Kind::Type;
+  if (dynamic_cast<const ast::literal::Enum*>(&n)) return EExtern_Kind::Enum;
+  if (dynamic_cast<const ast::expression::Call*>(&n)) return EExtern_Kind::Function;
+  if (dynamic_cast<const ast::expression::Call_Pipe*>(&n)) return EExtern_Kind::Function;
+  if (dynamic_cast<const ast::literal::Component*>(&n)) return EExtern_Kind::Component;
+  if (dynamic_cast<const ast::literal::Entity*>(&n)) return EExtern_Kind::Entity;
+  if (dynamic_cast<const ast::Expr_ID*>(&n)) return EExtern_Kind::Global;
+  if (dynamic_cast<const ast::Expr_ID_Qualified*>(&n)) return EExtern_Kind::Global;
+  if (dynamic_cast<const ast::Expr_ID_Type*>(&n)) return EExtern_Kind::Type;
 
-  return Extern_Item::Kind::Global;
+  return EExtern_Kind::Global;
 }

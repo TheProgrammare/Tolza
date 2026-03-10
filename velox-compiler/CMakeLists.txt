@@ -47,7 +47,7 @@ target_include_directories(velox-compiler
 
 target_include_directories(velox_vendor
     INTERFACE
-        ${CMAKE_SOURCE_DIR}/vendor
+        SYSTEM ${CMAKE_SOURCE_DIR}/vendor
 )
 
 # ----------------------------
@@ -61,6 +61,12 @@ target_include_directories(velox-compiler
     PRIVATE
         ${LLVM_INCLUDE_DIRS}
         ${CLANG_INCLUDE_DIRS}
+)
+
+# Desactivate LLVM warnings 
+target_compile_options(velox-compiler 
+    PRIVATE
+        -isystem ${LLVM_INCLUDE_DIRS}
 )
 
 target_compile_definitions(velox-compiler

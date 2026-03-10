@@ -1,15 +1,11 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <vector>
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_codeblock_instruction.hpp"
-#include "ast/ast_evaluator.hpp"
+#include "ast/ast_data.hpp"
 #include "ast/ast_forward.hpp"
-
-using proto_cb = std::function<ast::CodeBlock_instruction()>;
+#include "ast/ast_evaluator.hpp"
 
 namespace parser
 {
@@ -23,7 +19,7 @@ struct Parser_Declaration_Local {
 
   [[nodiscard]] std::shared_ptr<ast::ALocal> parse_local(bool silent_error = false);
 
-  [[nodiscard]] ast::declaration::local::Pattern_Element pattern_mapping(ECapability capa);
+  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Element> pattern_mapping(ECapability capa);
 
   [[nodiscard]] ast::Evaluator parse_evaluator(std::shared_ptr<ast::AExpression> comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern>
@@ -33,8 +29,6 @@ struct Parser_Declaration_Local {
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Variable_Unpack>        variable_unpack();
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Lambda>                 lambda();
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Capability>             capability();
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::CodeBlock>              code_block(bool     is_silent_error,
-                                                                                            proto_cb in_function);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::CodeBlock>              code_block_instruction();
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Lambda_Capture>         lambda_capture();
   [[nodiscard]] std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parameters();

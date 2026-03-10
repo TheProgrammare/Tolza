@@ -131,13 +131,13 @@ std::string parser::Parser_Context::get_export_name(const ast::Node& n) const
   return m_meta->get_export_name(n.get_tok_antepos());
 }
 
-const META::MetaInstruct* parser::Parser_Context::get_instruct(const ast::Node&                          n,
+const meta::MetaInstruct* parser::Parser_Context::get_instruct(const ast::Node&                          n,
                                                                const std::initializer_list<std::string>& pattern) const
 {
   return m_meta->get_instruct(n.get_tok_antepos(), pattern);
 }
 
-const META::MetaBlock* parser::Parser_Context::get_metablock(const ast::Node&                          n,
+const meta::Metablock* parser::Parser_Context::get_metablock(const ast::Node&                          n,
                                                              const std::initializer_list<std::string>& pattern)
 {
   return m_meta->get_metablock(n.get_tok_antepos(), pattern);
@@ -165,9 +165,9 @@ bool parser::Parser_Context::match_field_separator(TokTy separator, TokTy end)
   if (separator != TokTy::S_END_OF_FILE) {
     if (tok_v.match(separator)) return false;
     if (tok_v.match(end)) return true;
-    tok_v.add_error<12>("Unexpected token '" + tok_v.peek().val + "' in expression.",
-                        "expected a separator '" + std::to_string(int(separator)) + "' or a ending '"
-                            + std::to_string(int(end)) + "'");
+    tok_v.add_error(12, "Unexpected token '" + tok_v.peek().val + "' in expression.",
+                    "expected a separator '" + std::to_string(int(separator)) + "' or a ending '"
+                        + std::to_string(int(end)) + "'");
 
   } else {
     if (tok_v.match(end)) return true;
@@ -188,8 +188,8 @@ bool parser::Parser_Context::match_field_any_separator(TokTy separator, std::ini
       countSym = 0;
     }
   }
-  tok_v.add_error<13>("Unexpected token '" + tok_v.peek().val + "' in expression.",
-                      "expected a separator '" + std::to_string(int(separator)) + "' or a ending {" + endSymbols + "}");
+  tok_v.add_error(13, "Unexpected token '" + tok_v.peek().val + "' in expression.",
+                  "expected a separator '" + std::to_string(int(separator)) + "' or a ending {" + endSymbols + "}");
   return false;
 }
 
@@ -205,5 +205,5 @@ std::string parser::Parser_Context::parse_name(const std::string& custom_msg, co
   const std::string final_msg  = custom_msg.empty() ? _msg : custom_msg;
   const std::string final_hint = custom_hint.empty() ? _hint : custom_hint;
 
-  return tok_v.expect<777>(TokTy::IDENTIFIER, final_msg, final_hint).val;
+  return tok_v.expect(777, TokTy::IDENTIFIER, final_msg, final_hint).val;
 }

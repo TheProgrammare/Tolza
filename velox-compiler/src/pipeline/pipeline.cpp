@@ -3,9 +3,11 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <filesystem>
 
 #include "pipeline.hpp"
 
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 
 #include "script_info.hpp"
@@ -82,9 +84,9 @@ bool start_compilation(int argc, const char* argv[])
   else
     std::cout << color_BLUE "[build:1/9] File system begins" color_RESET << std::endl;
 
-  fs::path target_dir =
+  std::filesystem::path target_dir =
       compiler::in_binding_compilation ? compiler::COMP_CTX.get_binding_dir() : compiler::COMP_CTX.get_source_dir();
-  auto scr_infos = pipeline_start_filesystem(target_dir);
+  auto scr_infos = pipeline_start_filesystem(target_dir.string());
 
   if (scr_infos.empty()) {
     if (compiler::in_binding_compilation) {

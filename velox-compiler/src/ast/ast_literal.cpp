@@ -1,11 +1,186 @@
 #include "ast_literal.hpp"
 
-#include "ast/ast_data.hpp"
-#include "ast/ast_type.hpp"
-#include "ast_inferred_type_singleton.hpp"
-
-#include "visitor/symbol_manager.hpp"
 #include <memory>
+
+#include "ast_data.hpp"
+#include "ast_type.hpp"
+#include "ast_inferred_type_singleton.hpp"
+#include "ast_expression.hpp"
+
+#include "visitor/visitor_base.hpp"
+#include "visitor/visitor_codegen.hpp"
+
+
+void ast::literal::Boolean::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Boolean::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Integral::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Integral::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Decimal::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Decimal::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Floating::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Floating::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::ASCII::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::ASCII::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::UTF32::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::UTF32::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Text::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Text::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Format_Specifier::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Format_Specifier::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Text_Interpolation::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Text_Interpolation::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Textual_Format::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Textual_Format::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Table_Population::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Table_Population::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Table::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Table::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Map::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Map::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Enum::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Enum::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Tuple::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Tuple::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Range::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Range::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Component::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Component::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Entity::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Entity::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::literal::Iterator::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::literal::Iterator::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
 
 
 std::string ast::literal::Table::mangle_type() const

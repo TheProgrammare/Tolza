@@ -1,6 +1,144 @@
 #include "ast_declaration_local.hpp"
 
 #include "ast/ast_type.hpp"
+#include "visitor/visitor_base.hpp"
+#include "visitor/visitor_codegen.hpp"
+
+void ast::declaration::local::CodeBlock::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::CodeBlock::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Variable_Binding::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Variable_Binding::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Pattern_Enum::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Enum::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Pattern_Tuple::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Tuple::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Pattern_Entity::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Entity::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Pattern_Component::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Component::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Variable_Unpack::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Variable_Unpack::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Lambda::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Lambda::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Variable::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Variable::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Capability::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Capability::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Capture_Member::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Capture_Member::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Lambda_Capture::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Lambda_Capture::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Parameter::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Parameter::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Generic_Parameter_Element::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Generic_Parameter_Element::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::local::Generic_Parameters::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Generic_Parameters::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 std::string ast::declaration::local::Variable_Unpack::debug_str() const
 {

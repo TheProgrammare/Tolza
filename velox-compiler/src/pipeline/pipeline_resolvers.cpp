@@ -8,7 +8,7 @@
 #include <tuple>
 #include <vector>
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "script_info.hpp"
 
 #include "ast/ast_base.hpp"
@@ -32,7 +32,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     compiler::fmt_template(header_txt, {std::to_string(k + 1), name});
     std::cout << header_txt << std::endl;
 
-    std::vector<std::tuple<fs::path, std::vector<std::string>>> resErrors;
+    std::vector<std::tuple<std::string, std::vector<std::string>>> resErrors;
 
     size_t count = 0;
     for (auto scr_info : scr_infos) {
@@ -80,7 +80,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     if (!resErrors.empty()) {
       std::cerr << color_RED "[" << name << "] Failed" color_RESET << std::endl;
       for (auto& [path, fileError] : resErrors) {
-        std::cerr << color_RED "[resolver:ERROR] [file] " color_MAGENTA << path << color_MAGENTA "\n";
+        std::cerr << color_RED "[resolver:ERROR] [file] " color_MAGENTA "\"" << path << "\"" color_RESET "\n";
         for (auto& error : fileError) {
           std::cerr << error << "\n";
         }

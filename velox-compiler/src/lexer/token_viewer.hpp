@@ -3,8 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "error_output.hpp"
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "token.hpp"
 
 struct ScriptInfo;
@@ -37,51 +36,19 @@ public:
   bool match_id_val(const std::string& val);
   bool check_any(const std::initializer_list<TokTy>& types);
   bool match_any(const std::initializer_list<TokTy>& types);
-  template <size_t Code>
-  Token expect(TokTy type, const std::string& msg, const std::string& hint)
-  {
-    if (!check(type)) {
-      add_error<Code>(msg, hint);
-    }
-    return next();
-  }
 
-  template <size_t Code>
-  Token expect_any(const std::initializer_list<ETokenType>& types, const std::string& msg, const std::string& hint)
-  {
-    for (ETokenType type : types) {
-      if (check(type)) {
-        return next();
-      }
-    }
-    add_error<Code>(msg, hint);
-    return Token();
-  }
+  Token expect(ErrorCode code, TokTy type, const std::string& msg, const std::string& hint);
+
+  Token expect_any(ErrorCode code, const std::initializer_list<ETokenType>& types, const std::string& msg,
+                   const std::string& hint);
 
   size_t position() const;
   size_t line() const;
   void   rewind(size_t pos);
 
-  template <size_t Code>
-  void add_error(const std::string& msg, const std::string& hint)
-  {
-    auto error_diag =
-        Error_Diagnostic<Code>(scr_info, peek(), {}, compiler::EPhase::parser, EErrorSeverity::error, {}, msg, hint);
+  void add_error(ErrorCode code, const std::string& msg, const std::string& hint);
 
-    errors.push_back(error_diag.print_error());
-
-    throw std::runtime_error("");
-  }
-
-  template <size_t Code>
-  void add_error_tok(const Token& tok, const std::string& msg, const std::string& hint)
-  {
-    auto error_diag =
-        Error_Diagnostic<Code>(scr_info, tok, {}, compiler::EPhase::parser, EErrorSeverity::error, {}, msg, hint);
-    errors.push_back(error_diag.print_error());
-
-    throw std::runtime_error("");
-  }
+  void add_error_tok(ErrorCode code, const Token& tok, const std::string& msg, const std::string& hint);
 
   void synchronize();
 

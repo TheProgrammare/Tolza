@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ast/ast_data.hpp"
-#include "ast_base.hpp"
-#include <cstddef>
 #include <memory>
+#include <cstddef>
 #include <string>
-#include "ast/ast_declaration_local.hpp"
+
+#include "ast_base.hpp"
+
 
 struct Visitor_Base;
 
@@ -33,10 +33,8 @@ struct Ptr final : public AType {
   {
     return "type " + EPtrType_to_str(pointer_type);
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Table final : public AType {
@@ -69,10 +67,8 @@ struct Table final : public AType {
       return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size.value()) + "]";
     return "type table[" + sizeSymbol->debug_str() + "]";
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Primitive final : public AType {
@@ -99,10 +95,8 @@ struct Primitive final : public AType {
   {
     return "type " + EPrimTy_to_str(type);
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Tuple final : public AType {
@@ -131,13 +125,13 @@ struct Tuple final : public AType {
     }
     return false;
   }
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Function_Proto final : public AType {
+  ~Function_Proto();
+
   [[maybe_unused]] std::vector<std::shared_ptr<declaration::local::Parameter>>                 parameters;
   [[maybe_unused]] std::vector<std::unique_ptr<declaration::local::Generic_Parameter_Element>> gen_parameters;
   [[maybe_unused]] std::unique_ptr<Tuple>                                                      returnType;
@@ -145,29 +139,12 @@ struct Function_Proto final : public AType {
   bool isVariadic = false;
 
   std::string mangle_type() const override;
-  bool        compare_with(const AType& other) const override
-  {
-    if (auto ptr = dynamic_cast<const Function_Proto*>(&other)) {
-      if (isVariadic != ptr->isVariadic) return false;
-      if (parameters.size() != ptr->parameters.size()) return false;
-      if ((returnType == nullptr) != (ptr->returnType == nullptr)) return false;
-
-      if (returnType) {
-        if (!returnType->is_same(*ptr->returnType)) return false;
-      }
-
-      for (size_t i = 0; i < parameters.size(); i++) {
-        if (!parameters[i]->is_same(*ptr->parameters[i])) return false;
-      }
-    }
-    return false;
-  }
+  bool        compare_with(const AType& other) const override;
 
   std::string debug_str() const override;
-  void        accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Get_Expr_Type final : public AType {
@@ -186,10 +163,8 @@ struct Get_Expr_Type final : public AType {
     return "type get expression type";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 } // namespace type

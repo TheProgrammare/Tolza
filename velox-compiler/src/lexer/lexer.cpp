@@ -1,9 +1,16 @@
 
 #include "lexer.hpp"
 
+#include "script_info.hpp"
 #include "error_output.hpp"
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "token.hpp"
+
+Lexer::Lexer(ScriptInfo& _scr_info)
+  : scr_info(_scr_info)
+  , stream(scr_info.file_str)
+{
+}
 
 void Lexer::tokenize(const std::set<char>& exit_char)
 {
@@ -59,8 +66,8 @@ void Lexer::tokenize(const std::set<char>& exit_char)
         }
       }
 
-      add_error<0>("Expected end of placeholder end ']]' after placeholder start '[['",
-                   "define placeholders in code like: `[[_U]]`");
+      add_error(0, "Expected end of placeholder end ']]' after placeholder start '[['",
+                "define placeholders in code like: `[[_U]]`");
     }
     // can be a numeric value or a range token (.. or ..=) or a variadic (...)
     else if (std::isdigit(ch) || ch == '.') {
@@ -109,7 +116,7 @@ void Lexer::process_escape()
 {
   // read next chracter after backslash
   if (!stream.get(ch)) {
-    add_error<1>("Unexpected end of input after escape sequence.", "");
+    add_error(1, "Unexpected end of input after escape sequence.", "");
     return;
   }
 
@@ -132,7 +139,7 @@ void Lexer::process_escape()
     for (int i = 0; i < 2; ++i) { // On lit 1 ou 2 chiffres hexadécimaux
       if (!stream.get(ch) || !isxdigit(ch)) {
         if (hex.empty()) {
-          add_error<2>("Invalid hex escape sequence", "define hex escape like: `\\xHH`");
+          add_error(2, "Invalid hex escape sequence", "define hex escape like: `\\xHH`");
           return;
         } else {
           // return partial char if only one digit is read
@@ -145,7 +152,7 @@ void Lexer::process_escape()
       char value = static_cast<char>(std::stoul(hex, nullptr, 16));
       buffer += value;
     } catch (...) {
-      add_error<3>("Invalid hex escape value", "define hex escape like: `\\xHH`");
+      add_error(3, "Invalid hex escape value", "define hex escape like: `\\xHH`");
     }
     break;
   }
@@ -157,7 +164,7 @@ void Lexer::process_escape()
     std::string hex;
     for (int i = 0; i < numDigits; ++i) {
       if (!stream.get(ch) || !isxdigit(ch)) {
-        add_error<3>("Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
+        add_error(3, "Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
         return;
       }
       hex.push_back(ch);
@@ -180,17 +187,17 @@ void Lexer::process_escape()
         buffer += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
         buffer += static_cast<char>(0x80 | (codepoint & 0x3F));
       } else {
-        add_error<4>("Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
+        add_error(4, "Unicode codepoint out of range (" + std::to_string(codepoint) + ")", "");
       }
     } catch (...) {
-      add_error<5>("Invalid Unicode escape value", "");
+      add_error(5, "Invalid Unicode escape value", "");
     }
     break;
   }
 
   default:
     // escape char unknown : keep literally or ring the error
-    add_error<6>("Unknown escape sequence: \\" + std::to_string(ch), "");
+    add_error(6, "Unknown escape sequence: \\" + std::to_string(ch), "");
     buffer += ch;
     break;
   }
@@ -273,9 +280,9 @@ bool Lexer::tokenize_spec()
   case ' ':  addToken(TokTy::SPACE); return true;
   case '}':  return false;
   default:   {
-    auto error = Error_Diagnostic<151>(
-        scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)), {},
-        ::compiler::EPhase::lexer, EErrorSeverity::error, {}, "Unexpected format specifier character",
+    auto error = Error_Diagnostic(
+        151, scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)), {},
+        compiler::EPhase::lexer, EErrorSeverity::error, {}, "Unexpected format specifier character",
         "define format specifier like:"
         "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
 
@@ -588,10 +595,10 @@ void Lexer::tokenize_keyword()
   }
   // not identifier standard : error
   else {
-    add_error<7>("Unexpected token symbol",
-                 "define keywords like:"
-                 "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-zA-Z_][a-zA-Z0-9_]"
-                 "\n  - Reserved keyword: please, refer to the language documentation.");
+    add_error(7, "Unexpected token symbol",
+              "define keywords like:"
+              "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-zA-Z_][a-zA-Z0-9_]"
+              "\n  - Reserved keyword: please, refer to the language documentation.");
   }
 }
 
@@ -626,15 +633,14 @@ bool Lexer::eat()
   return false;
 }
 
-template <size_t Code>
-void Lexer::add_error(const std::string& msg, const std::string& hint)
+void Lexer::add_error(ErrorCode code, const std::string& msg, const std::string& hint)
 {
   Span span(0, stream.get_line(), stream.get_column(), buffer.size());
   span.anteprocess_pos = scr_info.tokens.size();
   auto tok             = Token(buffer, ETokenType::NONE, span);
 
   std::string out =
-      Error_Diagnostic<Code>(scr_info, tok, {}, ::compiler::EPhase::lexer, EErrorSeverity::error, {}, msg, hint)
+      Error_Diagnostic(code, scr_info, tok, {}, compiler::EPhase::lexer, EErrorSeverity::error, {}, msg, hint)
           .print_error();
   errors.push_back(out);
 }

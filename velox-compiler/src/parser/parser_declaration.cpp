@@ -3,13 +3,17 @@
 
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_cop.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_generic.hpp"
+#include "ast/ast_type.hpp"
+
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 #include "parser_type.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_declaration_cop.hpp"
 #include "parser_base.hpp"
-#include "ast/ast_generic.hpp"
 
 #include "lexer/token.hpp"
 
@@ -40,8 +44,8 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration
   default: break;
   }
 
-  ctx.tok_v.add_error<60>("Illegal instruction '" + tok.val + "' in global.",
-                          "you can define in global: namespace, variable, function, entity, component, system");
+  ctx.tok_v.add_error(60, "Illegal instruction '" + tok.val + "' in global.",
+                      "you can define in global: namespace, variable, function, entity, component, system");
 
   return nullptr;
 }
@@ -74,7 +78,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
 
     while (!ctx.tok_v.is_end()) {
       if (ctx.tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-        ctx.tok_v.add_error_tok<62>(ctx.tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+        ctx.tok_v.add_error_tok(62, ctx.tok_v.peek(), "Illegal nested module export/import instruction.", hint);
       }
 
       node->declarations.push_back(ctx.p_decl->parse_declaration());
@@ -87,7 +91,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
     return node;
   }
 
-  ctx.tok_v.add_error_tok<61>(ctx.tok_v.peek(), "Expected '{' or '=' after module name.", hint);
+  ctx.tok_v.add_error_tok(61, ctx.tok_v.peek(), "Expected '{' or '=' after module name.", hint);
 
   return nullptr;
 }
@@ -105,7 +109,7 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
   ctx.m_sym->add_decl(enu);
   ctx.m_sym->enter_scope(enu->name, EScopeType::Enum);
 
-  ctx.tok_v.expect<63>(TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
+  ctx.tok_v.expect(63, TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
 
   while (!ctx.tok_v.is_end()) {
     auto elem  = ctx.Create_Node<ast::declaration::Enum_Element>(ctx.tok_v.peek());
@@ -143,8 +147,8 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
       "\n   `# extern"
       "\n    let name: type";
 
-  auto          kind_tok = ctx.tok_v.expect_any<65>({TokTy::LET, TokTy::VAR, TokTy::CONST},
-                                                    "Expected global variable declaration token", hint);
+  auto          kind_tok = ctx.tok_v.expect_any(65, {TokTy::LET, TokTy::VAR, TokTy::CONST},
+                                                "Expected global variable declaration token", hint);
   EVariableKind kind     = TokTy_to_EVariableKind(kind_tok.type);
 
   auto var  = ctx.Create_Decl<ast::declaration::Global>(ctx.tok_v.peek());
@@ -156,12 +160,12 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   ctx.m_sym->add_decl(var);
 
   if (var->name.empty()) {
-    ctx.tok_v.add_error<66>("Invalid Identifier !", "");
+    ctx.tok_v.add_error(66, "Invalid Identifier !", "");
   }
 
   // type definition no expression
   if (var->isExtern) {
-    ctx.tok_v.expect<67>(TokTy::COLON, "Expected type definition for an global variable marked external.", hint);
+    ctx.tok_v.expect(67, TokTy::COLON, "Expected type definition for an global variable marked external.", hint);
     var->type = ctx.p_type->parse_type();
     ctx.tok_v.match(TokTy::SEMICOLON);
     return var;
@@ -180,8 +184,8 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   var->assignment  = TokTy_to_EAssignmentType(assign_tok.type);
 
   if (var->assignment == EAssignmentType::NONE && isAutoTy)
-    ctx.tok_v.add_error<68>("Expected assignation '=' in auto inferred variable type.",
-                            "define auto inferred variable like `let myName = expression;`");
+    ctx.tok_v.add_error(68, "Expected assignation '=' in auto inferred variable type.",
+                        "define auto inferred variable like `let myName = expression;`");
 
   auto expr = ctx.p_expr->parse_expression();
 
@@ -225,7 +229,7 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
 
   // if extern : no definition
   if (fn->isExtern && ctx.tok_v.check(TokTy::OPEN_BRACE))
-    ctx.tok_v.add_error<69>("Unexpected start code block '{' after a extern function declaration", hint);
+    ctx.tok_v.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
 
   if (!fn->isExtern) fn->codeblock = ctx.p_loc->code_block_instruction();
 
@@ -253,7 +257,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
   gen->name = ctx.parse_name("", kHint_gen);
   ctx.m_sym->add_decl(gen);
   ctx.m_sym->enter_scope(gen->name, EScopeType::Generic);
-  ctx.tok_v.expect<70>(TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
+  ctx.tok_v.expect(70, TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {
     gen->targetGenericSymbols.insert(ctx.parse_name("", kHint_gen));
@@ -261,7 +265,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACKETS)) break;
   }
 
-  ctx.tok_v.expect<72>(TokTy::OPEN_BRACE, "Expected start code block '{' after generic declaration.", kHint_gen);
+  ctx.tok_v.expect(72, TokTy::OPEN_BRACE, "Expected start code block '{' after generic declaration.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {
     if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
@@ -271,8 +275,8 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     if (ctx.tok_v.match(TokTy::OP)) {
       auto gen_op          = ctx.Create_Node<ast::generic::Have_Op>(ctx.tok_v.peek());
       gen_op->targetGenSym = firstok;
-      auto tok_op          = ctx.tok_v.expect_any<74>(
-          kOperatorTokens, "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
+      auto tok_op          = ctx.tok_v.expect_any(
+          74, kOperatorTokens, "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
       gen_op->operatorType   = TokTy_to_EBinOpType(tok_op.type);
       gen_op->parent_generic = gen;
 
@@ -328,14 +332,14 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
       castNode->parent_generic = gen;
 
       if (ctx.tok_v.peek(0).val != "to" && ctx.tok_v.peek(0).val != "from") {
-        ctx.tok_v.add_error<75>("Expected cast way 'to' or 'from' in generic filter argument.", kHint_filter);
+        ctx.tok_v.add_error(75, "Expected cast way 'to' or 'from' in generic filter argument.", kHint_filter);
       }
 
       castNode->target = ctx.p_type->parse_type();
 
       gen->conditions.push_back(std::move(castNode));
     } else
-      ctx.tok_v.add_error<76>("Expected generic condition 'use' or 'is' in generic filter argument.", kHint_filter);
+      ctx.tok_v.add_error(76, "Expected generic condition 'use' or 'is' in generic filter argument.", kHint_filter);
 
     ctx.tok_v.match(TokTy::SEMICOLON);
   }
@@ -352,11 +356,11 @@ std::shared_ptr<ast::declaration::Type_Alias> parser::Parser_Declaration::type_a
 
   tyAlias->name = ctx.parse_name();
 
-  ctx.tok_v.expect<77>(TokTy::ASSIGN, "Expected '=' after type alias.",
-                       "define type alias like:"
-                       "\n  - type `type myAlias = i32`."
-                       "\n  - generic `type Vec<T> = core::container::vector<T>`."
-                       "\n  - generic `type StrList = core::container::vector<str>`.");
+  ctx.tok_v.expect(77, TokTy::ASSIGN, "Expected '=' after type alias.",
+                   "define type alias like:"
+                   "\n  - type `type myAlias = i32`."
+                   "\n  - generic `type Vec<T> = core::container::vector<T>`."
+                   "\n  - generic `type StrList = core::container::vector<str>`.");
 
   tyAlias->type = ctx.p_type->parse_type();
 

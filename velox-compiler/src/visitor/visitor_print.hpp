@@ -1,16 +1,11 @@
 #pragma once
 
-#include "ast/ast_forward.hpp"
 #include "visitor_base.hpp"
-#include <sstream>
-#include <filesystem>
-
-namespace fs = std::filesystem;
 
 struct Visitor_Print : public Visitor_Base {
   using Visitor_Base::Visitor_Base;
 
-  std::ostringstream sstr;
+  std::string out_print;
 
   // ============ AST ============
   void visit(ast::Node& n) override;
@@ -185,7 +180,7 @@ struct Visitor_Print : public Visitor_Base {
   void visit(ast::memory::Align& n) override;
   void visit(ast::memory::Drop& n) override;
 
-  fs::path get_file_path() const;
+  std::string get_file_path() const;
 };
 
 // %0 velox-compiler version

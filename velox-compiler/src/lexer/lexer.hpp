@@ -21,22 +21,21 @@
 #include <vector>
 #include <set>
 
-#include "script_info.hpp"
 #include "stream_tracker.hpp"
 #include "token.hpp"
 
 enum class ETokenType;
 using TokTy = ETokenType;
 
+struct ScriptInfo;
+
+using ErrorCode = short;
+
 
 class Lexer
 {
 public:
-  Lexer(ScriptInfo& _scr_info)
-    : scr_info(_scr_info)
-    , stream(scr_info.file_str)
-  {
-  }
+  Lexer(ScriptInfo& _scr_info);
 
   enum class EPrefixFound { None, Prefix, All };
 
@@ -56,11 +55,10 @@ public:
   std::pair<TokTy, std::string> getToken();
   void                          addToken(TokTy type);
   bool                          eat();
-  template <size_t Code>
-  void  add_error(const std::string& msg, const std::string& hint);
-  TokTy classifyNumerals(std::string& outValue);
-  TokTy classifyKeyword(std::string& outWord);
-  TokTy classifyFormatSpec(std::string& outFormat);
+  void                          add_error(ErrorCode code, const std::string& msg, const std::string& hint);
+  TokTy                         classifyNumerals(std::string& outValue);
+  TokTy                         classifyKeyword(std::string& outWord);
+  TokTy                         classifyFormatSpec(std::string& outFormat);
 
   ScriptInfo&              scr_info;
   StreamTracker            stream;

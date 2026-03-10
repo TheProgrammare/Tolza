@@ -1,6 +1,6 @@
 #include "parser_command.hpp"
 #include "binder/ffi-json_reader.hpp"
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "pipeline/pipeline.hpp"
 
 #include <iostream>

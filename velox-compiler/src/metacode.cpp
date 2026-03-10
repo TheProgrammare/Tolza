@@ -1,13 +1,15 @@
 #include "metacode.hpp"
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 #include "script_info.hpp"
 
-const size_t META::MetaBlock_Expand::k_placeholder_flag = k_metacode_flag - 1;
-const size_t META::MetaBlock_Expand::k_expand_if_flag   = k_metacode_flag - 2;
+#include "ast/ast_type.hpp"
 
-bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param& a, const MetaBlock_Reuse_Param& b)
+const size_t meta::Metablock_Expand::k_placeholder_flag = k_metacode_flag - 1;
+const size_t meta::Metablock_Expand::k_expand_if_flag   = k_metacode_flag - 2;
+
+bool meta::is_equivalent_ReusableBlock_Param(const Metablock_Reuse_Param& a, const Metablock_Reuse_Param& b)
 {
   const bool same_pass_mode = a.pass_mode == b.pass_mode;
   const bool same_type      = a.type.get() == b.type.get();
@@ -16,7 +18,7 @@ bool META::is_equivalent_ReusableBlock_Param(const MetaBlock_Reuse_Param& a, con
   return same_pass_mode && same_type && same_variadic;
 }
 
-std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo& scr_info) const
+std::vector<Token> meta::Metablock::generate_tokens(ScriptInfo& scr_info) const
 {
   std::vector<Token> result;
   if (tokens_to_generate.empty()) return {};
@@ -28,7 +30,7 @@ std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo& scr_info) const
   for (auto pos : tokens_to_generate) {
     // if children must be generated before
     if (pos == k_metacode_flag) {
-      MetaBlock*         child      = _childrens[children_generated_count++].get();
+      Metablock*         child      = _childrens[children_generated_count++].get();
       std::vector<Token> child_toks = child->generate_tokens(scr_info);
 
       if (!child_toks.empty()) {
@@ -47,7 +49,7 @@ std::vector<Token> META::MetaBlock::generate_tokens(ScriptInfo& scr_info) const
   return result;
 }
 
-bool META::MetaBlock_If::eval_comp_args() const
+bool meta::Metablock_If::eval_comp_args() const
 {
   static LCtx map;
 
@@ -60,14 +62,14 @@ bool META::MetaBlock_If::eval_comp_args() const
   return eval(map);
 }
 
-std::vector<Token> META::MetaBlock_If::generate_tokens(ScriptInfo& scr_info) const
+std::vector<Token> meta::Metablock_If::generate_tokens(ScriptInfo& scr_info) const
 {
   if (!eval_comp_args() && alternative.get()) return alternative->generate_tokens(scr_info);
 
-  return MetaBlock::generate_tokens(scr_info);
+  return Metablock::generate_tokens(scr_info);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo& scr_info) const
+std::vector<Token> meta::Metablock_Expand::generate_tokens(ScriptInfo& scr_info) const
 {
   std::vector<Token> model;
   model.reserve(tokens_to_generate.size());
@@ -78,7 +80,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo& scr_info)
     const size_t pos = tokens_to_generate[i];
 
     if (pos == k_metacode_flag) {
-      MetaBlock*         child      = _childrens[children_generated_count++].get();
+      Metablock*         child      = _childrens[children_generated_count++].get();
       std::vector<Token> child_toks = child->generate_tokens(scr_info);
 
       if (!child_toks.empty()) {
@@ -110,7 +112,7 @@ std::vector<Token> META::MetaBlock_Expand::generate_tokens(ScriptInfo& scr_info)
   return generate_model_expansion(scr_info, model);
 }
 
-std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo&         scr_info,
+std::vector<Token> meta::Metablock_Expand::generate_model_expansion(ScriptInfo&         scr_info,
                                                                     std::vector<Token>& model) const
 {
   auto combos = generate_all_combinations();
@@ -172,13 +174,13 @@ std::vector<Token> META::MetaBlock_Expand::generate_model_expansion(ScriptInfo& 
   return result;
 }
 
-void META::MetaBlock_Expand::add_expand_condition(std::unique_ptr<Expand_If> exp_cond)
+void meta::Metablock_Expand::add_expand_condition(std::unique_ptr<Expand_If> exp_cond)
 {
   expand_conditions.push_back(std::move(exp_cond));
   tokens_to_generate.push_back(k_expand_if_flag);
 }
 
-void META::MetaBlock_Expand::generate_combinations(std::map<std::string, Token>&                             current,
+void meta::Metablock_Expand::generate_combinations(std::map<std::string, Token>&                             current,
                                                    std::map<std::string, std::vector<Token>>::const_iterator it,
                                                    std::vector<std::map<std::string, Token>>& result) const
 {
@@ -197,7 +199,7 @@ void META::MetaBlock_Expand::generate_combinations(std::map<std::string, Token>&
   }
 }
 
-std::vector<std::map<std::string, Token>> META::MetaBlock_Expand::generate_all_combinations() const
+std::vector<std::map<std::string, Token>> meta::Metablock_Expand::generate_all_combinations() const
 {
   std::vector<std::map<std::string, Token>> result;
   std::map<std::string, Token>              current;
@@ -205,7 +207,7 @@ std::vector<std::map<std::string, Token>> META::MetaBlock_Expand::generate_all_c
   return result;
 }
 
-bool META::Expand_If::eval(const std::map<std::string, Token>& ctx) const
+bool meta::Expand_If::eval(const std::map<std::string, Token>& ctx) const
 {
   LCtx final_ctx;
 
@@ -218,3 +220,6 @@ bool META::Expand_If::eval(const std::map<std::string, Token>& ctx) const
   else
     return true;
 }
+
+
+meta::Metablock_Reuse_Param::~Metablock_Reuse_Param() = default;

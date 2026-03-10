@@ -37,7 +37,7 @@ std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl(std::shared_ptr<ast::ADec
   return sym;
 }
 
-void Symbols_Manager::try_add_extern_sym_to_generate(const ast::AIdentifier& sym, Extern_Item::Kind kind)
+void Symbols_Manager::try_add_extern_sym_to_generate(const ast::AIdentifier& sym, EExtern_Kind kind)
 {
   std::string              name;
   std::vector<std::string> path;

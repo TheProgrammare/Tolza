@@ -4,7 +4,7 @@
 
 #include "ast_base.hpp"
 #include "ast_evaluator.hpp"
-#include "ast_forward.hpp"
+
 
 namespace ast
 {
@@ -12,6 +12,8 @@ namespace statement
 {
 
 struct If final : public Node {
+  ~If();
+
   Evaluator evaluator;
 
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
@@ -20,11 +22,9 @@ struct If final : public Node {
   bool                isElseNoCondition = false;
   bool                isInline          = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "IF";
   }
@@ -32,6 +32,8 @@ struct If final : public Node {
 
 // for i in range {}
 struct For final : public Node {
+  ~For();
+
   std::unique_ptr<AExpression> src;
 
   [[maybe_unused]]
@@ -42,22 +44,20 @@ struct For final : public Node {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
   bool                                           isReverse = false;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override;
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override;
 };
 
 // loop {...}
 struct Loop final : public Node {
+  ~Loop();
+
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "LOOP";
   }
@@ -65,15 +65,15 @@ struct Loop final : public Node {
 
 // while condition {...}
 struct While final : public Node {
+  ~While();
+
   bool                                           isDo = false;
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "WHILE";
   }
@@ -87,19 +87,15 @@ struct GoTo final : public AExpression {
     return "GOTO \"" + label + "\"";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // label azerty:
 struct GoTo_Label final : public ADeclaration {
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
-  std::string debug_str() const override
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "LABEL[" + name + "]";
   }
@@ -119,10 +115,8 @@ struct Return final : public Node {
     return "return";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Break final : public Node {
@@ -131,10 +125,8 @@ struct Break final : public Node {
     return "break";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 struct Continue final : public Node {
@@ -143,14 +135,14 @@ struct Continue final : public Node {
     return "continue";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // constant/comparison => {}
 struct Match_Case final : public Node {
+  ~Match_Case();
+
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
@@ -159,10 +151,8 @@ struct Match_Case final : public Node {
     return "CASE";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
@@ -177,10 +167,8 @@ struct Match final : public Node {
     return "MATCH";
   }
 
-  void accept(Visitor_Base& v) override
-  {
-    v.visit(*this);
-  }
+  void         accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 };
 
 } // namespace statement

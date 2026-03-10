@@ -20,40 +20,9 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <filesystem>
-
-// log color
-#define color_RESET         "\033[0m"
-#define color_BLACK         "\033[30m" /* Black */
-#define color_RED           "\033[31m" /* Red */
-#define color_GREEN         "\033[32m" /* Green */
-#define color_YELLOW        "\033[33m" /* Yellow */
-#define color_BLUE          "\033[34m" /* Blue */
-#define color_MAGENTA       "\033[35m" /* Magenta */
-#define color_CYAN          "\033[36m" /* Cyan */
-#define color_WHITE         "\033[37m" /* White */
-//
-#define k_pointer_size      sizeof(void*)
-#define k_architecture_size sizeof(void*)
-#define k_max_path_seg_size 12
-#define k_max_keyword_size  32
-
-namespace fs = std::filesystem;
-
 
 namespace compiler
 {
-
-constexpr const char* VELOX_COMPILER_VERSION = "2026.2.0b";
-extern bool           in_binding_compilation;
-extern bool           command_from_velox_toolchain;
-
-
-constexpr const char* k_comp_abort =
-    R"([velox-compiler] Compilation aborted
-[note] You must resolve all stage errors before to pass to the next stage!"
-Please see above to locate all errors.
-)";
 
 struct CompCtx {
   enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN, STATIC_LIB, DYNAMIC_LIB };
@@ -108,97 +77,56 @@ struct CompCtx {
   std::vector<std::string> undefines;
 
   // codegen
-  EEmitMode codegen_emit_mode = EEmitMode::BIN;
-  fs::path  codegen_build_dir;
+  EEmitMode   codegen_emit_mode = EEmitMode::BIN;
+  std::string codegen_build_dir;
 
   // project
-  fs::path project_dir;
-  fs::path source_dir;
-  fs::path vendor_dir;
-  fs::path ffi_json_dir;
-  fs::path binding_dir;
+  std::string project_dir;
+  std::string source_dir;
+  std::string vendor_dir;
+  std::string ffi_json_dir;
+  std::string binding_dir;
 
   // sub_configs
-  std::map<std::string, fs::path> sub_configs;
+  // key, path
+  std::map<std::string, std::string> sub_configs;
 
-  const fs::path& get_project_dir() const
+  const std::string& get_project_dir() const
   {
     return project_dir;
   }
 
-  const fs::path& get_source_dir() const
+  const std::string& get_source_dir() const
   {
     return source_dir;
   }
 
-  const fs::path& get_vendor_dir() const
+  const std::string& get_vendor_dir() const
   {
     return vendor_dir;
   }
 
-  const fs::path& get_build_dir() const
+  const std::string& get_build_dir() const
   {
     return codegen_build_dir;
   }
 
-  const fs::path& get_preprocess_dir() const
+  const std::string& get_binding_dir() const
   {
-    static auto out = get_build_dir() / "preprocess";
-    return out;
+    return binding_dir;
   }
 
-  const fs::path& get_binding_dir() const
-  {
-    static auto out = binding_dir;
-    return out;
-  }
+  const std::string& get_preprocess_dir() const;
 
-  const fs::path& get_debug_graph_dir() const
-  {
-    static auto out = get_build_dir() / "graph";
-    return out;
-  }
+  const std::string& get_debug_graph_dir() const;
 
-  const fs::path& get_llvmir_dir() const
-  {
-    static auto out = get_build_dir() / "llvm-ir";
-    return out;
-  }
+  const std::string& get_llvmir_dir() const;
 
-  const fs::path& get_ffi_json_dir() const
+  const std::string& get_ffi_json_dir() const
   {
     return ffi_json_dir;
   }
 };
-
-inline CompCtx COMP_CTX;
-
-void parse_args_for_compilation_context(CompCtx& ctx, int argc, const char* argv[]);
-
-void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args);
-
-
-enum class EPhase {
-  filesystem,
-  lexer,
-  preprosessor,
-  parser,
-  binder,
-  resolver_symbol,
-  resolver_type,
-  resolver_semantic,
-  llvmir,
-  linker
-};
-
-[[nodiscard]] fs::path    get_home_dir();
-[[nodiscard]] fs::path    get_stdlib_dir();
-[[nodiscard]] fs::path    get_user_lib_path();
-[[nodiscard]] fs::path    get_exe_path();
-[[nodiscard]] fs::path    get_exe_dir();
-[[nodiscard]] fs::path    get_packages_dir();
-[[nodiscard]] std::string Phase_to_code(EPhase phase);
-[[nodiscard]] std::string Phase_to_str(EPhase phase);
 
 
 } // namespace compiler

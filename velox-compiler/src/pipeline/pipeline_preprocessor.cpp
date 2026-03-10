@@ -5,14 +5,14 @@
 #include <memory>
 #include <vector>
 
-#include "compiler.hpp"
+#include "compiler_data.hpp"
 #include "lexer/token_viewer.hpp"
 #include "preprocessor.hpp"
 #include "script_info.hpp"
 
 bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  std::vector<std::tuple<fs::path, std::vector<std::string>>> errs;
+  std::vector<std::tuple<std::string, std::vector<std::string>>> errs;
 
   std::chrono::duration<double> final_duration;
 
@@ -29,7 +29,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
     auto                      start      = std::chrono::high_resolution_clock::now();
     std::vector<Token>        final_toks = pre.preprocess();
-    META::MetablockManager*&  meta       = pre.m_meta;
+    meta::MetablockManager*&  meta       = pre.m_meta;
     std::vector<std::string>& err        = pre.tok_v->errors;
 
     auto   end   = std::chrono::high_resolution_clock::now();
@@ -65,7 +65,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
       if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[preprocess:ERROR] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
-        std::cerr << f_err << "\n";
+        std::cerr << "\"" << f_err << "\"\n";
       }
       std::cerr << std::endl;
     }

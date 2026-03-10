@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <fstream>
+#include <unordered_map>
 
 // Helpers pour convertir string → enum
 ffi::EType ffi::JSON::str_to_etype(const std::string& s)
@@ -459,7 +460,7 @@ ffi::TypeAlias ffi::JSON::json_to_typealias(const json& j)
   return t;
 }
 
-ffi::AST ffi::JSON::read_ffi_json_file(const fs::path& path)
+ffi::AST ffi::JSON::read_ffi_json_file(const std::string& path)
 {
   std::ifstream f(path);
   if (!f.is_open()) throw std::runtime_error("Cannot open JSON AST file");

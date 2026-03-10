@@ -2,10 +2,8 @@
 
 #include <memory>
 #include <vector>
-#include <filesystem>
 #include <set>
 
-#include "ast/ast_forward.hpp"
 #include "lexer/token.hpp"
 
 namespace ast
@@ -14,28 +12,28 @@ struct Root;
 struct AExpression;
 } // namespace ast
 
-namespace fs = std::filesystem;
-
 struct ScriptInfo;
 
+enum class EExtern_Kind {
+  Function,
+  Type,
+  Global,
+  Enum,
+  Union,
+  Component,
+  System,
+  Entity,
+  Generic,
+  Metacode,
+};
+
 struct Extern_Item {
-  enum class Kind {
-    Function,
-    Type,
-    Global,
-    Enum,
-    Union,
-    Component,
-    System,
-    Entity,
-    Generic,
-    Metacode,
-  };
-  Kind                     kind;
+
+  EExtern_Kind             kind;
   std::string              name;
   std::vector<std::string> scope;
 
-  Extern_Item(const std::string& _name, const std::vector<std::string>& _scope, Kind _kind)
+  Extern_Item(const std::string& _name, const std::vector<std::string>& _scope, EExtern_Kind _kind)
     : name(_name)
     , scope(_scope)
     , kind(_kind)
@@ -43,14 +41,14 @@ struct Extern_Item {
   }
 };
 
-Extern_Item::Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n);
+EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n);
 
 struct Symbols_Manager;
 
-namespace META
+namespace meta
 {
 struct MetablockManager;
-} // namespace META
+} // namespace meta
 
 struct ModuleImportation {
   // project = default or ~
@@ -73,8 +71,8 @@ struct ModuleImportation {
 
   std::vector<Extern_Item> extern_references;
 
-  fs::path get_path() const;
-  fs::path get_normalized_path() const;
+  std::string get_path() const;
+  std::string get_normalized_path() const;
 
   bool is_external() const
   {
@@ -116,7 +114,7 @@ struct ModuleExportation {
 };
 
 struct ScriptInfo {
-  ScriptInfo(const fs::path& _file_path, const std::string& _file_str, const std::vector<std::string>& _file_lines)
+  ScriptInfo(const std::string& _file_path, const std::string& _file_str, const std::vector<std::string>& _file_lines)
     : file_path(_file_path)
     , file_str(_file_str)
     , file_lines(_file_lines)
@@ -126,10 +124,10 @@ struct ScriptInfo {
   enum class Origin { user, vendor_lib, stdlib, lib, binding };
 
   Origin                  origin = Origin::user;
-  fs::path                file_path;
+  std::string             file_path;
   std::string             file_str;
   std::vector<Token>      tokens;
-  META::MetablockManager* m_meta = nullptr;
+  meta::MetablockManager* m_meta = nullptr;
 
   // names of modules exported
   std::vector<std::shared_ptr<ModuleExportation>> exported_mod;
@@ -146,17 +144,14 @@ struct ScriptInfo {
   void add_export(const ModuleExportation& exp);
   void add_import(const ModuleImportation& imp);
 
-  [[nodiscard]] std::shared_ptr<ModuleExportation> get_export_module(const fs::path& path);
+  [[nodiscard]] std::shared_ptr<ModuleExportation> get_export_module(const std::string& path);
   [[nodiscard]] std::shared_ptr<ModuleImportation> get_import_module(std::span<const std::string> path);
 
   [[nodiscard]] std::set<ModuleImportation*> get_externs();
 
-  [[nodiscard]] std::set<fs::path> get_extern_languages();
+  [[nodiscard]] std::set<std::string> get_extern_languages();
 
-  [[nodiscard]] fs::path get_normalized_path() const
-  {
-    return file_path.parent_path() / file_path.stem();
-  }
+  [[nodiscard]] std::string get_normalized_path() const;
 
   // start at 1
   [[nodiscard]] std::string get_line(size_t line) const

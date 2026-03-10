@@ -1,9 +1,13 @@
 #include "visitor_default.hpp"
 
+#include "compiler_data.hpp"
 #include "error_output.hpp"
+
+#include "ast/ast_evaluator.hpp"
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_generic.hpp"
 #include "ast/ast_literal.hpp"
@@ -12,6 +16,34 @@
 #include "ast/ast_statement.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_type.hpp"
+
+
+void Visitor_Default::error_add(ErrorCode code, const ast::Node& n, const std::string& msg,
+                                const std::string& hint) const
+{
+  auto error = Error_Diagnostic(code, scr_info, n._token, {}, current_EPhase(), EErrorSeverity::error, {}, msg, hint);
+
+  errors.push_back(error.print_error());
+}
+
+void Visitor_Default::error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second,
+                                      const std::string& msg, const std::string& hint) const
+{
+  auto first_error = Error_Diagnostic(code, *first._scr_info, first._token, {}, current_EPhase(), EErrorSeverity::error,
+                                      {}, msg, hint);
+
+  auto second_error = Error_Diagnostic(code, *second._scr_info, second._token, {}, current_EPhase(),
+                                       EErrorSeverity::error, {}, msg, hint);
+
+  std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
+  out += first_error.print_line() + color_RESET "\n";
+  out += "[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
+  out += second_error.print_line() + color_RESET "\n";
+
+  out += first_error.print_messages();
+  errors.push_back(out);
+}
+
 
 // ============ AST ============
 void Visitor_Default::visit(ast::Node& n)
@@ -150,28 +182,28 @@ void Visitor_Default::visit(ast::declaration::local::Pattern& n)
 void Visitor_Default::visit(ast::declaration::local::Pattern_Enum& n)
 {
   for (auto& elem : n.mapping) {
-    if (auto node = elem.node()) node->accept(*this);
+    if (auto node = elem->node()) node->accept(*this);
   }
   Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Tuple& n)
 {
   for (auto& elem : n.mapping) {
-    if (auto node = elem.node()) node->accept(*this);
+    if (auto node = elem->node()) node->accept(*this);
   }
   Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Entity& n)
 {
   for (auto& elem : n.mapping) {
-    for (auto& [_, elem2] : elem->mapping) elem2.node()->accept(*this);
+    for (auto& [_, elem2] : elem->mapping) elem2->node()->accept(*this);
   }
   Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Component& n)
 {
   for (auto& [_, elem] : n.mapping) {
-    if (auto node = elem.node()) node->accept(*this);
+    if (auto node = elem->node()) node->accept(*this);
   }
   Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
@@ -405,7 +437,7 @@ void Visitor_Default::visit(ast::literal::Entity& n)
 // ============ Expression ============
 void Visitor_Default::visit(ast::expression::If_Ternary& n)
 {
-  n.evaluator.node()->accept(*this);
+  if (auto node = n.evaluator.get_node()) node->accept(*this);
   n.true_line->accept(*this);
   n.false_line->accept(*this);
 }
@@ -498,7 +530,7 @@ void Visitor_Default::visit(ast::expression::New_Ptr& n)
 // ============ STATEMENT ============
 void Visitor_Default::visit(ast::statement::If& n)
 {
-  if (auto node = n.evaluator.node()) node->accept(*this);
+  if (auto node = n.evaluator.get_node()) node->accept(*this);
   n.codeblock->accept(*this);
   if (n.alternative_statement) n.alternative_statement->accept(*this);
 }
@@ -516,7 +548,7 @@ void Visitor_Default::visit(ast::statement::Loop& n)
 }
 void Visitor_Default::visit(ast::statement::While& n)
 {
-  if (auto node = n.evaluator.node()) node->accept(*this);
+  if (auto node = n.evaluator.get_node()) node->accept(*this);
   n.codeblock->accept(*this);
 }
 void Visitor_Default::visit(ast::statement::GoTo& n)
@@ -545,7 +577,7 @@ void Visitor_Default::visit(ast::statement::Match& n)
 }
 void Visitor_Default::visit(ast::statement::Match_Case& n)
 {
-  if (auto node = n.evaluator.node()) node->accept(*this);
+  if (auto node = n.evaluator.get_node()) node->accept(*this);
   n.codeblock->accept(*this);
 }
 

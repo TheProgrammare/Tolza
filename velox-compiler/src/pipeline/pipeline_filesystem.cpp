@@ -5,30 +5,33 @@
 #include <iostream>
 #include <memory>
 
+#include "compiler_data.hpp"
 #include "compiler.hpp"
 #include "script_info.hpp"
-#include "compiler.hpp"
+
+namespace fs = std::filesystem;
 
 namespace
 {
 
-bool hasTargetExtension(const fs::path& filePath)
+bool hasTargetExtension(const std::string& filePath)
 {
-  auto ext = filePath.extension().string();
+  auto ext = fs::path(filePath).extension().string();
   return ext == ".vel" || ext == ".vlx" || ext == ".velox" || ext == ".velb" || ext == ".vlxb" || ext == ".veloxb";
 }
 
 ScriptInfo::Origin scriptOrigin_from_file(const fs::path& file)
 {
-  if (file.filename() == compiler::COMP_CTX.get_source_dir().filename()) return ScriptInfo::Origin::user;
-  if (file.filename() == compiler::COMP_CTX.get_binding_dir().filename()) return ScriptInfo::Origin::binding;
-  if (file.filename() == compiler::COMP_CTX.get_vendor_dir()) return ScriptInfo::Origin::vendor_lib;
+  if (file.filename() == fs::path(compiler::COMP_CTX.get_source_dir()).filename()) return ScriptInfo::Origin::user;
+  if (file.filename() == fs::path(compiler::COMP_CTX.get_binding_dir()).filename()) return ScriptInfo::Origin::binding;
+  if (file.filename() == fs::path(compiler::COMP_CTX.get_vendor_dir()).filename())
+    return ScriptInfo::Origin::vendor_lib;
   if (file == compiler::get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
   if (file == compiler::get_user_lib_path()) return ScriptInfo::Origin::lib;
   return ScriptInfo::Origin::user;
 }
 
-std::optional<std::vector<fs::path>> find_files(const fs::path& target_path)
+std::vector<fs::path> find_files(const fs::path& target_path)
 {
   std::vector<fs::path> filesFounds;
 
@@ -59,7 +62,7 @@ std::optional<std::vector<fs::path>> find_files(const fs::path& target_path)
     std::cerr << color_RED << "ERR reading " << e.what() << color_RESET << "\n";
     error = true;
   }
-  if (error) return std::nullopt;
+  if (error) return {};
   return filesFounds;
 }
 
@@ -106,11 +109,10 @@ std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>
 
 } // namespace
 
-std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const fs::path& target_file)
+std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string& target_file)
 {
-  auto filesResult = find_files(target_file);
-  if (!filesResult.has_value()) return {};
-  auto filesFounds = filesResult.value();
+  auto filesFounds = find_files(target_file);
+  if (filesFounds.empty()) return {};
 
   std::cout << color_YELLOW "[file:summary] " color_CYAN "files found: " color_YELLOW
                    + std::to_string(filesFounds.size()) + color_RESET "\n"

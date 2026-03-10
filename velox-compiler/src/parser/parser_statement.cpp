@@ -3,9 +3,15 @@
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_data.hpp"
+#include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_inferred_type_singleton.hpp"
+#include "ast/ast_statement.hpp"
+#include "ast/ast_type.hpp"
+
 #include "lexer/token.hpp"
+
 #include "parser_context.hpp"
 #include "parser_declaration.hpp"
 #include "parser_declaration_cop.hpp"
@@ -19,8 +25,6 @@
 
 #include "visitor/symbol_manager.hpp"
 
-#include "ast/ast_statement.hpp"
-#include "ast/ast_type.hpp"
 
 std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool is_silent_error)
 {
@@ -52,10 +56,11 @@ std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool is_sil
   }
 
   if (!is_silent_error)
-    ctx.tok_v.add_error<116>("Unexpected '" + ctx.tok_v.peek().val + "' keyword type (" + ctx.tok_v.peek().val
-                                 + ") not allowed in function statement.",
-                             "you can define in functions: variable, entity, enum, safe cast, if, "
-                             "else, do, while, match, break, continue, return");
+    ctx.tok_v.add_error(116,
+                        "Unexpected '" + ctx.tok_v.peek().val + "' keyword type (" + ctx.tok_v.peek().val
+                            + ") not allowed in function statement.",
+                        "you can define in functions: variable, entity, enum, safe cast, if, "
+                        "else, do, while, match, break, continue, return");
   return nullptr;
 }
 
@@ -147,7 +152,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
     }
   }
 
-  ctx.tok_v.expect<117>(TokTy::IN, "Expected in keyword 'in' after for identifier.", hint);
+  ctx.tok_v.expect(117, TokTy::IN, "Expected in keyword 'in' after for identifier.", hint);
 
   forState->src = ctx.p_expr->parse_expression();
 
@@ -199,13 +204,13 @@ std::unique_ptr<ast::statement::While> parser::Parser_Statement::while_statement
 
     flow->codeblock = ctx.p_loc->code_block_instruction();
 
-    ctx.tok_v.expect<118>(TokTy::WHILE, "Expected while keyword after do statement.", do_while_hint);
+    ctx.tok_v.expect(118, TokTy::WHILE, "Expected while keyword after do statement.", do_while_hint);
 
     flow->evaluator = ctx.p_loc->parse_evaluator(nullptr);
 
     ctx.tok_v.match(TokTy::SEMICOLON);
   } else
-    ctx.tok_v.add_error<119>("Expected do or while keyword!", do_while_hint);
+    ctx.tok_v.add_error(119, "Expected do or while keyword!", do_while_hint);
 
   ctx.m_sym->exit_scope();
 
@@ -230,16 +235,16 @@ std::unique_ptr<ast::statement::Match> parser::Parser_Statement::match_statement
 
   match->base = std::shared_ptr<ast::AExpression>(ctx.p_expr->parse_expression().release());
 
-  ctx.tok_v.expect<120>(TokTy::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
+  ctx.tok_v.expect(120, TokTy::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
   bool otherDefine = false;
 
   // check all cases
   while (!ctx.tok_v.is_end()) {
-    if (otherDefine) ctx.tok_v.add_error<121>("Expected end match '}' after the other '_ =>' case definition.", hint);
+    if (otherDefine) ctx.tok_v.add_error(121, "Expected end match '}' after the other '_ =>' case definition.", hint);
 
     if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
       if (match->cases.empty()) {
-        ctx.tok_v.add_error<122>("Match case without any case defined", hint);
+        ctx.tok_v.add_error(122, "Match case without any case defined", hint);
       }
       break;
     }
@@ -254,7 +259,7 @@ std::unique_ptr<ast::statement::Match> parser::Parser_Statement::match_statement
     auto ncase = ctx.Create_Node<ast::statement::Match_Case>(ctx.tok_v.peek());
 
     if (ctx.tok_v.match_any({TokTy::CAPA_MUT, TokTy::CAPA_REF})) {
-      ncase->evaluator = ctx.p_loc->parse_pattern(match->base);
+      ncase->evaluator = ast::Evaluator(std::move(ctx.p_loc->parse_pattern(match->base)));
     } else {
       ncase->evaluator = ctx.p_expr->parse_expression();
     }
@@ -300,7 +305,7 @@ std::unique_ptr<ast::statement::GoTo_Label> parser::Parser_Statement::goto_label
   auto goto_label  = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
   goto_label->name = ctx.parse_name("", hint);
 
-  ctx.tok_v.expect<123>(TokTy::COLON, "Expected colon ':' after label name.", hint);
+  ctx.tok_v.expect(123, TokTy::COLON, "Expected colon ':' after label name.", hint);
 
   ctx.m_sym->add_decl(goto_label);
 

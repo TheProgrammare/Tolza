@@ -1,6 +1,110 @@
-#include "ast/ast_declaration.hpp"
+#include "ast_declaration.hpp"
 
-#include "ast/ast_type.hpp"
+#include "ast_declaration_local.hpp"
+#include "ast_type.hpp"
+
+#include "visitor/visitor_base.hpp"
+#include "visitor/visitor_codegen.hpp"
+
+void ast::declaration::Enum_Element::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Enum_Element::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Enum::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Enum::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Flag::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Flag::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Mod::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Mod::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Export::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Export::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Extern::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Extern::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Function::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Function::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Mod_Alias::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Mod_Alias::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Type_Alias::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Type_Alias::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Generic::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Generic::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+void ast::declaration::Global::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::declaration::Global::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 std::string ast::declaration::Enum_Element::debug_str() const
 {
@@ -67,3 +171,5 @@ std::string ast::declaration::Global::debug_str() const
 
   return out + ": " + type->debug_str();
 }
+
+ast::declaration::Function::~Function() = default;

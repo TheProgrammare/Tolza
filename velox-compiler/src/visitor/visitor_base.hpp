@@ -34,7 +34,7 @@ struct Visitor_Base {
 
   ScriptInfo& scr_info;
 
-  std::vector<std::string> errors;
+  mutable std::vector<std::string> errors;
 
   // ============ AST ============
   virtual void visit(ast::Node& n) = 0;

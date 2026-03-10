@@ -2,42 +2,33 @@
 
 #include <memory>
 
-#include "ast_base.hpp"
-#include "ast_declaration_local.hpp"
-#include "ast_forward.hpp"
-
 namespace ast
 {
+struct Node;
+struct AExpression;
+
+namespace declaration
+{
+namespace local
+{
+
+struct Pattern;
+
+} // namespace local
+} // namespace declaration
 
 struct Evaluator final {
+  Evaluator();
+  Evaluator(std::unique_ptr<AExpression> _node);
+
   enum class EKind { None, Pattern, Condition };
   EKind kind = EKind::None;
 
-  std::unique_ptr<declaration::local::Pattern> pattern;
-  std::unique_ptr<AExpression>                 condition;
+  std::unique_ptr<AExpression> node;
 
-  AExpression* node() const
-  {
-    if (kind == EKind::Pattern)
-      return dynamic_cast<AExpression*>(pattern.get());
-    else
-      return condition.get();
-  }
-
-  Evaluator() = default;
-
-  Evaluator(std::unique_ptr<declaration::local::Pattern> _pattern)
-    : pattern(std::move(_pattern))
-    , kind(EKind::Pattern)
-  {
-  }
-
-  Evaluator(std::unique_ptr<AExpression> _condition)
-    : condition(std::move(_condition))
-    , kind(EKind::Condition)
-  {
-  }
+  AExpression*                      get_condition() const;
+  ast::declaration::local::Pattern* get_pattern() const;
+  Node*                             get_node() const;
 };
 
 } // namespace ast
-  // AST
