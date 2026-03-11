@@ -15,9 +15,9 @@ struct Boolean final : public ALiteral {
 
   Boolean();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "literal bool(" + std::to_string(val) + ")";
   }
@@ -29,9 +29,9 @@ struct Integral final : public ALiteral {
 
   Integral();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "literal " + EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
   }
@@ -59,8 +59,7 @@ struct Decimal final : public ALiteral {
     return "literal deci(" + val.i128_to_string() + ")";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Floating final : public ALiteral {
@@ -74,8 +73,7 @@ struct Floating final : public ALiteral {
     return "literal " + EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // Latin-1 encoding
@@ -89,8 +87,7 @@ struct ASCII final : public ALiteral {
     return "literal ascii('" + std::to_string(val) + "')";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct UTF32 final : public ALiteral {
@@ -103,8 +100,7 @@ struct UTF32 final : public ALiteral {
     return "literal utf32('" + codePoints + "')";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Text final : public ALiteral {
@@ -119,8 +115,7 @@ struct Text final : public ALiteral {
     return "\"" + std::string(val.begin(), val.end()) + "\"";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -178,8 +173,7 @@ struct Format_Specifier final : public Node {
     return "format specifier \":" + src_Str + "\"";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // "{expression}"
@@ -193,8 +187,7 @@ struct Text_Interpolation final : public AExpression {
     return "text interpolation";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Textual_Element final {
@@ -221,8 +214,7 @@ struct Textual_Format final : public ALiteral {
 
   std::string debug_str() const override;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Table_Population final : public ALiteral {
@@ -238,8 +230,7 @@ struct Table_Population final : public ALiteral {
     return "table population";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Table final : public ALiteral, AType {
@@ -275,8 +266,7 @@ struct Table final : public ALiteral, AType {
 
   std::string debug_str() const override;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Map final : public ALiteral {
@@ -294,9 +284,9 @@ struct Map final : public ALiteral {
   // key + value (no alignment need because it's translated to 2 arrays)
   size_t ty_sizeByte = 0;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "literal map[" + std::to_string(keys.size()) + "]";
   }
@@ -313,8 +303,7 @@ struct Enum final : public ALiteral {
     return "literal enum[" + name->debug_str() + "]";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Tuple final : public ALiteral {
@@ -329,8 +318,7 @@ struct Tuple final : public ALiteral {
     return "literal named tuple(" + std::to_string(values.size()) + ")";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // first..end or first..=end
@@ -345,8 +333,7 @@ struct Range final : public ALiteral {
     return "literal range";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
@@ -359,8 +346,7 @@ struct Component final : public ALiteral {
     return "literal component[" + name->debug_str() + "]";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
@@ -374,8 +360,7 @@ struct Entity final : public ALiteral {
     return "literal entity[" + name->debug_str() + "]";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Iterator final : public ALiteral {
@@ -386,8 +371,7 @@ struct Iterator final : public ALiteral {
     return "literal iterator";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 } // namespace literal

@@ -56,6 +56,7 @@ struct Parser_Context {
   std::shared_ptr<ast::Node>                     current_other;
 
   bool in_extern = false;
+  bool in_export = false;
 
   // debug purpose on error
   void                      attempt_recovery();

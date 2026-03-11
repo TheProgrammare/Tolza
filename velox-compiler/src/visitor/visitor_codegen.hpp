@@ -1,7 +1,13 @@
 
 #pragma once
 
+#include <llvm-19/llvm/IR/DerivedTypes.h>
+#include <llvm-19/llvm/IR/Function.h>
+#include <llvm-19/llvm/IR/GlobalVariable.h>
+#include <llvm-19/llvm/IR/Type.h>
+#include <llvm-19/llvm/IR/Value.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "ast/ast_forward.hpp"
@@ -21,6 +27,8 @@ struct Visitor_Codegen {
   llvm::Module      mod;
   llvm::IRBuilder<> builder;
 
+  std::unordered_map<std::string, llvm::Value*> locals;
+
   ScriptInfo& scr_info;
 
   mutable std::vector<std::string> errors;
@@ -31,11 +39,10 @@ struct Visitor_Codegen {
   void error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second, const std::string& msg,
                        const std::string& hint) const;
 
-
   // ============ AST ============
   llvm::Value* visit(ast::Node& n);
 
-  llvm::Value* visit(ast::AType& n);
+  llvm::Type*  visit(ast::AType& n);
   llvm::Value* visit(ast::ALiteral& n);
   llvm::Value* visit(ast::ADeclaration& n);
   llvm::Value* visit(ast::ALocal& n);
@@ -43,34 +50,34 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::AIdentifier& n);
   llvm::Value* visit(ast::Expr_ID& n);
   llvm::Value* visit(ast::Expr_ID_Qualified& n);
-  llvm::Value* visit(ast::Expr_ID_Type& n);
+  llvm::Type*  visit(ast::Expr_ID_Type& n);
 
-  llvm::Value* visit(ast::Root& n);
+  void visit(ast::Root& n); // statements / decls
 
   // ============ DECLARATION ============
-  llvm::Value* visit(ast::declaration::Global& n);
-  llvm::Value* visit(ast::declaration::Function& n);
+  llvm::GlobalVariable* visit(ast::declaration::Global& n);
+  llvm::Function*       visit(ast::declaration::Function& n);
 
-  llvm::Value* visit(ast::declaration::Mod& n);
-  llvm::Value* visit(ast::declaration::Export& n);
+  void         visit(ast::declaration::Mod& n);
+  void         visit(ast::declaration::Export& n);
   llvm::Value* visit(ast::declaration::Extern& n);
 
-  llvm::Value* visit(ast::declaration::Enum& n);
+  void         visit(ast::declaration::Enum& n);
   llvm::Value* visit(ast::declaration::Enum_Element& n);
 
-  llvm::Value* visit(ast::declaration::Flag& n);
+  void visit(ast::declaration::Flag& n);
 
-  llvm::Value* visit(ast::declaration::Mod_Alias& n);
-  llvm::Value* visit(ast::declaration::Type_Alias& n);
+  void        visit(ast::declaration::Mod_Alias& n);
+  llvm::Type* visit(ast::declaration::Type_Alias& n);
 
-  llvm::Value* visit(ast::declaration::Generic& n);
+  void visit(ast::declaration::Generic& n);
 
   // ============ LOCAL ============
-  llvm::Value* visit(ast::declaration::local::CodeBlock& n);
+  void visit(ast::declaration::local::CodeBlock& n);
 
-  llvm::Value* visit(ast::declaration::local::Lambda& n);
-  llvm::Value* visit(ast::declaration::local::Lambda_Capture& n);
-  llvm::Value* visit(ast::declaration::local::Capture_Member& n);
+  llvm::Function* visit(ast::declaration::local::Lambda& n);
+  llvm::Value*    visit(ast::declaration::local::Lambda_Capture& n);
+  llvm::Value*    visit(ast::declaration::local::Capture_Member& n);
 
   llvm::Value* visit(ast::declaration::local::Parameter& n);
   llvm::Value* visit(ast::declaration::local::Generic_Parameter_Element& n);
@@ -82,9 +89,9 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::declaration::local::Pattern_Entity& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Component& n);
 
-  llvm::Value* visit(ast::declaration::local::Variable_Binding& n);
-  llvm::Value* visit(ast::declaration::local::Variable_Unpack& n);
-  llvm::Value* visit(ast::declaration::local::Variable& n);
+  llvm::Value*      visit(ast::declaration::local::Variable_Binding& n);
+  void              visit(ast::declaration::local::Variable_Unpack& n);
+  llvm::AllocaInst* visit(ast::declaration::local::Variable& n);
 
   llvm::Value* visit(ast::declaration::local::Capability& n);
 
@@ -111,13 +118,13 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::generic::Compatible_System& n);
 
   // ============ TYPE ============
-  llvm::Value* visit(ast::type::Ptr& n);
-  llvm::Value* visit(ast::type::Table& n);
-  llvm::Value* visit(ast::type::Primitive& n);
-  llvm::Value* visit(ast::type::Tuple& n);
-  llvm::Value* visit(ast::type::Function_Proto& n);
+  llvm::Type*         visit(ast::type::Ptr& n);
+  llvm::Type*         visit(ast::type::Table& n);
+  llvm::Type*         visit(ast::type::Primitive& n);
+  llvm::StructType*   visit(ast::type::Tuple& n);
+  llvm::FunctionType* visit(ast::type::Function_Proto& n);
 
-  llvm::Value* visit(ast::type::Get_Expr_Type& n);
+  llvm::Type* visit(ast::type::Get_Expr_Type& n);
 
   // ============ LITERAL ============
   llvm::Value* visit(ast::literal::Boolean& n);
@@ -151,7 +158,6 @@ struct Visitor_Codegen {
 
   // ============ Expression ============
   llvm::Value* visit(ast::expression::If_Ternary& n);
-
   llvm::Value* visit(ast::expression::Member_Access& n);
 
   llvm::Value* visit(ast::expression::Self& n);
@@ -175,33 +181,32 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::expression::New_Ptr& n);
 
   // ============ STATEMENT ============
-  llvm::Value* visit(ast::statement::If& n);
+  void visit(ast::statement::If& n);
+  void visit(ast::statement::For& n);
+  void visit(ast::statement::Loop& n);
+  void visit(ast::statement::While& n);
+  void visit(ast::statement::GoTo& n);
+  void visit(ast::statement::GoTo_Label& n);
 
-  llvm::Value* visit(ast::statement::For& n);
-  llvm::Value* visit(ast::statement::Loop& n);
-  llvm::Value* visit(ast::statement::While& n);
-  llvm::Value* visit(ast::statement::GoTo& n);
-  llvm::Value* visit(ast::statement::GoTo_Label& n);
+  llvm::ReturnInst* visit(ast::statement::Return& n); // optionnel : retourne la instruction
+  llvm::BranchInst* visit(ast::statement::Break& n);
+  llvm::BranchInst* visit(ast::statement::Continue& n);
 
-  llvm::Value* visit(ast::statement::Return& n);
-  llvm::Value* visit(ast::statement::Break& n);
-  llvm::Value* visit(ast::statement::Continue& n);
-
-  llvm::Value* visit(ast::statement::Match& n);
-  llvm::Value* visit(ast::statement::Match_Case& n);
+  void visit(ast::statement::Match& n);
+  void visit(ast::statement::Match_Case& n);
 
   // ============ OPERATION ============
-  llvm::Value* visit(ast::operation::Cast_As& n);
-  llvm::Value* visit(ast::operation::Is& n);
-  llvm::Value* visit(ast::operation::In& n);
-  llvm::Value* visit(ast::operation::Assignment& n);
-  llvm::Value* visit(ast::operation::Binary& n);
-  llvm::Value* visit(ast::operation::Unary& n);
-  llvm::Value* visit(ast::operation::Interval& n);
-  llvm::Value* visit(ast::operation::Ptr_Dist& n);
+  llvm::Value*       visit(ast::operation::Cast_As& n);
+  llvm::Value*       visit(ast::operation::Is& n);
+  llvm::Value*       visit(ast::operation::In& n);
+  llvm::Instruction* visit(ast::operation::Assignment& n);
+  llvm::Value*       visit(ast::operation::Binary& n);
+  llvm::Value*       visit(ast::operation::Unary& n);
+  llvm::Value*       visit(ast::operation::Interval& n);
+  llvm::Value*       visit(ast::operation::Ptr_Dist& n);
 
   // ============ MEMORY ============
-  llvm::Value* visit(ast::memory::Del& n);
-  llvm::Value* visit(ast::memory::Align& n);
-  llvm::Value* visit(ast::memory::Drop& n);
+  llvm::CallInst* visit(ast::memory::Del& n);
+  llvm::Value*    visit(ast::memory::Align& n);
+  void            visit(ast::memory::Drop& n);
 };

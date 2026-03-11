@@ -80,9 +80,8 @@ struct Node {
   }
   [[nodiscard]] std::string         mangle_scope() const;
   [[nodiscard]] bool                is_visible_in(const std::span<const std::string>& other_scope) const;
-  [[nodiscard]] virtual std::string debug_str() const           = 0;
-  virtual void                      accept(Visitor_Base& v)     = 0;
-  virtual llvm::Value*              codegen(Visitor_Codegen& v) = 0;
+  [[nodiscard]] virtual std::string debug_str() const       = 0;
+  virtual void                      accept(Visitor_Base& v) = 0;
 };
 
 inline EPassMode get_defaultParamPassmode(ast::AType& node);
@@ -114,6 +113,8 @@ using SYM_REF       = Symbol_Data*;
 
 struct ADeclaration : virtual Node {
   std::string name;
+  bool        is_exported = false;
+  bool        is_extern   = false;
 
   SYM_REF symbol = nullptr;
 
@@ -197,8 +198,8 @@ struct Expr_ID final : virtual AIdentifier {
   {
     return name;
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
+
 
   std::span<const std::string> get_qualification_path() const override
   {
@@ -244,9 +245,9 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   std::string mangle_local_name() const override;
   std::string mangle_qualified_name() const override;
 
-  std::string                  debug_str() const override;
-  void                         accept(Visitor_Base& v) override;
-  llvm::Value*                 codegen(Visitor_Codegen& v) override;
+  std::string debug_str() const override;
+  void        accept(Visitor_Base& v) override;
+
   std::span<const std::string> get_qualification_path() const override
   {
     return path;
@@ -299,8 +300,7 @@ struct Expr_ID_Type final : public AIdentifier, AType {
 
   std ::string debug_str() const override;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Root final : public Node {
@@ -310,8 +310,7 @@ struct Root final : public Node {
   {
     return "root";
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 } // namespace ast

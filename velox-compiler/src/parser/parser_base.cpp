@@ -172,10 +172,10 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 
   ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
-  ctx->m_sym->in_export = true;
+  ctx->in_export = true;
 
   if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
-    ctx->m_sym->in_export = false;
+    ctx->in_export = false;
     return exp_node;
   }
 
@@ -191,7 +191,7 @@ std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
   }
 
 
-  ctx->m_sym->in_export = false;
+  ctx->in_export = false;
 
   return exp_node;
 }

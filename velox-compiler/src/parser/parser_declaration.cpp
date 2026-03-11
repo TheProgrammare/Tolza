@@ -155,7 +155,7 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   var->kind = kind;
   var->name = ctx.parse_name("", hint);
 
-  var->isExtern = ctx.in_extern;
+  var->is_extern = ctx.in_extern;
 
   ctx.m_sym->add_decl(var);
 
@@ -164,7 +164,7 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   }
 
   // type definition no expression
-  if (var->isExtern) {
+  if (var->is_extern) {
     ctx.tok_v.expect(67, TokTy::COLON, "Expected type definition for an global variable marked external.", hint);
     var->type = ctx.p_type->parse_type();
     ctx.tok_v.match(TokTy::SEMICOLON);
@@ -216,7 +216,8 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   fn->isConst = ctx.metablock_contains(*fn, "const");
   fn->isPure  = ctx.metablock_contains(*fn, "pure");
 
-  fn->isExtern = ctx.in_extern;
+  fn->is_extern   = ctx.in_extern;
+  fn->is_exported = ctx.in_export;
   if (auto pattern = ctx.get_instruct(*fn, {"extern", "<*>"})) {
     fn->extern_call_convention = pattern->at_str(1, 0);
   }
@@ -228,10 +229,10 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   for (auto& param : fn->prototype->parameters) param->parent_function = fn;
 
   // if extern : no definition
-  if (fn->isExtern && ctx.tok_v.check(TokTy::OPEN_BRACE))
+  if (fn->is_extern && ctx.tok_v.check(TokTy::OPEN_BRACE))
     ctx.tok_v.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
 
-  if (!fn->isExtern) fn->codeblock = ctx.p_loc->code_block_instruction();
+  if (!fn->is_extern) fn->codeblock = ctx.p_loc->code_block_instruction();
 
   ctx.m_sym->exit_scope();
 

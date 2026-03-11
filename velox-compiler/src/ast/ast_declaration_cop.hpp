@@ -28,8 +28,7 @@ struct Component_Field final : public ADeclaration {
     return ESymbolType::Component;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Component final : public ADeclaration, AType {
@@ -55,8 +54,7 @@ struct Component final : public ADeclaration, AType {
     return false;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Role final : public ADeclaration, AType {
@@ -83,8 +81,7 @@ struct Role final : public ADeclaration, AType {
     return "rl_" + mangle_id(name);
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Entity_Op;
@@ -127,8 +124,7 @@ struct Entity final : public ADeclaration, AType {
   }
   bool compare_with(const AType& other) const override;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Entity_Cast final : public ADeclaration {
@@ -150,8 +146,7 @@ struct Entity_Cast final : public ADeclaration {
     return ESymbolType::Entity_Cast;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Entity_Op : public ADeclaration {
@@ -172,8 +167,7 @@ struct Entity_Op : public ADeclaration {
     return ESymbolType::Entity_Op;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
@@ -192,8 +186,7 @@ struct Entity_OpIndex final : public Entity_Op {
     return ESymbolType::Entity_OpIndex;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct System final : public ADeclaration, ICallable {
@@ -216,8 +209,7 @@ struct System final : public ADeclaration, ICallable {
     return ESymbolType::System;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct System_Case final : public ADeclaration {
@@ -243,8 +235,7 @@ struct System_Case final : public ADeclaration {
     return ESymbolType::System_Case;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 } // namespace cop

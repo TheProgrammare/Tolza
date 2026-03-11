@@ -17,9 +17,9 @@ struct Cast_As final : public AExpression {
 
   ECastType cast_type = ECastType::AS;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     switch (cast_type) {
     case ECastType::AS:             return "cast as";
@@ -35,9 +35,9 @@ struct Is final : public AExpression {
 
   Is();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "is";
   }
@@ -49,9 +49,9 @@ struct In final : public AExpression {
 
   In();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "in";
   }
@@ -63,9 +63,9 @@ struct Assignment final : public Node {
   std::unique_ptr<AExpression> right;
   EAssignmentType              assignmentType = EAssignmentType::Copy;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     switch (assignmentType) {
     case EAssignmentType::Copy:         return "copy=";
@@ -82,9 +82,9 @@ struct Binary final : public AExpression {
   std::unique_ptr<AExpression> right;
   EBinOpType                   op = EBinOpType::Add;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "op bin(" + EBinOpType_to_str(op) + ")";
   }
@@ -101,9 +101,9 @@ struct Unary final : public AExpression {
   // sign
   bool                         pre_operator = false;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "op unary(" + EUnaryOpType_to_str(unitaryOp) + ")";
   }
@@ -121,9 +121,9 @@ struct Interval final : public AExpression {
 
   Interval();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "interval left[" + EBinOpType_to_str(left_comparator) + "] right[" + EBinOpType_to_str(right_comparator)
            + "]";
@@ -138,9 +138,9 @@ struct Ptr_Dist final : public AExpression {
 
   Ptr_Dist();
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "ptr distance";
   }

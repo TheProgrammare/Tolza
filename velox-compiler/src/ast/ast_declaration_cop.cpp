@@ -11,83 +11,38 @@ void ast::declaration::cop::Component_Field::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Component_Field::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Component::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Component::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Role::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Role::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Entity::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Entity::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Entity_Cast::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Entity_Cast::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Entity_Op::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Entity_Op::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::Entity_OpIndex::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::Entity_OpIndex::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::System::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::System::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::declaration::cop::System_Case::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::declaration::cop::System_Case::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 bool ast::declaration::cop::System_Case::manage_entity(const Entity& entity) const
 {
   return false;

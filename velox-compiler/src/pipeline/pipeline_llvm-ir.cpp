@@ -22,7 +22,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
   size_t count = 0;
   for (auto& scr_info : scr_infos) {
     std::cout << "[llvm-ir:" << ++count << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
+    std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::endl;
 
     auto            start = std::chrono::high_resolution_clock::now();
     Visitor_Codegen codegen_visi(*scr_info);

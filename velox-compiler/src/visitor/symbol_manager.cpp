@@ -26,14 +26,10 @@ std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl(std::shared_ptr<ast::ADec
   sym->is_exported    = !get_current_export_name().empty();
   sym->type           = declaration->get_symbol_type();
   declaration->symbol = sym.get();
-
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::Global>(declaration))
-    sym->is_external = ptr->isExtern;
-  else if (auto ptr = std::dynamic_pointer_cast<ast::declaration::Function>(declaration))
-    sym->is_external = ptr->isExtern;
+  sym->is_external    = declaration->is_extern;
 
   declarations.push_back(sym);
-  if (in_export) exportations.push_back(sym);
+  if (declaration->is_exported) exportations.push_back(sym);
   return sym;
 }
 

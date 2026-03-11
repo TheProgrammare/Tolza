@@ -22,9 +22,9 @@ struct If final : public Node {
   bool                isElseNoCondition = false;
   bool                isInline          = false;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "IF";
   }
@@ -44,9 +44,9 @@ struct For final : public Node {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
   bool                                           isReverse = false;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override;
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override;
 };
 
 // loop {...}
@@ -55,9 +55,9 @@ struct Loop final : public Node {
 
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "LOOP";
   }
@@ -71,9 +71,9 @@ struct While final : public Node {
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "WHILE";
   }
@@ -87,15 +87,14 @@ struct GoTo final : public AExpression {
     return "GOTO \"" + label + "\"";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // label azerty:
 struct GoTo_Label final : public ADeclaration {
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  void accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
   {
     return "LABEL[" + name + "]";
   }
@@ -115,8 +114,7 @@ struct Return final : public Node {
     return "return";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Break final : public Node {
@@ -125,8 +123,7 @@ struct Break final : public Node {
     return "break";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Continue final : public Node {
@@ -135,8 +132,7 @@ struct Continue final : public Node {
     return "continue";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // constant/comparison => {}
@@ -151,8 +147,7 @@ struct Match_Case final : public Node {
     return "CASE";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
@@ -167,8 +162,7 @@ struct Match final : public Node {
     return "MATCH";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 } // namespace statement

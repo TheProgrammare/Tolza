@@ -33,8 +33,7 @@ struct Enum_Element final : public AType {
     return false;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Enum final : public ADeclaration, AType {
@@ -65,8 +64,7 @@ struct Enum final : public ADeclaration, AType {
     return false;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Flag final : public ADeclaration, AType {
@@ -93,8 +91,7 @@ struct Flag final : public ADeclaration, AType {
     return false;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // e.g. mod name {}
@@ -110,8 +107,7 @@ struct Mod : public ADeclaration {
     return ESymbolType::Module;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Export final : public Mod {
@@ -121,9 +117,9 @@ struct Export final : public Mod {
   {
     return "export";
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  ESymbolType  get_symbol_type() const override
+  void accept(Visitor_Base& v) override;
+
+  ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Export;
   }
@@ -139,8 +135,7 @@ struct Extern final : public Mod {
   {
     return ESymbolType::Extern;
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Function final : public ADeclaration, ICallable {
@@ -152,7 +147,6 @@ struct Function final : public ADeclaration, ICallable {
   bool                                  isConst       = false;
   bool                                  isPure        = false;
   bool                                  isCompileTime = false;
-  bool                                  isExtern      = false;
   std::string                           extern_call_convention;
 
   std::string debug_str() const override;
@@ -166,8 +160,7 @@ struct Function final : public ADeclaration, ICallable {
     return ESymbolType::Function;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Mod_Alias final : public ADeclaration {
@@ -182,8 +175,7 @@ struct Mod_Alias final : public ADeclaration {
     return ESymbolType::Mod_Alias;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Type_Alias final : public ADeclaration, AType {
@@ -206,8 +198,7 @@ struct Type_Alias final : public ADeclaration, AType {
     return type->is_same(other);
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // gen name<T, U,...> { condition }
@@ -237,8 +228,7 @@ struct Generic final : public ADeclaration, AType {
     return false;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 // let/var a: ptr'type#tableSize = expression;
@@ -248,8 +238,6 @@ struct Global final : public ADeclaration {
   std::unique_ptr<Node>  expression;                                 // affectation
   EVariableKind          kind = EVariableKind::Const;
 
-  bool isExtern = false;
-
   std::string debug_str() const override;
 
   ESymbolType get_symbol_type() const override
@@ -257,8 +245,8 @@ struct Global final : public ADeclaration {
     return ESymbolType::Global;
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
+
 
 private:
   bool type_already_checked = false;

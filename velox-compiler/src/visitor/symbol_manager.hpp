@@ -46,8 +46,6 @@ struct Symbols_Manager {
   std::vector<ScopeData>                    current_scope_path;
   std::vector<std::string>                  decl_errors;
 
-  bool in_export = false;
-
   std::string                            get_current_export_name() const;
   std::shared_ptr<Symbol_Data>           add_decl(std::shared_ptr<ast::ADeclaration> declaration);
   bool                                   is_external_symbol(const ast::AIdentifier& sym) const;

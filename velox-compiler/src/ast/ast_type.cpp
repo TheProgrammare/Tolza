@@ -11,57 +11,26 @@ void ast::type::Ptr::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Ptr::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::type::Table::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Table::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::type::Primitive::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Primitive::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::type::Tuple::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Tuple::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::type::Function_Proto::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Function_Proto::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::type::Get_Expr_Type::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::type::Get_Expr_Type::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
-
 std::string ast::type::Function_Proto::mangle_type() const
 {
   std::string out   = "fn" + std::to_string(parameters.size());

@@ -33,8 +33,7 @@ struct Ptr final : public AType {
   {
     return "type " + EPtrType_to_str(pointer_type);
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Table final : public AType {
@@ -67,8 +66,7 @@ struct Table final : public AType {
       return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size.value()) + "]";
     return "type table[" + sizeSymbol->debug_str() + "]";
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Primitive final : public AType {
@@ -95,8 +93,7 @@ struct Primitive final : public AType {
   {
     return "type " + EPrimTy_to_str(type);
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Tuple final : public AType {
@@ -125,8 +122,7 @@ struct Tuple final : public AType {
     }
     return false;
   }
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Function_Proto final : public AType {
@@ -143,8 +139,7 @@ struct Function_Proto final : public AType {
 
   std::string debug_str() const override;
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 struct Get_Expr_Type final : public AType {
@@ -163,8 +158,7 @@ struct Get_Expr_Type final : public AType {
     return "type get expression type";
   }
 
-  void         accept(Visitor_Base& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void accept(Visitor_Base& v) override;
 };
 
 } // namespace type

@@ -28,38 +28,18 @@ void ast::Expr_ID::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::Expr_ID::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::Expr_ID_Qualified::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::Expr_ID_Qualified::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::Expr_ID_Type::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::Expr_ID_Type::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 void ast::Root::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-llvm::Value* ast::Root::codegen(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
-
 std::string ast::Expr_ID_Qualified::debug_str() const
 {
   std::string outStr;
