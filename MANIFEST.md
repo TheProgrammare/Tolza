@@ -1233,10 +1233,10 @@ There is differents usage mod of entity who define the pointer type.
 Filed entity typed mode 
 | mode | syntax | behaviour |
 |-|-|-|
-| reference (default) | `use ref EntityT` | non nullable, same lifetime |
-| optional reference | `use ref EntityT?` | nullable, same lifetime |
-| pointer | `use ptr EntityT` | nullable, raw pointer, independent lifetime |
-| pointer | `use sptr EntityT` | nullable, reference counted, lifetime shared |
+| reference (default) | `ref name: EntityT` | non nullable, same lifetime |
+| optional reference | `ref name: EntityT?` | nullable, same lifetime |
+| pointer | `ptr name: EntityT` | nullable, raw pointer, independent lifetime |
+| pointer | `sptr name: EntityT` | nullable, reference counted, lifetime shared |
 
 ## Role
 > Use `role` to declare a role
