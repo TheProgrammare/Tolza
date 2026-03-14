@@ -59,17 +59,17 @@ This project uses the following open-source libraries:
 | integral       | `isize` `i8`-`i128` | `0 ` `-1` `10isize`         | 8-128 bits |
 | unsigned       | `usize` `u8`-`u128` | `0 ` `10usize`              | 8-128 bits |
 | floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
-| decimal        | `deci`           | `0.0` `-1.0` `10d` default | numbers*8  bit |
-| udecimal       | `udeci`           | `10ud`                       | numbers*8  bit |
+| decimal        | `deci`           | `0.0` `-1.0` `10d` default | 128 bits : 0-96 bits value + sign MSB, 96-103 bits scale, 103-128 padding |
+| udecimal       | `udeci`           | `10ud`                       | 128 bits : 0-96 bits value, 96-103 bits scale, 103-128 padding |
 | decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
-| no type        | `u0`, `void`   |  | 
+| no type        | `u0`   |  | 
 | ascii          | `ascii`          | `"a"ascii`                   | 8 bits (latin1) |
 | utf32      | `utf32`           | `"⚜"utf32` `"⚜"` default         | 32 bits  |                   
 | string         | `str`            | `"hello"s`                   | ascii*len + 2*bsize (fat pointer) bit (latin1) |
 | text | `text`           | `"hello"t` `"world"` default | utf32*len + 2*bsize (fat pointer) bit (utf32) |
-| opaque ptr     | `ptr'void`           | `...`                      | bsize bit      |
+| opaque ptr     | `ptr'u0`           | `...`                      | bsize bit      |
 | unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
-| shared ptr     | `sptr'void`           | `sptr'i32`                      | bsize bit      |
+| shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
 | function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
 | static table   | `[T; N]`       | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | N*size + bisize (pointer) |
 | static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | N*size + bisize (pointer) |
@@ -452,7 +452,7 @@ There is two types of management of memory:
 # Memory Managment: Pointers
 | name | syntax | info |
 |-|-|-|
-| non typed memory address | `ptr'void` | useful for C interop (`void*`) |
+| non typed memory address | `ptr'u0` | useful for C interop (`void*`) |
 | raw pointer | `ptr'T` | if no escape in the scope, will delete |
 | unique pointer | `uptr'T` | only `move=` to change his position and invalidate his last position |
 | shared pointer | `sptr'T` | only `=` to add his reference to the new position and increment his counter |
@@ -1268,7 +1268,7 @@ entity name<gen_args> {...}
 | cast | `cast self as T { ... }` | cast entity to antoher type, reserved key `self` and `other` used, permit to use `my_var as T` | `const` | `T` |
 | cast | `cast T as self { ... }` | cast entity from another type, reserved key `self` and `other` used, permit to use `my_val as Type(my_entity)` | `const` | `self` |
 | constructor | `new(params) { ... }` | overloading possible, must returns the same entity type | `const` | `self` | 
-| output | `output(ref output_mode: io::output::mode, args: io::arguments...) { ... }` | overloading output I/O operation | `const` | `void` |
+| output | `output(ref output_mode: io::output::mode, args: io::arguments...) { ... }` | overloading output I/O operation | `const` | `u0` |
 | open | `open(ref path: str, args: io::argument...) { ... }` | overloading open I/O operation |  | `self` |
 | close | `close { ... }` | overloading close I/O operation |  | `self` |
 | read | `read(ref read_mode: io::argument, args: io::argument...) -> T { ... }` | overloading read I/O operation |  | `T` |
@@ -1577,7 +1577,7 @@ bindgen script:
 export C {
 
 # extern 
-fn printf(_Format: str, args: addr...) -> void;
+fn printf(_Format: str, args: addr...) -> u0;
 
 }
 ```
