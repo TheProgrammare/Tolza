@@ -1224,19 +1224,19 @@ Avoid any type abiguity
 A component used in function parameter is a guarantee of the presence of the values as long as the entity have the component expected.
 
 ### Component Field entity typed
-A field is a primtive type or an entity, no nested component field are accepted. To keep the composition clean
+A field is a primtive type or an entity, no inline component/entity field are accepted. To keep the composition clean
 
-Components can't handle a nested entity for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
+Components can't handle a nested entity/component for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
 
 There is differents usage mod of entity who define the pointer type.
 
-Filed entity typed mode 
+Filed entity/component typed mode 
 | mode | syntax | behaviour |
 |-|-|-|
-| reference (default) | `ref name: EntityT` | non nullable, same lifetime |
-| optional reference | `ref name: EntityT?` | nullable, same lifetime |
-| pointer | `ptr name: EntityT` | nullable, raw pointer, independent lifetime |
-| pointer | `sptr name: EntityT` | nullable, reference counted, lifetime shared |
+| pointer | `ref name: EntityT/CompT` | non-nullable, reference, same lifetime |
+| pointer | `mut name: EntityT/CompT` | non-nullable, mutable reference, same lifetime |
+| pointer | `name: ptr'EntityT/CompT` | nullable, raw pointer, independent lifetime |
+| pointer | `name: sptr'EntityT/CompT` | nullable, reference counted, lifetime shared |
 
 ## Role
 > Use `role` to declare a role
