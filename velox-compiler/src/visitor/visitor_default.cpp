@@ -123,6 +123,11 @@ void Visitor_Default::visit(ast::declaration::Flag& n)
 {
 }
 
+void Visitor_Default::visit(ast::declaration::Union& n)
+{
+  for (auto& [name, ty] : n.fields) ty->accept(*this);
+}
+
 void Visitor_Default::visit(ast::declaration::Type_Alias& n)
 {
   n.type->accept(*this);
@@ -181,37 +186,43 @@ void Visitor_Default::visit(ast::declaration::local::Pattern& n)
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Enum& n)
 {
+  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Tuple& n)
 {
+  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Entity& n)
 {
+  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     for (auto& [_, elem2] : elem->mapping) elem2->node()->accept(*this);
   }
+}
+void Visitor_Default::visit(ast::declaration::local::Pattern_System_Component& n)
+{
   Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
+  n.name->accept(*this);
+  n.bind->accept(*this);
 }
 void Visitor_Default::visit(ast::declaration::local::Pattern_Component& n)
 {
+  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& [_, elem] : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Default::visit(static_cast<ast::declaration::local::Pattern&>(n));
 }
 
 void Visitor_Default::visit(ast::declaration::local::Variable_Binding& n)
 {
 }
-void Visitor_Default::visit(ast::declaration::local::Variable_Unpack& n)
+void Visitor_Default::visit(ast::declaration::local::Tuple_Destructuring& n)
 {
   for (auto& elem : n.elements) elem->accept(*this);
   n.right->accept(*this);
@@ -247,13 +258,20 @@ void Visitor_Default::visit(ast::declaration::cop::Role& n)
 void Visitor_Default::visit(ast::declaration::cop::Entity& n)
 {
   for (auto& elem : n.comps) elem->accept(*this);
-  for (auto& [proto, elem] : n.constructors) {
-    proto->accept(*this);
-    elem->accept(*this);
-  }
   if (n.gen_params) n.gen_params->accept(*this);
+  for (auto& elem : n.news) elem->accept(*this);
+  n.del->accept(*this);
   for (auto& elem : n.operators) elem->accept(*this);
   for (auto& elem : n.casts) elem->accept(*this);
+}
+void Visitor_Default::visit(ast::declaration::cop::Entity_New& n)
+{
+  n.prototype->accept(*this);
+  n.codeblock->accept(*this);
+}
+void Visitor_Default::visit(ast::declaration::cop::Entity_Del& n)
+{
+  n.codeblock->accept(*this);
 }
 void Visitor_Default::visit(ast::declaration::cop::Entity_Cast& n)
 {
@@ -268,6 +286,10 @@ void Visitor_Default::visit(ast::declaration::cop::Entity_OpIndex& n)
 {
   n.codeblock->accept(*this);
   n.return_type->accept(*this);
+}
+void Visitor_Default::visit(ast::declaration::cop::Entity_Transfert& n)
+{
+  n.codeblock->accept(*this);
 }
 
 void Visitor_Default::visit(ast::declaration::cop::System& n)
@@ -401,7 +423,6 @@ void Visitor_Default::visit(ast::literal::Map& n)
 void Visitor_Default::visit(ast::literal::Tuple& n)
 {
   for (auto& elem : n.values) elem->accept(*this);
-  for (auto& elem : n.tys) elem->accept(*this);
 }
 
 void Visitor_Default::visit(ast::literal::Range& n)
@@ -423,7 +444,7 @@ void Visitor_Default::visit(ast::literal::Enum& n)
 }
 
 
-void Visitor_Default::visit(ast::literal::Component& n)
+void Visitor_Default::visit(ast::literal::Structured_Data& n)
 {
   n.name->accept(*this);
   for (auto& elem : n.field_args) elem->accept(*this);

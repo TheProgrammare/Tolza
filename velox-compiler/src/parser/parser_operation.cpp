@@ -199,7 +199,7 @@ std::unique_ptr<ast::operation::Assignment> parser::Parser_Operator::assignment(
 
   auto assign            = ctx.Create_Node<ast::operation::Assignment>(assign_tok);
   assign->left           = std::move(left);
-  assign->assignmentType = TokTy_to_EAssignmentType(assign_tok.type);
+  assign->assignmentType = TokTy_to_ETransfertType(assign_tok.type);
   assign->right          = ctx.p_expr->parse_expression();
   return assign;
 }
@@ -223,8 +223,8 @@ std::unique_ptr<ast::operation::Binary> parser::Parser_Operator::Create_BinOp(st
 std::unique_ptr<ast::operation::Unary> parser::Parser_Operator::Create_UnOp(EUnaryOpType                      op,
                                                                             std::unique_ptr<ast::AExpression> base)
 {
-  auto node       = ctx.Create_Node<ast::operation::Unary>(ctx.tok_v.peek());
-  node->unitaryOp = op;
-  node->base      = std::move(base);
+  auto node      = ctx.Create_Node<ast::operation::Unary>(ctx.tok_v.peek());
+  node->unary_op = op;
+  node->base     = std::move(base);
   return node;
 }

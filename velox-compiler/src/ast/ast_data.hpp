@@ -9,9 +9,9 @@ using TokTy = ETokenType;
 enum class EUnaryOpType {
   NONE,
   // arithmetic
-  _not, // not !
-  _pos, // as positive +
-  _neg, // as negative -
+  _not,   // not !
+  _plus,  // as positive +
+  _minus, // as negative -
 };
 
 [[nodiscard]] EUnaryOpType TokTy_to_EUnaryOpType(TokTy tok);
@@ -28,6 +28,7 @@ enum class EBinOpType {
   Mod,    // modulo %mod% not signed if divided > 0
   Quo,    // quotien %quo%
   Rem,    // remain %rem% signed with dividend
+  Divrem, // quotien + remainder in one operation %divrem%
   Pow,    // power **
   Sign,   // singator +- to set sign
   Index,  // index [i]
@@ -119,7 +120,7 @@ enum class EPrimType {
   f32,
   f64,
   f128,
-  Void,
+  u0,
   deci,
   udeci,
   Enum,
@@ -137,6 +138,11 @@ enum class EPrimType {
   Iterator,
   Slice,
 };
+
+[[nodiscard]] bool EPrimType_is_signed(EPrimType type);
+[[nodiscard]] bool EPrimType_is_integral(EPrimType type);
+[[nodiscard]] bool EPrimType_is_byte(EPrimType type);
+[[nodiscard]] bool EPrimType_is_floating(EPrimType type);
 
 [[nodiscard]] std::string EPrimTy_to_str(EPrimType type);
 
@@ -162,9 +168,10 @@ enum class EVariableKind { NONE, Const, Let, Var };
 [[nodiscard]] EVariableKind TokTy_to_EVariableKind(TokTy tok);
 [[nodiscard]] std::string   EVariableKind_to_str(EVariableKind kind);
 
-enum class EAssignmentType { NONE, Copy, Clone, MoveSemantic };
+enum class ETransfertType { NONE, Copy, Clone, MoveSemantic };
 
-[[nodiscard]] EAssignmentType TokTy_to_EAssignmentType(TokTy tok);
+[[nodiscard]] ETransfertType TokTy_to_ETransfertType(TokTy tok);
+[[nodiscard]] std::string    ETransfertType_to_str(ETransfertType type);
 
 enum class ESymbolType {
   NONE,
@@ -192,6 +199,7 @@ enum class ESymbolType {
   Entity_Cast,
   Entity_New,
   Entity_Del,
+  Entity_Transfert,
   Type_Alias,
   Mod_Alias,
   Generic,
@@ -215,7 +223,9 @@ enum class EScopeType {
   Entity,
   Entity_Op,
   Entity_Cast,
+  Entity_Transfert,
   Entity_New,
+  Entity_Del,
   If,
   Else,
   Elif,

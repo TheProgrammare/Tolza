@@ -5,7 +5,9 @@
 #include "ast_literal.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+
+#include "codegen/visitor_codegen.hpp"
+
 
 void ast::declaration::cop::Component_Field::accept(Visitor_Base& v)
 {
@@ -23,6 +25,14 @@ void ast::declaration::cop::Entity::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+void ast::declaration::cop::Entity_New::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+void ast::declaration::cop::Entity_Del::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
 void ast::declaration::cop::Entity_Cast::accept(Visitor_Base& v)
 {
   v.visit(*this);
@@ -32,6 +42,10 @@ void ast::declaration::cop::Entity_Op::accept(Visitor_Base& v)
   v.visit(*this);
 }
 void ast::declaration::cop::Entity_OpIndex::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+void ast::declaration::cop::Entity_Transfert::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -52,6 +66,20 @@ bool ast::declaration::cop::System_Case::manage_component(const Component& comp)
 {
   return false;
 }
+
+std::string ast::declaration::cop::Component_Field::mangle_type() const
+{
+  return type->mangle_type();
+}
+
+bool ast::declaration::cop::Component_Field::compare_with(const AType& other) const
+{
+  if (auto ptr = dynamic_cast<const Component_Field*>(&other)) {
+    return type == ptr->type;
+  }
+  return type->compare_with(other);
+}
+
 
 bool ast::declaration::cop::Entity::contains_op(EBinOpType op, const AType* return_type) const
 {
@@ -121,6 +149,7 @@ bool ast::declaration::cop::System::manage_component(const ast::declaration::cop
   return false;
 }
 
+
 std::string ast::declaration::cop::Component::debug_str() const
 {
   std::string out;
@@ -129,5 +158,131 @@ std::string ast::declaration::cop::Component::debug_str() const
   return out;
 }
 
+std::string ast::declaration::cop::Entity_New::debug_str() const
+{
+  return "new " + prototype->debug_str();
+}
+
 
 ast::declaration::cop::Entity::~Entity() = default;
+
+
+llvm::Function* ast::declaration::cop::Entity_New::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::Entity_Del::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::Entity_Cast::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::Entity_Op::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::Entity_OpIndex::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::Entity_Transfert::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Function* ast::declaration::cop::System::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
+llvm::Type* ast::declaration::cop::Component::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::cop::Component_Field::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Type* ast::declaration::cop::Role::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Type* ast::declaration::cop::Entity::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
+llvm::Value* ast::declaration::cop::Entity_New::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::Entity_Del::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::Entity_Cast::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::Entity_Op::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::Entity_OpIndex::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::Entity_Transfert::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::cop::System::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::cop::System_Case::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+
+
+llvm::Value* ast::declaration::cop::Component::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::cop::Component_Field::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+
+llvm::Value* ast::declaration::cop::Role::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+
+llvm::Value* ast::declaration::cop::Entity::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}

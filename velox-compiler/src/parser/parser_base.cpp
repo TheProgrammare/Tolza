@@ -2,8 +2,10 @@
 #include "parser_base.hpp"
 
 #include "ast/ast_base.hpp"
+#include "ast/ast_codeblock_instruction.hpp"
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_operation.hpp"
 #include "ast/ast_memory.hpp"
@@ -240,7 +242,7 @@ ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
   - statement `if/elif/else/match/while/do-while/loop/for/goto`
   - local variable declaration `let/var/const`
   - lambda declaration `lam ...`
-  - assignation `left copy=/move=/ref=/mut= ...`
+  - assignation `left copy=/move= ...`
   - operation assignation `left +=/-=/*=//=/... ...`
   - function call `name()`
   - system call `entity_name::>system_name()`
@@ -249,6 +251,10 @@ ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
   // if elif else for ...
   if (auto statement = ctx->p_state->parse_statement(true)) {
     return ast::CodeBlock_instruction(std::move(statement));
+  } else if (ctx->tok_v.check_any({TokTy::VAR, TokTy::LET, TokTy::CONST})
+             && ctx->tok_v.peek(1).type == TokTy::OPEN_PAREN) {
+    auto tuple = ctx->p_loc->tuple_destructuring();
+    return ast::CodeBlock_instruction(std::move(tuple));
   }
   // local variable + lambda
   else if (auto local = ctx->p_loc->parse_local(true)) {

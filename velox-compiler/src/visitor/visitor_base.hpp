@@ -62,7 +62,8 @@ struct Visitor_Base {
   virtual void visit(ast::declaration::Enum& n)         = 0;
   virtual void visit(ast::declaration::Enum_Element& n) = 0;
 
-  virtual void visit(ast::declaration::Flag& n) = 0;
+  virtual void visit(ast::declaration::Flag& n)  = 0;
+  virtual void visit(ast::declaration::Union& n) = 0;
 
   virtual void visit(ast::declaration::Mod_Alias& n)  = 0;
   virtual void visit(ast::declaration::Type_Alias& n) = 0;
@@ -80,15 +81,16 @@ struct Visitor_Base {
   virtual void visit(ast::declaration::local::Generic_Parameter_Element& n) = 0;
   virtual void visit(ast::declaration::local::Generic_Parameters& n)        = 0;
 
-  virtual void visit(ast::declaration::local::Pattern& n)           = 0;
-  virtual void visit(ast::declaration::local::Pattern_Enum& n)      = 0;
-  virtual void visit(ast::declaration::local::Pattern_Tuple& n)     = 0;
-  virtual void visit(ast::declaration::local::Pattern_Entity& n)    = 0;
-  virtual void visit(ast::declaration::local::Pattern_Component& n) = 0;
+  virtual void visit(ast::declaration::local::Pattern& n)                  = 0;
+  virtual void visit(ast::declaration::local::Pattern_Enum& n)             = 0;
+  virtual void visit(ast::declaration::local::Pattern_Tuple& n)            = 0;
+  virtual void visit(ast::declaration::local::Pattern_Entity& n)           = 0;
+  virtual void visit(ast::declaration::local::Pattern_System_Component& n) = 0;
+  virtual void visit(ast::declaration::local::Pattern_Component& n)        = 0;
 
-  virtual void visit(ast::declaration::local::Variable_Binding& n) = 0;
-  virtual void visit(ast::declaration::local::Variable_Unpack& n)  = 0;
-  virtual void visit(ast::declaration::local::Variable& n)         = 0;
+  virtual void visit(ast::declaration::local::Variable_Binding& n)    = 0;
+  virtual void visit(ast::declaration::local::Tuple_Destructuring& n) = 0;
+  virtual void visit(ast::declaration::local::Variable& n)            = 0;
 
   virtual void visit(ast::declaration::local::Capability& n) = 0;
 
@@ -98,10 +100,13 @@ struct Visitor_Base {
 
   virtual void visit(ast::declaration::cop::Role& n) = 0;
 
-  virtual void visit(ast::declaration::cop::Entity& n)         = 0;
-  virtual void visit(ast::declaration::cop::Entity_Cast& n)    = 0;
-  virtual void visit(ast::declaration::cop::Entity_Op& n)      = 0;
-  virtual void visit(ast::declaration::cop::Entity_OpIndex& n) = 0;
+  virtual void visit(ast::declaration::cop::Entity& n)           = 0;
+  virtual void visit(ast::declaration::cop::Entity_New& n)       = 0;
+  virtual void visit(ast::declaration::cop::Entity_Del& n)       = 0;
+  virtual void visit(ast::declaration::cop::Entity_Cast& n)      = 0;
+  virtual void visit(ast::declaration::cop::Entity_Op& n)        = 0;
+  virtual void visit(ast::declaration::cop::Entity_OpIndex& n)   = 0;
+  virtual void visit(ast::declaration::cop::Entity_Transfert& n) = 0;
 
   virtual void visit(ast::declaration::cop::System& n)      = 0;
   virtual void visit(ast::declaration::cop::System_Case& n) = 0;
@@ -150,8 +155,8 @@ struct Visitor_Base {
 
   virtual void visit(ast::literal::Enum& n) = 0;
 
-  virtual void visit(ast::literal::Component& n) = 0;
-  virtual void visit(ast::literal::Entity& n)    = 0;
+  virtual void visit(ast::literal::Structured_Data& n) = 0;
+  virtual void visit(ast::literal::Entity& n)          = 0;
 
   // ============ Expression ============
   virtual void visit(ast::expression::If_Ternary& n) = 0;

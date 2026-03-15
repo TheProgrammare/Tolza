@@ -1,14 +1,15 @@
 #include "ast_base.hpp"
 
 #include <cstddef>
-#include <llvm-19/llvm/IR/Value.h>
+
 
 #include "error_output.hpp"
 
 #include "ast_type.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+#include "codegen/visitor_codegen.hpp"
+
 
 std::string mangle_id(const std::string& inId)
 {
@@ -36,6 +37,24 @@ void ast::Expr_ID_Type::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
+llvm::Value* ast::Expr_ID::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::Expr_ID_Qualified::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::Expr_ID_Type::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::Expr_ID_Type::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit_ty(*this);
+}
+
 void ast::Root::accept(Visitor_Base& v)
 {
   v.visit(*this);
@@ -95,6 +114,7 @@ std::string ast::Expr_ID_Qualified::mangle_qualified_name() const
   }
 }
 
+
 std::string ast::Node::mangle_scope() const
 {
   std::string out;
@@ -117,7 +137,6 @@ bool ast::Node::is_visible_in(const std::span<const std::string>& other_scope) c
 
   return true;
 }
-
 
 std::string ast::Expr_ID_Type::mangle_types() const
 {

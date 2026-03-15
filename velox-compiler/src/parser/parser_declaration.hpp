@@ -19,6 +19,8 @@ struct Parser_Declaration {
   [[nodiscard]] std::shared_ptr<ast::ADeclaration>            module();
   [[nodiscard]] std::shared_ptr<ast::declaration::Type_Alias> type_alias();
   [[nodiscard]] std::shared_ptr<ast::declaration::Enum>       enumeration();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Union>      _union();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Flag>       flag();
   [[nodiscard]] std::shared_ptr<ast::declaration::Global>     global_variable();
   [[nodiscard]] std::shared_ptr<ast::declaration::Function>   function();
   [[nodiscard]] std::shared_ptr<ast::declaration::Generic>    generic();

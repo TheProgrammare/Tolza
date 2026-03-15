@@ -25,6 +25,7 @@
 #include "ast_data.hpp"
 #include "ast_forward.hpp"
 #include "lexer/token.hpp"
+#include "codegen/llvm_forward.hpp"
 
 struct ScriptInfo;
 struct Symbol_Data;
@@ -34,16 +35,29 @@ struct Visitor_Codegen;
 
 std::string mangle_id(const std::string& inId);
 
-namespace llvm
-{
-class Value;
-}
-
 namespace ast
 {
 
-struct ICallable {
-  [[nodiscard]] virtual type::Function_Proto* get_signature() = 0;
+struct Trait_LLVM_Passage {
+  [[nodiscard]] virtual llvm::Value* codegen_pass(Visitor_Codegen& v) = 0;
+};
+
+struct Trait_LLVM_Typed {
+  llvm::Type* llvm_type = nullptr;
+
+  [[nodiscard]] virtual llvm::Type* codegen_ty(Visitor_Codegen& v) = 0;
+};
+
+struct Trait_LLVM_Callable {
+  llvm::Function* llvm_fn = nullptr;
+
+  [[nodiscard]] virtual llvm::Function* codegen(Visitor_Codegen& v) = 0;
+};
+
+struct Trait_LLVM_Value {
+  llvm::Value* llvm_value = nullptr;
+
+  [[nodiscard]] virtual llvm::Value* codegen(Visitor_Codegen& v) = 0;
 };
 
 // base of
@@ -86,14 +100,13 @@ struct Node {
 
 inline EPassMode get_defaultParamPassmode(ast::AType& node);
 
-struct AType : virtual Node {
+struct AType : virtual Node, Trait_LLVM_Typed {
   bool type_isOptional = false;
   bool type_isConst    = false;
   bool type_isVolatile = false;
 
-  [[nodiscard]] virtual std::string mangle_type() const = 0;
-
-  [[nodiscard]] virtual bool compare_with(const AType& other) const = 0;
+  [[nodiscard]] virtual std::string mangle_type() const                    = 0;
+  [[nodiscard]] virtual bool        compare_with(const AType& other) const = 0;
 
   [[nodiscard]] bool is_same(const AType& other) const
   {
@@ -111,10 +124,10 @@ struct AType : virtual Node {
 using INFERRED_TYPE = AType*;
 using SYM_REF       = Symbol_Data*;
 
-struct ADeclaration : virtual Node {
+struct ADeclaration : virtual Node, Trait_LLVM_Passage {
   std::string name;
   bool        is_exported = false;
-  bool        is_extern   = false;
+  bool        is_external = false;
 
   SYM_REF symbol = nullptr;
 
@@ -134,9 +147,12 @@ struct ALocal : ADeclaration {
   virtual ~ALocal() = default;
 };
 
-struct AExpression : virtual Node {
-  INFERRED_TYPE inferred_type = nullptr;
-  virtual ~AExpression()      = default;
+struct AExpression : virtual Node, Trait_LLVM_Value {
+  INFERRED_TYPE inferred_type    = nullptr;
+  // for struct, enum, union
+  size_t        in_type_position = 0;
+
+  virtual ~AExpression() = default;
 };
 
 // for every node who contains a value coded
@@ -174,10 +190,12 @@ struct Expr_ID final : virtual AIdentifier {
   {
   }
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string get_supposed_import_name() const override
   {
     return "";
-  };
+  }
   bool is_qualified_id() const override
   {
     return false;
@@ -228,12 +246,14 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
     return mangle_local_name() == other.mangle_local_name();
   }
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   [[nodiscard]] std::string mangle_path() const;
 
   std::string get_supposed_import_name() const override
   {
     return path.empty() ? "" : path[0];
-  };
+  }
   bool is_qualified_id() const override
   {
     return true;
@@ -251,7 +271,7 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   std::span<const std::string> get_qualification_path() const override
   {
     return path;
-  };
+  }
 };
 
 // for every node who need a type resolution
@@ -259,13 +279,15 @@ struct Expr_ID_Type final : public AIdentifier, AType {
   std::unique_ptr<AIdentifier>                         name;
   [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
 
-  [[nodiscard]] std::string mangle_types() const;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
 
+  [[nodiscard]] std::string mangle_types() const;
 
   std::string get_supposed_import_name() const override
   {
     return name->get_supposed_import_name();
-  };
+  }
   bool is_qualified_id() const override
   {
     return name->is_qualified_id();
@@ -296,7 +318,7 @@ struct Expr_ID_Type final : public AIdentifier, AType {
   std::span<const std::string> get_qualification_path() const override
   {
     return name->get_qualification_path();
-  };
+  }
 
   std ::string debug_str() const override;
 

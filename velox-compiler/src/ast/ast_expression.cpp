@@ -3,7 +3,7 @@
 #include "ast_base.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+#include "codegen/visitor_codegen.hpp"
 
 void ast::expression::If_Ternary::accept(Visitor_Base& v)
 {
@@ -73,6 +73,78 @@ void ast::expression::New_Ptr::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
+
+llvm::Value* ast::expression::If_Ternary::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Member_Access::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Self::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Other::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Call_Argument::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Call::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Call_System::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Call_Pipe::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Table_Access::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Ptr_At::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Ptr_Offset::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Ptr_Val::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Addr_Of::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Size_Of::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::GetBits::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::Move::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+llvm::Value* ast::expression::New_Ptr::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+}
+
+
 std::string ast::expression::Call::debug_str() const
 {
   std::string out = "call[" + callee->debug_str();

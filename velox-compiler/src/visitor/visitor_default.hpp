@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "ast/ast_declaration_cop.hpp"
 #include "compiler_data.hpp"
 #include "visitor_base.hpp"
 
@@ -46,6 +47,7 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::declaration::Enum_Element& n) override;
 
   void visit(ast::declaration::Flag& n) override;
+  void visit(ast::declaration::Union& n) override;
 
   void visit(ast::declaration::Mod_Alias& n) override;
   void visit(ast::declaration::Type_Alias& n) override;
@@ -67,10 +69,11 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::declaration::local::Pattern_Enum& n) override;
   void visit(ast::declaration::local::Pattern_Tuple& n) override;
   void visit(ast::declaration::local::Pattern_Entity& n) override;
+  void visit(ast::declaration::local::Pattern_System_Component& n) override;
   void visit(ast::declaration::local::Pattern_Component& n) override;
 
   void visit(ast::declaration::local::Variable_Binding& n) override;
-  void visit(ast::declaration::local::Variable_Unpack& n) override;
+  void visit(ast::declaration::local::Tuple_Destructuring& n) override;
   void visit(ast::declaration::local::Variable& n) override;
 
   void visit(ast::declaration::local::Capability& n) override;
@@ -82,9 +85,12 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::declaration::cop::Role& n) override;
 
   void visit(ast::declaration::cop::Entity& n) override;
+  void visit(ast::declaration::cop::Entity_New& n) override;
+  void visit(ast::declaration::cop::Entity_Del& n) override;
   void visit(ast::declaration::cop::Entity_Cast& n) override;
   void visit(ast::declaration::cop::Entity_Op& n) override;
   void visit(ast::declaration::cop::Entity_OpIndex& n) override;
+  void visit(ast::declaration::cop::Entity_Transfert& n) override;
 
   void visit(ast::declaration::cop::System& n) override;
   void visit(ast::declaration::cop::System_Case& n) override;
@@ -133,7 +139,7 @@ struct Visitor_Default : public Visitor_Base {
 
   void visit(ast::literal::Enum& n) override;
 
-  void visit(ast::literal::Component& n) override;
+  void visit(ast::literal::Structured_Data& n) override;
   void visit(ast::literal::Entity& n) override;
 
   // ============ Expression ============

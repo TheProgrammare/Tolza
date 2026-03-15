@@ -28,7 +28,8 @@ struct Extern; // extern "C" {...}
 struct Enum;         // enum EItem { House(str, i32), City(str), None() }
 struct Enum_Element; // EItem::House(str, i32)
 
-struct Flag; // flag Fautorisation { pr, pw, px, gr, gw, gx, or, ow, og }
+struct Flag;  // flag FAutorisation { pr, pw, px, gr, gw, gx, or, ow, og }
+struct Union; // union UCLangLegacy { a: i32, b: ffi::C::_str }
 
 struct Type_Alias; // type ull = u64
 struct Mod_Alias;  // mod Vec = core::container::Vector
@@ -49,14 +50,15 @@ struct Generic_Parameters;        // <T: Movable + Physic, U: Copyable>
 
 struct Pattern;
 struct Pattern_Element;
-struct Pattern_Enum;      // let EItem::House(name, number) = building
-struct Pattern_Tuple;     // let (a, b, c) = triple
-struct Pattern_Entity;    // let Player{ CId.name: name, CId.id: 10 } // let Player{ CId{ name: name, id: 10 } }
-struct Pattern_Component; // let CId{ name: name, id: 10 }
+struct Pattern_Enum;             // let EItem::House(name, number) = building
+struct Pattern_Tuple;            // let (a, b, c) = triple
+struct Pattern_Entity;           // let Player{ CId.name: name, CId.id: 10 } // let Player{ CId{ name: name, id: 10 } }
+struct Pattern_System_Component; // sys name() { Component1(a) + Component2(b) => { ... } ... }
+struct Pattern_Component;        // let CId{ name: name, id: 10 }
 
-struct Variable_Binding; // EItem::House(str, i32) // str and i32 are bindings
-struct Variable_Unpack;  // var (a, _, c) = triple / let (a, b) = call_pair()
-struct Variable;         // var a: T = ... / let a: T = ... / const a: T = ...
+struct Variable_Binding;    // EItem::House(str, i32) // str and i32 are bindings
+struct Tuple_Destructuring; // var (a, _, c) = triple / let (a, b) = call_pair()
+struct Variable;            // var a: T = ... / let a: T = ... / const a: T = ...
 
 struct Capability; // ref a = origin // mut a = origin
 } // namespace local
@@ -69,10 +71,13 @@ struct Component_Field; // x: f32 = 0
 
 struct Role; // role RMovable { CPosition, CPhysic }
 
-struct Entity;         // entity TPlayer { use CPosition, use CPhysic }
-struct Entity_Cast;    // cast self to TAnimal {...}
-struct Entity_Op;      // op + { self.CPosition.x += other.CPosition.y }
-struct Entity_OpIndex; // op[a] { return self.CInventory.items[a] }
+struct Entity;           // entity TPlayer { use CPosition, use CPhysic }
+struct Entity_New;       // new(params...) {...}
+struct Entity_Del;       // del {...}
+struct Entity_Cast;      // cast self to TAnimal {...}
+struct Entity_Op;        // op + { self.CPosition.x += other.CPosition.y }
+struct Entity_OpIndex;   // op[a] { return self.CInventory.items[a] }
+struct Entity_Transfert; // move {...} // copy {...} // clone {...}
 
 struct System;      // sys jump(height: f32) { A(a) + B(b) => ... other => ...}
 struct System_Case; // CPosition(pos) + CPhysic(phy) => call_fn(pos, phy)
@@ -136,9 +141,9 @@ struct Iterator;
 
 struct Enum; // EItem::House(name, number)
 
-struct Component; // CPosition{x= 10, y= 10, z= 10}
-struct Entity;    // CPlayer{CPosition.x= 10} // CPlayer{CPosition{x= 10, y= 10, z=
-                  // 10}} // CPlayer{.CPosition{10, 10, 10}}
+struct Structured_Data; // CPosition{x= 10, y= 10, z= 10}
+struct Entity;          // CPlayer{CPosition.x= 10} // CPlayer{CPosition{x= 10, y= 10, z=
+                        // 10}} // CPlayer{.CPosition{10, 10, 10}}
 } // namespace literal
   // Literal
 

@@ -1,35 +1,64 @@
 
 #pragma once
 
-#include <llvm-19/llvm/IR/DerivedTypes.h>
 #include <llvm-19/llvm/IR/Function.h>
-#include <llvm-19/llvm/IR/GlobalVariable.h>
+#include <llvm-19/llvm/IR/Instructions.h>
 #include <llvm-19/llvm/IR/Type.h>
+
 #include <llvm-19/llvm/IR/Value.h>
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
 
+#include "ast/ast_base.hpp"
 #include "ast/ast_forward.hpp"
+#include "llvm_forward.hpp"
 
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
+
 
 struct ScriptInfo;
+struct LLVM_Tools;
+struct Static_Evaluator;
 
 using ErrorCode = short;
 
 struct Visitor_Codegen {
   Visitor_Codegen(ScriptInfo& _scr_info);
 
-  llvm::LLVMContext ctx;
-  llvm::Module      mod;
-  llvm::IRBuilder<> builder;
+
+  llvm::LLVMContext& ctx;
+  llvm::Module&      mod;
+  llvm::IRBuilder<>& builder;
 
   std::unordered_map<std::string, llvm::Value*> locals;
 
-  ScriptInfo& scr_info;
+  ScriptInfo&       scr_info;
+  Static_Evaluator& eval;
+
+  LLVM_Tools& tools;
+
+  llvm::Function* init_func;
+
+
+  // llvm types
+  llvm::Type* const u0Ty;
+  llvm::Type* const i1Ty;
+  llvm::Type* const i8Ty;
+  llvm::Type* const i16Ty;
+  llvm::Type* const i32Ty;
+  llvm::Type* const i64Ty;
+  llvm::Type* const i128Ty;
+  llvm::Type* const iSizeTy;
+
+  llvm::Type* const f32Ty;
+  llvm::Type* const f64Ty;
+  llvm::Type* const f128Ty;
+  llvm::Type* const fSizeTy;
+
+  llvm::Type* const strTy;
+
+  void build_init_func();
 
   mutable std::vector<std::string> errors;
 
@@ -39,75 +68,82 @@ struct Visitor_Codegen {
   void error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second, const std::string& msg,
                        const std::string& hint) const;
 
+
   // ============ AST ============
-  llvm::Value* visit(ast::Node& n);
+  void visit(ast::Node& n);
 
   llvm::Type*  visit(ast::AType& n);
-  llvm::Value* visit(ast::ALiteral& n);
-  llvm::Value* visit(ast::ADeclaration& n);
-  llvm::Value* visit(ast::ALocal& n);
-  llvm::Value* visit(ast::AExpression& n);
-  llvm::Value* visit(ast::AIdentifier& n);
+  void         visit(ast::ALiteral& n);
+  void         visit(ast::ADeclaration& n);
+  void         visit(ast::ALocal& n);
+  void         visit(ast::AExpression& n);
+  void         visit(ast::AIdentifier& n);
   llvm::Value* visit(ast::Expr_ID& n);
   llvm::Value* visit(ast::Expr_ID_Qualified& n);
-  llvm::Type*  visit(ast::Expr_ID_Type& n);
+  llvm::Value* visit(ast::Expr_ID_Type& n);
+  llvm::Type*  visit_ty(ast::Expr_ID_Type& n);
 
-  void visit(ast::Root& n); // statements / decls
+  void visit(ast::Root& n);
 
   // ============ DECLARATION ============
-  llvm::GlobalVariable* visit(ast::declaration::Global& n);
-  llvm::Function*       visit(ast::declaration::Function& n);
+  llvm::Value*    visit(ast::declaration::Global& n);
+  llvm::Function* visit(ast::declaration::Function& n);
 
-  void         visit(ast::declaration::Mod& n);
-  void         visit(ast::declaration::Export& n);
-  llvm::Value* visit(ast::declaration::Extern& n);
+  void visit(ast::declaration::Mod& n);
+  void visit(ast::declaration::Export& n);
+  void visit(ast::declaration::Extern& n);
 
-  void         visit(ast::declaration::Enum& n);
-  llvm::Value* visit(ast::declaration::Enum_Element& n);
+  llvm::Type* visit(ast::declaration::Enum& n);
+  llvm::Type* visit(ast::declaration::Enum_Element& n);
 
-  void visit(ast::declaration::Flag& n);
+  llvm::Type* visit(ast::declaration::Flag& n);
+  llvm::Type* visit(ast::declaration::Union& n);
 
   void        visit(ast::declaration::Mod_Alias& n);
   llvm::Type* visit(ast::declaration::Type_Alias& n);
 
-  void visit(ast::declaration::Generic& n);
+  llvm::Type* visit(ast::declaration::Generic& n);
 
   // ============ LOCAL ============
   void visit(ast::declaration::local::CodeBlock& n);
 
   llvm::Function* visit(ast::declaration::local::Lambda& n);
-  llvm::Value*    visit(ast::declaration::local::Lambda_Capture& n);
-  llvm::Value*    visit(ast::declaration::local::Capture_Member& n);
+  void            visit(ast::declaration::local::Lambda_Capture& n);
+  void            visit(ast::declaration::local::Capture_Member& n);
 
-  llvm::Value* visit(ast::declaration::local::Parameter& n);
-  llvm::Value* visit(ast::declaration::local::Generic_Parameter_Element& n);
-  llvm::Value* visit(ast::declaration::local::Generic_Parameters& n);
+  void visit(ast::declaration::local::Parameter& n);
+  void visit(ast::declaration::local::Generic_Parameter_Element& n);
+  void visit(ast::declaration::local::Generic_Parameters& n);
 
   llvm::Value* visit(ast::declaration::local::Pattern& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Enum& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Tuple& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Entity& n);
+  llvm::Value* visit(ast::declaration::local::Pattern_System_Component& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Component& n);
 
-  llvm::Value*      visit(ast::declaration::local::Variable_Binding& n);
-  void              visit(ast::declaration::local::Variable_Unpack& n);
-  llvm::AllocaInst* visit(ast::declaration::local::Variable& n);
+  llvm::Value* visit(ast::declaration::local::Variable_Binding& n);
+  void         visit(ast::declaration::local::Tuple_Destructuring& n);
+  llvm::Value* visit(ast::declaration::local::Variable& n);
 
   llvm::Value* visit(ast::declaration::local::Capability& n);
 
   // ============ COP ============
-  llvm::Value* visit(ast::declaration::cop::Component& n);
-  llvm::Value* visit(ast::declaration::cop::Component_Field& n);
+  llvm::Type* visit(ast::declaration::cop::Component& n);
+  llvm::Type* visit(ast::declaration::cop::Component_Field& n);
 
-  llvm::Value* visit(ast::declaration::cop::Role& n);
+  llvm::Type* visit(ast::declaration::cop::Role& n);
 
-  llvm::Value* visit(ast::declaration::cop::Entity& n);
-  llvm::Value* visit(ast::declaration::cop::Entity_Cast& n);
-  llvm::Value* visit(ast::declaration::cop::Entity_Op& n);
-  llvm::Value* visit(ast::declaration::cop::Entity_OpIndex& n);
+  llvm::Type*     visit(ast::declaration::cop::Entity& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_New& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_Del& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_Cast& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_Op& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_OpIndex& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_Transfert& n);
 
-  llvm::Value* visit(ast::declaration::cop::System& n);
-  llvm::Value* visit(ast::declaration::cop::System_Case& n);
+  llvm::Function* visit(ast::declaration::cop::System& n);
+  void            visit(ast::declaration::cop::System_Case& n);
 
   // ============ GENERIC ============
   llvm::Value* visit(ast::generic::Is_Type& n);
@@ -118,11 +154,11 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::generic::Compatible_System& n);
 
   // ============ TYPE ============
-  llvm::Type*         visit(ast::type::Ptr& n);
-  llvm::Type*         visit(ast::type::Table& n);
-  llvm::Type*         visit(ast::type::Primitive& n);
-  llvm::StructType*   visit(ast::type::Tuple& n);
-  llvm::FunctionType* visit(ast::type::Function_Proto& n);
+  llvm::Type* visit(ast::type::Ptr& n);
+  llvm::Type* visit(ast::type::Table& n);
+  llvm::Type* visit(ast::type::Primitive& n);
+  llvm::Type* visit(ast::type::Tuple& n);
+  llvm::Type* visit(ast::type::Function_Proto& n);
 
   llvm::Type* visit(ast::type::Get_Expr_Type& n);
 
@@ -153,11 +189,12 @@ struct Visitor_Codegen {
 
   llvm::Value* visit(ast::literal::Enum& n);
 
-  llvm::Value* visit(ast::literal::Component& n);
+  llvm::Value* visit(ast::literal::Structured_Data& n);
   llvm::Value* visit(ast::literal::Entity& n);
 
   // ============ Expression ============
   llvm::Value* visit(ast::expression::If_Ternary& n);
+
   llvm::Value* visit(ast::expression::Member_Access& n);
 
   llvm::Value* visit(ast::expression::Self& n);
@@ -182,13 +219,14 @@ struct Visitor_Codegen {
 
   // ============ STATEMENT ============
   void visit(ast::statement::If& n);
-  void visit(ast::statement::For& n);
-  void visit(ast::statement::Loop& n);
-  void visit(ast::statement::While& n);
-  void visit(ast::statement::GoTo& n);
-  void visit(ast::statement::GoTo_Label& n);
 
-  llvm::ReturnInst* visit(ast::statement::Return& n); // optionnel : retourne la instruction
+  void         visit(ast::statement::For& n);
+  void         visit(ast::statement::Loop& n);
+  void         visit(ast::statement::While& n);
+  llvm::Value* visit(ast::statement::GoTo& n);
+  void         visit(ast::statement::GoTo_Label& n);
+
+  llvm::ReturnInst* visit(ast::statement::Return& n);
   llvm::BranchInst* visit(ast::statement::Break& n);
   llvm::BranchInst* visit(ast::statement::Continue& n);
 
@@ -196,17 +234,17 @@ struct Visitor_Codegen {
   void visit(ast::statement::Match_Case& n);
 
   // ============ OPERATION ============
-  llvm::Value*       visit(ast::operation::Cast_As& n);
-  llvm::Value*       visit(ast::operation::Is& n);
-  llvm::Value*       visit(ast::operation::In& n);
-  llvm::Instruction* visit(ast::operation::Assignment& n);
-  llvm::Value*       visit(ast::operation::Binary& n);
-  llvm::Value*       visit(ast::operation::Unary& n);
-  llvm::Value*       visit(ast::operation::Interval& n);
-  llvm::Value*       visit(ast::operation::Ptr_Dist& n);
+  llvm::Value* visit(ast::operation::Cast_As& n);
+  llvm::Value* visit(ast::operation::Is& n);
+  llvm::Value* visit(ast::operation::In& n);
+  llvm::Value* visit(ast::operation::Assignment& n);
+  llvm::Value* visit(ast::operation::Binary& n);
+  llvm::Value* visit(ast::operation::Unary& n);
+  llvm::Value* visit(ast::operation::Interval& n);
+  llvm::Value* visit(ast::operation::Ptr_Dist& n);
 
   // ============ MEMORY ============
-  llvm::CallInst* visit(ast::memory::Del& n);
-  llvm::Value*    visit(ast::memory::Align& n);
-  void            visit(ast::memory::Drop& n);
+  void visit(ast::memory::Del& n);
+  void visit(ast::memory::Align& n);
+  void visit(ast::memory::Drop& n);
 };

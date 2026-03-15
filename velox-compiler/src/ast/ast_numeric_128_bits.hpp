@@ -1,8 +1,9 @@
 #pragma once
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallVector.h"
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
 
 class Float128 final
 {
@@ -11,6 +12,21 @@ public:
 
   Float128()
     : val(llvm::APFloatBase::IEEEquad(), llvm::StringRef("0.0"))
+  {
+  }
+
+  Float128(const llvm::APFloat& value)
+    : val(value)
+  {
+  }
+
+  Float128(double value)
+    : val(value)
+  {
+  }
+
+  Float128(const std::string& s)
+    : val(llvm::APFloatBase::IEEEquad(), llvm::StringRef(s))
   {
   }
 
@@ -36,6 +52,21 @@ public:
 
   Int128()
     : val(128, 0, true)
+  {
+  }
+
+  Int128(const llvm::APInt& value)
+    : val(value)
+  {
+  }
+
+  explicit Int128(long long value)
+    : val(128, value)
+  {
+  }
+
+  explicit Int128(const std::string& s, uint8_t radix = 10)
+    : val(128, llvm::StringRef(s), radix)
   {
   }
 

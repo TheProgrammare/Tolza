@@ -1,7 +1,6 @@
 #include "ast_memory.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
 
 
 void ast::memory::Del::accept(Visitor_Base& v)

@@ -133,7 +133,7 @@ EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
   if (dynamic_cast<const ast::literal::Enum*>(&n)) return EExtern_Kind::Enum;
   if (dynamic_cast<const ast::expression::Call*>(&n)) return EExtern_Kind::Function;
   if (dynamic_cast<const ast::expression::Call_Pipe*>(&n)) return EExtern_Kind::Function;
-  if (dynamic_cast<const ast::literal::Component*>(&n)) return EExtern_Kind::Component;
+  if (dynamic_cast<const ast::literal::Structured_Data*>(&n)) return EExtern_Kind::Component;
   if (dynamic_cast<const ast::literal::Entity*>(&n)) return EExtern_Kind::Entity;
   if (dynamic_cast<const ast::Expr_ID*>(&n)) return EExtern_Kind::Global;
   if (dynamic_cast<const ast::Expr_ID_Qualified*>(&n)) return EExtern_Kind::Global;

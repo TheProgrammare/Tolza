@@ -31,7 +31,7 @@ private:
 
 public:
   [[nodiscard]] std::unique_ptr<ast::literal::Entity>           literal_entity(std::unique_ptr<ast::AIdentifier> id);
-  [[nodiscard]] std::unique_ptr<ast::literal::Component>        literal_component(std::unique_ptr<ast::AIdentifier> id);
+  [[nodiscard]] std::unique_ptr<ast::literal::Structured_Data>  literal_component(std::unique_ptr<ast::AIdentifier> id);
   [[nodiscard]] std::unique_ptr<ast::expression::Call_Argument> literal_field();
 
 

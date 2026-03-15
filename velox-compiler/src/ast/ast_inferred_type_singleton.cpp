@@ -167,7 +167,7 @@ ast::AType* ast::type::get_udeci_type()
 // other types
 ast::AType* ast::type::get_void_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::Void);
+  static ast::AType* prim = new Primitive(EPrimType::u0);
   return prim;
 }
 

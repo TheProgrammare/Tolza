@@ -26,7 +26,7 @@ std::shared_ptr<Symbol_Data> Symbols_Manager::add_decl(std::shared_ptr<ast::ADec
   sym->is_exported    = !get_current_export_name().empty();
   sym->type           = declaration->get_symbol_type();
   declaration->symbol = sym.get();
-  sym->is_external    = declaration->is_extern;
+  sym->is_external    = declaration->is_external;
 
   declarations.push_back(sym);
   if (declaration->is_exported) exportations.push_back(sym);

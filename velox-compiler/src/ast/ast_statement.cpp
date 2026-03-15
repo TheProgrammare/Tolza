@@ -3,7 +3,8 @@
 #include "ast_declaration_local.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+
+#include "codegen/visitor_codegen.hpp"
 
 
 void ast::statement::If::accept(Visitor_Base& v)
@@ -59,6 +60,17 @@ std::string ast::statement::For::debug_str() const
   }
 
   return "FOR[" + str_index + str_items + "]";
+}
+
+
+llvm::Value* ast::statement::GoTo::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::statement::GoTo_Label::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
 }
 
 

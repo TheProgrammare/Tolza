@@ -1,5 +1,6 @@
 #pragma once
 
+#include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 
 #include "ast_base.hpp"
@@ -87,12 +88,14 @@ struct GoTo final : public AExpression {
     return "GOTO \"" + label + "\"";
   }
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 };
 
 // label azerty:
 struct GoTo_Label final : public ADeclaration {
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {

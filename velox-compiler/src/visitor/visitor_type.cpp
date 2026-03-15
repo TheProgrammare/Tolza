@@ -2,6 +2,8 @@
 #include "visitor_type.hpp"
 
 #include <cstddef>
+#include <iostream>
+#include <memory>
 
 #include "visitor_default.hpp"
 #include "symbol_manager.hpp"
@@ -43,7 +45,9 @@ ast::AType* Visitor_Type::get_inferred_type(ast::Node& node) const
     return ptr->type.get();
   else if (auto ptr = dynamic_cast<ast::declaration::cop::Component_Field*>(&node))
     return ptr->type.get();
-  else {
+  else if (auto ptr = dynamic_cast<ast::declaration::Type_Alias*>(&node)) {
+    return ptr->type.get();
+  } else {
     error_add(168, node, "Type inferrance impossible on [" + node.debug_str() + "](" + typeid(node).name() + ")", "");
     return nullptr;
   }
@@ -60,7 +64,11 @@ ast::AType* Visitor_Type::get_symbol_type(const ast::Node& n, const ast::SYM_REF
     return nullptr;
   }
 
-  return get_inferred_type(*sym_data->symbol.get());
+  if (auto ty = get_inferred_type(*sym_data->symbol.get())) {
+    return ty;
+  } else {
+    error_add(187, *sym_data->symbol, "Impossible to infer symbol type", "");
+  }
 }
 
 bool Visitor_Type::is_same_type(const ast::AType& p_type_1, const ast::AType& p_type_2) const
@@ -72,19 +80,32 @@ void Visitor_Type::visit(ast::Expr_ID& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = get_symbol_type(n, n.symbol);
+  if (auto ty = get_symbol_type(n, n.symbol)) {
+    n.inferred_type = ty;
+  } else {
+    error_add(185, *n.symbol->symbol, "Symbol inferred type not found", "");
+  }
 }
 void Visitor_Type::visit(ast::Expr_ID_Qualified& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = get_symbol_type(n, n.symbol);
+  if (auto ty = get_symbol_type(n, n.symbol)) {
+    n.inferred_type = ty;
+  } else {
+    error_add(186, *n.symbol->symbol, "Symbol inferred type not found", "");
+  }
 }
 void Visitor_Type::visit(ast::Expr_ID_Type& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = get_symbol_type(n, n.symbol);
+  if (auto ty = get_symbol_type(n, n.symbol)) {
+    n.inferred_type       = ty;
+    n.name->inferred_type = ty;
+  } else {
+    error_add(187, *n.symbol->symbol, "Symbol inferred type not found", "");
+  }
 }
 
 // expression inferred type;
@@ -182,6 +203,39 @@ void Visitor_Type::visit(ast::declaration::local::Pattern_Component& n)
   }
 }
 
+
+void Visitor_Type::visit(ast::declaration::Global& n)
+{
+  if (!n.type) {
+    if (auto ty = get_inferred_type(*n.expression)) {
+      n.type = std::unique_ptr<ast::AType>(ty);
+    } else {
+      error_add(188, *n.expression, "Impossible to infer symbol type", "");
+    }
+  }
+}
+
+void Visitor_Type::visit(ast::declaration::local::Variable& n)
+{
+  if (!n.type) {
+    if (auto ty = get_inferred_type(*n.expression)) {
+      n.type = std::unique_ptr<ast::AType>(ty);
+    } else {
+      error_add(189, *n.expression, "Impossible to infer symbol type", "");
+    }
+  }
+}
+void Visitor_Type::visit(ast::declaration::local::Variable_Binding& n)
+{
+  if (!n.type) {
+    if (auto ty = get_inferred_type(*n.parent_pattern->right)) {
+      n.type = ty;
+    } else {
+      error_add(190, *n.parent_pattern->right, "Impossible to infer symbol type", "");
+    }
+  }
+}
+
 void Visitor_Type::visit(ast::expression::If_Ternary& n)
 {
   Visitor_Default::visit(n);
@@ -212,13 +266,31 @@ void Visitor_Type::visit(ast::expression::Call& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = get_inferred_type(*n.callee);
+  if (auto ty = get_inferred_type(*n.callee)) {
+    n.inferred_type = ty;
+  } else {
+    error_add(191, *n.callee, "Impossible to infer symbol type", "");
+  }
 }
 void Visitor_Type::visit(ast::expression::Call_Pipe& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = get_inferred_type(*n.callee);
+  if (auto ty = get_inferred_type(*n.callee)) {
+    n.inferred_type = ty;
+  } else {
+    error_add(192, *n.callee, "Impossible to infer symbol type", "");
+  }
+}
+void Visitor_Type::visit(ast::expression::Call_System& n)
+{
+  Visitor_Default::visit(n);
+
+  if (auto ty = get_inferred_type(*n.callee)) {
+    n.inferred_type = ty;
+  } else {
+    error_add(192, *n.callee, "Impossible to infer symbol type", "");
+  }
 }
 void Visitor_Type::visit(ast::expression::Table_Access& n)
 {
@@ -283,7 +355,7 @@ void Visitor_Type::visit(ast::literal::Range& n)
 {
   Visitor_Default::visit(n);
 }
-void Visitor_Type::visit(ast::literal::Component& n)
+void Visitor_Type::visit(ast::literal::Structured_Data& n)
 {
   Visitor_Default::visit(n);
 }

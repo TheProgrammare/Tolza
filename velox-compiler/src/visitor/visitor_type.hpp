@@ -2,7 +2,8 @@
 
 #include <memory>
 
-#include "ast/ast_base.hpp"
+#include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "ast/ast_forward.hpp"
 #include "visitor_default.hpp"
 
@@ -37,6 +38,11 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::declaration::local::Pattern_Entity& n) override;
   void visit(ast::declaration::local::Pattern_Component& n) override;
 
+  void visit(ast::declaration::Global& n) override;
+
+  void visit(ast::declaration::local::Variable& n) override;
+  void visit(ast::declaration::local::Variable_Binding& n) override;
+
 
   void visit(ast::expression::If_Ternary& n) override;
   void visit(ast::expression::Member_Access& n) override;
@@ -45,6 +51,7 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::expression::Call_Argument& n) override;
   void visit(ast::expression::Call& n) override;
   void visit(ast::expression::Call_Pipe& n) override;
+  void visit(ast::expression::Call_System& n) override;
   void visit(ast::expression::Table_Access& n) override;
   void visit(ast::expression::Ptr_At& n) override;
   void visit(ast::expression::Ptr_Offset& n) override;
@@ -61,7 +68,7 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::literal::Enum& n) override;
   void visit(ast::literal::Tuple& n) override;
   void visit(ast::literal::Range& n) override;
-  void visit(ast::literal::Component& n) override;
+  void visit(ast::literal::Structured_Data& n) override;
   void visit(ast::literal::Entity& n) override;
   void visit(ast::literal::Iterator& n) override;
   // exception: non typed expression

@@ -18,6 +18,8 @@ struct Ptr final : public AType {
   EPtrType               pointer_type = EPtrType::raw_ptr;
   std::unique_ptr<AType> inner;
 
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+
   std::string mangle_type() const override
   {
     return EPtrType_to_mangle(pointer_type) + inner->mangle_type();
@@ -41,6 +43,8 @@ struct Table final : public AType {
   std::unique_ptr<Node> sizeSymbol;
 
   std::unique_ptr<AType> inner;
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string mangle_type() const override
   {
@@ -70,13 +74,15 @@ struct Table final : public AType {
 };
 
 struct Primitive final : public AType {
-  EPrimType type = EPrimType::Void;
+  EPrimType type = EPrimType::u0;
 
   Primitive() = default;
   Primitive(EPrimType p_type)
     : type(p_type)
   {
   }
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string mangle_type() const override
   {
@@ -99,6 +105,8 @@ struct Primitive final : public AType {
 struct Tuple final : public AType {
   std::vector<std::shared_ptr<AType>> types;
   std::vector<std::string>            name_fields;
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string mangle_type() const override
   {
@@ -134,6 +142,8 @@ struct Function_Proto final : public AType {
 
   bool isVariadic = false;
 
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+
   std::string mangle_type() const override;
   bool        compare_with(const AType& other) const override;
 
@@ -144,6 +154,8 @@ struct Function_Proto final : public AType {
 
 struct Get_Expr_Type final : public AType {
   std::unique_ptr<AExpression> target;
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string mangle_type() const override
   {

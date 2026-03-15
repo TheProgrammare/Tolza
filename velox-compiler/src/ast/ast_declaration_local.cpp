@@ -2,16 +2,36 @@
 
 #include "ast/ast_type.hpp"
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+
+#include "codegen/visitor_codegen.hpp"
+#include <llvm-19/llvm/IR/Value.h>
+
+llvm::Value* ast::declaration::local::CodeBlock::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 
 void ast::declaration::local::CodeBlock::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
 void ast::declaration::local::Variable_Binding::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Variable_Binding::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+llvm::Value* ast::declaration::local::Variable_Binding::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
 void ast::declaration::local::Pattern_Enum::accept(Visitor_Base& v)
 {
   v.visit(*this);
@@ -24,26 +44,85 @@ void ast::declaration::local::Pattern_Entity::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+void ast::declaration::local::Pattern_System_Component::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
 void ast::declaration::local::Pattern_Component::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::declaration::local::Variable_Unpack::accept(Visitor_Base& v)
+void ast::declaration::local::Tuple_Destructuring::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
+llvm::Value* ast::declaration::local::Pattern_Enum::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Tuple::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Entity::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_System_Component::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Pattern_Component::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Tuple_Destructuring::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+
+
 void ast::declaration::local::Lambda::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Lambda::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Function* ast::declaration::local::Lambda::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 void ast::declaration::local::Variable::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Variable::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Variable::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 void ast::declaration::local::Capability::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Capability::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Capability::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 void ast::declaration::local::Capture_Member::accept(Visitor_Base& v)
 {
   v.visit(*this);
@@ -52,13 +131,28 @@ void ast::declaration::local::Lambda_Capture::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Parameter::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 void ast::declaration::local::Parameter::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::declaration::local::Generic_Parameter_Element::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 void ast::declaration::local::Generic_Parameter_Element::accept(Visitor_Base& v)
 {
   v.visit(*this);
+}
+llvm::Value* ast::declaration::local::Generic_Parameters::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
 }
 void ast::declaration::local::Generic_Parameters::accept(Visitor_Base& v)
 {
@@ -66,7 +160,7 @@ void ast::declaration::local::Generic_Parameters::accept(Visitor_Base& v)
 }
 
 
-std::string ast::declaration::local::Variable_Unpack::debug_str() const
+std::string ast::declaration::local::Tuple_Destructuring::debug_str() const
 {
   std::string out;
   out += "unpack variable ";

@@ -170,6 +170,18 @@ void Visitor_Print::visit(ast::declaration::Flag& n)
   out_print += "</ul></li>\n";
 }
 
+void Visitor_Print::visit(ast::declaration::Union& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  for (auto& [name, field] : n.fields) {
+    out_print += "<li class='node'>" + name + "<ul class='children'>\n";
+    out_print += "<li class='node'>" + field->debug_str() + "<ul class='children'>\n";
+    out_print += "</ul></li>\n";
+    out_print += "</ul></li>\n";
+  }
+  out_print += "</ul></li>\n";
+}
+
 void Visitor_Print::visit(ast::declaration::Type_Alias& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
@@ -246,37 +258,44 @@ void Visitor_Print::visit(ast::declaration::local::Pattern& n)
 void Visitor_Print::visit(ast::declaration::local::Pattern_Enum& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::declaration::local::Pattern_Tuple& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::declaration::local::Pattern_Entity& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& elem : n.mapping) {
     for (auto& [_, elem2] : elem->mapping) elem2->node()->accept(*this);
   }
+  out_print += "</ul></li>\n";
+}
+void Visitor_Print::visit(ast::declaration::local::Pattern_System_Component& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
+  n.bind->accept(*this);
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::declaration::local::Pattern_Component& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   for (auto& [_, elem] : n.mapping) {
     if (auto node = elem->node()) node->accept(*this);
   }
-  Visitor_Print::visit(static_cast<ast::declaration::local::Pattern&>(n));
   out_print += "</ul></li>\n";
 }
 
@@ -285,7 +304,7 @@ void Visitor_Print::visit(ast::declaration::local::Variable_Binding& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::declaration::local::Variable_Unpack& n)
+void Visitor_Print::visit(ast::declaration::local::Tuple_Destructuring& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (auto& elem : n.elements) elem->accept(*this);
@@ -330,13 +349,21 @@ void Visitor_Print::visit(ast::declaration::cop::Entity& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (auto& elem : n.comps) elem->accept(*this);
-  for (auto& [proto, elem] : n.constructors) {
-    proto->accept(*this);
-    elem->accept(*this);
-  }
   if (n.gen_params) n.gen_params->accept(*this);
   for (auto& elem : n.operators) elem->accept(*this);
   for (auto& elem : n.casts) elem->accept(*this);
+  out_print += "</ul></li>\n";
+}
+void Visitor_Print::visit(ast::declaration::cop::Entity_New& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  n.codeblock->accept(*this);
+  out_print += "</ul></li>\n";
+}
+void Visitor_Print::visit(ast::declaration::cop::Entity_Del& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  n.codeblock->accept(*this);
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::declaration::cop::Entity_Cast& n)
@@ -357,6 +384,12 @@ void Visitor_Print::visit(ast::declaration::cop::Entity_OpIndex& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   n.codeblock->accept(*this);
   n.return_type->accept(*this);
+  out_print += "</ul></li>\n";
+}
+void Visitor_Print::visit(ast::declaration::cop::Entity_Transfert& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  n.codeblock->accept(*this);
   out_print += "</ul></li>\n";
 }
 
@@ -548,7 +581,6 @@ void Visitor_Print::visit(ast::literal::Tuple& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (auto& elem : n.values) elem->accept(*this);
-  for (auto& elem : n.tys) elem->accept(*this);
   out_print += "</ul></li>\n";
 }
 
@@ -576,7 +608,7 @@ void Visitor_Print::visit(ast::literal::Enum& n)
   out_print += "</ul></li>\n";
 }
 
-void Visitor_Print::visit(ast::literal::Component& n)
+void Visitor_Print::visit(ast::literal::Structured_Data& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   n.name->accept(*this);

@@ -4,8 +4,9 @@
 
 #include "ast_declaration_local.hpp"
 
+#include "codegen/visitor_codegen.hpp"
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+
 
 void ast::type::Ptr::accept(Visitor_Base& v)
 {
@@ -31,6 +32,33 @@ void ast::type::Get_Expr_Type::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
+llvm::Type* ast::type::Ptr::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::type::Table::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::type::Primitive::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::type::Tuple::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::type::Function_Proto::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::type::Get_Expr_Type::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
 std::string ast::type::Function_Proto::mangle_type() const
 {
   std::string out   = "fn" + std::to_string(parameters.size());

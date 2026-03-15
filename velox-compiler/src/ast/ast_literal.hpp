@@ -1,7 +1,10 @@
 #pragma once
 
-#include <memory>
 
+#include <memory>
+#include <string>
+
+#include "ast/ast_data.hpp"
 #include "ast_base.hpp"
 #include "ast_numeric_128_bits.hpp"
 
@@ -14,27 +17,34 @@ struct Boolean final : public ALiteral {
   bool val = false;
 
   Boolean();
+  Boolean(bool value);
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
-    return "literal bool(" + std::to_string(val) + ")";
+    return "bool(" + std::to_string(val) + ")";
   }
 };
 
 struct Integral final : public ALiteral {
   Int128    val;
-  EPrimType type = EPrimType::i64;
+  EPrimType type = EPrimType::iSize;
 
   Integral();
+  Integral(const Int128& value);
 
-  void accept(Visitor_Base& v) override;
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
-    return "literal " + EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
+    return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
   }
+
+  bool is_signed() const;
 };
 
 struct Decimal final : public ALiteral {
@@ -45,6 +55,7 @@ struct Decimal final : public ALiteral {
   bool is_unsigned = false;
 
   Decimal();
+  Decimal(const Int128& value, size_t _integral_num, size_t _decimal_num, bool _is_unsigned);
 
   bool operator==(const ALiteral& other) const
   {
@@ -53,10 +64,12 @@ struct Decimal final : public ALiteral {
     return false;
   }
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     if (is_unsigned) return "literal udeci(" + val.i128_to_string() + ")";
-    return "literal deci(" + val.i128_to_string() + ")";
+    return "deci(" + val.i128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -67,10 +80,13 @@ struct Floating final : public ALiteral {
   EPrimType type = EPrimType::f64;
 
   Floating();
+  Floating(const Float128& value);
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "literal " + EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
+    return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -81,10 +97,13 @@ struct ASCII final : public ALiteral {
   char val = 0x0;
 
   ASCII();
+  ASCII(char value);
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "literal ascii('" + std::to_string(val) + "')";
+    return "ascii(\"" + std::to_string(val) + "\")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -94,10 +113,13 @@ struct UTF32 final : public ALiteral {
   std::string codePoints;
 
   UTF32();
+  UTF32(std::string codePoints_value);
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "literal utf32('" + codePoints + "')";
+    return "utf32(\"" + codePoints + "\")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -109,6 +131,9 @@ struct Text final : public ALiteral {
   bool           is_ascii = false;
 
   Text();
+  Text(const std::u32string& value, bool _is_ascii);
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -182,6 +207,8 @@ struct Text_Interpolation final : public AExpression {
   std::unique_ptr<AExpression>      expression;
   std::unique_ptr<Format_Specifier> spec;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     return "text interpolation";
@@ -212,6 +239,8 @@ struct Textual_Element final {
 struct Textual_Format final : public ALiteral {
   std::vector<Textual_Element> values;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override;
 
   void accept(Visitor_Base& v) override;
@@ -225,6 +254,8 @@ struct Table_Population final : public ALiteral {
   // can be a ex nihilo node (for primitive types)
   INFERRED_TYPE element_definition;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     return "table population";
@@ -233,7 +264,7 @@ struct Table_Population final : public ALiteral {
   void accept(Visitor_Base& v) override;
 };
 
-struct Table final : public ALiteral, AType {
+struct Table final : public ALiteral {
   // for explicit specified values like: { 0, 1, 2, 3 }
   [[maybe_unused]]
   std::vector<std::unique_ptr<AExpression>> values;
@@ -246,6 +277,8 @@ struct Table final : public ALiteral, AType {
 
   std::vector<size_t> resolved_size;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   bool is_matrix() const
   {
     return resolved_size.size() > 1;
@@ -255,14 +288,6 @@ struct Table final : public ALiteral, AType {
     return population.get();
   }
 
-  std::string mangle_type() const override;
-  bool        compare_with(const AType& other) const override
-  {
-    if (auto ptr = dynamic_cast<const Table*>(&other)) {
-      return element_type->is_same(*ptr->element_type) && resolved_size == ptr->resolved_size;
-    }
-    return false;
-  }
 
   std::string debug_str() const override;
 
@@ -284,6 +309,8 @@ struct Map final : public ALiteral {
   // key + value (no alignment need because it's translated to 2 arrays)
   size_t ty_sizeByte = 0;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   void accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
@@ -298,9 +325,11 @@ struct Enum final : public ALiteral {
   std::unique_ptr<ast::AIdentifier>         name;
   std::vector<std::unique_ptr<AExpression>> member_values;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
-    return "literal enum[" + name->debug_str() + "]";
+    return "literal enum[" + std::to_string(in_type_position) + " - " + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override;
@@ -310,7 +339,7 @@ struct Tuple final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> values;
   std::vector<std::string>                  name_fields;
 
-  std::vector<std::shared_ptr<AType>> tys; // size for each element type
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -328,6 +357,8 @@ struct Range final : public ALiteral {
   std::unique_ptr<AExpression> step;
   bool                         endInclude = false;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     return "literal range";
@@ -337,13 +368,16 @@ struct Range final : public ALiteral {
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
-struct Component final : public ALiteral {
+// can be component, union, enum, flag
+struct Structured_Data final : public ALiteral {
   std::unique_ptr<ast::AIdentifier>                       name;
   std::vector<std::unique_ptr<expression::Call_Argument>> field_args;
 
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
-    return "literal component[" + name->debug_str() + "]";
+    return "literal structured data[" + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override;
@@ -352,8 +386,10 @@ struct Component final : public ALiteral {
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
 // not the same as Person("Zagreus", 32) it's a call of constructor
 struct Entity final : public ALiteral {
-  std::unique_ptr<ast::AIdentifier>       name;
-  std::vector<std::unique_ptr<Component>> comp_args;
+  std::unique_ptr<ast::AIdentifier>             name;
+  std::vector<std::unique_ptr<Structured_Data>> comp_args;
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -365,6 +401,8 @@ struct Entity final : public ALiteral {
 
 struct Iterator final : public ALiteral {
   std::unique_ptr<AExpression> collection;
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {

@@ -18,7 +18,7 @@
 #pragma once
 
 #include <string>
-#include <array>
+#include <initializer_list>
 
 // log color
 #define color_RESET         "\033[0m"

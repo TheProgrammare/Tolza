@@ -4,7 +4,8 @@
 #include "ast_type.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+#include "codegen/visitor_codegen.hpp"
+
 
 void ast::declaration::Enum_Element::accept(Visitor_Base& v)
 {
@@ -15,6 +16,10 @@ void ast::declaration::Enum::accept(Visitor_Base& v)
   v.visit(*this);
 }
 void ast::declaration::Flag::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+void ast::declaration::Union::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -52,6 +57,87 @@ void ast::declaration::Global::accept(Visitor_Base& v)
 }
 
 
+llvm::Type* ast::declaration::Enum_Element::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::Enum::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::Flag::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::Union::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::Type_Alias::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Type* ast::declaration::Generic::codegen_ty(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
+llvm::Value* ast::declaration::Enum::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Flag::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Union::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Mod::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Export::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Extern::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Function::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::declaration::Mod_Alias::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Type_Alias::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Generic::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::Global::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
+
 std::string ast::declaration::Enum_Element::debug_str() const
 {
   std::string out = "elem ::" + name;
@@ -74,6 +160,12 @@ std::string ast::declaration::Enum_Element::mangle_type() const
 {
   return parent_enum->mangle_type() + mangle_id(name);
 }
+
+llvm::Function* ast::declaration::Function::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 std::string ast::declaration::Function::debug_str() const
 {
@@ -117,5 +209,10 @@ std::string ast::declaration::Global::debug_str() const
 
   return out + ": " + type->debug_str();
 }
+llvm::Value* ast::declaration::Global::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 ast::declaration::Function::~Function() = default;

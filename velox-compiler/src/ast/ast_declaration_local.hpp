@@ -1,11 +1,14 @@
 #pragma once
 
+
+#include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "ast_base.hpp"
 #include "ast_codeblock_instruction.hpp"
+#include "visitor/visitor_base.hpp"
 
 namespace ast
 {
@@ -14,10 +17,11 @@ namespace declaration
 namespace local
 {
 
-struct CodeBlock final : public Node {
+struct CodeBlock final : public Node, Trait_LLVM_Passage {
   std::vector<CodeBlock_instruction> elements;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -32,10 +36,15 @@ struct CodeBlock final : public Node {
 // e.g. (a, b, c) = triple
 // e.g. match val { Some(a) => ... }
 // e.g. sys name() { Component(c) => ... }
-struct Variable_Binding final : public ALocal {
+struct Variable_Binding final : public ALocal, Trait_LLVM_Value {
   ECapability capability = ECapability::NONE;
 
+  // parser resolved
+  Pattern*      parent_pattern;
   INFERRED_TYPE type;
+
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -96,7 +105,8 @@ struct Pattern_Enum final : public Pattern {
   std::unique_ptr<AIdentifier>                  name;
   std::vector<std::unique_ptr<Pattern_Element>> mapping;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -108,7 +118,8 @@ struct Pattern_Enum final : public Pattern {
 struct Pattern_Tuple final : public Pattern {
   std::vector<std::unique_ptr<Pattern_Element>> mapping;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -121,17 +132,28 @@ struct Pattern_Tuple final : public Pattern {
 struct Pattern_Entity final : public Pattern {
   std::unique_ptr<AIdentifier> name;
 
-  // component
-  // identifier,
-  // field_name,
-  // pattern_element
+  // component identifier, field_name, pattern_element
   std::vector<std::unique_ptr<Pattern_Component>> mapping;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
     return "entity pattern[" + name->debug_str() + "]";
+  }
+};
+
+struct Pattern_System_Component final : public Pattern {
+  std::unique_ptr<AIdentifier>      name;
+  std::unique_ptr<Variable_Binding> bind;
+
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
+
+  std::string debug_str() const override
+  {
+    return "sys component pattern[" + name->debug_str() + "]";
   }
 };
 
@@ -143,7 +165,8 @@ struct Pattern_Component final : public Pattern {
   // pattern_element
   std::vector<std::tuple<std::string, std::unique_ptr<Pattern_Element>>> mapping;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -152,23 +175,19 @@ struct Pattern_Component final : public Pattern {
 };
 
 // var (a, b, _, d) = call(); var (a, _, c, d) = tupleVariable;
-struct Variable_Unpack final : public ALocal {
+struct Tuple_Destructuring final : public Pattern {
   std::vector<std::shared_ptr<Variable_Binding>> elements;
-  std::unique_ptr<AExpression>                   right;
 
   EVariableKind kind     = EVariableKind::Const;
   bool          isStatic = false;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Local;
-  };
 };
 
-struct Lambda final : public ALocal, ICallable {
+struct Lambda final : public ALocal, Trait_LLVM_Callable {
   std::shared_ptr<type::Function_Proto> prototype;
   std::unique_ptr<local::CodeBlock>     codeblock;
   std::unique_ptr<Lambda_Capture>       capture;
@@ -180,14 +199,12 @@ struct Lambda final : public ALocal, ICallable {
   bool isLambdaConstexpr = false;
   bool isConstexpr       = false;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
+  llvm::Function* codegen(Visitor_Codegen& v) override;
+  void            accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
 
-  type::Function_Proto* get_signature() override
-  {
-    return prototype.get();
-  };
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Lambda;
@@ -195,15 +212,17 @@ struct Lambda final : public ALocal, ICallable {
 };
 
 // let/var a: ptr'type?$ = expression;
-struct Variable final : public ALocal {
-  [[maybe_unused]] std::shared_ptr<AType> type;       // infered if nullptr
-  [[maybe_unused]] std::unique_ptr<Node>  expression; // affectation
+struct Variable final : public ALocal, Trait_LLVM_Value {
+  [[maybe_unused]] std::shared_ptr<AType>       type;       // infered if nullptr
+  [[maybe_unused]] std::unique_ptr<AExpression> expression; // affectation
 
-  EAssignmentType assignment = EAssignmentType::Copy; // assign type
-  EVariableKind   kind       = EVariableKind::Const;
-  bool            isStatic   = false;
+  ETransfertType assignment = ETransfertType::Copy; // assign type
+  EVariableKind  kind       = EVariableKind::Const;
+  bool           isStatic   = false;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
   ESymbolType get_symbol_type() const override
@@ -213,12 +232,14 @@ struct Variable final : public ALocal {
 };
 
 // ref/mut name = expression
-struct Capability final : public ALocal {
+struct Capability final : public ALocal, Trait_LLVM_Value {
   std::unique_ptr<AExpression> right;
 
   ECapability kind = ECapability::NONE;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -260,15 +281,16 @@ struct Lambda_Capture final : public Node {
 
 // (a: str, copy b: i32 = 10, mut c: f32 = nullptr, args: ...)
 struct Parameter final : public ALocal {
-  std::shared_ptr<AType>                      type;
-  [[maybe_unused]] std::unique_ptr<Node>      defaultValue;
-  [[maybe_unused]] std::shared_ptr<ICallable> parent_function;
+  std::shared_ptr<AType>                                type;
+  [[maybe_unused]] std::unique_ptr<Node>                defaultValue;
+  [[maybe_unused]] std::shared_ptr<Trait_LLVM_Callable> parent_function;
 
   EPassMode passMode   = EPassMode::Copy;
   bool      isVariadic = false;
 
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
   bool        is_same(const Parameter& other) const
@@ -288,7 +310,8 @@ struct Generic_Parameter_Element final : public ALocal {
 
   std::string name;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
   ESymbolType get_symbol_type() const override
@@ -300,7 +323,8 @@ struct Generic_Parameter_Element final : public ALocal {
 struct Generic_Parameters final : public ALocal {
   std::vector<std::shared_ptr<Generic_Parameter_Element>> parameters;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
   ESymbolType get_symbol_type() const override

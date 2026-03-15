@@ -3,7 +3,6 @@
 #include "ast_declaration_cop.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
 
 
 void ast::generic::Is_Type::accept(Visitor_Base& v)

@@ -1,14 +1,17 @@
 #include "ast_literal.hpp"
 
+#include <iomanip>
 #include <memory>
 
+#include "ast/ast_numeric_128_bits.hpp"
 #include "ast_data.hpp"
 #include "ast_type.hpp"
 #include "ast_inferred_type_singleton.hpp"
 #include "ast_expression.hpp"
 
 #include "visitor/visitor_base.hpp"
-#include "visitor/visitor_codegen.hpp"
+
+#include "codegen/visitor_codegen.hpp"
 
 
 void ast::literal::Boolean::accept(Visitor_Base& v)
@@ -75,7 +78,7 @@ void ast::literal::Range::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::Component::accept(Visitor_Base& v)
+void ast::literal::Structured_Data::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -87,23 +90,81 @@ void ast::literal::Iterator::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-std::string ast::literal::Table::mangle_type() const
+
+
+llvm::Value* ast::literal::Boolean::codegen(Visitor_Codegen& v)
 {
-  std::string out = "arr";
-  std::string ty;
-
-  if (!values.empty())
-    ty = values[0]->inferred_type->mangle_type();
-  else if (!population)
-    ty = population->inferred_type->mangle_type();
-
-  for (auto dimension : resolved_size) out += std::to_string(dimension) + "_";
-
-  if (resolved_size.empty())
-    return out + "_" + ty;
-  else
-    return out + ty;
+  return v.visit(*this);
 }
+llvm::Value* ast::literal::Integral::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Decimal::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Floating::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::ASCII::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::UTF32::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Text::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Text_Interpolation::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Textual_Format::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Table_Population::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Table::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Map::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Enum::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Tuple::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Range::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Structured_Data::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Entity::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::literal::Iterator::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+
 
 std::string ast::literal::Table::debug_str() const
 {
@@ -118,6 +179,13 @@ std::string ast::literal::Table::debug_str() const
 }
 
 ast::literal::Boolean::Boolean()
+{
+  inferred_type = type::get_bool_type();
+}
+
+
+ast::literal::Boolean::Boolean(bool value)
+  : val(value)
 {
   inferred_type = type::get_bool_type();
 }
@@ -152,6 +220,28 @@ ast::literal::Integral::Integral()
   }
 }
 
+ast::literal::Integral::Integral(const Int128& value)
+  : val(value)
+  , type(EPrimType::iSize)
+{
+  inferred_type = type::get_isize_type();
+}
+
+bool ast::literal::Integral::is_signed() const
+{
+  switch (type) {
+  case EPrimType::ptrdiff:
+  case EPrimType::iSize:
+  case EPrimType::i8:
+  case EPrimType::i16:
+  case EPrimType::i32:
+  case EPrimType::i64:
+  case EPrimType::i128:    return true;
+  default:                 return false;
+  }
+}
+
+
 ast::literal::Decimal::Decimal()
 {
   if (is_unsigned)
@@ -159,6 +249,15 @@ ast::literal::Decimal::Decimal()
   else
     inferred_type = type::get_deci_type();
 }
+
+ast::literal::Decimal::Decimal(const Int128& value, size_t _integral_num, size_t _decimal_num, bool _is_unsigned)
+  : val(value)
+  , integral_num(_integral_num)
+  , decimal_num(_decimal_num)
+  , is_unsigned(_is_unsigned)
+{
+}
+
 
 ast::literal::Floating::Floating()
 {
@@ -173,9 +272,22 @@ ast::literal::Floating::Floating()
   }
 }
 
+ast::literal::Floating::Floating(const Float128& value)
+  : val(value)
+  , type(EPrimType::fSize)
+{
+}
+
 ast::literal::ASCII::ASCII()
 {
   inferred_type = type::get_ascii_type();
+}
+
+
+ast::literal::ASCII::ASCII(char value)
+{
+  inferred_type = type::get_ascii_type();
+  val           = value;
 }
 
 ast::literal::UTF32::UTF32()
@@ -183,7 +295,25 @@ ast::literal::UTF32::UTF32()
   inferred_type = type::get_utf32_type();
 }
 
+ast::literal::UTF32::UTF32(std::string codePoints_value)
+{
+  codePoints    = codePoints_value;
+  inferred_type = type::get_utf32_type();
+}
+
+
 ast::literal::Text::Text()
+{
+  if (is_ascii)
+    inferred_type = type::get_str_type();
+  else
+    inferred_type = type::get_text_type();
+}
+
+ast::literal::Text::Text(const std::u32string& value, bool _is_ascii = false)
+  : val(value)
+  , is_ascii(_is_ascii)
+
 {
   if (is_ascii)
     inferred_type = type::get_str_type();

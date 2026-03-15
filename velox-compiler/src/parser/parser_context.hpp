@@ -109,7 +109,9 @@ struct Parser_Context {
     node->_token = token;
     node->_scope = m_sym->get_current_path();
     node_count++;
-    node->_scr_info = &scr_info;
+    node->_scr_info   = &scr_info;
+    node->is_exported = in_export;
+    node->is_external = in_extern;
     return node;
   };
 };

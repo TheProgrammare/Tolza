@@ -19,12 +19,16 @@
 
 #include "metacode.hpp"
 #include "visitor/symbol_manager.hpp"
+#include <tuple>
+#include <utility>
 
 std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration()
 {
   auto tok = ctx.tok_v.peek();
   switch (tok.type) {
   case TokTy::MOD:       return module();
+  case TokTy::UNION:     return _union();
+  case TokTy::FLAG:      return flag();
   case TokTy::ENUM:      return enumeration();
   case TokTy::VAR:
   case TokTy::LET:
@@ -111,9 +115,11 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
 
   ctx.tok_v.expect(63, TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
 
+  size_t count = 0;
   while (!ctx.tok_v.is_end()) {
-    auto elem  = ctx.Create_Node<ast::declaration::Enum_Element>(ctx.tok_v.peek());
-    elem->name = ctx.parse_name("", hint);
+    auto elem      = ctx.Create_Node<ast::declaration::Enum_Element>(ctx.tok_v.peek());
+    elem->name     = ctx.parse_name("", hint);
+    elem->position = count++;
 
     if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
       while (!ctx.tok_v.is_end()) {
@@ -131,6 +137,61 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
   ctx.m_sym->exit_scope();
 
   return enu;
+}
+
+std::shared_ptr<ast::declaration::Union> parser::Parser_Declaration::_union()
+{
+  static const std::string hint = "define union like: `union name { field_name1: T, field_name2: U, ... }";
+  ctx.tok_v.match(TokTy::UNION);
+
+  auto _union  = ctx.Create_Decl<ast::declaration::Union>(ctx.tok_v.peek());
+  _union->name = ctx.parse_name("", hint);
+  ctx.m_sym->add_decl(_union);
+  ctx.m_sym->enter_scope(_union->name, EScopeType::Union);
+
+  ctx.tok_v.expect(182, TokTy::OPEN_BRACE, "Expected start union block '{' after union name declaration.", hint);
+
+  while (!ctx.tok_v.is_end()) {
+    auto field_name = ctx.parse_name("", hint);
+
+    ctx.tok_v.expect(183, TokTy::COLON, "Expected colon ':' after union field name declaration.", hint);
+
+    auto filed_ty = ctx.p_type->parse_type();
+
+    _union->fields.emplace_back(field_name, std::move(filed_ty));
+
+    if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
+  }
+
+  ctx.m_sym->exit_scope();
+
+  return _union;
+}
+
+std::shared_ptr<ast::declaration::Flag> parser::Parser_Declaration::flag()
+{
+  static const std::string hint = "define flag like: `flag name { flag1, flag2, ... }";
+  ctx.tok_v.match(TokTy::FLAG);
+
+  auto flag  = ctx.Create_Decl<ast::declaration::Flag>(ctx.tok_v.peek());
+  flag->name = ctx.parse_name("", hint);
+
+  ctx.m_sym->add_decl(flag);
+  ctx.m_sym->enter_scope(flag->name, EScopeType::Flag);
+
+  ctx.tok_v.expect(184, TokTy::OPEN_BRACE, "Expected start flag block '{' after flag name declaration.", hint);
+
+  while (!ctx.tok_v.is_end()) {
+    auto field_name = ctx.parse_name("", hint);
+
+    flag->fields.push_back(field_name);
+
+    if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
+  }
+
+  ctx.m_sym->exit_scope();
+
+  return flag;
 }
 
 std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_variable()
@@ -155,8 +216,6 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   var->kind = kind;
   var->name = ctx.parse_name("", hint);
 
-  var->is_extern = ctx.in_extern;
-
   ctx.m_sym->add_decl(var);
 
   if (var->name.empty()) {
@@ -164,7 +223,7 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   }
 
   // type definition no expression
-  if (var->is_extern) {
+  if (var->is_external) {
     ctx.tok_v.expect(67, TokTy::COLON, "Expected type definition for an global variable marked external.", hint);
     var->type = ctx.p_type->parse_type();
     ctx.tok_v.match(TokTy::SEMICOLON);
@@ -181,9 +240,9 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
 
   // check affectation
   Token assign_tok = ctx.tok_v.next();
-  var->assignment  = TokTy_to_EAssignmentType(assign_tok.type);
+  var->assignment  = TokTy_to_ETransfertType(assign_tok.type);
 
-  if (var->assignment == EAssignmentType::NONE && isAutoTy)
+  if (var->assignment == ETransfertType::NONE && isAutoTy)
     ctx.tok_v.add_error(68, "Expected assignation '=' in auto inferred variable type.",
                         "define auto inferred variable like `let myName = expression;`");
 
@@ -216,8 +275,6 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   fn->isConst = ctx.metablock_contains(*fn, "const");
   fn->isPure  = ctx.metablock_contains(*fn, "pure");
 
-  fn->is_extern   = ctx.in_extern;
-  fn->is_exported = ctx.in_export;
   if (auto pattern = ctx.get_instruct(*fn, {"extern", "<*>"})) {
     fn->extern_call_convention = pattern->at_str(1, 0);
   }
@@ -229,10 +286,10 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   for (auto& param : fn->prototype->parameters) param->parent_function = fn;
 
   // if extern : no definition
-  if (fn->is_extern && ctx.tok_v.check(TokTy::OPEN_BRACE))
+  if (fn->is_external && ctx.tok_v.check(TokTy::OPEN_BRACE))
     ctx.tok_v.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
 
-  if (!fn->is_extern) fn->codeblock = ctx.p_loc->code_block_instruction();
+  if (!fn->is_external) fn->codeblock = ctx.p_loc->code_block_instruction();
 
   ctx.m_sym->exit_scope();
 
@@ -252,7 +309,6 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
       "\n  - nested filter `T is gen::base_of<Animal>;`";
 
   auto gen = ctx.Create_Decl<ast::declaration::Generic>(ctx.tok_v.peek());
-
   ctx.tok_v.match(TokTy::GENERIC);
 
   gen->name = ctx.parse_name("", kHint_gen);

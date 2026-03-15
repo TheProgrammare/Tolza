@@ -1,6 +1,7 @@
 #include "ast_data.hpp"
 
 #include "lexer/token.hpp"
+#include <cstddef>
 
 EBinOpType TokTy_to_EBinOpType(TokTy tok)
 {
@@ -61,6 +62,7 @@ std::string EBinOpType_to_str(EBinOpType opTy)
   case EBinOpType::Mod:     return "%mod%";
   case EBinOpType::Quo:     return "%quo%";
   case EBinOpType::Rem:     return "%rem%";
+  case EBinOpType::Divrem:  return "%divrem%";
   case EBinOpType::Pow:     return "**";
   case EBinOpType::Sign:    return "+-";
   case EBinOpType::Index:   return "[i]";
@@ -139,8 +141,8 @@ EUnaryOpType TokTy_to_EUnaryOpType(TokTy tok)
 {
   switch (tok) {
   case TokTy::NOT:      return EUnaryOpType::_not;
-  case TokTy::OP_PLUS:  return EUnaryOpType::_pos;
-  case TokTy::OP_MINUS: return EUnaryOpType::_neg;
+  case TokTy::OP_PLUS:  return EUnaryOpType::_plus;
+  case TokTy::OP_MINUS: return EUnaryOpType::_minus;
   default:              return EUnaryOpType::NONE;
   }
 }
@@ -148,10 +150,10 @@ EUnaryOpType TokTy_to_EUnaryOpType(TokTy tok)
 std::string EUnaryOpType_to_str(EUnaryOpType opTy)
 {
   switch (opTy) {
-  case EUnaryOpType::_not: return "!";
-  case EUnaryOpType::_pos: return "+";
-  case EUnaryOpType::_neg: return "-";
-  default:                 return "NO UNARY OP TYPE";
+  case EUnaryOpType::_not:   return "!";
+  case EUnaryOpType::_plus:  return "+";
+  case EUnaryOpType::_minus: return "-";
+  default:                   return "NO UNARY OP TYPE";
   }
 }
 
@@ -216,6 +218,68 @@ EExprPassMode TokTy_to_EExprPassMode(TokTy tok)
   }
 }
 
+bool EPrimType_is_signed(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::iSize:
+  case EPrimType::i8:
+  case EPrimType::i16:
+  case EPrimType::i32:
+  case EPrimType::i64:
+  case EPrimType::i128:
+  case EPrimType::ptrdiff:
+  case EPrimType::fSize:
+  case EPrimType::f32:
+  case EPrimType::f64:
+  case EPrimType::f128:
+  case EPrimType::deci:    return true;
+  default:                 return false;
+  }
+}
+
+bool EPrimType_is_integral(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::u8:
+  case EPrimType::u16:
+  case EPrimType::u32:
+  case EPrimType::u64:
+  case EPrimType::u128:
+  case EPrimType::uSize:
+  case EPrimType::ptrdiff:
+  case EPrimType::i8:
+  case EPrimType::i16:
+  case EPrimType::i32:
+  case EPrimType::i64:
+  case EPrimType::i128:
+  case EPrimType::iSize:   return true;
+  default:                 return false;
+  }
+}
+bool EPrimType_is_byte(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::b8:
+  case EPrimType::b16:
+  case EPrimType::b32:
+  case EPrimType::b64:
+  case EPrimType::b128:
+  case EPrimType::bSize: return true;
+  default:               return false;
+  }
+}
+bool EPrimType_is_floating(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::f32:
+  case EPrimType::f64:
+  case EPrimType::f128:
+  case EPrimType::fSize: return true;
+  default:               return false;
+  }
+}
+
+
 std::string EPrimTy_to_str(EPrimType type)
 {
   switch (type) {
@@ -253,7 +317,7 @@ std::string EPrimTy_to_str(EPrimType type)
   case EPrimType::f64:       return "f64";
   case EPrimType::f128:      return "f128";
 
-  case EPrimType::Void:      return "Void";
+  case EPrimType::u0:        return "Void";
   case EPrimType::deci:      return "decimal";
   case EPrimType::udeci:     return "unsigned decimal";
   case EPrimType::Enum:      return "Enum";
@@ -284,7 +348,7 @@ std::string EPrimTy_to_mangle(EPrimType type)
   case EPrimType::str:       return "str";
   case EPrimType::text:      return "txt";
 
-  case EPrimType::Void:      return "u0";
+  case EPrimType::u0:        return "u0";
   case EPrimType::ptrdiff:   return "pdif";
 
   case EPrimType::iSize:     return "isz";
@@ -369,7 +433,7 @@ EPrimType TokTy_to_EPrimType(TokTy tok)
   case TokTy::T_F64:     return EPrimType::f64;
   case TokTy::T_F128:    return EPrimType::f128;
 
-  case TokTy::T_VOID:    return EPrimType::Void;
+  case TokTy::T_U0:      return EPrimType::u0;
 
   case TokTy::ENUM:      return EPrimType::Enum;
   case TokTy::FLAG:      return EPrimType::Flag;
@@ -432,16 +496,28 @@ std::string EVariableKind_to_str(EVariableKind kind)
   }
 }
 
-EAssignmentType TokTy_to_EAssignmentType(TokTy tok)
+ETransfertType TokTy_to_ETransfertType(TokTy tok)
 {
   switch (tok) {
-  case TokTy::ASSIGN:       return EAssignmentType::MoveSemantic;
-  case TokTy::COPY_ASSIGN:  return EAssignmentType::Copy;
-  case TokTy::CLONE_ASSIGN: return EAssignmentType::Clone;
-  case TokTy::MOVE_ASSIGN:  return EAssignmentType::MoveSemantic;
-  default:                  return EAssignmentType::NONE;
+  case TokTy::ASSIGN:       return ETransfertType::MoveSemantic;
+  case TokTy::COPY_ASSIGN:  return ETransfertType::Copy;
+  case TokTy::CLONE_ASSIGN: return ETransfertType::Clone;
+  case TokTy::MOVE_ASSIGN:  return ETransfertType::MoveSemantic;
+  default:                  return ETransfertType::NONE;
   }
 }
+
+std::string ETransfertType_to_str(ETransfertType type)
+{
+  switch (type) {
+
+  case ETransfertType::Copy:         return "cppy";
+  case ETransfertType::Clone:        return "clone";
+  case ETransfertType::MoveSemantic: return "move";
+  case ETransfertType::NONE:         return "NO TRANSFERT TYPE";
+  }
+}
+
 
 bool is_op_handled(EPrimType src, EBinOpType op)
 {

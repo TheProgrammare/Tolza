@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "ast/ast_data.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_expression.hpp"
@@ -40,6 +41,11 @@ std::shared_ptr<ast::declaration::cop::Component> parser::Parser_Declaration_COP
   while (!ctx.tok_v.is_end()) {
     auto field         = ctx.Create_Decl<ast::declaration::cop::Component_Field>(ctx.tok_v.peek());
     field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
+
+    if (ctx.tok_v.match(TokTy::CAPA_REF))
+      field->borrow = ast::declaration::cop::Component_Field::EBorrow::ref;
+    else if (ctx.tok_v.match(TokTy::CAPA_MUT))
+      field->borrow = ast::declaration::cop::Component_Field::EBorrow::mut;
 
     field->name = ctx.parse_name("", hint);
     ctx.tok_v.expect(15, TokTy::COLON, "Expected type defintion symbol ':' after field name", hint);
@@ -131,6 +137,7 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
       "\n  - `use name { field1: val1, field2: val2 }`"
       "\n  - `use name`";
   static const std::string new_hint = "define new entity def like: `new(params) { ... }`";
+  static const std::string del_hint = "define del entity def like: `del { ... }`";
 
   if (ctx.tok_v.match(TokTy::USE)) {
     std::unique_ptr<ast::AIdentifier> comp_id;
@@ -145,10 +152,10 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
     }
     auto comp = ctx.p_lit->literal_component(std::move(comp_id));
 
-    if (auto ptr = dynamic_cast<ast::literal::Component*>(comp.get())) {
+    if (auto ptr = dynamic_cast<ast::literal::Structured_Data*>(comp.get())) {
       // Transfert ownership directement en downcast
       parent_entity->comps.push_back(
-          std::unique_ptr<ast::literal::Component>(static_cast<ast::literal::Component*>(comp.release())));
+          std::unique_ptr<ast::literal::Structured_Data>(static_cast<ast::literal::Structured_Data*>(comp.release())));
     } else {
       ctx.tok_v.add_error(19, "Expected Literal component after 'use' instruction", hint);
     }
@@ -156,13 +163,27 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
     return;
   } else if (ctx.tok_v.match(TokTy::NEW)) {
     ctx.m_sym->enter_scope("new", EScopeType::Entity_New);
-    auto new_fn_type = ctx.p_type->explicit_function_proto();
+
+    auto e_new = ctx.Create_Decl<ast::declaration::cop::Entity_New>(ctx.tok_v.peek(-1));
+
+    e_new->prototype = ctx.p_type->explicit_function_proto();
     ctx.tok_v.expect(20, TokTy::OPEN_BRACE, "Expected start code '{'.", new_hint);
 
-    auto cb = ctx.p_loc->code_block_instruction();
+    e_new->codeblock = ctx.p_loc->code_block_instruction();
 
     ctx.m_sym->exit_scope();
-    parent_entity->constructors.push_back({std::move(new_fn_type), std::move(cb)});
+    e_new->parent_entity = parent_entity;
+    parent_entity->news.push_back(std::move(e_new));
+    return;
+  } else if (ctx.tok_v.match(TokTy::DEL)) {
+    ctx.m_sym->enter_scope("del", EScopeType::Entity_Del);
+
+    auto e_del = ctx.Create_Decl<ast::declaration::cop::Entity_Del>(ctx.tok_v.peek(-1));
+    ctx.tok_v.expect(20, TokTy::OPEN_BRACE, "Expected start code '{'.", del_hint);
+
+    ctx.m_sym->exit_scope();
+    e_del->parent_entity = parent_entity;
+    parent_entity->del   = e_del;
     return;
   } else if (ctx.tok_v.match(TokTy::OP)) {
     auto op = _entity_op(parent_entity);
@@ -252,7 +273,8 @@ parser::Parser_Declaration_COP::_entity_cast(std::shared_ptr<ast::declaration::c
       "\n  - `cast self as T { ... }`."
       "\n  - `cast T as self { ... }`.";
 
-  auto cast = ctx.Create_Decl<ast::declaration::cop::Entity_Cast>(ctx.tok_v.peek());
+  auto cast           = ctx.Create_Decl<ast::declaration::cop::Entity_Cast>(ctx.tok_v.peek());
+  cast->parent_entity = parent_entity;
 
   ctx.m_sym->enter_scope("cast", EScopeType::Entity_Cast);
 

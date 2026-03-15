@@ -19,14 +19,15 @@ struct Parser_Declaration_Local {
 
   [[nodiscard]] std::shared_ptr<ast::ALocal> parse_local(bool silent_error = false);
 
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Element> pattern_mapping(ECapability capa);
+  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Element>
+  pattern_mapping(ast::declaration::local::Pattern& parent_pattern);
 
   [[nodiscard]] ast::Evaluator parse_evaluator(std::shared_ptr<ast::AExpression> comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern>
   parse_pattern(std::shared_ptr<ast::AExpression> comparison_ref);
 
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Variable>               variable();
-  [[nodiscard]] std::shared_ptr<ast::declaration::local::Variable_Unpack>        variable_unpack();
+  [[nodiscard]] std::unique_ptr<ast::declaration::local::Tuple_Destructuring>    tuple_destructuring();
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Lambda>                 lambda();
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Capability>             capability();
   [[nodiscard]] std::unique_ptr<ast::declaration::local::CodeBlock>              code_block_instruction();

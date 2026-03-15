@@ -524,7 +524,7 @@ std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std
     if (ctx.tok_v.check(TokTy::OPEN_BRACE)) {
       lit_entity->comp_args.push_back(literal_component(std::move(comp_name)));
     } else if (ctx.tok_v.match(TokTy::DOT)) {
-      auto lit_comp = ctx.Create_Node<ast::literal::Component>(comp_name->_token);
+      auto lit_comp = ctx.Create_Node<ast::literal::Structured_Data>(comp_name->_token);
       lit_comp->field_args.push_back(literal_field());
 
       lit_entity->comp_args.push_back(std::move(lit_comp));
@@ -539,7 +539,8 @@ std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std
   return lit_entity;
 }
 
-std::unique_ptr<ast::literal::Component> parser::Parser_Literal::literal_component(std::unique_ptr<ast::AIdentifier> id)
+std::unique_ptr<ast::literal::Structured_Data>
+parser::Parser_Literal::literal_component(std::unique_ptr<ast::AIdentifier> id)
 {
   static const std::string hint =
       "define literal component like:"
@@ -547,7 +548,7 @@ std::unique_ptr<ast::literal::Component> parser::Parser_Literal::literal_compone
       "\n  - normal `name{ .field1= val1, .field2= val2 }`"
       "\n  - generic `name<gen_args>{ .field1= val1, .field2= val2 }`";
 
-  auto comp  = ctx.Create_Node<ast::literal::Component>(ctx.tok_v.peek());
+  auto comp  = ctx.Create_Node<ast::literal::Structured_Data>(ctx.tok_v.peek());
   comp->name = std::move(id);
 
   ctx.tok_v.match(TokTy::OPEN_BRACE);

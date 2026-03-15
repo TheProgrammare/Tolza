@@ -1,10 +1,13 @@
 #pragma once
 
+
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "ast/ast_data.hpp"
+#include "ast/ast_forward.hpp"
 #include "ast_base.hpp"
 
 struct ModuleExportation;
@@ -21,6 +24,8 @@ struct Enum_Element final : public AType {
   size_t                              position = 0;
 
   std::shared_ptr<Enum> parent_enum;
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string debug_str() const override;
 
@@ -42,6 +47,9 @@ struct Enum final : public ADeclaration, AType {
   bool                       isGlobal              = true;
   size_t                     discriminant_max      = 0;
   [[maybe_unused]] EPrimType discriminant_int_type = EPrimType::u8;
+
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -70,6 +78,9 @@ struct Enum final : public ADeclaration, AType {
 struct Flag final : public ADeclaration, AType {
   std::vector<std::string> fields;
 
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     return "declaration flag \"" + name + "\"";
@@ -94,11 +105,43 @@ struct Flag final : public ADeclaration, AType {
   void accept(Visitor_Base& v) override;
 };
 
+struct Union final : public ADeclaration, AType {
+  // field name, field type
+  std::vector<std::pair<std::string, std::unique_ptr<ast::AType>>> fields;
+
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+
+  std::string debug_str() const override
+  {
+    return "declaration union \"" + name + "\"";
+  }
+  ESymbolType get_symbol_type() const override
+  {
+    return ESymbolType::Union;
+  }
+
+  std::string mangle_type() const override
+  {
+    return "uo_" + mangle_id(name);
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Union*>(&other)) {
+      return name == ptr->name;
+    }
+    return false;
+  }
+
+  void accept(Visitor_Base& v) override;
+};
+
 // e.g. mod name {}
 struct Mod : public ADeclaration {
   std::vector<std::shared_ptr<ADeclaration>> declarations;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "declaration mod \"" + name + "\"";
   }
@@ -113,7 +156,8 @@ struct Mod : public ADeclaration {
 struct Export final : public Mod {
   std::shared_ptr<ModuleExportation> mod_exp_sym;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "export";
   }
@@ -127,7 +171,8 @@ struct Export final : public Mod {
 
 struct Extern final : public Mod {
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "extern \"" + name + "\"";
   }
@@ -138,7 +183,7 @@ struct Extern final : public Mod {
   void accept(Visitor_Base& v) override;
 };
 
-struct Function final : public ADeclaration, ICallable {
+struct Function final : public ADeclaration, Trait_LLVM_Callable {
   ~Function();
 
   std::shared_ptr<type::Function_Proto> prototype;
@@ -149,12 +194,11 @@ struct Function final : public ADeclaration, ICallable {
   bool                                  isCompileTime = false;
   std::string                           extern_call_convention;
 
+  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
+  llvm::Function* codegen(Visitor_Codegen& v) override;
+
   std::string debug_str() const override;
 
-  type::Function_Proto* get_signature() override
-  {
-    return prototype.get();
-  };
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Function;
@@ -166,7 +210,8 @@ struct Function final : public ADeclaration, ICallable {
 struct Mod_Alias final : public ADeclaration {
   std::unique_ptr<AIdentifier> module;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "mod " + name + " = " + module->debug_str();
   }
@@ -180,6 +225,9 @@ struct Mod_Alias final : public ADeclaration {
 
 struct Type_Alias final : public ADeclaration, AType {
   std::shared_ptr<AType> type;
+
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
@@ -207,6 +255,9 @@ struct Generic final : public ADeclaration, AType {
   std::set<std::string>                                targetGenericSymbols; // generic typenames
   std::vector<std::shared_ptr<ast::generic::IGenCond>> conditions;           // generic conditions
 
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+
   std::string debug_str() const override
   {
     return "generic \"" + name + "\"";
@@ -232,11 +283,14 @@ struct Generic final : public ADeclaration, AType {
 };
 
 // let/var a: ptr'type#tableSize = expression;
-struct Global final : public ADeclaration {
-  std::shared_ptr<AType> type;                                       // infered if nullptr
-  EAssignmentType        assignment = EAssignmentType::MoveSemantic; // assign type
-  std::unique_ptr<Node>  expression;                                 // affectation
-  EVariableKind          kind = EVariableKind::Const;
+struct Global final : public ADeclaration, Trait_LLVM_Value {
+  std::shared_ptr<AType>       type;                                      // infered if nullptr
+  ETransfertType               assignment = ETransfertType::MoveSemantic; // assign type
+  std::unique_ptr<AExpression> expression;                                // affectation
+  EVariableKind                kind = EVariableKind::Const;
+
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override;
 

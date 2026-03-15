@@ -3,10 +3,9 @@
 #include <memory>
 
 #include "ast/ast_base.hpp"
-#include "ast/ast_declaration.hpp"
-#include "ast/ast_declaration_cop.hpp"
-#include "visitor/symbol_manager.hpp"
 #include "visitor_default.hpp"
+
+struct Symbol_Data;
 
 struct Visitor_Symbol : public Visitor_Default {
   // keep
