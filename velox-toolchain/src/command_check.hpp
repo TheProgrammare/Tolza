@@ -1,11 +1,7 @@
 #pragma once
 
-#include <expected>
 #include <string>
-#include <filesystem>
 #include <map>
-
-namespace fs = std::filesystem;
 
 namespace command
 {
@@ -55,8 +51,8 @@ static std::map<std::string, std::string> k_config_map = {
     {"sub_configs", ""               },
 };
 
-bool check_velox_config(const fs::path& file, bool full_config, bool verbose = true);
-bool check_workspace(const fs::path& ws_path, bool verbose = true);
+bool check_velox_config(const std::string& file, bool full_config, bool verbose = true);
+bool check_workspace(const std::string& ws_path, bool verbose = true);
 
 } // namespace check
 } // namespace command

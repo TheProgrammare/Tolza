@@ -9,9 +9,11 @@
 #include "cli_wrapper.hpp"
 #include "toolchain.hpp"
 
-void command::workspace::generate_velox_workspace(const std::string& project_name, const fs::path& path)
+namespace fs = std::filesystem;
+
+void command::workspace::generate_velox_workspace(const std::string& project_name, const std::string& path)
 {
-  fs::path project_path = path / project_name;
+  fs::path project_path = fs::path(path) / project_name;
 
   if (!cli::yes_no_question("Do you want to create a new velox projet named \"" + project_name + "\" at\n  \""
                             + project_path.string() + "\"?\n ")) {
@@ -22,7 +24,7 @@ void command::workspace::generate_velox_workspace(const std::string& project_nam
   std::cout << "[velox-toolchain] generate workspace at " << project_path << std::endl;
 
   bool success    = true;
-  auto dir_create = [&](const fs::path& _path) {
+  auto dir_create = [&](const std::string& _path) {
     try {
       fs::create_directory(_path);
     } catch (const fs::filesystem_error e) {
@@ -52,7 +54,7 @@ void command::workspace::generate_velox_workspace(const std::string& project_nam
     std::cout << "[velox-toolchain] Workspace successfully generated!" << std::endl;
 }
 
-bool command::workspace::write_file(const fs::path& path, const std::string& text)
+bool command::workspace::write_file(const std::string& path, const std::string& text)
 {
   std::ofstream f;
   try {
@@ -67,7 +69,7 @@ bool command::workspace::write_file(const fs::path& path, const std::string& tex
   return true;
 }
 
-bool command::workspace::write_config_file(const fs::path& path, const std::string& name, bool file_debug_mode)
+bool command::workspace::write_config_file(const std::string& path, const std::string& name, bool file_debug_mode)
 {
   auto fmt_template = [](std::string& templateStr, const std::initializer_list<std::string>& args) {
     size_t count = 0;
@@ -98,7 +100,7 @@ bool command::workspace::write_config_file(const fs::path& path, const std::stri
 }
 
 
-void command::workspace::ask_new_workspace(const fs::path& ws_path)
+void command::workspace::ask_new_workspace(const std::string& ws_path)
 {
   if (cli::yes_no_question("Do you want to generate a Velox project in a new folder?")) {
   retry_project_name:

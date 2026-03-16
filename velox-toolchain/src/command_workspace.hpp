@@ -1,18 +1,15 @@
 #pragma once
 
-#include <filesystem>
 #include <string>
-
-namespace fs = std::filesystem;
 
 namespace command
 {
 namespace workspace
 {
-void generate_velox_workspace(const std::string& project_name, const fs::path& path);
-bool write_file(const fs::path& path, const std::string& text);
-bool write_config_file(const fs::path& path, const std::string& name, bool file_debug_mode);
-void ask_new_workspace(const fs::path& ws_path);
+void generate_velox_workspace(const std::string& project_name, const std::string& path);
+bool write_file(const std::string& path, const std::string& text);
+bool write_config_file(const std::string& path, const std::string& name, bool file_debug_mode);
+void ask_new_workspace(const std::string& ws_path);
 bool new_velox_workspace();
 
 // %0 project_name

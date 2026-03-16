@@ -23,6 +23,8 @@
 #include "parser_command.hpp"
 #include "toolchain.hpp"
 
+namespace fs = std::filesystem;
+
 void command::build::err(const std::string& msg)
 {
   std::cerr << "[build] [ERROR] " << msg << std::endl;
@@ -47,7 +49,7 @@ std::string remove_quotes(const std::string& str)
   return str.substr(start, end - start + 1);
 }
 
-std::optional<toolchain::CompCtx> command::build::init_compilation_context(const fs::path& path)
+std::optional<toolchain::CompCtx> command::build::init_compilation_context(const std::string& path)
 {
   static const std::string welcome =
       R"([velox-toolchain]
@@ -94,9 +96,9 @@ Welcome to the Velox toolchain !
 }
 
 
-toolchain::CompCtx command::build::parse_compilation_context(const fs::path& config_path)
+toolchain::CompCtx command::build::parse_compilation_context(const std::string& config_path)
 {
-  auto resolve_path = [&config_path](const fs::path& _path) -> fs::path {
+  auto resolve_path = [&config_path](const std::string& _path) -> fs::path {
     if (_path.is_relative()) {
       return fs::weakly_canonical(config_path.parent_path() / _path);
     } else {
@@ -230,7 +232,7 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
     };
 
     // e.g. --dest="/mnt/data/my_project"
-    auto path_arg = [&](fs::path& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
+    auto path_arg = [&](std::string& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
       if (arg_name.empty() && alt_arg_name.empty()) {
         return false;
       }
@@ -362,8 +364,8 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
   }
 }
 
-bool command::build::generate_ffi_json(const fs::path& compiler_file, const fs::path& target_dir,
-                                       const fs::path& dest_dir)
+bool command::build::generate_ffi_json(const std::string& compiler_file, const std::string& target_dir,
+                                       const std::string& dest_dir)
 {
   // %0 target executable
   // %1 target dir

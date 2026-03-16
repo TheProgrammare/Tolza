@@ -23,7 +23,7 @@
 
 namespace ast_loc = ast::declaration::local;
 
-ast::AType* Visitor_Type::get_inferred_type(ast::Node& node) const
+ast::AType* Visitor_Type::get_inferred_type(ast::Node& node, bool is_prototype_expected) const
 {
   if (auto ptr = dynamic_cast<ast::AType*>(&node))
     return ptr;
@@ -31,9 +31,10 @@ ast::AType* Visitor_Type::get_inferred_type(ast::Node& node) const
     return ptr->inferred_type;
   else if (auto ptr = dynamic_cast<ast::declaration::Global*>(&node))
     return ptr->type.get();
-  else if (auto ptr = dynamic_cast<ast::declaration::Function*>(&node))
+  else if (auto ptr = dynamic_cast<ast::declaration::Function*>(&node)) {
+    if (is_prototype_expected) return ptr->prototype.get();
     return ptr->prototype->returnType.get();
-  else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&node))
+  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&node))
     return ptr->type.get();
   else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(&node))
     return ptr->type;
@@ -266,8 +267,14 @@ void Visitor_Type::visit(ast::expression::Call& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto ty = get_inferred_type(*n.callee)) {
-    n.inferred_type = ty;
+  if (auto proto = get_inferred_type(*n.callee, true)) {
+    n.function_proto = proto;
+
+    if (auto ptr = dynamic_cast<ast::type::Function_Proto*>(proto)) {
+      n.inferred_type = ptr->returnType.get();
+    } else {
+      error_add(193, *n.callee, "Expected fuction type in inferred type", "");
+    }
   } else {
     error_add(191, *n.callee, "Impossible to infer symbol type", "");
   }

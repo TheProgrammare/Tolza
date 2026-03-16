@@ -942,12 +942,12 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  auto base_ty = n..inferred_type->codegen_ty(*this);
-  auto fn_ty   = llvm::cast<llvm::FunctionType>(base_ty);
+  auto fn_callee = n.function_symbol->symbol->codegen_pass(*this);
+  auto fn_casted = llvm::cast<llvm::Function>(fn_callee);
 
   std::vector<llvm::Value*> args;
   for (auto& arg : n.param_args) args.emplace_back(arg->codegen(*this));
-  builder.CreateCall() auto result = builder.CreateCall(fn_ty, n.callee->codegen(*this), args, "call_tmp");
+  auto result = builder.CreateCall(fn_casted, args, "tmp_call");
 
   return n.llvm_value = result;
 }

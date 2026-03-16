@@ -20,12 +20,7 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <filesystem>
 #include <optional>
-#include <expected>
-
-namespace fs = std::filesystem;
-
 
 namespace toolchain
 {
@@ -46,7 +41,7 @@ struct CompCtx {
     }
   };
 
-  fs::path config_path;
+  std::string config_path;
 
   std::map<std::string, std::string> COMPILATION_ARGS;
 
@@ -95,23 +90,24 @@ struct CompCtx {
   std::vector<std::string> undefines;
 
   // codegen
-  EEmitMode codegen_emit_mode = EEmitMode::BIN;
-  fs::path  codegen_build_dir;
+  EEmitMode   codegen_emit_mode = EEmitMode::BIN;
+  std::string codegen_build_dir;
 
   // project
-  fs::path project_dir;
-  fs::path source_dir;
-  fs::path vendor_dir;
-  fs::path ffi_json_dir;
-  fs::path binding_dir;
-  fs::path compiler_file;
+  std::string project_dir;
+  std::string source_dir;
+  std::string vendor_dir;
+  std::string ffi_json_dir;
+  std::string binding_dir;
+  std::string compiler_file;
 
   // sub_configs
-  std::map<std::string, fs::path> sub_configs;
+  // key, path
+  std::map<std::string, std::string> sub_configs;
 
-  const fs::path& get_config_file() const
+  const std::string& get_config_file() const
   {
-    static fs::path out;
+    static std::string out;
     if (!out.empty()) return out;
 
     if (target_config.empty() || target_config == "self") return out = config_path;
@@ -120,56 +116,44 @@ struct CompCtx {
     return out = config_path;
   }
 
-  const fs::path& get_project_dir() const
+  const std::string& get_project_dir() const
   {
     return project_dir;
   }
 
-  const fs::path& get_source_dir() const
+  const std::string& get_source_dir() const
   {
     return source_dir;
   }
 
-  const fs::path& get_vendor_dir() const
+  const std::string& get_vendor_dir() const
   {
     return vendor_dir;
   }
 
-  const fs::path& get_build_dir() const
+  const std::string& get_build_dir() const
   {
     return codegen_build_dir;
   }
 
-  const fs::path& get_compiler_file() const
+  const std::string& get_compiler_file() const
   {
     return compiler_file;
   }
 
-  const fs::path& get_preprocess_dir() const
-  {
-    static auto out = get_build_dir() / "preprocess";
-    return out;
-  }
+  const std::string& get_preprocess_dir() const;
 
-  const fs::path& get_binding_dir() const
+  const std::string& get_binding_dir() const
   {
     static auto out = binding_dir;
     return out;
   }
 
-  const fs::path& get_debug_graph_dir() const
-  {
-    static auto out = get_build_dir() / "graph";
-    return out;
-  }
+  const std::string& get_debug_graph_dir() const;
 
-  const fs::path& get_llvmir_dir() const
-  {
-    static auto out = get_build_dir() / "llvm-ir";
-    return out;
-  }
+  const std::string& get_llvmir_dir() const;
 
-  const fs::path& get_ffi_json_dir() const
+  const std::string& get_ffi_json_dir() const
   {
     return ffi_json_dir;
   }
@@ -234,20 +218,21 @@ struct CompCtx_Optional {
   EMergeMode               undefines_merge_mode = EMergeMode::_union;
 
   // codegen
-  std::optional<EEmitMode> codegen_emit_mode;
-  std::optional<fs::path>  codegen_build_dir;
+  std::optional<EEmitMode>   codegen_emit_mode;
+  std::optional<std::string> codegen_build_dir;
 
   // project
-  std::optional<fs::path> project_dir;
-  std::optional<fs::path> source_dir;
-  std::optional<fs::path> vendor_dir;
-  std::optional<fs::path> ffi_json_dir;
-  std::optional<fs::path> compiler_file;
+  std::optional<std::string> project_dir;
+  std::optional<std::string> source_dir;
+  std::optional<std::string> vendor_dir;
+  std::optional<std::string> ffi_json_dir;
+  std::optional<std::string> compiler_file;
 
   // sub_configs
-  std::map<std::string, fs::path> sub_configs;
+  // key, path
+  std::map<std::string, std::string> sub_configs;
 
-  fs::path get_project_dir() const
+  std::string get_project_dir() const
   {
     return project_dir.value();
   }
@@ -298,30 +283,11 @@ inline constexpr std::string DETECTED_ABI =
 #endif
 
 
-namespace fs = std::filesystem;
-
 struct Version {
   int  year, month, day;
   char suffix; // '\0' = stable, 'b' = beta, 'p' = preview
 
-  Version(const std::string& str, const std::string& separator = "-")
-  {
-    suffix        = '\0';
-    size_t first  = str.find(separator);
-    size_t second = str.find(separator, first + 1);
-    if (first == std::string::npos || second == std::string::npos)
-      throw std::invalid_argument("Invalid format version: " + str);
-
-    year  = std::stoi(str.substr(0, first));
-    month = std::stoi(str.substr(first + 1, second - first - 1));
-
-    std::string dayPart = str.substr(second + 1);
-    if (!dayPart.empty() && !isdigit(dayPart.back())) {
-      suffix = dayPart.back();
-      dayPart.pop_back();
-    }
-    day = std::stoi(dayPart);
-  }
+  Version(const std::string& str, const std::string& separator = "-");
 
   bool operator<(const Version& other) const
   {
@@ -338,8 +304,8 @@ struct Version {
   }
 };
 
-std::vector<std::pair<Version, fs::path>> find_all_compilers();
-std::optional<fs::path>                   find_compiler_version(const std::string& version);
-std::optional<fs::path>                   find_lastest_compiler();
+std::vector<std::pair<Version, std::string>> find_all_compilers();
+std::optional<std::string>                   find_compiler_version(const std::string& version);
+std::optional<std::string>                   find_lastest_compiler();
 
 } // namespace toolchain

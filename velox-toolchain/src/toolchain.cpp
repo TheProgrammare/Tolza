@@ -149,3 +149,40 @@ std::optional<fs::path> toolchain::find_lastest_compiler()
     return std::nullopt;
   }
 }
+
+const std::string& toolchain::CompCtx::get_preprocess_dir() const
+{
+  static auto out = (fs::path(get_build_dir()) / "preprocess").string();
+  return out;
+}
+
+const std::string& toolchain::CompCtx::get_debug_graph_dir() const
+{
+  static auto out = (fs::path(get_build_dir()) / "graph").string();
+  return out;
+}
+
+const std::string& get_llvmir_dir() const
+{
+  static auto out = (fs::path(get_build_dir()) / "llvm-ir").string();
+  return out;
+}
+
+toolchain::Version::Version(const std::string& str, const std::string& separator = "-")
+{
+  suffix        = '\0';
+  size_t first  = str.find(separator);
+  size_t second = str.find(separator, first + 1);
+  if (first == std::string::npos || second == std::string::npos)
+    throw std::invalid_argument("Invalid format version: " + str);
+
+  year  = std::stoi(str.substr(0, first));
+  month = std::stoi(str.substr(first + 1, second - first - 1));
+
+  std::string dayPart = str.substr(second + 1);
+  if (!dayPart.empty() && !isdigit(dayPart.back())) {
+    suffix = dayPart.back();
+    dayPart.pop_back();
+  }
+  day = std::stoi(dayPart);
+}

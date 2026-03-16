@@ -78,3 +78,11 @@ void Visitor_Symbol::visit(ast::Expr_ID_Type& n)
   resolve_sym(n, n.symbol, false);
   n.name->symbol = n.symbol;
 }
+
+void Visitor_Symbol::visit(ast::expression::Call& n)
+{
+  if (auto ptr = dynamic_cast<ast::AIdentifier*>(n.callee.get())) {
+    resolve_sym(*ptr, n.function_symbol, false);
+  } else {
+  }
+}

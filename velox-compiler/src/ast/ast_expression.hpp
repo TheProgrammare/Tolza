@@ -86,6 +86,9 @@ struct Call : public AExpression {
   std::vector<std::unique_ptr<AType>>         gen_args;
   std::vector<std::unique_ptr<Call_Argument>> param_args;
 
+  SYM_REF       function_symbol;
+  INFERRED_TYPE function_proto;
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   std::string  debug_str() const override;
 

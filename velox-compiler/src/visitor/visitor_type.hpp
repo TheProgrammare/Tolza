@@ -24,7 +24,7 @@ struct Visitor_Type : public Visitor_Default {
   std::shared_ptr<ast::AType> resolve_type(ast::Node& n, ast::AType& input_type, bool silentError = false);
 
 
-  ast::AType* get_inferred_type(ast::Node& node) const;
+  ast::AType* get_inferred_type(ast::Node& node, bool is_prototype_expected = false) const;
 
   ast::AType* get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const;
 
