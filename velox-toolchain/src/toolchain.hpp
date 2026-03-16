@@ -171,43 +171,65 @@ struct CompCtx_Optional {
 
 
   // target
-  std::optional<std::string> target_abi;
-  std::optional<std::string> target_arch;
-  std::optional<size_t>      target_bits;
-  std::optional<std::string> target_os;
-  std::optional<std::string> target_libc;
-  std::optional<std::string> target_config;
+  std::string target_abi;
+  std::string target_arch;
+  size_t      target_bits = 0;
+  std::string target_os;
+  std::string target_libc;
+  std::string target_config;
 
   // profile
-  std::optional<bool>   profile_debug;
-  std::optional<size_t> profile_opt_level;
-  std::optional<bool>   profile_size_opt;
+  bool   profile_debug         = false;
+  bool   has_profile_debug     = false;
+  size_t profile_opt_level     = 0;
+  bool   has_profile_opt_level = false;
+  bool   profile_size_opt      = false;
+  bool   has_profile_size_opt  = false;
 
   // logs
-  std::optional<bool> log_all;
-  std::optional<bool> log_filesystem;
-  std::optional<bool> log_lexer;
-  std::optional<bool> log_preprocessor;
-  std::optional<bool> log_parser;
-  std::optional<bool> log_binder;
-  std::optional<bool> log_exporter;
-  std::optional<bool> log_resolver;
-  std::optional<bool> log_LLVM_IR;
-  std::optional<bool> log_linker;
+
+  bool log_all;
+  bool has_log_all = false;
+  bool log_filesystem;
+  bool has_log_filesystem = false;
+  bool log_lexer;
+  bool has_log_lexer = false;
+  bool log_preprocessor;
+  bool has_log_preprocessor = false;
+  bool log_parser;
+  bool has_log_parser = false;
+  bool log_binder;
+  bool has_log_binder = false;
+  bool log_exporter;
+  bool has_log_exporter = false;
+  bool log_resolver;
+  bool has_log_resolver = false;
+  bool log_LLVM_IR;
+  bool has_log_LLVM_IR = false;
+  bool log_linker;
+  bool has_log_linker = false;
 
   // warnings
-  std::optional<bool>   warn_all;
-  std::optional<bool>   warn_extra;
-  std::optional<bool>   warn_pedantic;
-  std::optional<size_t> warn_level;
-  std::optional<bool>   warn_unused;
-  std::optional<bool>   warn_dead_code;
-  std::optional<bool>   warn_as_error;
+  bool   warn_all           = false;
+  bool   has_warn_all       = false;
+  bool   warn_extra         = false;
+  bool   has_warn_extra     = false;
+  bool   warn_pedantic      = false;
+  bool   has_warn_pedantic  = false;
+  size_t warn_level         = 0;
+  bool   has_warn_level     = false;
+  bool   warn_unused        = false;
+  bool   has_warn_unused    = false;
+  bool   warn_dead_code     = false;
+  bool   has_warn_dead_code = false;
+  bool   warn_as_error      = false;
+  bool   has_warn_as_error  = false;
 
   // dot
-  std::optional<bool> dot_ast;
-  std::optional<bool> dot_link;
-
+  bool dot_ast      = false;
+  bool has_dot_ast  = false;
+  bool dot_link     = false;
+  bool has_dot_link = false;
 
   // defines
   std::map<std::string, std::string> defines;
@@ -218,29 +240,31 @@ struct CompCtx_Optional {
   EMergeMode               undefines_merge_mode = EMergeMode::_union;
 
   // codegen
-  std::optional<EEmitMode>   codegen_emit_mode;
-  std::optional<std::string> codegen_build_dir;
+  EEmitMode   codegen_emit_mode     = EEmitMode::BIN;
+  bool        has_codegen_emit_mode = false;
+  std::string codegen_build_dir;
+  bool        has_codegen_build_dir = false;
 
   // project
-  std::optional<std::string> project_dir;
-  std::optional<std::string> source_dir;
-  std::optional<std::string> vendor_dir;
-  std::optional<std::string> ffi_json_dir;
-  std::optional<std::string> compiler_file;
+  std::string project_dir;
+  bool        has_project_dir = false;
+  std::string source_dir;
+  bool        has_source_dir = false;
+  std::string vendor_dir;
+  bool        has_vendor_dir = false;
+  std::string ffi_json_dir;
+  bool        has_ffi_json_dir = false;
+  std::string compiler_file;
+  bool        has_compiler_file = false;
 
   // sub_configs
   // key, path
   std::map<std::string, std::string> sub_configs;
-
-  std::string get_project_dir() const
-  {
-    return project_dir.value();
-  }
 };
 
-inline constexpr std::string VELOX_TOOLCHAIN_VERSION = "2026.2.0b";
+inline constexpr char VELOX_TOOLCHAIN_VERSION[] = "2026.2.0b";
 
-inline constexpr std::string DETECTED_OS_NAME =
+inline constexpr char DETECTED_OS_NAME[] =
 #ifdef _WIN32
     "windows";
 #elif __APPLE__
@@ -251,7 +275,7 @@ inline constexpr std::string DETECTED_OS_NAME =
     "unknown";
 #endif
 
-inline constexpr std::string DETECTED_ARCH =
+inline constexpr char DETECTED_ARCH[] =
 #if defined(__x86_64__) || defined(_M_X64)
     "amd64";
 #elif defined(__i386) || defined(_M_IX86)
@@ -264,7 +288,7 @@ inline constexpr std::string DETECTED_ARCH =
         "unknown";
 #endif
 
-inline constexpr std::string DETECTED_BITS =
+inline constexpr char DETECTED_BITS[] =
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
     "64";
 #elif defined(__i386) || defined(_M_IX86) || defined(__arm__)
@@ -273,7 +297,7 @@ inline constexpr std::string DETECTED_BITS =
     "0";
 #endif
 
-inline constexpr std::string DETECTED_ABI =
+inline constexpr char DETECTED_ABI[] =
 #if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__)
     "LP64";
 #elif defined(__ILP32__) || defined(__i386)
@@ -305,7 +329,7 @@ struct Version {
 };
 
 std::vector<std::pair<Version, std::string>> find_all_compilers();
-std::optional<std::string>                   find_compiler_version(const std::string& version);
-std::optional<std::string>                   find_lastest_compiler();
+std::string                                  find_compiler_version(const std::string& version);
+std::string                                  find_lastest_compiler();
 
 } // namespace toolchain

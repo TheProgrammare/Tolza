@@ -2,9 +2,7 @@
 
 #include <cstddef>
 #include <string>
-#include <filesystem>
 
-namespace fs = std::filesystem;
 
 struct CategoryStats {
   size_t files         = 0;
@@ -62,7 +60,7 @@ namespace command
 namespace audit
 {
 bool is_blank(const std::string& line);
-void process_file(const fs::path& file, CategoryStats& cat_stats, GlobalStats& global_stats);
-void audit_workspace(const fs::path& root);
+void process_file(const std::string& file, CategoryStats& cat_stats, GlobalStats& global_stats);
+void audit_workspace(const std::string& root);
 } // namespace audit
 } // namespace command

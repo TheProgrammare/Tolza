@@ -62,9 +62,9 @@ Welcome to the Velox toolchain !
   fmt_template(wel, {toolchain::VELOX_TOOLCHAIN_VERSION, path});
   std::cout << wel << std::endl;
 
-  fs::path config_path = path / "velox.config";
+  fs::path config_path = fs::path(path) / "velox.config";
   if (auto result = command::check::check_workspace(path, false); !result) {
-    err("The velox.config at " + path.string() + " is invalid.");
+    err("The velox.config at " + fs::path(path).string() + " is invalid.");
     return std::nullopt;
   }
 
@@ -99,8 +99,8 @@ Welcome to the Velox toolchain !
 toolchain::CompCtx command::build::parse_compilation_context(const std::string& config_path)
 {
   auto resolve_path = [&config_path](const std::string& _path) -> fs::path {
-    if (_path.is_relative()) {
-      return fs::weakly_canonical(config_path.parent_path() / _path);
+    if (fs::path(_path).is_relative()) {
+      return fs::weakly_canonical(fs::path(config_path).parent_path() / _path);
     } else {
       return fs::absolute(_path);
     }
@@ -171,9 +171,7 @@ toolchain::CompCtx command::build::parse_compilation_context(const std::string& 
   result.compiler_file = resolve_path(remove_quotes(reader.GetString("project", "compiler_file", "")));
 
   if (result.compiler_file.empty()) {
-    if (auto comp = toolchain::find_lastest_compiler()) result.compiler_file = comp.value();
-
-    result.compiler_file = "";
+    result.compiler_file = toolchain::find_lastest_compiler();
   }
 
   for (auto& sub_config : reader.Keys("sub_configs")) {

@@ -12,8 +12,11 @@
 
 #include <expected>
 #include <iostream>
+#include <filesystem>
 
 #include <benhoyt/cpp/INIReader.h>
+
+namespace fs = std::filesystem;
 
 
 void command::check::err(const std::string& msg)
@@ -29,16 +32,16 @@ void command::check::log(const std::string& msg, bool sub_log)
     std::cerr << "[check] " << msg << std::endl;
 }
 
-bool command::check::check_velox_config(const fs::path& file, bool full_config, bool verbose)
+bool command::check::check_velox_config(const std::string& file, bool full_config, bool verbose)
 {
   if (!fs::exists(file)) {
-    err("The config file at " + file.string() + " dosen't exists.");
+    err("The config file at " + file + " dosen't exists.");
     return false;
   }
 
   INIReader reader(file);
   if (reader.ParseError() < 0) {
-    err("Cannot open the config file at " + file.string() + ".");
+    err("Cannot open the config file at " + file + ".");
     return false;
   }
 
@@ -90,31 +93,31 @@ bool command::check::check_velox_config(const fs::path& file, bool full_config, 
 }
 
 
-bool command::check::check_workspace(const fs::path& ws_path, bool verbose)
+bool command::check::check_workspace(const std::string& ws_path, bool verbose)
 {
   log("Checking workspace check...");
 
   if (!fs::exists(ws_path)) {
-    err("The directory at " + ws_path.string() + " dosen't exists.");
+    err("The directory at " + ws_path + " dosen't exists.");
     return false;
   }
 
   bool src_found = true;
-  if (!fs::exists(ws_path / "src")) {
-    err("The mandatory file \"src/\" at " + ws_path.string() + "/src dosen't exists.");
+  if (!fs::exists(fs::path(ws_path) / "src")) {
+    err("The mandatory file \"src/\" at " + ws_path + "/src dosen't exists.");
     src_found = false;
   }
 
   bool config_found   = true;
   bool config_healthy = true;
-  if (!fs::exists(ws_path / "velox.config")) {
-    err("The mandatory \"velox.config\" at " + ws_path.string() + "/velox.config dosen't exists.");
+  if (!fs::exists(fs::path(ws_path) / "velox.config")) {
+    err("The mandatory \"velox.config\" at " + ws_path + "/velox.config dosen't exists.");
     config_found = false;
   } else {
-    if (auto result = check_velox_config(ws_path / "velox.config", true, verbose); result) {
+    if (auto result = check_velox_config(fs::path(ws_path) / "velox.config", true, verbose); result) {
       config_healthy = true;
     } else {
-      err("The .config at " + ws_path.string() + "/velox.config is invalid.");
+      err("The .config at " + ws_path + "/velox.config is invalid.");
     }
   }
 

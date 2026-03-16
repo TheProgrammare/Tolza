@@ -85,10 +85,10 @@ bool command::workspace::write_config_file(const std::string& path, const std::s
 
   fs::path compiler_file;
   auto     result = toolchain::find_lastest_compiler();
-  if (!result) {
+  if (result.empty()) {
     compiler_file = "velox-compiler not found!";
   } else {
-    compiler_file = result.value();
+    compiler_file = result;
   }
 
   std::string fmt_config = VELOX_CONFIG_TEMPLATE;

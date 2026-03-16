@@ -15,6 +15,8 @@
 #include <thread>
 #include <atomic>
 
+namespace fs = std::filesystem;
+
 
 bool command::audit::is_blank(const std::string& line)
 {
@@ -24,7 +26,7 @@ bool command::audit::is_blank(const std::string& line)
 }
 
 
-void command::audit::process_file(const fs::path& file, CategoryStats& cat_stats, GlobalStats& global_stats)
+void command::audit::process_file(const std::string& file, CategoryStats& cat_stats, GlobalStats& global_stats)
 {
   auto contains_word = [](const std::string& line, const std::string& word) {
     size_t pos = line.find(word);
@@ -98,7 +100,7 @@ void command::audit::process_file(const fs::path& file, CategoryStats& cat_stats
   global_stats.byte_size += fs::file_size(file);
 }
 
-void command::audit::audit_workspace(const fs::path& root)
+void command::audit::audit_workspace(const std::string& root)
 {
   static const char* out_str = R"(
 =============================================================================== 

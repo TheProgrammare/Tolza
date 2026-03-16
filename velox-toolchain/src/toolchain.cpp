@@ -1,10 +1,12 @@
 #include "toolchain.hpp"
 
+#include <algorithm>
 #include <filesystem>
-#include <optional>
 #include <string>
 #include <expected>
 #include <iostream>
+
+namespace fs = std::filesystem;
 
 void toolchain::err(const std::string& msg)
 {
@@ -63,18 +65,18 @@ std::vector<std::string> toolchain::CompCtx::to_args() const
   }
 
   out.push_back("--emit=" + EEmitMode_to_str());
-  out.push_back("--build=\"" + codegen_build_dir.string() + "\"");
+  out.push_back("--build=\"" + codegen_build_dir + "\"");
 
-  out.push_back("--project=\"" + project_dir.string() + "\"");
-  out.push_back("--src=\"" + source_dir.string() + "\"");
-  out.push_back("--vendor=\"" + vendor_dir.string() + "\"");
-  out.push_back("--ffi-json=\"" + ffi_json_dir.string() + "\"");
-  out.push_back("--binding=\"" + binding_dir.string() + "\"");
+  out.push_back("--project=\"" + project_dir + "\"");
+  out.push_back("--src=\"" + source_dir + "\"");
+  out.push_back("--vendor=\"" + vendor_dir + "\"");
+  out.push_back("--ffi-json=\"" + ffi_json_dir + "\"");
+  out.push_back("--binding=\"" + binding_dir + "\"");
 
   return out;
 }
 
-std::vector<std::pair<toolchain::Version, fs::path>> toolchain::find_all_compilers()
+std::vector<std::pair<toolchain::Version, std::string>> toolchain::find_all_compilers()
 {
   std::string exeName;
 #ifdef _WIN32
@@ -92,7 +94,7 @@ std::vector<std::pair<toolchain::Version, fs::path>> toolchain::find_all_compile
   baseDirs = {"/usr/local/velox", "/opt/velox"};
 #endif
 
-  std::vector<std::pair<Version, fs::path>> compilers;
+  std::vector<std::pair<Version, std::string>> compilers;
 
   for (const auto& base : baseDirs) {
     if (!fs::exists(base)) continue;
@@ -117,13 +119,13 @@ std::vector<std::pair<toolchain::Version, fs::path>> toolchain::find_all_compile
   return compilers;
 }
 
-std::optional<fs::path> toolchain::find_compiler_version(const std::string& version)
+std::string toolchain::find_compiler_version(const std::string& version)
 {
   try {
     Version v(version, ".");
     auto    compilers = find_all_compilers();
     if (!compilers.empty()) {
-      return std::nullopt;
+      return "";
     }
 
     for (auto [ver, file] : compilers) {
@@ -131,22 +133,22 @@ std::optional<fs::path> toolchain::find_compiler_version(const std::string& vers
     }
 
     toolchain::err("No velox-compiler found for the version " + version + ".");
-    return std::nullopt;
+    return "";
   } catch (...) {
     toolchain::err("[velox-toolchain] [error] The version format \"" + version  + "\" is invalid.\n"
     "  Write version format like \"9999.99.99\" or \"9999.99.99b\" or \"9999.99.99a\"");
-    return std::nullopt;
+    return "";
   }
 }
 
-std::optional<fs::path> toolchain::find_lastest_compiler()
+std::string toolchain::find_lastest_compiler()
 {
   if (auto compilers = find_all_compilers(); !compilers.empty()) {
     auto latest = *std::max_element(compilers.begin(), compilers.end(),
                                     [](const auto& a, const auto& b) { return a.first < b.first; });
     return latest.second;
   } else {
-    return std::nullopt;
+    return "";
   }
 }
 
@@ -162,13 +164,13 @@ const std::string& toolchain::CompCtx::get_debug_graph_dir() const
   return out;
 }
 
-const std::string& get_llvmir_dir() const
+const std::string& toolchain::CompCtx::get_llvmir_dir() const
 {
   static auto out = (fs::path(get_build_dir()) / "llvm-ir").string();
   return out;
 }
 
-toolchain::Version::Version(const std::string& str, const std::string& separator = "-")
+toolchain::Version::Version(const std::string& str, const std::string& separator)
 {
   suffix        = '\0';
   size_t first  = str.find(separator);

@@ -15,6 +15,8 @@
 
 #include "toolchain.hpp"
 
+namespace fs = std::filesystem;
+
 
 void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args)
 {
@@ -94,8 +96,9 @@ bool command::parse_find_compiler()
 {
   log("[velox-compiler] Searching a compiler on your machine...");
 
-  if (auto result = toolchain::find_lastest_compiler(); result) {
-    log("Compiler found at : " + result.value().string() + ".", true);
+  auto result = toolchain::find_lastest_compiler();
+  if (!result.empty()) {
+    log("Compiler found at : " + result + ".", true);
     return true;
   } else {
     log("Please install a velox-compiler to use properly velox-toolchain.");
@@ -236,7 +239,7 @@ bool command::parse_build(int argc, const char* argv[])
     if (argc > 3) command::build::parse_args_for_compilation_context(ctx.value(), 3, argc, argv);
 
     if (!fs::exists(ctx->compiler_file)) {
-      command::err("The velox-compiler path at " + ctx->compiler_file.string() + " dosen't exists.");
+      command::err("The velox-compiler path at " + ctx->compiler_file + " dosen't exists.");
       return true;
     }
 
@@ -252,7 +255,7 @@ bool command::parse_generate_ffi_json(int argc, const char* argv[])
   const fs::path path = (argc >= 3) ? fs::weakly_canonical(argv[2]) : fs::current_path();
   if (auto ctx = command::build::init_compilation_context(path); ctx) {
     if (!fs::exists(ctx->compiler_file)) {
-      command::err("The velox-compiler path at " + ctx->compiler_file.string() + " dosen't exists.");
+      command::err("The velox-compiler path at " + ctx->compiler_file + " dosen't exists.");
       return false;
     }
 
@@ -314,7 +317,7 @@ bool command::help_command()
 
 bool command::version_command()
 {
-  std::cout << "Velox Toolchain version " + toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
+  std::cout << "Velox Toolchain version " << toolchain::VELOX_TOOLCHAIN_VERSION << std::endl;
   return true;
 }
 
