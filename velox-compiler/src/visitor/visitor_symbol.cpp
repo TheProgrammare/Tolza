@@ -19,6 +19,7 @@
 #include "ast/ast_statement.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_type.hpp"
+#include "visitor/visitor_default.hpp"
 
 Visitor_Symbol::~Visitor_Symbol() = default;
 
@@ -68,21 +69,33 @@ bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, Symbol_Data*& target_reso
 void Visitor_Symbol::visit(ast::Expr_ID& n)
 {
   resolve_sym(n, n.symbol, false);
+
+  Visitor_Default::visit(n);
 }
 void Visitor_Symbol::visit(ast::Expr_ID_Qualified& n)
 {
   resolve_sym(n, n.symbol, false);
+
+  Visitor_Default::visit(n);
 }
 void Visitor_Symbol::visit(ast::Expr_ID_Type& n)
 {
   resolve_sym(n, n.symbol, false);
   n.name->symbol = n.symbol;
+
+  Visitor_Default::visit(n);
 }
 
 void Visitor_Symbol::visit(ast::expression::Call& n)
 {
   if (auto ptr = dynamic_cast<ast::AIdentifier*>(n.callee.get())) {
-    resolve_sym(*ptr, n.function_symbol, false);
+    if (resolve_sym(*ptr, n.function_symbol, false))
+      ptr->symbol = n.function_symbol;
+    else
+      error_add(195, n, "Impossible to found the function symbol", "");
   } else {
+    error_add(196, n, "The callee is not an indentifier", "");
   }
+
+  Visitor_Default::visit(n);
 }

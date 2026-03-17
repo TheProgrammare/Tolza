@@ -77,71 +77,71 @@ void ast::expression::New_Ptr::accept(Visitor_Base& v)
 
 llvm::Value* ast::expression::If_Ternary::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Member_Access::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Self::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Other::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Call_Argument::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Call::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Call_System::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Call_Pipe::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Table_Access::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Ptr_At::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Ptr_Offset::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Ptr_Val::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Addr_Of::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Size_Of::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::GetBits::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::Move::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 llvm::Value* ast::expression::New_Ptr::codegen(Visitor_Codegen& v)
 {
-  v.visit(*this);
+  return v.visit(*this);
 }
 
 

@@ -84,7 +84,7 @@ void Visitor_Type::visit(ast::Expr_ID& n)
   if (auto ty = get_symbol_type(n, n.symbol)) {
     n.inferred_type = ty;
   } else {
-    error_add(185, *n.symbol->symbol, "Symbol inferred type not found", "");
+    error_add(185, n, "Symbol inferred type not found", "");
   }
 }
 void Visitor_Type::visit(ast::Expr_ID_Qualified& n)
@@ -94,7 +94,7 @@ void Visitor_Type::visit(ast::Expr_ID_Qualified& n)
   if (auto ty = get_symbol_type(n, n.symbol)) {
     n.inferred_type = ty;
   } else {
-    error_add(186, *n.symbol->symbol, "Symbol inferred type not found", "");
+    error_add(186, n, "Symbol inferred type not found", "");
   }
 }
 void Visitor_Type::visit(ast::Expr_ID_Type& n)
@@ -105,7 +105,7 @@ void Visitor_Type::visit(ast::Expr_ID_Type& n)
     n.inferred_type       = ty;
     n.name->inferred_type = ty;
   } else {
-    error_add(187, *n.symbol->symbol, "Symbol inferred type not found", "");
+    error_add(187, n, "Symbol inferred type not found", "");
   }
 }
 
@@ -267,11 +267,10 @@ void Visitor_Type::visit(ast::expression::Call& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto proto = get_inferred_type(*n.callee, true)) {
-    n.function_proto = proto;
-
+  if (auto proto = get_inferred_type(*n.function_symbol->symbol, true)) {
     if (auto ptr = dynamic_cast<ast::type::Function_Proto*>(proto)) {
-      n.inferred_type = ptr->returnType.get();
+      n.function_proto = ptr;
+      n.inferred_type  = ptr->returnType.get();
     } else {
       error_add(193, *n.callee, "Expected fuction type in inferred type", "");
     }

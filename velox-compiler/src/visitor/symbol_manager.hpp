@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,6 +27,8 @@ struct Symbol_Data {
   std::string mangling_convention_name = "Velox";
 
   std::shared_ptr<ast::ADeclaration> symbol;
+
+  llvm::Value* llvm_symbol = nullptr;
 
   bool is_exported  = false;
   bool is_external  = false;

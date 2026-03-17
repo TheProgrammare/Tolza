@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/Function.h>
 #include <llvm-19/llvm/IR/Instructions.h>
 #include <llvm-19/llvm/IR/Type.h>
@@ -58,6 +59,8 @@ struct Visitor_Codegen {
 
   llvm::Type* const strTy;
 
+  llvm::Constant* const zero;
+
   void build_init_func();
 
   mutable std::vector<std::string> errors;
@@ -68,6 +71,8 @@ struct Visitor_Codegen {
   void error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second, const std::string& msg,
                        const std::string& hint) const;
 
+  llvm::Function* generate_stub(ast::type::Function_Proto& proto, const std::string& name,
+                                llvm::Function::LinkageTypes link_ty);
 
   // ============ AST ============
   void visit(ast::Node& n);

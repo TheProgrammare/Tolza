@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include <iostream>
+#include <llvm-19/llvm/IR/GlobalValue.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
@@ -71,6 +72,7 @@ Visitor_Codegen::Visitor_Codegen(ScriptInfo& _scr_info)
   , f128Ty(llvm::Type::getFP128Ty(ctx))
   , fSizeTy(compiler::COMP_CTX.target_bits == 32 ? f32Ty : f64Ty)
   , strTy(llvm::StructType::get(ctx, {i32Ty->getPointerTo(), i32Ty}))
+  , zero(llvm::ConstantInt::get(i32Ty, 0))
 {
 }
 
@@ -132,6 +134,17 @@ llvm::Value* Visitor_Codegen::visit(ast::Root& n)
   mod.print(llvm::outs(), nullptr);
   return nullptr;
 }*/
+
+llvm::Function* Visitor_Codegen::generate_stub(ast::type::Function_Proto& proto, const std::string& name,
+                                               llvm::Function::LinkageTypes link_ty)
+{
+  if (auto func = mod.getFunction(name)) return func;
+
+  auto fn_ty = llvm::cast<llvm::FunctionType>(proto.codegen_ty(*this));
+  auto fn    = llvm::Function::Create(fn_ty, link_ty, name, mod);
+
+  return fn;
+}
 
 
 // ============ AST ============
@@ -649,6 +662,8 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Tuple& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
+  if (n.types.empty()) return n.llvm_type = u0Ty;
+
   std::vector<llvm::Type*> tys;
   for (auto& ty : n.types) tys.emplace_back(ty->codegen_ty(*this));
 
@@ -739,19 +754,21 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Text& n)
   for (char32_t c : n.val) {
     elements.push_back(llvm::ConstantInt::get(i32Ty, static_cast<uint32_t>(c)));
   }
-  auto arr_ty    = llvm::ArrayType::get(i32Ty, elements.size());
+  auto arr_ty    = llvm::ArrayType::get(i32Ty, elements.size() + 1);
   auto arr_const = llvm::ConstantArray::get(arr_ty, elements);
 
   // build global constant variable to store the text
   auto glo_arr =
       new llvm::GlobalVariable(mod, arr_ty, true, llvm::GlobalVariable::PrivateLinkage, arr_const, "txt_array");
 
+  glo_arr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
   // point to the table first character
-  auto arr_ptr = llvm::ConstantExpr::getGetElementPtr(arr_ty, glo_arr, 0);
+  auto arr_ptr = llvm::ConstantExpr::getGetElementPtr(arr_ty, glo_arr, zero);
 
   // build the text fat pointer
-  auto fat_ptr_ty   = llvm::StructType::get(i32Ty->getPointerTo(), i32Ty);
-  auto lenght_const = llvm::ConstantInt::get(i32Ty, n.val.size());
+  auto fat_ptr_ty   = llvm::StructType::get(ctx, i32Ty->getPointerTo(), i32Ty);
+  auto lenght_const = llvm::ConstantInt::get(i32Ty, n.val.size() + 1);
   auto fat_ptr      = llvm::ConstantStruct::get(fat_ptr_ty, {arr_ptr, lenght_const});
 
   return n.llvm_value = fat_ptr;
@@ -766,6 +783,11 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Element& n)
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Format& n)
 {
+  if (n.is_pure_literal_text) return n.values[0].val->codegen(*this);
+
+  for (auto& elem : n.values) {
+    elem.val->codegen(*this);
+  }
   return nullptr;
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Format_Specifier& n)
@@ -788,7 +810,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Map& n)
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Tuple& n)
 {
-  if (n.llvm_value) return llvm::cast<llvm::LoadInst>(n.llvm_value);
+  if (n.llvm_value) return n.llvm_value;
 
   std::vector<llvm::Type*>  types;
   std::vector<llvm::Value*> vals;
@@ -808,12 +830,12 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Tuple& n)
     builder.CreateStore(val, val_ptr);
   }
 
-  return llvm::cast<llvm::LoadInst>(n.llvm_value = builder.CreateLoad(tuple_ty, ptr));
+  return n.llvm_value = builder.CreateLoad(tuple_ty, ptr);
 }
 
 llvm::Value* Visitor_Codegen::visit(ast::literal::Range& n)
 {
-  if (n.llvm_value) return llvm::cast<llvm::LoadInst>(n.llvm_value);
+  if (n.llvm_value) return n.llvm_value;
 
   auto start_ty = n.start->inferred_type->codegen_ty(*this);
   auto end_ty   = n.end->inferred_type->codegen_ty(*this);
@@ -835,18 +857,18 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Range& n)
   builder.CreateStore(end_val, end_ptr);
   builder.CreateStore(step_val, step_ptr);
 
-  return llvm::cast<llvm::LoadInst>(n.llvm_value = builder.CreateLoad(range_ty, ptr));
+  return n.llvm_value = builder.CreateLoad(range_ty, ptr);
 }
 
 llvm::Value* Visitor_Codegen::visit(ast::literal::Iterator& n)
 {
-  if (n.llvm_value) return llvm::cast<llvm::LoadInst>(n.llvm_value);
+  if (n.llvm_value) return n.llvm_value;
   return nullptr;
 }
 
 llvm::Value* Visitor_Codegen::visit(ast::literal::Enum& n)
 {
-  if (n.llvm_value) return llvm::cast<llvm::LoadInst>(n.llvm_value);
+  if (n.llvm_value) return n.llvm_value;
 
   auto tag = llvm::ConstantInt::get(i32Ty, n.in_type_position);
 
@@ -942,12 +964,20 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  auto fn_callee = n.function_symbol->symbol->codegen_pass(*this);
-  auto fn_casted = llvm::cast<llvm::Function>(fn_callee);
+  llvm::Function* fn_callee;
+  if (!n.function_symbol->llvm_symbol) {
+    if (auto ptr = dynamic_cast<ast::AIdentifier*>(n.callee.get())) {
+      fn_callee = generate_stub(*n.function_proto, ptr->get_base_name(),
+                                n.function_symbol->symbol->_scr_info == n._scr_info ? llvm::Function::InternalLinkage
+                                                                                    : llvm::Function::ExternalLinkage);
+    }
+  } else {
+    fn_callee = llvm::cast<llvm::Function>(n.function_symbol->llvm_symbol);
+  }
 
   std::vector<llvm::Value*> args;
   for (auto& arg : n.param_args) args.emplace_back(arg->codegen(*this));
-  auto result = builder.CreateCall(fn_casted, args, "tmp_call");
+  auto result = builder.CreateCall(fn_callee, args, "tmp_call");
 
   return n.llvm_value = result;
 }

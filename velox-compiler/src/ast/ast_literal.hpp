@@ -241,6 +241,8 @@ struct Textual_Format final : public ALiteral {
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
+  bool is_pure_literal_text = false;
+
   std::string debug_str() const override;
 
   void accept(Visitor_Base& v) override;

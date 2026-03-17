@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "ast/ast_type.hpp"
 #include "ast_base.hpp"
 #include "ast_evaluator.hpp"
 
@@ -86,8 +87,8 @@ struct Call : public AExpression {
   std::vector<std::unique_ptr<AType>>         gen_args;
   std::vector<std::unique_ptr<Call_Argument>> param_args;
 
-  SYM_REF       function_symbol;
-  INFERRED_TYPE function_proto;
+  SYM_REF                    function_symbol;
+  ast::type::Function_Proto* function_proto;
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   std::string  debug_str() const override;
