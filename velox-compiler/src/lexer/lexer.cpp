@@ -15,7 +15,7 @@ Lexer::Lexer(ScriptInfo& _scr_info)
 void Lexer::tokenize(const std::set<char>& exit_char)
 {
   auto stop_guard = [&]() -> bool {
-    while ((std::iscntrl(ch) || std::isspace(ch)) && exit_char.find(ch) == exit_char.end()) {
+    while ((is_ctrl(ch) || is_space(ch)) && exit_char.find(ch) == exit_char.end()) {
       if (!eat()) return false;
     }
     if (ch == EOF) return true;
@@ -28,11 +28,11 @@ void Lexer::tokenize(const std::set<char>& exit_char)
     if (stop_guard()) return;
 
     // no char before keyword : clear all char control and spaces
-    while ((std::iscntrl(ch) || std::isspace(ch)) && eat()) {
+    while ((is_ctrl(ch) || is_space(ch)) && eat()) {
     }
 
     // it's a literal string
-    if (ch == '"') {
+    if (ch == '"' || ch == 'c' && stream.peek() == '"') {
       tokenize_textual();
       continue;
     }
@@ -70,17 +70,17 @@ void Lexer::tokenize(const std::set<char>& exit_char)
                 "define placeholders in code like: `[[_U]]`");
     }
     // can be a numeric value or a range token (.. or ..=) or a variadic (...)
-    else if (std::isdigit(ch) || ch == '.') {
+    else if (is_digit(ch) || ch == '.') {
       tokenize_numeric();
       continue;
     }
     // can be a identifier or keyword
-    else if (std::isalpha(ch) || ch == '_') {
+    else if (is_alpha(ch) || ch == '_') {
       tokenize_identifier();
 
       // try to avoid tokenize_keyword who is expensive :(
       // no prefix possible: can be a keyword or identifier
-      if (std::iscntrl(stream.peek()) || std::isspace(stream.peek())) {
+      if (is_ctrl(stream.peek()) || is_space(stream.peek())) {
         // it's a keyword
         if (TokTy type = Str_to_ETokenType(buffer); type != TokTy::UNKNOWN) {
           addToken(type);
@@ -137,7 +137,7 @@ void Lexer::process_escape()
   case 'x':  {
     std::string hex;
     for (int i = 0; i < 2; ++i) { // On lit 1 ou 2 chiffres hexadécimaux
-      if (!stream.get(ch) || !isxdigit(ch)) {
+      if (!stream.get(ch) || !is_hex(ch)) {
         if (hex.empty()) {
           add_error(2, "Invalid hex escape sequence", "define hex escape like: `\\xHH`");
           return;
@@ -163,7 +163,7 @@ void Lexer::process_escape()
     int         numDigits = (ch == 'u') ? 4 : 8;
     std::string hex;
     for (int i = 0; i < numDigits; ++i) {
-      if (!stream.get(ch) || !isxdigit(ch)) {
+      if (!stream.get(ch) || !is_hex(ch)) {
         add_error(3, "Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
         return;
       }
@@ -205,6 +205,8 @@ void Lexer::process_escape()
 
 void Lexer::tokenize_textual()
 {
+  bool is_c_string = ch == 'c';
+  if (ch == 'c') eat(); // consume c
   while (eat()) {
     if (ch == '{') {
       if (!buffer.empty()) addToken(TokTy::L_TEXTUAL);
@@ -232,7 +234,7 @@ void Lexer::tokenize_textual()
     }
 
     if (ch == '"') {
-      addToken(TokTy::L_TEXTUAL);
+      addToken(is_c_string ? TokTy::L_C_STRING : TokTy::L_TEXTUAL);
       return;
     } else if (ch == '\\') {
       process_escape();
@@ -245,9 +247,9 @@ void Lexer::tokenize_textual()
 bool Lexer::tokenize_spec()
 {
   // Unsigned integrals
-  if (isdigit(ch)) {
+  if (is_digit(ch)) {
     buffer += ch;
-    while (isdigit(stream.peek())) {
+    while (is_digit(stream.peek())) {
       eat();        // consume current
       buffer += ch; // save peeked digit
     }
@@ -256,7 +258,7 @@ bool Lexer::tokenize_spec()
     return true;
   }
   // Letters
-  else if (isalpha(ch)) {
+  else if (is_alpha(ch)) {
     buffer = ch;
     addToken(TokTy::L_ASCII);
     return true;
@@ -365,7 +367,7 @@ void Lexer::tokenize_numeric()
   }
 
   if (!isBin && !isOct && !isHex) {
-    if (std::isdigit(ch))
+    if (is_digit(ch))
       buffer += ch;
     else if (check_range_case())
       return;
@@ -373,7 +375,7 @@ void Lexer::tokenize_numeric()
     else if (ch == '.') {
       // member access : a.b
 
-      if (!scr_info.tokens.empty() && scr_info.tokens.back().type == TokTy::IDENTIFIER && std::isalpha(stream.peek())) {
+      if (!scr_info.tokens.empty() && scr_info.tokens.back().type == TokTy::IDENTIFIER && is_alpha(stream.peek())) {
         buffer = ".";
         addToken(TokTy::DOT);
         return;
@@ -395,7 +397,7 @@ void Lexer::tokenize_numeric()
       else if (ch == '\'' || ch == '_')
         continue;
       else {
-        stream.putback(ch);
+        stream.go_back();
         break;
       }
     }
@@ -406,25 +408,25 @@ void Lexer::tokenize_numeric()
       else if (ch == '\'' || ch == '_')
         continue;
       else {
-        stream.putback(ch);
+        stream.go_back();
         break;
       }
     }
     // Only allow 0 1 2 3 4 5 6 7 8 9 A B C D E F ' _
     else if (isHex) {
-      if (std::isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'))
+      if (is_digit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'))
         buffer += ch;
       else if (ch == '\'' || ch == '_')
         continue;
       else {
-        stream.putback(ch);
+        stream.go_back();
         break;
       }
     }
     // numeric
     else {
       // classic numeric
-      if (std::isdigit(ch)) {
+      if (is_digit(ch)) {
         buffer += ch;
       }
       // prevent range creation : save buffer vals
@@ -463,7 +465,7 @@ void Lexer::tokenize_numeric()
       }
       // end
       else {
-        stream.putback(ch);
+        stream.go_back();
         break;
       }
     }
@@ -479,52 +481,113 @@ void Lexer::tokenize_numeric()
   return addToken(TokTy::L_I);
 }
 
-Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search)
+Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, std::string_view _key, std::string_view _search)
 {
   if (_key == _search) return EPrefixFound::All;
   if (_search.size() < _key.size() && _key.rfind(_search, 0) == 0) return EPrefixFound::Prefix;
   return EPrefixFound::None;
 }
 
-bool Lexer::is_valid_prefix(char prefix, const std::string& _current)
+const std::vector<std::pair<std::string_view, ETokenType>>& get_sorted_keywords()
 {
-  auto kSortedKeywords = [&]() {
-    static std::vector<std::pair<std::string, ETokenType>> out;
-    if (!out.empty()) return out;
+  static std::vector<std::pair<std::string_view, ETokenType>> sorted;
+  if (sorted.empty()) {
+    sorted.reserve(kKeywords.size());
+    for (auto& [text, type] : kKeywords) sorted.emplace_back(text, type);
 
-    for (auto& [text, type] : kKeywords) {
-      out.push_back({text, type});
-    }
-
-    std::stable_sort(out.begin(), out.end(),
+    // Trie décroissant par taille pour matcher le mot clé le plus long en premier
+    std::stable_sort(sorted.begin(), sorted.end(),
                      [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
+  }
+  return sorted;
+}
 
-    return out;
-  };
-
-  for (auto& [val, type] : kSortedKeywords()) {
+bool Lexer::is_valid_prefix(char prefix, std::string_view _current)
+{
+  for (auto& [val, type] : get_sorted_keywords()) {
     if (val.size() <= _current.size()) continue;
-    if (val.rfind(_current, 0) != 0) continue;
+    // Manual prefix comparison
+    if (val.substr(0, _current.size()) != _current) continue;
     if (val[_current.size()] == prefix) return true;
   }
   return false;
-};
+}
 
 void Lexer::tokenize_keyword()
 {
-  auto kSortedKeywords = [&]() {
-    static std::vector<std::pair<std::string, ETokenType>> out;
-    if (!out.empty()) return out;
-
-    for (auto& [text, type] : kKeywords) {
-      out.push_back({text, type});
-    }
-
-    std::stable_sort(out.begin(), out.end(),
-                     [](const auto& a, const auto& b) { return a.first.size() > b.first.size(); });
-
-    return out;
+  struct Keyword {
+    std::string text;
+    ETokenType  type;
   };
+
+  if (buffer.empty()) buffer = ch;
+
+  bool keep_searching = true;
+
+  while (keep_searching) {
+    keep_searching = false;
+
+    for (auto& [val, type] : get_sorted_keywords()) {
+      if (val.empty() || val[0] != buffer[0]) continue;
+      if (buffer.size() > val.size()) continue;
+
+      switch (get_prefix_keyword(type, val, buffer)) {
+      case EPrefixFound::None: continue;
+
+      case EPrefixFound::All:
+        buffer = std::string(val); // convertir string_view en string
+        addToken(type);
+        return;
+
+      case EPrefixFound::Prefix: {
+        char next = stream.peek();
+        if (next == EOF || is_ctrl(next) || is_space(next)) {
+          keep_searching = false;
+          break;
+        }
+
+        if (is_valid_prefix(next, buffer)) {
+          eat();
+          buffer += next;
+          if (buffer.size() > k_max_keyword_size) break;
+          keep_searching = true;
+        } else {
+          // Backtracking optimisé : vider le buffer tout en remettant les chars
+          while (!buffer.empty()) {
+            if (str_is_identifier(buffer)) return;
+            if (auto type2 = Str_to_ETokenType(buffer); type2 != TokTy::UNKNOWN) {
+              addToken(type2);
+              return;
+            }
+            buffer.pop_back();
+            stream.go_back();
+          }
+          keep_searching = false;
+        }
+        break;
+      }
+      }
+
+      if (keep_searching) break;
+    }
+  }
+
+  // Nettoyage du buffer : remove_if + erase pour éviter copie
+  buffer.erase(std::remove_if(buffer.begin(), buffer.end(), [](char c) { return is_ctrl(c) || is_space(c); }),
+               buffer.end());
+
+  if (buffer.empty()) return;
+
+  if (str_is_identifier(buffer)) {
+    addToken(TokTy::IDENTIFIER);
+  } else {
+    add_error(7, "Unexpected token symbol",
+              "define keywords like:"
+              "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-zA-Z_][a-zA-Z0-9_]"
+              "\n  - Reserved keyword: please, refer to the language documentation.");
+  }
+
+  /*
 
   // if no start by id : buffer must have the current character
   if (buffer.empty()) buffer = ch;
@@ -533,7 +596,7 @@ void Lexer::tokenize_keyword()
   while (keep_searching) {
     keep_searching = false;
 
-    for (auto& [val, type] : kSortedKeywords()) {
+    for (auto& [val, type] : get_sorted_keywords()) {
       // Ignore keywords that can't possibly match the first character
       if (val.empty() || val[0] != buffer[0]) continue;
       if (buffer.size() > val.size()) continue;
@@ -548,7 +611,7 @@ void Lexer::tokenize_keyword()
       }
       case EPrefixFound::Prefix: {
         char next = stream.peek();
-        if (next == EOF || std::iscntrl(next) || std::isspace(next)) {
+        if (next == EOF || is_ctrl(next) || is_space(next)) {
           keep_searching = false;
           break;
         }
@@ -583,7 +646,7 @@ void Lexer::tokenize_keyword()
   // purge the buffer of control char
   std::string buffer_temp;
   for (char elem : buffer) {
-    if (!std::iscntrl(elem) && !std::isspace(elem)) buffer_temp += elem;
+    if (!is_ctrl(elem) && !is_space(elem)) buffer_temp += elem;
   }
   buffer = buffer_temp;
 
@@ -600,6 +663,7 @@ void Lexer::tokenize_keyword()
               "\n  - Identifier: alpha or '_' first and after alphanumeric: [a-zA-Z_][a-zA-Z0-9_]"
               "\n  - Reserved keyword: please, refer to the language documentation.");
   }
+              */
 }
 
 void Lexer::tokenize_identifier()
@@ -608,7 +672,7 @@ void Lexer::tokenize_identifier()
   bool keep_tokenize = true;
   while (keep_tokenize) {
     keep_tokenize = false;
-    if (std::isalnum(stream.peek()) || stream.peek() == '_') {
+    if (is_alnum(stream.peek()) || stream.peek() == '_') {
       eat();
       buffer += ch;
       keep_tokenize = true;
@@ -650,12 +714,12 @@ TokTy Lexer::classifyNumerals(std::string& outValue)
   outValue.clear();
   char c;
 
-  while (stream.get(c) && std::isspace(c)) {
+  while (stream.get(c) && is_space(c)) {
   }
 
   // Check if start of number
-  if (!isdigit(c) && c != '.') {
-    stream.putback(c);
+  if (!is_digit(c) && c != '.') {
+    stream.go_back();
     return TokTy::UNKNOWN;
   }
 
@@ -691,7 +755,7 @@ TokTy Lexer::classifyNumerals(std::string& outValue)
       else if (c == '\'' || c == '_')
         continue;
       else {
-        stream.putback(c);
+        stream.go_back();
         break;
       }
     }
@@ -702,24 +766,24 @@ TokTy Lexer::classifyNumerals(std::string& outValue)
       else if (c == '\'' || c == '_')
         continue;
       else {
-        stream.putback(c);
+        stream.go_back();
         break;
       }
     }
     // Hexadecimal
     else if (isHex) {
-      if (isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+      if (is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
         buffer += c;
       else if (c == '\'' || c == '_')
         continue;
       else {
-        stream.putback(c);
+        stream.go_back();
         break;
       }
     }
     // Numeric / float / decimal
     else {
-      if (isdigit(c))
+      if (is_digit(c))
         buffer += c;
       else if (c == '.' & stream.peek() != '.' && !isDecimal) {
         buffer += c;
@@ -741,7 +805,7 @@ TokTy Lexer::classifyNumerals(std::string& outValue)
         isuDecimal = true;
         break;
       } else {
-        stream.putback(c);
+        stream.go_back();
         break;
       }
     }
@@ -764,7 +828,7 @@ TokTy Lexer::classifyKeyword(std::string& outWord)
   char c = outWord[0];
 
   std::string buffer(1, c);
-  while (stream.peek() != EOF && !std::isspace(stream.peek()) && !std::iscntrl(stream.peek())) {
+  while (stream.peek() != EOF && !is_space(stream.peek()) && !is_ctrl(stream.peek())) {
     stream.get(c);
     buffer += c;
   }
@@ -775,19 +839,19 @@ TokTy Lexer::classifyKeyword(std::string& outWord)
     if (it != kKeywords.end()) {
       outWord = candidate;
       // Remettre les caractères restants
-      for (int i = (int)buffer.size() - 1; i >= (int)len; --i) stream.putback(buffer[i]);
+      for (int i = (int)buffer.size() - 1; i >= (int)len; --i) stream.go_back();
       return it->second;
     }
   }
 
 
-  if (isalpha(buffer[0]) || buffer[0] == '_') {
+  if (is_alpha(buffer[0]) || buffer[0] == '_') {
     size_t i = 1;
-    while (i < buffer.size() && (isalnum(buffer[i]) || buffer[i] == '_')) i++;
+    while (i < buffer.size() && (is_alnum(buffer[i]) || buffer[i] == '_')) i++;
 
     outWord = buffer.substr(0, i);
 
-    for (int j = (int)buffer.size() - 1; j >= (int)i; --j) stream.putback(buffer[j]);
+    for (int j = (int)buffer.size() - 1; j >= (int)i; --j) stream.go_back();
 
     return TokTy::IDENTIFIER;
   }
@@ -802,22 +866,22 @@ TokTy Lexer::classifyFormatSpec(std::string& outFormat)
   char c = outFormat[0];
 
   // Unsigned integrals
-  if (isdigit(c)) {
+  if (is_digit(c)) {
     outFormat += c;
 
     while (stream.get(c)) {
       // concat numbers
-      if (isdigit(c))
+      if (is_digit(c))
         outFormat += c;
       else {
-        stream.putback(c);
+        stream.go_back();
         break;
       }
     }
     return TokTy::L_U;
   }
   // Letters
-  else if (isalpha(c)) {
+  else if (is_alpha(c)) {
     outFormat += c;
     return TokTy::L_ASCII;
   }

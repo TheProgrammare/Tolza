@@ -8,6 +8,7 @@
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_data.hpp"
+#include "ast/ast_inferred_type_singleton.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_expression.hpp"
 
@@ -44,6 +45,7 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silen
     // literal
     // string
   case TokTy::L_TEXTUAL:
+  case TokTy::L_C_STRING:
     return literal_textual();
     // literal
     // range
@@ -227,9 +229,18 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
   while (!ctx.tok_v.is_end()) {
     if (ctx.tok_v.check(TokTy::L_TEXTUAL)) {
       auto           text = ctx.Create_Node<ast::literal::Text>(ctx.tok_v.peek());
-      std::u32string val =
+      auto           val  = ctx.tok_v.peek().val;
+      std::u32string utf32_val =
           std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>{}.from_bytes(ctx.tok_v.next().val);
-      text->val = val;
+      text->utf32_val     = utf32_val;
+      text->inferred_type = ast::type::get_text_type();
+      ftext->values.push_back(std::move(text));
+      continue;
+    } else if (ctx.tok_v.check(TokTy::L_C_STRING)) {
+      auto text           = ctx.Create_Node<ast::literal::Text>(ctx.tok_v.peek());
+      text->val           = ctx.tok_v.next().val;
+      text->is_c_string   = true;
+      text->inferred_type = ast::type::get_c_str_type();
       ftext->values.push_back(std::move(text));
       continue;
     } else if (ctx.tok_v.match(TokTy::S_TEXTUAL_EXPR_START)) {

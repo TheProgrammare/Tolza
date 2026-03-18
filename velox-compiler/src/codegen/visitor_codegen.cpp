@@ -26,6 +26,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Value.h>
+#include <memory>
 #include <vector>
 
 
@@ -253,11 +254,24 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 {
   if (n.llvm_fn) return n.llvm_fn;
 
+  const bool is_main = n.name == "main";
 
-  auto fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
-  auto fn    = llvm::Function::Create(
-      fn_ty, n.is_exported || n.is_external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage, n.name,
-      mod);
+  llvm::Function::LinkageTypes linkage =
+      n.is_exported || n.is_external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
+
+  llvm::FunctionType* fn_ty;
+
+  if (is_main) {
+    linkage = llvm::Function::ExternalLinkage;
+
+    std::vector<llvm::Type*> param_tys;
+    for (auto& param : n.prototype->parameters) param_tys.emplace_back(param->type->codegen_ty(*this));
+    fn_ty = llvm::FunctionType::get(i32Ty, param_tys, false);
+  } else {
+    fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
+  }
+
+  auto fn = llvm::Function::Create(fn_ty, linkage, n.name, mod);
 
   if (!n.codeblock) return fn;
 
@@ -266,7 +280,10 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 
   n.codeblock->codegen_pass(*this);
 
-  if (!entry->getTerminator()) builder.CreateRetVoid();
+  if (is_main)
+    builder.CreateRet(llvm::ConstantInt::get(i32Ty, 0));
+  else if (!entry->getTerminator())
+    builder.CreateRetVoid();
   return n.llvm_fn = fn;
 }
 
@@ -667,6 +684,8 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Tuple& n)
   std::vector<llvm::Type*> tys;
   for (auto& ty : n.types) tys.emplace_back(ty->codegen_ty(*this));
 
+  if (tys.size() == 1) return n.llvm_type = tys[0];
+
   return n.llvm_type = llvm::StructType::get(ctx, tys);
 }
 llvm::Type* Visitor_Codegen::visit(ast::type::Function_Proto& n)
@@ -747,6 +766,14 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Text& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
+  if (n.is_c_string) {
+    auto txt = llvm::ConstantDataArray::getString(ctx, n.val, true);
+    auto glo_txt =
+        new llvm::GlobalVariable(mod, txt->getType(), true, llvm::GlobalVariable::PrivateLinkage, txt, ".cstr");
+    glo_txt->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+    return n.llvm_value = llvm::ConstantExpr::getInBoundsGetElementPtr(txt->getType(), glo_txt, zero);
+  }
 
   std::vector<llvm::Constant*> elements;
 
@@ -754,13 +781,11 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Text& n)
   for (char32_t c : n.val) {
     elements.push_back(llvm::ConstantInt::get(i32Ty, static_cast<uint32_t>(c)));
   }
-  auto arr_ty    = llvm::ArrayType::get(i32Ty, elements.size() + 1);
+  auto arr_ty    = llvm::ArrayType::get(i32Ty, elements.size());
   auto arr_const = llvm::ConstantArray::get(arr_ty, elements);
 
   // build global constant variable to store the text
-  auto glo_arr =
-      new llvm::GlobalVariable(mod, arr_ty, true, llvm::GlobalVariable::PrivateLinkage, arr_const, "txt_array");
-
+  auto glo_arr = new llvm::GlobalVariable(mod, arr_ty, true, llvm::GlobalVariable::PrivateLinkage, arr_const, ".txt");
   glo_arr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // point to the table first character
@@ -768,7 +793,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Text& n)
 
   // build the text fat pointer
   auto fat_ptr_ty   = llvm::StructType::get(ctx, i32Ty->getPointerTo(), i32Ty);
-  auto lenght_const = llvm::ConstantInt::get(i32Ty, n.val.size() + 1);
+  auto lenght_const = llvm::ConstantInt::get(i32Ty, n.val.size());
   auto fat_ptr      = llvm::ConstantStruct::get(fat_ptr_ty, {arr_ptr, lenght_const});
 
   return n.llvm_value = fat_ptr;

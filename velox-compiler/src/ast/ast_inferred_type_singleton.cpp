@@ -195,6 +195,12 @@ ast::AType* ast::type::get_str_type()
   return prim;
 }
 
+ast::AType* ast::type::get_c_str_type()
+{
+  static ast::AType* prim = new Primitive(EPrimType::c_str);
+  return prim;
+}
+
 ast::AType* ast::type::get_text_type()
 {
   static ast::AType* prim = new Primitive(EPrimType::text);

@@ -96,6 +96,7 @@ enum class EPrimType {
   ASCII,
   UTF32,
   str,
+  c_str,
   text,
   iSize,
   i8,

@@ -304,18 +304,22 @@ ast::literal::UTF32::UTF32(std::string codePoints_value)
 
 ast::literal::Text::Text()
 {
-  if (is_ascii)
+  if (is_c_string)
+    inferred_type = type::get_c_str_type();
+  else if (is_ascii)
     inferred_type = type::get_str_type();
   else
     inferred_type = type::get_text_type();
 }
 
-ast::literal::Text::Text(const std::u32string& value, bool _is_ascii = false)
+ast::literal::Text::Text(const std::string& value, bool _is_c_string = false, bool _is_ascii = false)
   : val(value)
   , is_ascii(_is_ascii)
-
+  , is_c_string(_is_c_string)
 {
-  if (is_ascii)
+  if (is_c_string)
+    inferred_type = type::get_c_str_type();
+  else if (is_ascii)
     inferred_type = type::get_str_type();
   else
     inferred_type = type::get_text_type();

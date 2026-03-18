@@ -60,6 +60,8 @@ static const std::string binder_info = "%0 files + %1 binding files = %2 total f
 
 bool start_compilation(int argc, const char* argv[])
 {
+  auto duration_start = std::chrono::high_resolution_clock::now();
+
   // if command == src/ build ...
   if (!compiler::in_binding_compilation && argc > 2)
     compiler::parse_args_for_compilation_context(compiler::COMP_CTX, argc, argv);
@@ -195,10 +197,17 @@ bool start_compilation(int argc, const char* argv[])
   // link data
   if (!pipeline_start_linker(scr_infos)) return false;
 
-  std::cout << color_BLUE R"(
-[velox-compiler] Compilation finish successfully !
-)" color_RESET
-            << std::endl;
+  auto   duration_end = std::chrono::high_resolution_clock::now();
+  double milli        = std::chrono::duration<double, std::milli>(duration_end - duration_start).count();
+
+  constexpr char end_log[] = color_BLUE
+      "[velox-compiler] Compilation finish successfully !\n"
+      "Duration: " color_YELLOW "%0 ms\n" color_RESET "  Find the executable at " color_MAGENTA "%1" color_RESET;
+
+  std::string fmt_end = end_log;
+  compiler::fmt_template(fmt_end, {std::to_string(milli), compiler::COMP_CTX.get_build_dir()});
+
+  std::cout << fmt_end << std::endl;
 
   return true;
 }

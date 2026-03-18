@@ -78,6 +78,7 @@ enum class ETokenType {
   S_TEXTUAL_EXPR_START,
   S_TEXTUAL_EXPR_END,
   // text
+  L_C_STRING,
   L_TEXTUAL,
   TRUE,
   FALSE,

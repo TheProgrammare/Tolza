@@ -287,6 +287,7 @@ std::string EPrimTy_to_str(EPrimType type)
   case EPrimType::ASCII:     return "ASCII";
   case EPrimType::UTF32:     return "UTF32";
   case EPrimType::str:       return "string";
+  case EPrimType::c_str:     return "c_str";
   case EPrimType::text:      return "text";
 
   case EPrimType::ptrdiff:   return "ptrdiff";
@@ -345,6 +346,7 @@ std::string EPrimTy_to_mangle(EPrimType type)
   case EPrimType::boolean:   return "b";
   case EPrimType::ASCII:     return "aii";
   case EPrimType::UTF32:     return "utf";
+  case EPrimType::c_str:     return "cstr";
   case EPrimType::str:       return "str";
   case EPrimType::text:      return "txt";
 

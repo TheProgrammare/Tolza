@@ -22,7 +22,6 @@
 #include <set>
 
 #include "stream_tracker.hpp"
-#include "token.hpp"
 
 enum class ETokenType;
 using TokTy = ETokenType;
@@ -39,8 +38,8 @@ public:
 
   enum class EPrefixFound { None, Prefix, All };
 
-  EPrefixFound                  get_prefix_keyword(TokTy _type, const std::string& _key, const std::string& _search);
-  bool                          is_valid_prefix(char prefix, const std::string& _current);
+  EPrefixFound                  get_prefix_keyword(TokTy _type, std::string_view _key, std::string_view _search);
+  bool                          is_valid_prefix(char prefix, std::string_view _current);
   void                          tokenize(const std::set<char>& exit_char);
   void                          process_escape();
   void                          tokenize_textual();
@@ -66,3 +65,36 @@ public:
   std::string              buffer;
   char                     ch = '\0';
 };
+
+const std::vector<std::pair<std::string_view, TokTy>>& get_sorted_keywords();
+
+
+inline bool is_space(unsigned char c) noexcept
+{
+  return (c == ' ' || (c >= '\t' && c <= '\r'));
+}
+
+inline bool is_ctrl(unsigned char c) noexcept
+{
+  return (c < 32 || c == 127);
+}
+
+inline bool is_digit(unsigned char c) noexcept
+{
+  return c >= '0' && c <= '9';
+}
+
+inline bool is_hex(unsigned char c) noexcept
+{
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+
+inline bool is_alnum(unsigned char c) noexcept
+{
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+inline bool is_alpha(unsigned char c) noexcept
+{
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}

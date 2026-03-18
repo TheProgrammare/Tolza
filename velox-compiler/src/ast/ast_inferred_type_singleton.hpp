@@ -52,6 +52,7 @@ ast::type::Tuple* get_void_return_type();
 ast::AType*       get_ascii_type();
 ast::AType*       get_utf32_type();
 ast::AType*       get_str_type();
+ast::AType*       get_c_str_type();
 ast::AType*       get_text_type();
 
 } // namespace type

@@ -1,24 +1,34 @@
 #pragma once
 
-#include <sstream>
+#include <string>
 
 class StreamTracker
 {
-  std::istringstream stream;
-  size_t             line     = 1;
-  size_t             column   = 0;
-  char               lastChar = '\0';
+  const char* start;
+  const char* end;
+  const char* cur;
+
+  std::string text;
+
+  size_t line     = 1;
+  size_t column   = 0;
+  char   lastChar = '\0';
 
 public:
   StreamTracker(const std::string& s)
-    : stream(std::istringstream(s))
+    : text(s)
+    , start(s.begin().base())
+    , end(s.end().base())
+    , cur(start)
   {
   }
 
   // Read char and update line and column
   bool get(char& c)
   {
-    if (!stream.get(c)) return false;
+    if (cur == end) return false;
+    c = *cur;
+    cur++;
     if (lastChar == '\n') {
       line++;
       column = 1;
@@ -31,7 +41,8 @@ public:
 
   char peek()
   {
-    return stream.peek();
+    if (cur == end) return EOF;
+    return *cur;
   }
 
   size_t get_line() const
@@ -43,14 +54,15 @@ public:
     return column;
   }
 
-  void putback(char c)
+  void go_back()
   {
-    if (!stream) stream.clear(); // clear le flux avant putback
-    stream.putback(c);
-    if (c == '\n') {
+    if (cur == start) return;
+
+    cur--;
+    if (*cur == '\n') {
       line--;
       column = 1;
-    } else if (!std::iscntrl(c)) {
+    } else if (!is_ctrl(*cur)) {
       column--;
       if (column < 1) column = 1;
     }
@@ -59,5 +71,11 @@ public:
   char get_last_ch()
   {
     return lastChar;
+  }
+
+private:
+  bool is_ctrl(unsigned char c) noexcept
+  {
+    return (c < 32 || c == 127);
   }
 };

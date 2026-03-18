@@ -126,12 +126,14 @@ struct UTF32 final : public ALiteral {
 };
 
 struct Text final : public ALiteral {
-  std::u32string val;
-  size_t         length   = 1;
-  bool           is_ascii = false;
+  std::string val;
+  size_t      length      = 1;
+  bool        is_ascii    = false;
+  bool        is_c_string = false;
 
+  std::u32string utf32_val;
   Text();
-  Text(const std::u32string& value, bool _is_ascii);
+  Text(const std::string& value, bool _is_c_string, bool _is_ascii);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 

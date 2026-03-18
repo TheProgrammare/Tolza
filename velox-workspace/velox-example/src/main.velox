@@ -1,5 +1,7 @@
-import usr: core
+// import usr: core
+import ext: C::stdio
 
 fn main() {
-  core::println("hello world!")
+  //core::println("hello world!")
+  C::printf(c"hello world!")
 }
