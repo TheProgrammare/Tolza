@@ -23,7 +23,7 @@ bool help_command();
 bool version_command();
 void invalid_command();
 
-constexpr const char* HELP_LIST_COMMANDS =
+constexpr char HELP_LIST_COMMANDS[] =
     R"(
 USAGE: velox-compiler <command> [options]
 
@@ -81,7 +81,7 @@ Preprocessor options:
   -U<name>                  Undefine a macro.
 
 Code generation options:        
-  --emit=<obj|asm|bc|bin>   Set the output format.
+  --emit-<obj|asm|bc|bin|llvm>   Set the output format.
   --build=<dir>             Set the build directory.
 
 Project options:        

@@ -64,7 +64,13 @@ std::vector<std::string> toolchain::CompCtx::to_args() const
     out.push_back("-U" + udef);
   }
 
-  out.push_back("--emit=" + EEmitMode_to_str());
+  if (emit_bin) out.push_back("--emit-bin");
+  if (emit_llvm) out.push_back("--emit-llvm");
+  if (emit_obj) out.push_back("--emit-obj");
+  if (emit_asm) out.push_back("--emit-asm");
+  if (emit_bc) out.push_back("--emit-bc");
+  if (emit_static_lib) out.push_back("--emit-static-lib");
+  if (emit_dynamic_lib) out.push_back("--emit-dynamic-lib");
   out.push_back("--build=\"" + codegen_build_dir + "\"");
 
   out.push_back("--project=\"" + project_dir + "\"");

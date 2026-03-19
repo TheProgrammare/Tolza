@@ -213,20 +213,14 @@ void compiler::parse_args_for_compilation_context(CompCtx& ctx, int argc, const 
     }
 
     // codegen
-    std::string emit_mode;
-    if (str_arg(emit_mode, "emit")) {
-      if (emit_mode == "obj")
-        ctx.codegen_emit_mode = CompCtx::EEmitMode::OBJ;
-      else if (emit_mode == "asm")
-        ctx.codegen_emit_mode = CompCtx::EEmitMode::ASM;
-      else if (emit_mode == "bc")
-        ctx.codegen_emit_mode = CompCtx::EEmitMode::BC;
-      else if (emit_mode == "bin")
-        ctx.codegen_emit_mode = CompCtx::EEmitMode::BIN;
-      else
-        std::cerr << "Invalid emit mode value --emit-mode=" << emit_mode << std::endl;
-      continue;
-    }
+    if (bool_arg(ctx.emit_bin, "emit-bin")) continue;
+    if (bool_arg(ctx.emit_llvm, "emit-llvm")) continue;
+    if (bool_arg(ctx.emit_obj, "emit-obj")) continue;
+    if (bool_arg(ctx.emit_asm, "emit-asm")) continue;
+    if (bool_arg(ctx.emit_bc, "emit-bc")) continue;
+    if (bool_arg(ctx.emit_static_lib, "emit-static-lib")) continue;
+    if (bool_arg(ctx.emit_dynamic_lib, "emit-dynamic-lib")) continue;
+
     if (path_arg(ctx.codegen_build_dir, "build")) continue;
 
     // project

@@ -29,18 +29,6 @@ void log(const std::string& msg);
 void err(const std::string& msg);
 
 struct CompCtx {
-  enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN };
-  std::string EEmitMode_to_str() const
-  {
-    switch (codegen_emit_mode) {
-    case EEmitMode::LLVM: return "llvm";
-    case EEmitMode::OBJ:  return "obj";
-    case EEmitMode::ASM:  return "asm";
-    case EEmitMode::BC:   return "bc";
-    case EEmitMode::BIN:  return "bin";
-    }
-  };
-
   std::string config_path;
 
   std::map<std::string, std::string> COMPILATION_ARGS;
@@ -90,7 +78,13 @@ struct CompCtx {
   std::vector<std::string> undefines;
 
   // codegen
-  EEmitMode   codegen_emit_mode = EEmitMode::BIN;
+  bool        emit_bin         = false;
+  bool        emit_llvm        = false;
+  bool        emit_obj         = false;
+  bool        emit_asm         = false;
+  bool        emit_bc          = false;
+  bool        emit_static_lib  = false;
+  bool        emit_dynamic_lib = false;
   std::string codegen_build_dir;
 
   // project

@@ -25,8 +25,6 @@ namespace compiler
 {
 
 struct CompCtx {
-  enum class EEmitMode { LLVM, OBJ, ASM, BC, BIN, STATIC_LIB, DYNAMIC_LIB };
-
   std::map<std::string, std::string> COMPILATION_ARGS;
 
   const int    argc = 0;
@@ -77,7 +75,13 @@ struct CompCtx {
   std::vector<std::string> undefines;
 
   // codegen
-  EEmitMode   codegen_emit_mode = EEmitMode::BIN;
+  bool        emit_bin         = false;
+  bool        emit_llvm        = false;
+  bool        emit_obj         = false;
+  bool        emit_asm         = false;
+  bool        emit_bc          = false;
+  bool        emit_static_lib  = false;
+  bool        emit_dynamic_lib = false;
   std::string codegen_build_dir;
 
   // project

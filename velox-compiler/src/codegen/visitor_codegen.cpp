@@ -1063,6 +1063,24 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::New_Ptr& n)
 // ============ STATEMENT ============
 void Visitor_Codegen::visit(ast::statement::If& n)
 {
+  auto bb_then = llvm::BasicBlock::Create(ctx, "then");
+  auto bb_else = llvm::BasicBlock::Create(ctx, "else");
+
+  auto bb_merge = llvm::BasicBlock::Create(ctx, "merge");
+
+  auto cond = n.evaluator.node->codegen(*this);
+
+  builder.CreateCondBr(cond, bb_then, bb_else);
+
+  if (n.codeblock) {
+    builder.SetInsertPoint(bb_then);
+    n.codeblock->codegen_pass(*this);
+  }
+
+  if (n.alternative_statement) {
+    builder.SetInsertPoint(bb_else);
+    visit(*n.alternative_statement.get());
+  }
 }
 void Visitor_Codegen::visit(ast::statement::For& n)
 {

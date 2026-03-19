@@ -4,9 +4,9 @@
 
 class StreamTracker
 {
-  const char* start;
-  const char* end;
-  const char* cur;
+  const char* const start;
+  const char* const end;
+  const char*       cur;
 
   std::string text;
 

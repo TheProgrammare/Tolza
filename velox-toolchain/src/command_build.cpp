@@ -152,11 +152,16 @@ toolchain::CompCtx command::build::parse_compilation_context(const std::string& 
   result.undefines = reader.Keys("undefines");
 
   auto emit_mode = remove_quotes(reader.GetString("codegen", "emit_mode", "BIN"));
-  if (emit_mode == "LLVM") result.codegen_emit_mode = toolchain::CompCtx::EEmitMode::LLVM;
-  if (emit_mode == "OBJ") result.codegen_emit_mode = toolchain::CompCtx::EEmitMode::OBJ;
-  if (emit_mode == "ASM") result.codegen_emit_mode = toolchain::CompCtx::EEmitMode::ASM;
-  if (emit_mode == "BC") result.codegen_emit_mode = toolchain::CompCtx::EEmitMode::BC;
-  if (emit_mode == "BIN") result.codegen_emit_mode = toolchain::CompCtx::EEmitMode::BIN;
+
+  result.emit_bin  = emit_mode == "bin" || emit_mode == "BIN";
+  result.emit_llvm = emit_mode == "llvm" || emit_mode == "LLVM";
+  result.emit_obj  = emit_mode == "obj" || emit_mode == "OBJ";
+  result.emit_asm  = emit_mode == "asm" || emit_mode == "ASM";
+  result.emit_bc   = emit_mode == "bc" || emit_mode == "BC";
+  result.emit_static_lib =
+      emit_mode == "static_lib" || emit_mode == "STATIC_LIB" || emit_mode == "STATIC" || emit_mode == "static";
+  result.emit_dynamic_lib =
+      emit_mode == "dynamic_lib" || emit_mode == "DYNAMIC_LIB" || emit_mode == "DYNAMIC" || emit_mode == "dynamic";
 
   result.codegen_build_dir = resolve_path(remove_quotes(reader.GetString("codegen", "build_dir", "./build")));
 
@@ -334,20 +339,13 @@ void command::build::parse_args_for_compilation_context(toolchain::CompCtx& ctx,
     }
 
     // codegen
-    std::string emit_mode;
-    if (str_arg(emit_mode, "emit")) {
-      if (emit_mode == "obj")
-        ctx.codegen_emit_mode = toolchain::CompCtx::EEmitMode::OBJ;
-      else if (emit_mode == "asm")
-        ctx.codegen_emit_mode = toolchain::CompCtx::EEmitMode::ASM;
-      else if (emit_mode == "bc")
-        ctx.codegen_emit_mode = toolchain::CompCtx::EEmitMode::BC;
-      else if (emit_mode == "bin")
-        ctx.codegen_emit_mode = toolchain::CompCtx::EEmitMode::BIN;
-      else
-        std::cerr << "Invalid emit mode value --emit-mode=" << emit_mode << std::endl;
-      continue;
-    }
+    if (bool_arg(ctx.emit_bin, "emit-bin")) continue;
+    if (bool_arg(ctx.emit_llvm, "emit-llvm")) continue;
+    if (bool_arg(ctx.emit_obj, "emit-obj")) continue;
+    if (bool_arg(ctx.emit_asm, "emit-asm")) continue;
+    if (bool_arg(ctx.emit_bc, "emit-bc")) continue;
+    if (bool_arg(ctx.emit_static_lib, "emit-static-lib")) continue;
+    if (bool_arg(ctx.emit_dynamic_lib, "emit-dynamic-lib")) continue;
     if (path_arg(ctx.codegen_build_dir, "build")) continue;
 
     // project

@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 const std::string& compiler::CompCtx::get_preprocess_dir() const
 {
-  static auto out = (fs::path(get_build_dir()) / "preprocess").string();
+  static auto out = (fs::path(get_project_dir()) / "preprocess").string();
   return out;
 }
 
