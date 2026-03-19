@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <llvm-19/llvm/IR/BasicBlock.h>
 #include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/Function.h>
 #include <llvm-19/llvm/IR/Instructions.h>
@@ -60,6 +61,10 @@ struct Visitor_Codegen {
   llvm::Type* const strTy;
 
   llvm::Constant* const zero;
+  llvm::Constant* const one;
+
+  llvm::BasicBlock* current_bb_break;
+  llvm::BasicBlock* current_bb_continue;
 
   void build_init_func();
 
@@ -116,9 +121,9 @@ struct Visitor_Codegen {
   void            visit(ast::declaration::local::Lambda_Capture& n);
   void            visit(ast::declaration::local::Capture_Member& n);
 
-  void visit(ast::declaration::local::Parameter& n);
-  void visit(ast::declaration::local::Generic_Parameter_Element& n);
-  void visit(ast::declaration::local::Generic_Parameters& n);
+  llvm::Value* visit(ast::declaration::local::Parameter& n);
+  void         visit(ast::declaration::local::Generic_Parameter_Element& n);
+  void         visit(ast::declaration::local::Generic_Parameters& n);
 
   llvm::Value* visit(ast::declaration::local::Pattern& n);
   llvm::Value* visit(ast::declaration::local::Pattern_Enum& n);
@@ -228,8 +233,8 @@ struct Visitor_Codegen {
   void         visit(ast::statement::For& n);
   void         visit(ast::statement::Loop& n);
   void         visit(ast::statement::While& n);
-  llvm::Value* visit(ast::statement::GoTo& n);
-  void         visit(ast::statement::GoTo_Label& n);
+  void         visit(ast::statement::GoTo& n);
+  llvm::Value* visit(ast::statement::GoTo_Label& n);
 
   llvm::ReturnInst* visit(ast::statement::Return& n);
   llvm::BranchInst* visit(ast::statement::Break& n);

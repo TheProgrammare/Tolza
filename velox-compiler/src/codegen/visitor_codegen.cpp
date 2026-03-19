@@ -74,6 +74,7 @@ Visitor_Codegen::Visitor_Codegen(ScriptInfo& _scr_info)
   , fSizeTy(compiler::COMP_CTX.target_bits == 32 ? f32Ty : f64Ty)
   , strTy(llvm::StructType::get(ctx, {i32Ty->getPointerTo(), i32Ty}))
   , zero(llvm::ConstantInt::get(i32Ty, 0))
+  , one(llvm::ConstantInt::get(i32Ty, 1))
 {
 }
 
@@ -273,6 +274,13 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 
   auto fn = llvm::Function::Create(fn_ty, linkage, n.name, mod);
 
+  // store arguments to nodes to access references from symbol
+  size_t idx = 0;
+  for (auto& arg : fn->args()) {
+    auto& node_param     = n.prototype->parameters[idx++];
+    node_param->llvm_arg = &arg;
+  }
+
   if (!n.codeblock) return fn;
 
   auto entry = llvm::BasicBlock::Create(ctx, "entry", fn);
@@ -284,6 +292,7 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
     builder.CreateRet(llvm::ConstantInt::get(i32Ty, 0));
   else if (!entry->getTerminator())
     builder.CreateRetVoid();
+
   return n.llvm_fn = fn;
 }
 
@@ -390,12 +399,14 @@ void Visitor_Codegen::visit(ast::declaration::local::CodeBlock& n)
     case ast::CodeBlock_instruction::EKind::None:         continue;
     case ast::CodeBlock_instruction::EKind::Shared_local: elem.data_local->codegen_pass(*this); break;
     case ast::CodeBlock_instruction::EKind::Unique_base:  {
-      if (auto ptr = dynamic_cast<ast::AType*>(elem.data_base.get()))
+      if (auto ptr = dynamic_cast<ast::Trait_LLVM_Typed*>(elem.data_base.get()))
         ptr->codegen_ty(*this);
-      else if (auto ptr = dynamic_cast<ast::AExpression*>(elem.data_base.get()))
+      else if (auto ptr = dynamic_cast<ast::Trait_LLVM_Value*>(elem.data_base.get()))
         ptr->codegen(*this);
-      else if (auto ptr = dynamic_cast<ast::ADeclaration*>(elem.data_base.get()))
+      else if (auto ptr = dynamic_cast<ast::Trait_LLVM_Passage*>(elem.data_base.get()))
         ptr->codegen_pass(*this);
+      else if (auto ptr = dynamic_cast<ast::Trait_LLVM_Callable*>(elem.data_base.get()))
+        ptr->codegen(*this);
       break;
     }
     }
@@ -413,8 +424,9 @@ void Visitor_Codegen::visit(ast::declaration::local::Capture_Member& n)
 {
 }
 
-void Visitor_Codegen::visit(ast::declaration::local::Parameter& n)
+llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Parameter& n)
 {
+  return n.llvm_arg;
 }
 void Visitor_Codegen::visit(ast::declaration::local::Generic_Parameter_Element& n)
 {
@@ -444,7 +456,17 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Pattern_Component& 
 
 llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Variable_Binding& n)
 {
-  return nullptr;
+  if (n.llvm_value) return n.llvm_value;
+
+  auto ty     = n.type->codegen_ty(*this);
+  auto alloca = builder.CreateAlloca(ty, nullptr, n.name);
+
+  if (n.parent_pattern && n.parent_pattern->right) {
+    auto init_val = n.parent_pattern->right->codegen(*this);
+    builder.CreateStore(init_val, alloca);
+  }
+
+  return n.llvm_value = alloca;
 }
 void Visitor_Codegen::visit(ast::declaration::local::Tuple_Destructuring& n)
 {
@@ -691,7 +713,6 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Tuple& n)
 llvm::Type* Visitor_Codegen::visit(ast::type::Function_Proto& n)
 {
   if (n.llvm_type) return n.llvm_type;
-
 
   auto                     ret_ty = n.returnType->codegen_ty(*this);
   std::vector<llvm::Type*> params;
@@ -1063,54 +1084,180 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::New_Ptr& n)
 // ============ STATEMENT ============
 void Visitor_Codegen::visit(ast::statement::If& n)
 {
-  auto bb_then = llvm::BasicBlock::Create(ctx, "then");
-  auto bb_else = llvm::BasicBlock::Create(ctx, "else");
+  auto function = builder.GetInsertBlock()->getParent();
 
-  auto bb_merge = llvm::BasicBlock::Create(ctx, "merge");
+  auto bb_then = llvm::BasicBlock::Create(ctx, "then", function);
 
   auto cond = n.evaluator.node->codegen(*this);
 
-  builder.CreateCondBr(cond, bb_then, bb_else);
+  if (n.alternative_statement) {
+    auto bb_else = llvm::BasicBlock::Create(ctx, "else", function);
+    builder.CreateCondBr(cond, bb_then, bb_else);
 
-  if (n.codeblock) {
     builder.SetInsertPoint(bb_then);
     n.codeblock->codegen_pass(*this);
-  }
 
-  if (n.alternative_statement) {
     builder.SetInsertPoint(bb_else);
     visit(*n.alternative_statement.get());
+  } else {
+    auto bb_merge = llvm::BasicBlock::Create(ctx, "merge", function);
+    builder.CreateCondBr(cond, bb_then, bb_merge);
+
+    builder.SetInsertPoint(bb_then);
+    n.codeblock->codegen_pass(*this);
+
+    builder.SetInsertPoint(bb_merge);
   }
 }
 void Visitor_Codegen::visit(ast::statement::For& n)
 {
+  auto function = builder.GetInsertBlock()->getParent();
+
+  llvm::Value* index = n.index ? n.index->codegen(*this) : nullptr;
+
+  if (auto ptr = dynamic_cast<ast::literal::Range*>(n.expression.get())) {
+    auto start = ptr->start->codegen(*this);
+    auto end   = ptr->end->codegen(*this);
+
+    if (index) builder.CreateStore(start, index);
+
+    auto bb_header = llvm::BasicBlock::Create(ctx, "for", function);
+    auto bb_body   = llvm::BasicBlock::Create(ctx, "body", function);
+    auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
+
+    builder.CreateBr(bb_body); // jump
+
+    // Header
+    builder.SetInsertPoint(bb_header);
+    if (index) {
+      auto incr = builder.CreateAdd(index, one);
+      builder.CreateStore(incr, index);
+
+      // auto cond = builder.CreateICmpEQ(incr, end);
+      // builder.CreateCondBr(cond, bb_after, bb_body);
+    }
+
+    current_bb_break    = bb_after;
+    current_bb_continue = bb_header;
+
+    builder.SetInsertPoint(bb_body);
+    n.codeblock->codegen_pass(*this);
+    builder.CreateBr(bb_header);
+
+    current_bb_break    = nullptr;
+    current_bb_continue = nullptr;
+
+    builder.SetInsertPoint(bb_after);
+  }
 }
 void Visitor_Codegen::visit(ast::statement::Loop& n)
 {
+  auto function = builder.GetInsertBlock()->getParent();
+
+  auto bb_header = llvm::BasicBlock::Create(ctx, "loop", function);
+  auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
+
+  builder.CreateBr(bb_header); // jump
+
+  current_bb_break    = bb_after;
+  current_bb_continue = bb_header;
+
+  // body : loop {...}
+  builder.SetInsertPoint(bb_header);
+  n.codeblock->codegen_pass(*this);
+  builder.CreateBr(bb_header);
+
+  current_bb_break    = nullptr;
+  current_bb_continue = nullptr;
+
+  // after : } ...
+  builder.SetInsertPoint(bb_after);
 }
 void Visitor_Codegen::visit(ast::statement::While& n)
 {
-}
-llvm::Value* Visitor_Codegen::visit(ast::statement::GoTo& n)
-{
-}
-void Visitor_Codegen::visit(ast::statement::GoTo_Label& n)
-{
-}
+  auto function = builder.GetInsertBlock()->getParent();
 
+  // Blocks
+  auto bb_header = llvm::BasicBlock::Create(ctx, "while", function);
+  auto bb_body   = llvm::BasicBlock::Create(ctx, "body", function);
+  auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
+
+  // Init jump on header
+  builder.CreateBr(bb_header);
+
+  // Header
+  builder.SetInsertPoint(bb_header);
+
+  llvm::Value* cond = nullptr;
+  if (auto ptr = n.evaluator.get_condition())
+    cond = ptr->codegen(*this);
+  else if (auto ptr = n.evaluator.get_pattern())
+    cond = ptr->codegen(*this);
+
+  if (n.isDo) {
+    // Do-while : body first
+    builder.CreateBr(bb_body);
+  } else {
+    // While classique : test cond before body
+    builder.CreateCondBr(cond, bb_body, bb_after);
+  }
+
+  current_bb_break    = bb_after;
+  current_bb_continue = bb_header;
+
+  // Body
+  builder.SetInsertPoint(bb_body);
+  n.codeblock->codegen_pass(*this);
+
+  current_bb_break    = nullptr;
+  current_bb_continue = nullptr;
+
+  // Do-while cond
+  if (n.isDo) {
+    llvm::Value* condDo = nullptr;
+    if (auto ptr = n.evaluator.get_condition())
+      condDo = ptr->codegen(*this);
+    else if (auto ptr = n.evaluator.get_pattern())
+      condDo = ptr->codegen(*this);
+
+    builder.CreateCondBr(condDo, bb_body, bb_after);
+  } else {
+    // While : end of body, return to header for cond
+    builder.CreateBr(bb_header);
+  }
+
+  // After
+  builder.SetInsertPoint(bb_after);
+}
+void Visitor_Codegen::visit(ast::statement::GoTo& n)
+{
+  if (auto bb = llvm::cast<llvm::BasicBlock>(n.label_sym->codegen_pass(*this))) builder.CreateBr(bb);
+}
+llvm::Value* Visitor_Codegen::visit(ast::statement::GoTo_Label& n)
+{
+  if (n.llvm_bb) return n.llvm_bb;
+
+  auto function = builder.GetInsertBlock()->getParent();
+
+  auto label = llvm::BasicBlock::Create(ctx, n.name, function);
+  builder.SetInsertPoint(label);
+  n.codeblock->codegen_pass(*this);
+  return n.llvm_bb = label;
+}
 llvm::ReturnInst* Visitor_Codegen::visit(ast::statement::Return& n)
 {
-  return nullptr;
-} // optionnel : retourne la instruction
+  auto val = n.value->codegen(*this);
+
+  return builder.CreateRet(val);
+}
 llvm::BranchInst* Visitor_Codegen::visit(ast::statement::Break& n)
 {
-  return nullptr;
+  return current_bb_break ? builder.CreateBr(current_bb_break) : nullptr;
 }
 llvm::BranchInst* Visitor_Codegen::visit(ast::statement::Continue& n)
 {
-  return nullptr;
+  return current_bb_continue ? builder.CreateBr(current_bb_continue) : nullptr;
 }
-
 void Visitor_Codegen::visit(ast::statement::Match& n)
 {
 }

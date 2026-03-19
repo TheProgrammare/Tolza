@@ -4,6 +4,7 @@
 #include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "ast/ast_forward.hpp"

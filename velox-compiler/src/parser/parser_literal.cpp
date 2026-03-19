@@ -427,9 +427,6 @@ std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::
 
   range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
 
-  range->start      = ctx.Create_Node<ast::literal::Integral>(ctx.tok_v.peek());
-  range->endInclude = ctx.tok_v.match(TokTy::RANGE_INCLUSIVE);
-
   if (!ctx.tok_v.check_any(kEndArgsListokens)) {
     range->end = ctx.p_expr->parse_expression();
   }

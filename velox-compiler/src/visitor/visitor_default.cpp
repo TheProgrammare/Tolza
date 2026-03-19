@@ -558,7 +558,7 @@ void Visitor_Default::visit(ast::statement::If& n)
 
 void Visitor_Default::visit(ast::statement::For& n)
 {
-  n.src->accept(*this);
+  n.expression->accept(*this);
   if (n.index) n.index->accept(*this);
   for (auto& elem : n.items) elem->accept(*this);
   n.codeblock->accept(*this);

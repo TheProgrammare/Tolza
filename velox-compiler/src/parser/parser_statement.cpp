@@ -154,7 +154,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
 
   ctx.tok_v.expect(117, TokTy::IN, "Expected in keyword 'in' after for identifier.", hint);
 
-  forState->src = ctx.p_expr->parse_expression();
+  forState->expression = ctx.p_expr->parse_expression();
 
   forState->codeblock = ctx.p_loc->code_block_instruction();
 
@@ -305,9 +305,9 @@ std::unique_ptr<ast::statement::GoTo_Label> parser::Parser_Statement::goto_label
   auto goto_label  = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
   goto_label->name = ctx.parse_name("", hint);
 
-  ctx.tok_v.expect(123, TokTy::COLON, "Expected colon ':' after label name.", hint);
-
   ctx.m_sym->add_decl(goto_label);
+
+  goto_label->codeblock = ctx.p_loc->code_block_instruction();
 
   return std::unique_ptr<ast::statement::GoTo_Label>(goto_label.get());
 }

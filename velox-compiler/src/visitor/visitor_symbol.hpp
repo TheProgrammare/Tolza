@@ -29,6 +29,7 @@ struct Visitor_Symbol : public Visitor_Default {
   void visit(ast::Expr_ID_Qualified& n) override;
   void visit(ast::Expr_ID_Type& n) override;
   void visit(ast::expression::Call& n) override;
+  void visit(ast::statement::GoTo& n) override;
 };
 
 inline const std::string SYM_HINT =

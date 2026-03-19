@@ -753,7 +753,7 @@ void Visitor_Print::visit(ast::statement::If& n)
 void Visitor_Print::visit(ast::statement::For& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
-  n.src->accept(*this);
+  n.expression->accept(*this);
   if (n.index) n.index->accept(*this);
   for (auto& elem : n.items) elem->accept(*this);
   n.codeblock->accept(*this);

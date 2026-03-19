@@ -1,5 +1,6 @@
 #pragma once
 
+#include <llvm-19/llvm/IR/BasicBlock.h>
 #include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 
@@ -12,7 +13,7 @@ namespace ast
 namespace statement
 {
 
-struct If final : public Node {
+struct If final : public Node, Trait_LLVM_Passage {
   ~If();
 
   Evaluator evaluator;
@@ -23,7 +24,8 @@ struct If final : public Node {
   bool                isElseNoCondition = false;
   bool                isInline          = false;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -32,10 +34,10 @@ struct If final : public Node {
 };
 
 // for i in range {}
-struct For final : public Node {
+struct For final : public Node, Trait_LLVM_Passage {
   ~For();
 
-  std::unique_ptr<AExpression> src;
+  std::unique_ptr<AExpression> expression;
 
   [[maybe_unused]]
   std::shared_ptr<declaration::local::Variable_Binding> index;
@@ -45,18 +47,20 @@ struct For final : public Node {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
   bool                                           isReverse = false;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override;
 };
 
 // loop {...}
-struct Loop final : public Node {
+struct Loop final : public Node, Trait_LLVM_Passage {
   ~Loop();
 
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -65,14 +69,15 @@ struct Loop final : public Node {
 };
 
 // while condition {...}
-struct While final : public Node {
+struct While final : public Node, Trait_LLVM_Passage {
   ~While();
 
   bool                                           isDo = false;
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  void accept(Visitor_Base& v) override;
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
@@ -80,22 +85,32 @@ struct While final : public Node {
   }
 };
 
+struct GoTo_Label;
+
 // goto azerty
 struct GoTo final : public AExpression {
   std::string label;
+
+
   std::string debug_str() const override
   {
     return "GOTO \"" + label + "\"";
   }
 
+  GoTo_Label* label_sym = nullptr;
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 };
 
-// label azerty:
+// label azerty {...}
 struct GoTo_Label final : public ADeclaration {
+  std::unique_ptr<declaration::local::CodeBlock> codeblock;
+
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
+
+  llvm::BasicBlock* llvm_bb = nullptr;
 
   std::string debug_str() const override
   {
@@ -108,11 +123,12 @@ struct GoTo_Label final : public ADeclaration {
 };
 
 // return a, b, c
-struct Return final : public Node {
+struct Return final : public Node, Trait_LLVM_Passage {
   [[maybe_unused]]
   std::unique_ptr<AExpression> value;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "return";
   }
@@ -120,8 +136,9 @@ struct Return final : public Node {
   void accept(Visitor_Base& v) override;
 };
 
-struct Break final : public Node {
-  std::string debug_str() const override
+struct Break final : public Node, Trait_LLVM_Passage {
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "break";
   }
@@ -129,8 +146,9 @@ struct Break final : public Node {
   void accept(Visitor_Base& v) override;
 };
 
-struct Continue final : public Node {
-  std::string debug_str() const override
+struct Continue final : public Node, Trait_LLVM_Passage {
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "continue";
   }
@@ -139,13 +157,14 @@ struct Continue final : public Node {
 };
 
 // constant/comparison => {}
-struct Match_Case final : public Node {
+struct Match_Case final : public Node, Trait_LLVM_Passage {
   ~Match_Case();
 
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "CASE";
   }
@@ -154,13 +173,14 @@ struct Match_Case final : public Node {
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
-struct Match final : public Node {
+struct Match final : public Node, Trait_LLVM_Passage {
   std::shared_ptr<AExpression>             base;
   std::vector<std::unique_ptr<Match_Case>> cases;
   [[maybe_unused]]
   std::unique_ptr<Match_Case> other_case;
 
-  std::string debug_str() const override
+  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  std::string  debug_str() const override
   {
     return "MATCH";
   }

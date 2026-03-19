@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <llvm-19/llvm/IR/Argument.h>
 #include <llvm-19/llvm/IR/Value.h>
 #include <memory>
 #include <string>
@@ -288,6 +289,7 @@ struct Parameter final : public ALocal {
   EPassMode passMode   = EPassMode::Copy;
   bool      isVariadic = false;
 
+  llvm::Argument* llvm_arg = nullptr;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;

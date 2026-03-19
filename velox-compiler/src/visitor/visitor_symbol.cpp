@@ -92,10 +92,24 @@ void Visitor_Symbol::visit(ast::expression::Call& n)
     if (resolve_sym(*ptr, n.function_symbol, false))
       ptr->symbol = n.function_symbol;
     else
-      error_add(195, n, "Impossible to found the function symbol", "");
+      error_add(195, n, "Impossible to find the function symbol", "");
   } else {
     error_add(196, n, "The callee is not an indentifier", "");
   }
+
+  Visitor_Default::visit(n);
+}
+
+void Visitor_Symbol::visit(ast::statement::GoTo& n)
+{
+  if (auto sym = scr_info.m_sym->find_local_symbol(n._scope, n.label)) {
+    if (auto ptr = dynamic_cast<ast::statement::GoTo_Label*>(sym->symbol.get())) {
+      n.label_sym = ptr;
+      return;
+    }
+    error_add(197, n, "The referenced name is not a label", "");
+  }
+  error_add(198, n, "Impossible to find the label", "");
 
   Visitor_Default::visit(n);
 }

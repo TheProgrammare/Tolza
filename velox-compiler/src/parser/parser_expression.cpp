@@ -73,7 +73,17 @@ std::unique_ptr<ast::AExpression>
 parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> base_expr)
 {
   // is a literal expression, no suffix allowed
-  if (dynamic_cast<ast::ALiteral*>(base_expr.get())) return base_expr;
+  if (dynamic_cast<ast::ALiteral*>(base_expr.get())) {
+    // only range and cast suffix allowed
+    if (ctx.tok_v.check_any({TokTy::RANGE, TokTy::RANGE_INCLUSIVE})) {
+      base_expr = ctx.p_lit->literal_range(std::move(base_expr));
+    }
+
+    // if cast
+    if (ctx.tok_v.check_any(kCastType)) base_expr = cast_as(std::move(base_expr));
+
+    return base_expr;
+  }
 
 
   // supported access operators:

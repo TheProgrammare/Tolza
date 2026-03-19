@@ -51,6 +51,8 @@ void ast::statement::Match::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+
+
 std::string ast::statement::For::debug_str() const
 {
   std::string str_index = index ? "index: " + index->debug_str() : "";
@@ -63,11 +65,53 @@ std::string ast::statement::For::debug_str() const
 }
 
 
+llvm::Value* ast::statement::If::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::statement::For::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::statement::Loop::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::statement::While::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 llvm::Value* ast::statement::GoTo::codegen(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::statement::GoTo_Label::codegen_pass(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::statement::GoTo_Label::codegen_pass(Visitor_Codegen& v)
+llvm::Value* ast::statement::Return::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::statement::Break::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::statement::Continue::codegen_pass(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::statement::Match_Case::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::statement::Match::codegen_pass(Visitor_Codegen& v)
 {
   v.visit(*this);
   return nullptr;

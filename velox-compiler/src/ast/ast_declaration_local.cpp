@@ -133,8 +133,7 @@ void ast::declaration::local::Lambda_Capture::accept(Visitor_Base& v)
 }
 llvm::Value* ast::declaration::local::Parameter::codegen_pass(Visitor_Codegen& v)
 {
-  v.visit(*this);
-  return nullptr;
+  return v.visit(*this);
 }
 void ast::declaration::local::Parameter::accept(Visitor_Base& v)
 {
