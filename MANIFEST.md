@@ -1098,12 +1098,12 @@ Syntax:
 >Inline case: `for ... => <expression>`
 
 # Goto Statement
-Highlty not recommended, designed for flexibility and code specific behaviour.
+The goto statement is scoped, you can use it without fear.
 
 | state | syntax |
 |-|-|
 | go to and label | `goto name` |
-| label definition | `label name:` |
+| label definition | `label name {...}` `label name => ...` |
 
 # Range Statement
 Borned with a start integral, end integral and optional step (only for `for` loop).
