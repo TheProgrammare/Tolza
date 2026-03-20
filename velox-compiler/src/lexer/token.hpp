@@ -62,7 +62,7 @@ enum class ETokenType {
   HASHTAG,
   AT,
   STD_LIB,
-  THIRD_LIB,
+  PKG_LIB,
   USR_LIB,
   EXT_LIB,
   // literal values
@@ -314,7 +314,7 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"#",         ETokenType::HASHTAG         },
     {"@",         ETokenType::AT              },
     {"std:",      ETokenType::STD_LIB         },
-    {"lib:",      ETokenType::THIRD_LIB       },
+    {"pkg:",      ETokenType::PKG_LIB         },
     {"usr:",      ETokenType::USR_LIB         },
     {"ext:",      ETokenType::EXT_LIB         },
     // boolean litteral key

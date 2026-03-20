@@ -27,6 +27,22 @@
         ],
         "description": "Named Tuple instance"
     },
+    "Goto": {
+        "prefix": "goto",
+        "body": [
+            "goto ${1:Label}"
+        ],
+        "description": "Goto instruction"
+    },
+    "Goto Label": {
+        "prefix": "label",
+        "body": [
+            "label ${1:Label} {",
+            "  $0",
+            "}"
+        ],
+        "description": "Label instruction"
+    },
     "Function Definition": {
         "prefix": "fn",
         "body": [
@@ -189,11 +205,39 @@
     "Export Definition": {
         "prefix": "export",
         "body": [
-            "export ${1:Name} {",
+            "export {",
             "  $0",
             "}"
         ],
         "description": "export declaration"
+    },
+    "Import": {
+        "prefix": "import",
+        "body": [
+            "import ${1:Name}"
+        ],
+        "description": "import"
+    },
+    "Import Source": {
+        "prefix": "import src",
+        "body": [
+            "import src: ${1:Name}"
+        ],
+        "description": "import source"
+    },
+    "Import Library": {
+        "prefix": "import lib",
+        "body": [
+            "import lib: ${1:Name}"
+        ],
+        "description": "import lib"  
+    },
+    "Import Extern": {
+        "prefix": "import ext",
+        "body": [
+            "import ext: ${1:Name/Lang}::${2:lib}"
+        ],
+        "description": "import extern"  
     },
     "Import Definition": {
         "prefix": "import",
@@ -201,13 +245,6 @@
             "import ${1:Name}"
         ],
         "description": "import declaration"
-    },
-    "Import Extern Definition": {
-        "prefix": "import extern",
-        "body": [
-            "import extern ${1:Name/Lang}::${2:lib}"
-        ],
-        "description": "import extern declaration"
     },
     "Mod Definition": {
         "prefix": "mod",
@@ -378,7 +415,7 @@
     "Alias": {
         "prefix": "alias",
         "body": [
-            "alias ${1:alias}: ${2:Type}"
+            "alias ${1:alias} = ${2:Type}"
         ],
         "description": "Alias"
     },

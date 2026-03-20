@@ -90,7 +90,7 @@ std::string ModuleImportation::get_path() const
   switch (import_source) {
   case EImportSource::User:        p_out = compiler::COMP_CTX.get_source_dir(); break;
   case EImportSource::StandardLib: p_out = compiler::get_stdlib_dir(); break;
-  case EImportSource::UserLib:     p_out = compiler::get_packages_dir(); break;
+  case EImportSource::Package:     p_out = compiler::get_packages_dir(); break;
   case EImportSource::Extern:      p_out = compiler::COMP_CTX.get_binding_dir(); break;
   default:                         p_out = compiler::COMP_CTX.get_source_dir(); break;
   }

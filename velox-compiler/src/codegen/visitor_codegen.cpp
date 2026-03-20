@@ -213,8 +213,6 @@ void Visitor_Codegen::visit(ast::Root& n)
       auto a = ptr->codegen_pass(*this);
     }
   }
-
-  mod.print(llvm::outs(), nullptr);
 }
 
 // ============ DECLARATION ============

@@ -56,7 +56,7 @@ struct ModuleImportation {
   // user lib = lib:
   // extern = ext:
   // binding = ext:
-  enum class EImportSource { Unknown, User, StandardLib, UserLib, Extern, Binding };
+  enum class EImportSource { Unknown, User, StandardLib, Package, Extern, Binding };
 
   std::string              name;
   std::vector<std::string> path;

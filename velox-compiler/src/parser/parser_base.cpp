@@ -109,15 +109,15 @@ ModuleImportation* parser::Parser_Base::parse_import()
     auto id               = ctx->p_expr->identifier();
     extract_id(*id, mod_imp.name, mod_imp.path);
   }
-  // import lib: #
-  else if (ctx->tok_v.match_any({TokTy::HASHTAG, TokTy::USR_LIB})) {
-    mod_imp.import_source = ModuleImportation::EImportSource::UserLib;
+  // import pkg: #
+  else if (ctx->tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
+    mod_imp.import_source = ModuleImportation::EImportSource::Package;
     auto id               = ctx->p_expr->identifier();
     extract_id(*id, mod_imp.name, mod_imp.path);
   }
-  // import ext:
-  else if (ctx->tok_v.match(TokTy::EXT_LIB)) {
-    // import from external code e.g. import extern C::stdio
+  // import ext: ?
+  else if (ctx->tok_v.match_any({TokTy::INTERROGATIVE, TokTy::EXT_LIB})) {
+    // import from external code e.g. import ext: C::stdio
     mod_imp.import_source = ModuleImportation::EImportSource::Extern;
     mod_imp.name          = ctx->parse_name();
     ctx->tok_v.expect(8, TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);

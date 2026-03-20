@@ -3,5 +3,6 @@ import ext: C::stdio
 
 fn main() {
   //core::println("hello world!")
-    C::printf(c"Hello World ! 💜")
+
+  C::printf(c"Hello World ! 💜")
 }
