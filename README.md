@@ -141,11 +141,11 @@ Velox allows the use of external code with minimal boilerplate and no name colli
 
 ### Example: Using a C Library
 ```Velox
-  import extern C::stdio
+import ext: C::stdio
 
-  fn main() {
-    C::printf("%s", "Hello World")
-  }
+fn main() {
+  C::printf("Hello World !"c_str)
+}
 ```
 Explanation:
 - `import extern C::stdio` declares the external library to import
