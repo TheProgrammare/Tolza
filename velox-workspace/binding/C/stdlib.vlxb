@@ -1,0 +1,27 @@
+
+// +-------------------------------------+
+// |    Velox auto generated wrappers    |
+// | Lang: C                             |
+// |  Lib: stdlib                        |
+// |                                     |
+// |    Please do not modify the file    |
+// +-------------------------------------+
+
+
+// +-----------------------+
+// |   import definition   |
+// +-----------------------+
+import usr: ffi::C
+
+export {
+
+extern "C" {
+
+// +-----------------------+
+// |  function definition  |
+// +-----------------------+
+fn system(ref __command: c_str) -> ffi::C::_int;
+
+} // C
+
+} // export

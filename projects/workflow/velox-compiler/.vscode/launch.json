@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug build",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "args": [
+                "build",
+                "--abi=LP64",
+                "--arch=amd64",
+                "--bits=64",
+                "--os=linux",
+                "--libc=",
+                "--config=self",
+                "--release",
+                "-Oz",
+                "--warn-level=0",
+                "-Dversion=1.0",
+                //"--print-ast",
+                "--emit-obj",
+                "--emit-bin",
+                "--emit-llvm",
+                "--build=${workspaceFolder}/../../../velox-workspace/build",
+                "--project=${workspaceFolder}/../../../velox-workspace",
+                "--src=${workspaceFolder}/../../../velox-workspace/src",
+                "--vendor=${workspaceFolder}/../../../velox-workspace/vendor",
+                "--ffi-json=${workspaceFolder}/../../../velox-workspace/ffi-json",
+                "--binding=${workspaceFolder}/../../../velox-workspace/binding"
+            ],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+            
+        },
+        {
+            "name": "Release",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/release/velox-compiler",
+            "args": ["build", "${workspaceFolder}/../../../velox-workspace/velox-example"],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

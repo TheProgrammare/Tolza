@@ -1,0 +1,5 @@
+import ext: C::stdio
+
+fn main() {
+  C::printf("Hello World !"c_str)
+}
