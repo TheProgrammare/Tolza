@@ -18,7 +18,11 @@
 #pragma once
 
 #include <string>
-#include <initializer_list>
+#include <set>
+#include <map>
+#include <vector>
+#include <memory>
+
 
 // log color
 #define color_RESET   "\033[0m"
@@ -27,8 +31,6 @@
 #define color_GREEN   "\033[32m" /* Green */
 #define color_YELLOW  "\033[33m" /* Yellow */
 #define color_MAGENTA "\033[35m" /* Magenta */
-#define color_CYAN    "\033[36m" /* Cyan */
-#define color_WHITE   "\033[37m" /* White */
 
 
 #define k_max_path_seg_size 12
@@ -36,28 +38,47 @@
 
 using ErrorCode = short;
 
+struct ScriptInfo;
+
 namespace llvm
 {
 class LLVMContext;
-}
+class TargetMachine;
+} // namespace llvm
 
 namespace common
 {
 struct CompCtx;
 }
 
-namespace compiler
-{
-
-constexpr const char* VELOX_COMPILER_VERSION = "2026.2.0b";
-extern bool           in_binding_compilation;
-
-
-constexpr const char* k_comp_abort =
+inline const char* k_comp_abort =
     R"([velox-compiler] Compilation aborted
 [note] You must resolve all stage errors before to pass to the next stage!"
 Please see above to locate all errors.
 )";
+
+struct Compiler {
+
+
+  Compiler()
+  {
+  }
+
+
+  std::map<std::string, std::shared_ptr<ScriptInfo>> prepared_scripts;
+  std::set<std::string>                              imported_modules;
+
+  double actual_duration = 0.0f;
+
+
+  bool start_compilation();
+  bool prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos);
+  bool analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos);
+};
+
+
+namespace compiler
+{
 
 enum class EPhase {
   filesystem,
@@ -72,15 +93,12 @@ enum class EPhase {
   linker
 };
 
-extern common::CompCtx   COMP_CTX;
-extern llvm::LLVMContext LLVM_CTX;
-
-inline bool in_binding_compilation = false;
-
-void fmt_template(std::string& templateStr, const std::initializer_list<std::string>& args);
-
 [[nodiscard]] std::string Phase_to_code(EPhase phase);
 [[nodiscard]] std::string Phase_to_str(EPhase phase);
 
+extern Compiler             COMP;
+extern common::CompCtx      COMP_CTX;
+extern llvm::LLVMContext    LLVM_CTX;
+inline llvm::TargetMachine* TM = nullptr;
 
 } // namespace compiler

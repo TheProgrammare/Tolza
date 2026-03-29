@@ -8,6 +8,8 @@ namespace ffi
 struct Bind_Package;
 }
 
+struct Compiler;
+
 struct ScriptInfo;
 
 bool generate_script(const ffi::Bind_Package& bind);

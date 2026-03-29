@@ -1,20 +1,23 @@
 /*
- * This program include and use the benhoyt/inih project
+ * This program include and use the marzer/tomlplusplus project
  * You can find this project at
  *
- *     https://github.com/benhoyt/inih
+ *     https://marzer.github.io/tomlplusplus/
  *
  * Used for the ini format file reading.
  */
 
 
 #include "command_check.hpp"
+#include "command_workspace.hpp"
+#include "common.hpp"
+#include "toolchain/toolchain.hpp"
 
 #include <expected>
 #include <iostream>
 #include <filesystem>
 
-#include <benhoyt/cpp/INIReader.h>
+#include <marzer/toml++.hpp>
 
 namespace fs = std::filesystem;
 
@@ -39,57 +42,39 @@ bool command::check::check_velox_config(const std::string& file, bool full_confi
     return false;
   }
 
-  INIReader reader(file);
-  if (reader.ParseError() < 0) {
-    err("Cannot open the config file at " + file + ".");
+  std::string cache = common::get_cache_dir();
+  try {
+    fs::create_directories(cache);
+  } catch (const std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
     return false;
   }
 
-  bool is_healthy = true;
-  for (auto& section : reader.Sections()) {
-    if (!k_config_map.contains(section)) {
-      err("Unexpected section [" + section + "].");
-      is_healthy = false;
+  std::string cache_config = fs::path(cache) / "velox.toml.template";
+  workspace::write_config_file(cache, "velox.toml.template", false);
+  if (cache_config.empty()) return false;
+
+  toml::table eg_tbl;
+  try {
+    eg_tbl = toml::parse_file(cache_config);
+  } catch (const toml::parse_error& e) {
+    std::cerr << e.what() << ", at: " << e.source().begin.line << ":" << e.source().begin.column << std::endl;
+    return false;
+  }
+  toml::table tbl;
+  try {
+    tbl = toml::parse_file(file);
+  } catch (const toml::parse_error& e) {
+    err(e.what());
+    return false;
+  }
+  for (auto& [section, fields] : tbl) {
+    if (!eg_tbl.contains(section)) {
+      err("Unexpected section [" + std::string(section.str()) + "]");
+      return false;
     }
   }
-
-  if (full_config) {
-    for (auto& [section, key] : k_config_map) {
-      if (key != "") {
-        if (!reader.HasValue(section, key)) {
-          err("Unexpected key [" + key + "] at section [" + section + "].");
-          is_healthy = false;
-        }
-      }
-    }
-  }
-
-  for (auto& defines_key : reader.Keys("defines")) {
-    if (!reader.HasValue("defines", defines_key)) {
-      err("Unexpected key [" + defines_key + "] at section [defines]");
-      is_healthy = false;
-    }
-  }
-
-  for (auto& undefines_key : reader.Keys("undefines")) {
-    if (reader.HasValue("undefines", undefines_key)) {
-      err("Unexpected key [" + undefines_key + "] at section [undefines] with value.");
-      is_healthy = false;
-    }
-  }
-
-  for (auto& sub_config : reader.Keys("sub_configs")) {
-    if (!reader.HasValue("sub_configs", sub_config)) {
-      err("Unexpected key [" + sub_config + "] at section [sub_configs] without value.");
-      is_healthy = false;
-    }
-    if (auto val = reader.GetString("sub_configs", sub_config, ""); val.empty()) {
-      err("Unexpected key [" + sub_config + "] at section [sub_configs] with a non string value.");
-      is_healthy = false;
-    }
-  }
-
-  return is_healthy;
+  return true;
 }
 
 
@@ -110,14 +95,13 @@ bool command::check::check_workspace(const std::string& ws_path, bool verbose)
 
   bool config_found   = true;
   bool config_healthy = true;
-  if (!fs::exists(fs::path(ws_path) / "velox.config")) {
-    err("The mandatory \"velox.config\" at " + ws_path + "/velox.config dosen't exists.");
+  if (!fs::exists(fs::path(ws_path) / "velox.toml")) {
+    err("The mandatory \"velox.toml\" at " + ws_path + "/velox.toml dosen't exists.");
     config_found = false;
   } else {
-    if (auto result = check_velox_config(fs::path(ws_path) / "velox.config", true, verbose); result) {
-      config_healthy = true;
-    } else {
-      err("The .config at " + ws_path + "/velox.config is invalid.");
+    if (!check_velox_config(fs::path(ws_path) / "velox.toml", true, verbose)) {
+      err("The config at " + ws_path + "/velox.toml is invalid.");
+      config_healthy = false;
     }
   }
 

@@ -15,10 +15,41 @@
  *  limitations under the License.
  */
 
+/*
+ * This program include and use the CLIUtils/CLI11 project
+ * You can find this project at
+ *
+ *     https://github.com/CLIUtils/CLI11
+ *
+ * Used for the command parser.
+ */
+
 #pragma once
 
-bool parse_command(int argc, const char* argv[]);
-bool generate_ffi_json_command(int argc, const char* argv[]);
-bool help_command();
-bool version_command();
-void invalid_command();
+#include <string>
+
+namespace CLI
+{
+class App;
+}
+
+class Command
+{
+public:
+  Command(CLI::App& _app, int argc, const char* argv[])
+    : app(_app)
+  {
+    init_commands(argc, argv);
+  }
+
+private:
+  CLI::App& app;
+
+  std::string dir_source;
+  std::string dir_dest;
+
+  void init_commands(int argc, const char* argv[]);
+  void init_command_cogito();
+  void init_command_build(int argc, const char* argv[]);
+  void init_command_ffi_json();
+};

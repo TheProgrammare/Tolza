@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "ast/ast_base.hpp"
+#include "common.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/script_info.hpp"
 
@@ -53,13 +54,13 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
       imp->target_modules.push_back(it->second);
 
       std::string log_txt = log_str;
-      compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
-                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
+      common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
+                                     imp->debug_name(), fs::path(imp_scr->file_path).filename()});
       std::cout << log_txt << std::endl;
     } else {
       std::string log_txt = log_str;
-      compiler::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
-                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
+      common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
+                                     imp->debug_name(), fs::path(imp_scr->file_path).filename()});
       std::cerr << log_txt << std::endl;
       success = false;
     }

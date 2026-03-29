@@ -4,118 +4,128 @@
 #include <iostream>
 #include <fstream>
 #include <ostream>
-#include <stdexcept>
 
 #include "cli_wrapper.hpp"
-#include "command_compiler.hpp"
 #include "common.hpp"
-#include "toolchain.hpp"
+#include "compiler_context.hpp"
+#include "toolchain/toolchain.hpp"
+#include "toolchain_context.hpp"
 
 namespace fs = std::filesystem;
 
-void command::workspace::generate_velox_workspace(const std::string& project_name, const std::string& path)
+void command::workspace::err(const std::string& msg)
+{
+  std::cerr << "[workspace:ERROR] " << msg << std::endl;
+}
+
+void command::workspace::log(const std::string& msg)
+{
+  std::cout << "[workspace] " << msg << std::endl;
+}
+
+std::string command::workspace::generate_velox_workspace(const std::string& project_name, const std::string& path,
+                                                         bool force)
 {
   fs::path project_path = fs::path(path) / project_name;
 
-  if (!cli::yes_no_question("Do you want to create a new velox projet named \"" + project_name + "\" at\n  \""
-                            + project_path.string() + "\"?\n ")) {
-    std::cout << "[velox-toolchain] Velox workspace generation aborted..." << std::endl;
-    return;
+  if (!force
+      && !cli::yes_no_question("Do you want to create a new velox projet named \"" + project_name + "\" at\n  \""
+                               + project_path.string() + "\"?\n ")) {
+    log("Velox workspace generation aborted...");
+    return "";
   }
 
-  std::cout << "[velox-toolchain] generate workspace at " << project_path << std::endl;
+  if (fs::exists(fs::path(project_path / project_name))) {
+    err("The file already exists.");
+    log("Velox workspace generation aborted...");
+    return "";
+  }
+
+  log("\"" + project_path.string() + "\"");
 
   bool success    = true;
   auto dir_create = [&](const std::string& _path) {
     try {
       fs::create_directory(_path);
     } catch (const fs::filesystem_error e) {
-      std::cerr << e.what() << std::endl;
+      err(e.what());
       return success = false;
     }
-    std::cerr << "[velox-toolchain] Directory created at " << _path << std::endl;
+    log("\"" + _path + "\"");
     return true;
   };
 
   if (!dir_create(project_path)) success = false;
   if (!dir_create(project_path / "src")) success = false;
   if (!dir_create(project_path / "vendor")) success = false;
+  if (!dir_create(project_path / "binding")) success = false;
+  if (!dir_create(project_path / "binding" / "ffi_json")) success = false;
   if (!dir_create(project_path / "build")) success = false;
   if (!dir_create(project_path / "build" / "debug")) success = false;
   if (!dir_create(project_path / "build" / "release")) success = false;
   if (!dir_create(project_path / "config")) success = false;
 
-  if (!write_config_file(project_path / "velox.config", project_name, false)) success = false;
-  if (!write_config_file(project_path / "config" / "debug.config", project_name + "-debug", true)) success = false;
+  if (write_config_file(project_path, "velox.toml", false).empty()) success = false;
+  if (write_config_file(project_path / "config", "velox_debug.toml", true).empty()) success = false;
 
-  if (!write_file(project_path / "src" / "main.velox", VELOX_MAIN_TEMPLATE)) success = false;
+  if (write_file(project_path / "src" / "main.vlx", toolchain::VELOX_MAIN_TEMPLATE).empty()) success = false;
 
   if (!success)
-    std::cerr << "[velox-toolchain:ERROR] An error has occured, workspace generation aborted..." << std::endl;
+    err("An error has occured, workspace generation aborted...");
   else
-    std::cout << "[velox-toolchain] Workspace successfully generated!" << std::endl;
+    log("Workspace successfully generated!");
+
+  return project_path;
 }
 
-bool command::workspace::write_file(const std::string& path, const std::string& text)
+std::string command::workspace::write_file(const std::string& path, const std::string& text, bool verbose)
 {
   std::ofstream f;
   try {
     f = std::ofstream(path);
   } catch (const fs::filesystem_error e) {
-    std::cout << e.what() << std::endl;
-    return false;
+    err(e.what());
+    return "";
   }
 
   f << text;
-  std::cout << "[velox-toolchain] File created at " << path << std::endl;
-  return true;
+  if (verbose) log("\"" + path + "\"");
+  return path;
 }
 
-bool command::workspace::write_config_file(const std::string& path, const std::string& name, bool file_debug_mode)
+std::string command::workspace::write_config_file(const std::string& path, const std::string& name,
+                                                  bool file_debug_mode)
 {
-  auto fmt_template = [](std::string& templateStr, const std::initializer_list<std::string>& args) {
-    size_t count = 0;
-    for (auto& arg : args) { // parcours en sens inverse
-      std::string placeholder = "%" + std::to_string(count++);
-      size_t      pos         = 0;
-      while ((pos = templateStr.find(placeholder, pos)) != std::string::npos) {
-        templateStr.replace(pos, placeholder.length(), arg);
-        pos += arg.length();
-      }
-    }
-  };
-
-  fs::path compiler_file;
-  auto     result = command::compiler::find_lastest_compiler();
-  if (result.empty()) {
-    compiler_file = "velox-compiler not found!";
-  } else {
-    compiler_file = result;
-  }
-
-  std::string fmt_config = VELOX_CONFIG_TEMPLATE;
-  fmt_template(fmt_config, {name, std::string(common::DETECTED_ABI), std::string(common::DETECTED_ARCH),
-                            std::string(common::DETECTED_BITS), std::string(common::DETECTED_OS_NAME),
-                            file_debug_mode ? "true" : "false", compiler_file});
-
-  return write_file(path, fmt_config);
+  common::CompCtx ctx;
+  ctx.target_project_name = name;
+  ctx.target_arch         = common::DETECTED_ARCH;
+  ctx.target_os           = common::DETECTED_OS;
+  ctx.target_vendor       = common::DETECTED_VENDOR;
+  ctx.target_abi          = common::DETECTED_ABI;
+  ctx.target_size_abi     = common::DETECTED_ABI_SIZE();
+  auto config_txt         = compiler_context_to_config(ctx);
+  return write_file(fs::path(path) / name, config_txt);
 }
 
 
-void command::workspace::ask_new_workspace(const std::string& ws_path)
+void command::workspace::ask_new_workspace(const std::string& ws_path, const std::string& name)
 {
+  std::string filename = name;
   if (cli::yes_no_question("Do you want to generate a Velox project in a new folder?")) {
   retry_project_name:
-    auto filename = cli::get_input("Write down your project name (file name only valid)");
+    if (filename.empty()) filename = cli::get_input("Write down your project name (file name only valid)");
 
     if (!cli::is_valid_filename(filename)) {
-      std::cout << "Invalid project name \"" << filename << "\"." << std::endl;
+      log("Invalid project name \"" + filename + "\".");
       auto sanitize = cli::sanitize_filename(filename);
 
       if (!cli::yes_no_question("Do you want to use \"" + sanitize + "\" instead?")) {
-        if (cli::yes_no_question("Do you want to retry?")) goto retry_project_name;
+        if (cli::yes_no_question("Do you want to retry?")) {
+          filename.clear();
+          goto retry_project_name;
+        }
 
-        std::cout << std::endl << "[velox-toolchain] Velox workspace generation aborted..." << std::endl;
+        log("Velox workspace generation aborted...");
         return;
       } else {
         generate_velox_workspace(sanitize, ws_path);
@@ -125,32 +135,124 @@ void command::workspace::ask_new_workspace(const std::string& ws_path)
 
     generate_velox_workspace(filename, ws_path);
   } else {
-    std::cout << std::endl << "[velox-toolchain] Velox workspace generation aborted..." << std::endl;
+    log("Velox workspace generation aborted...");
   }
 }
 
-bool command::workspace::new_velox_workspace()
+std::string command::workspace::new_velox_workspace()
 {
-  std::cout << std::endl << "[velox-toolchain] Generation of Velox workspace... at " << fs::current_path() << std::endl;
+  log("Generation of Velox workspace... at \"" + fs::current_path().string() + "\"");
 
 retry_project_name:
   auto filename = cli::get_input("write down your project name (file name only valid)");
 
   if (!cli::is_valid_filename(filename)) {
-    std::cout << "Invalid project name \"" << filename << "\"." << std::endl;
+    log("Invalid project name \"" + filename + "\".");
     auto sanitize = cli::sanitize_filename(filename);
 
     if (!cli::yes_no_question("Do you want to use \"" + sanitize + "\" instead? [Y/n]")) {
       if (cli::yes_no_question("Do you want to retry? [Y/n]")) goto retry_project_name;
 
-      std::cout << std::endl << "[velox-toolchain] Velox workspace generation aborted..." << std::endl;
-      return false;
+      log("Velox workspace generation aborted...");
+      return "";
     } else {
-      generate_velox_workspace(sanitize, fs::current_path());
-      return true;
+      return generate_velox_workspace(sanitize, fs::current_path());
     }
   }
 
-  generate_velox_workspace(filename, fs::current_path());
-  return true;
+  return generate_velox_workspace(filename, fs::current_path());
+}
+
+std::string command::workspace::compiler_context_to_config(const common::CompCtx& ctx)
+{
+  auto btos = [](bool _in) -> std::string { return _in ? "true" : "false"; };
+
+  std::string config_txt = toolchain::VELOX_CONFIG_TEMPLATE;
+
+  std::string reloc_model = common::CompCtx::ERelocModel_to_str(ctx.target_reloc_model);
+  std::string code_model  = common::CompCtx::ECodeModel_to_str(ctx.target_code_model);
+  std::string opt         = common::CompCtx::EOptimization_to_str(ctx.profile_optimization);
+  std::string wlevel      = std::to_string(static_cast<int>(ctx.warn_level));
+
+  std::string defines;
+  for (auto& [key, val] : ctx.defines) defines += key + " = \"" + val + "\"\n";
+  std::string undefines;
+  for (auto& val : ctx.undefines) undefines += "\"" + val + "\n";
+  std::string sub_configs;
+  for (auto& [key, val] : ctx.sub_configs) defines += key + " = \"" + val + "\"\n";
+  std::string llvm_args;
+  for (auto& val : ctx.llvm_args) llvm_args += "\"" + std::string(val) + "\",\n";
+  std::string logs;
+  logs.reserve(ctx.logs.size());
+  for (auto& log : ctx.logs) logs += "\"" + std::string(log) + "\",\n";
+  std::string warns;
+  warns.reserve(ctx.warns.size());
+  for (auto& warn : ctx.warns) warns += "\"" + std::string(warn) + "\",\n";
+  std::string debugs;
+  debugs.reserve(ctx.debugs.size());
+  for (auto& debug : ctx.debugs) debugs += "\"" + std::string(debug) + "\",\n";
+  std::string emits;
+  emits.reserve(ctx.target_emits.empty() ? 1 : ctx.target_emits.size());
+  for (auto& emit : ctx.target_emits) {
+    switch (emit) {
+    case common::CompCtx::EEmit::Bin:   emits += "\"bin\", ";
+    case common::CompCtx::EEmit::LLVM:  emits += "\"llvm\", ";
+    case common::CompCtx::EEmit::Obj:   emits += "\"obj\", ";
+    case common::CompCtx::EEmit::ASM:   emits += "\"asm\", ";
+    case common::CompCtx::EEmit::BC:    emits += "\"bc\", ";
+    case common::CompCtx::EEmit::s_lib: emits += "\"s_lib\", ";
+    case common::CompCtx::EEmit::d_lib: emits += "\"d_lib\", ";
+    }
+  }
+
+  std::map<std::string, std::string> config_params = {
+      // target
+      {"target_project_name",  ctx.target_project_name       },
+      {"target_arch",          ctx.target_arch               },
+      {"target_os",            ctx.target_os                 },
+      {"target_vendor",        ctx.target_vendor             },
+      {"target_abi",           ctx.target_abi                },
+      {"target_size_abi",      ctx.target_size_abi           },
+      {"target_libc",          ctx.target_libc               },
+      {"target_cpu",           ctx.target_cpu                },
+      {"target_features",      ctx.target_features           },
+      {"target_code_model",    code_model                    },
+      {"target_reloc_model",   reloc_model                   },
+      {"target_sub_config",    ctx.target_sub_config         },
+      {"target_emit",          emits                         },
+      // profile
+      {"profile_debug",        btos(ctx.profile_debug)       },
+      {"profile_optimization", opt                           },
+      // logs
+      {"logs",                 logs                          },
+      // warnings
+      {"warnings",             warns                         },
+      {"warn_level",           wlevel                        },
+      // debug printer
+      {"debugs",               debugs                        },
+      // defines
+      {"defines",              defines                       },
+      // undefines
+      {"undefines",            undefines                     },
+      // directories
+      {"dir_project",          ctx.dir_project               },
+      {"dir_build",            ctx.dir_build                 },
+      {"dir_source",           ctx.dir_source                },
+      {"dir_vendor",           ctx.dir_vendor                },
+      {"dir_ffi_json",         ctx.dir_ffi_json              },
+      {"dir_binding",          ctx.dir_binding               },
+      {"dir_compiler",         common::TOOL_CTX.compiler_used},
+      {"dir_stdlib",           common::get_stdlib_dir()      },
+      {"dir_packages",         common::get_packages_dir()    },
+      // sub_configs
+      {"sub_configs",          sub_configs                   },
+      // llvm
+      {"llvm_triple",          ctx.llvm_triple               },
+      {"llvm_verify_module",   btos(ctx.llvm_verify_module)  },
+      {"llvm_args",            llvm_args                     },
+  };
+
+  common::fmt_template(config_txt, config_params);
+
+  return config_txt;
 }

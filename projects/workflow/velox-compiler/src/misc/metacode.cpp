@@ -54,7 +54,7 @@ bool meta::Metablock_If::eval_comp_args() const
   static LCtx map;
 
   if (map.empty()) {
-    for (auto& [def, val] : compiler::COMP_CTX.COMPILATION_ARGS) {
+    for (auto& [def, val] : compiler::COMP_CTX.PREPROCESSOR_ARGS) {
       map[def] = {val};
     }
   }

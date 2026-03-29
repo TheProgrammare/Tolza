@@ -56,7 +56,7 @@ struct MetablockManager;
 struct ModuleImportation {
   // project = default or ~
   // standard lib = std:
-  // user lib = lib:
+  // user = usr:
   // extern = ext:
   // binding = ext:
   enum class EImportSource { Unknown, User, StandardLib, Package, Extern, Binding };
@@ -120,9 +120,9 @@ struct ScriptInfo {
   ScriptInfo(const std::string& _file_path, const std::string& _file_str, const std::vector<std::string>& _file_lines);
   ~ScriptInfo();
 
-  enum class Origin { user, vendor_lib, stdlib, lib, binding };
+  enum class Origin { src, vendor_lib, stdlib, pkg_lib, binding };
 
-  Origin                  origin = Origin::user;
+  Origin                  origin = Origin::src;
   std::string             file_path;
   std::string             file_str;
   std::vector<Token>      tokens;

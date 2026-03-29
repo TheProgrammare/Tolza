@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include "ast/ast_base.hpp"
+#include "common.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
 
@@ -149,7 +150,7 @@ std::string ffi::type_to_str(const Type& ty)
       std::string str_return = ffi::type_to_str(ty.proto_type->return_type);
 
       std::string fn = BINDER_PROTOTYPE_TEMPLATE;
-      compiler::fmt_template(fn, {str_params, str_return});
+      common::fmt_template(fn, {str_params, str_return});
       type = fn;
     } else {
       std::runtime_error("Undefined function type");
@@ -171,9 +172,10 @@ std::string ffi::import_to_str(const Import& _imp)
   std::string path;
 
   switch (_imp.type) {
-  case Import::EImportType::lib:     type = "lib:"; break;
+  case Import::EImportType::pkg:     type = "pkg:"; break;
   case Import::EImportType::user:    type = "usr:"; break;
   case Import::EImportType::stdlib:  type = "std:"; break;
+  case Import::EImportType::ext:     type = "ext:"; break;
   case Import::EImportType::unknown: break;
   }
 
@@ -181,7 +183,7 @@ std::string ffi::import_to_str(const Import& _imp)
   path += _imp.name;
 
   std::string out = BINDER_IMPORT_TEMPLATE;
-  compiler::fmt_template(out, {type, path});
+  common::fmt_template(out, {type, path});
   return out;
 }
 
@@ -193,13 +195,13 @@ std::string ffi::comp_to_str(const Comp& comp)
   for (size_t i = 0; i < comp.fields.size(); i++) {
     auto& [name, type] = comp.fields[i];
     std::string field  = BINDER_EXTERN_FIELD;
-    compiler::fmt_template(field, {name, type_to_str(type)});
+    common::fmt_template(field, {name, type_to_str(type)});
 
     members += field;
   }
 
   std::string out = BINDER_EXTERN_COMP_TEMPLATE;
-  compiler::fmt_template(out, {comp.name, members});
+  common::fmt_template(out, {comp.name, members});
   return out;
 }
 
@@ -213,7 +215,7 @@ std::string ffi::entity_to_str(const Entity& entity)
   }
 
   std::string out = BINDER_EXTERN_ENTITY_TEMPLATE;
-  compiler::fmt_template(out, {entity.name, members});
+  common::fmt_template(out, {entity.name, members});
   return out;
 }
 
@@ -228,7 +230,7 @@ std::string ffi::union_to_str(const Union& _union)
   bool test = members.empty() ? true : false;
 
   std::string out = BINDER_EXTERN_UNION_TEMPLATE;
-  compiler::fmt_template(out, {_union.name, members});
+  common::fmt_template(out, {_union.name, members});
   return out;
 }
 
@@ -241,7 +243,7 @@ std::string ffi::flag_to_str(const Flag& flag)
   }
 
   std::string out = BINDER_EXTERN_FLAG_TEMPLATE;
-  compiler::fmt_template(out, {flag.name, ffi::EType_to_str(flag.underlying_type), members});
+  common::fmt_template(out, {flag.name, ffi::EType_to_str(flag.underlying_type), members});
   return out;
 }
 
@@ -262,7 +264,7 @@ std::string ffi::enum_to_str(const Enum& _enum)
   }
 
   std::string out = BINDER_EXTERN_ENUM_TEMPLATE;
-  compiler::fmt_template(out, {_enum.name, members});
+  common::fmt_template(out, {_enum.name, members});
   return out;
 }
 
@@ -286,7 +288,7 @@ std::string ffi::func_to_str(const Func& func)
   }
 
   std::string out = BINDER_EXTERN_FN_TEMPALTE;
-  compiler::fmt_template(out, {func.name, params, type_to_str(func.proto.return_type)});
+  common::fmt_template(out, {func.name, params, type_to_str(func.proto.return_type)});
   return out;
 }
 
@@ -295,26 +297,26 @@ std::string ffi::global_to_str(const Global& glo)
   std::string kind = glo.is_const ? "let" : "var";
 
   std::string out = BINDER_EXTERN_GLOBAL_TEMPLATE;
-  compiler::fmt_template(out, {kind, glo.name, type_to_str(glo.type)});
+  common::fmt_template(out, {kind, glo.name, type_to_str(glo.type)});
   return out;
 }
 
 std::string ffi::typealias_to_str(const TypeAlias& _ty_alias)
 {
   std::string out = BINDER_EXTERN_TYPEALIAS_TEMPLATE;
-  compiler::fmt_template(out, {_ty_alias.name, type_to_str(_ty_alias.type)});
+  common::fmt_template(out, {_ty_alias.name, type_to_str(_ty_alias.type)});
   return out;
 }
 
 
-void ffi::write_ast(const ffi::AST& ast, const std::string& target_path)
+void ffi::write_ast(const ffi::AST& ast, const std::string& dest_file)
 {
   if (!check_ast_generation(ast)) return;
 
-  std::filesystem::create_directories(std::filesystem::path(target_path).parent_path());
-  std::ofstream os(target_path);
+  std::filesystem::create_directories(std::filesystem::path(dest_file).parent_path());
+  std::ofstream os(dest_file);
 
-  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(target_path).string() + "\"");
+  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(dest_file).string() + "\"");
 
   os.clear();
 
@@ -330,7 +332,7 @@ void ffi::write_ast(const ffi::AST& ast, const std::string& target_path)
     }
 
     std::string header = ffi::BINDER_FILE_HEADER;
-    compiler::fmt_template(header, {_lang, _lib, _imp, ast.bind.abi});
+    common::fmt_template(header, {_lang, _lib, _imp, ast.bind.abi});
     os << header << std::flush;
   }
 

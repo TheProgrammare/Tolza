@@ -15,6 +15,22 @@
  *  limitations under the License.
  */
 
-#pragma once
+#include <CLIUtils/CLI11.hpp>
 
-bool start_compilation(int argc, const char* argv[]);
+#include "common.hpp"
+#include "toolchain/parser_command.hpp"
+#include "toolchain/toolchain.hpp"
+#include "toolchain_context.hpp"
+
+int main(int argc, const char* argv[])
+{
+  toolchain::init_autocompletion();
+  common::init_toolchain_context();
+
+  CLI::App app{"Velox toolchain (" + common::SOFTWARE_VERSION + ")", "velox"};
+  Command  command(app);
+
+  toolchain::link_stdlib();
+
+  CLI11_PARSE(app, argc, argv);
+}

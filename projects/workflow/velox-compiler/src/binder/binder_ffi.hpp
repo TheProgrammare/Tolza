@@ -222,7 +222,7 @@ struct TypeAlias {
 };
 
 struct Import {
-  enum class EImportType { lib, user, stdlib, unknown };
+  enum class EImportType { pkg, user, stdlib, ext, unknown };
 
   std::string              name;
   std::vector<std::string> path;
@@ -258,7 +258,7 @@ struct AST {
 [[nodiscard]] std::string typealias_to_str(const TypeAlias& _ty_alias);
 
 
-void write_ast(const AST& ast, const std::string& target_path);
+void write_ast(const AST& ast, const std::string& dest_file);
 
 bool check_ast_generation(const AST& ast);
 

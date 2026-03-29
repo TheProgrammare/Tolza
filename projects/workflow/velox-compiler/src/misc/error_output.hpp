@@ -72,17 +72,16 @@ struct Error_Diagnostic {
     std::string str_msg;
     str_msg += "[" + ESeverity_to_color(severity) + ESeverity_to_str(severity) + color_RESET "] ";
     str_msg += print_code() + " " + msg;
-    if (!hint.empty()) str_msg += "\n[hint] " color_CYAN + hint + color_RESET;
+    if (!hint.empty()) str_msg += "\n[hint] " + hint;
 
     if (!context.empty()) {
-      str_msg += "\n[context] " color_CYAN;
+      str_msg += "\n[context] ";
 
       size_t count = 0;
       for (auto& elem : context) {
         str_msg += elem;
         if (count != context.size() - 1) str_msg += " >> ";
       }
-      str_msg += color_RESET;
     }
 
     return str_msg;

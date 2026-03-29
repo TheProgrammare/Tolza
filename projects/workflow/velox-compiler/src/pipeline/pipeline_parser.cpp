@@ -8,7 +8,6 @@
 
 #include "parser/parser_base.hpp"
 #include "parser/parser_context.hpp"
-#include "pipeline.hpp"
 #include "visitor/symbol_manager.hpp"
 #include "misc/script_info.hpp"
 
@@ -26,10 +25,9 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
     parser::Parser_Base inParser(*scr_info);
 
-    if (compiler::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[parse:";
-    std::cout << color_CYAN << ++count << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA "\"" << scr_info->file_path << "\"" color_CYAN "... " << std::flush;
+    std::cout << ++count << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << color_MAGENTA "\"" << scr_info->file_path << "\"... " << std::flush;
 
     auto                      start       = std::chrono::high_resolution_clock::now();
     std::vector<std::string>  out_par_err = inParser.start_parsing();
@@ -43,7 +41,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
     } else {
       std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET;
-      std::cout << color_CYAN " (" << inParser.ctx->node_count << " nodes)" color_RESET << std::endl;
+      std::cout << " (" << inParser.ctx->node_count << " nodes)" color_RESET << std::endl;
     }
 
     final_duration += end - start;
@@ -51,7 +49,6 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   }
 
   if (!parErrors.empty()) {
-    if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
     std::cerr << color_RED "[parse] Failed\n" color_RESET;
     // sum of errors
     size_t err_count = 0;
@@ -64,7 +61,6 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     for (auto& [path, fileError] : parErrors) {
       if (fileError.empty()) continue;
 
-      if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[parse:ERROR] [file] " color_MAGENTA << path << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << "\"" << f_err << "\"\n";
@@ -86,7 +82,6 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
     for (auto& [name, fileError] : declErrors) {
       if (fileError.empty()) continue;
 
-      if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
       std::cerr << color_RED "[declaration:ERROR] [file] " color_MAGENTA << name << color_RESET "\n\n";
       for (const auto& f_err : fileError) {
         std::cerr << "\"" << f_err << "\"\n";
@@ -94,8 +89,6 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       std::cerr << std::endl;
     }
   }
-
-  if (compiler::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 

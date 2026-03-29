@@ -112,11 +112,11 @@ std::string ModuleImportation::get_path() const
 {
   std::filesystem::path p_out;
   switch (import_source) {
-  case EImportSource::User:        p_out = compiler::COMP_CTX.source_dir; break;
-  case EImportSource::StandardLib: p_out = common::get_stdlib_dir(); break;
-  case EImportSource::Package:     p_out = common::get_packages_dir(); break;
-  case EImportSource::Extern:      p_out = compiler::COMP_CTX.binding_dir; break;
-  default:                         p_out = compiler::COMP_CTX.source_dir; break;
+  case EImportSource::User:        p_out = compiler::COMP_CTX.get_dir_source(); break;
+  case EImportSource::StandardLib: p_out = common::resolve_path(common::get_stdlib_dir()); break;
+  case EImportSource::Package:     p_out = common::resolve_path(common::get_packages_dir()); break;
+  case EImportSource::Extern:      p_out = compiler::COMP_CTX.get_dir_binding(); break;
+  default:                         p_out = compiler::COMP_CTX.get_dir_source(); break;
   }
 
   for (auto& elem : path) {
@@ -125,7 +125,7 @@ std::string ModuleImportation::get_path() const
 
   p_out /= name;
   if (!extern_lib.empty()) p_out /= extern_lib;
-  p_out.replace_extension(".velox");
+  p_out.replace_extension(".vlx");
 
   return p_out.string();
 }

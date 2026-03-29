@@ -15,12 +15,16 @@
  *  limitations under the License.
  */
 
-#include "pipeline/pipeline.hpp"
+#include <CLIUtils/CLI11.hpp>
+#include "compiler/compiler.hpp"
+#include "compiler/parser_command.hpp"
+#include "common.hpp"
 
 int main(int argc, const char* argv[])
 {
-  if (start_compilation(argc, argv))
-    return 0;
-  else
-    return 1;
+  CLI::App app{"Velox compiler (" + common::SOFTWARE_VERSION + ")", common::SOFTWARE_NAME};
+  Command  command(app, argc, argv);
+
+
+  CLI11_PARSE(app, argc, argv);
 }

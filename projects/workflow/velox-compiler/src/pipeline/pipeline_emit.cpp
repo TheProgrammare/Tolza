@@ -23,36 +23,11 @@ bool pipeline_start_emit(const std::vector<std::shared_ptr<ScriptInfo>>& scr_inf
 
   auto& mod = scr_infos[0]->llvm_module;
 
-  // Init backends
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
-
-  // Init target
-  std::string target_triple = llvm::sys::getDefaultTargetTriple();
-  mod->setTargetTriple(target_triple);
-
-  std::string         err;
-  const llvm::Target* target = llvm::TargetRegistry::lookupTarget(target_triple, err);
-
-  if (!target) {
-    llvm::errs() << err;
-    return false;
-  }
-
-
-  // Init target machine
-  llvm::TargetOptions  opt;
-  auto                 RM = std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_);
-  llvm::TargetMachine* TM = target->createTargetMachine(target_triple, "generic", "", opt, RM);
-
-  mod->setDataLayout(TM->createDataLayout());
-
   // Emit object
-  if (compiler::COMP_CTX.emit_obj) {
+  if (compiler::COMP_CTX.target_emits.contains(common::CompCtx::EEmit::Obj)) {
     std::error_code       err_c;
     std::filesystem::path dest_path =
-        std::filesystem::path(compiler::COMP_CTX.codegen_build_dir) / compiler::COMP_CTX.get_project_name();
+        std::filesystem::path(compiler::COMP_CTX.get_dir_build()) / compiler::COMP_CTX.get_project_name();
     dest_path.replace_extension(".o");
 
     llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
@@ -62,9 +37,10 @@ bool pipeline_start_emit(const std::vector<std::shared_ptr<ScriptInfo>>& scr_inf
       return false;
     }
 
+
     llvm::legacy::PassManager pass;
 
-    if (TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+    if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
       llvm::errs() << "[emitter:ERROR] TargetMachine dosen't support obj emit";
       return false;
     }

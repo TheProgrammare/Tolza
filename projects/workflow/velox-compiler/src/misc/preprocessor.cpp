@@ -63,7 +63,7 @@ std::vector<Token> Preprocessor::preprocess()
     tok.span.pos = final_pos_count++;
   }
 
-  if (compiler::COMP_CTX.log_preprocessor) {
+  if (compiler::COMP_CTX.logs.contains("preprocessor")) {
     debug_write_postprocess_code_files(final_tokens);
   }
 

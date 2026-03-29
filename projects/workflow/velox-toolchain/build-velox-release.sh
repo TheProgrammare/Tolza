@@ -17,4 +17,4 @@ cmake -G Ninja -DCMAKE_CXX_STANDARD=23 ../../
 
 # Build in parallel using Ninja
 echo "Building Velox with $NUM_THREADS threads..."
-time ninja -j $NUM_THREADS velox-toolchain
+time ninja -j $NUM_THREADS velox

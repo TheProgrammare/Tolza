@@ -1,35 +1,106 @@
 #include "compiler_context.hpp"
+#include "common.hpp"
 
+#include <algorithm>
 #include <set>
 #include <string>
 #include <filesystem>
-#include <iostream>
 
 namespace fs = std::filesystem;
 
 
+size_t common::CompCtx::get_size_bit() const
+{
+  // on abi_size
+  if (!target_size_abi.empty()) {
+    std::string abi = target_size_abi;
+    // case insensible
+    for (auto& c : abi) c = std::toupper(c);
+
+    if (abi == "ILP32") {
+      return 32;
+    } else if (abi == "LP64" || abi == "LLP64" || abi == "ILP64") {
+      return 64;
+    } else {
+      // unknown, check arch
+    }
+  }
+
+  // on target_arch
+  if (!target_arch.empty()) {
+    std::string arch = target_arch;
+    for (auto& c : arch) c = std::tolower(c);
+
+    if (arch == "x86" || arch == "arm") {
+      return 32;
+    } else if (arch == "x86_64" || arch == "amd64" || arch == "aarch64" || arch == "riscv64") {
+      return 64;
+    }
+  }
+
+  // fallback
+  return 64;
+}
+
+std::string common::CompCtx::get_dir_project() const
+{
+  return resolve_path(dir_project, fs::path(current_config_file).parent_path());
+}
+std::string common::CompCtx::get_dir_build() const
+{
+  return resolve_path(dir_build, get_dir_project());
+}
+std::string common::CompCtx::get_dir_source() const
+{
+  return resolve_path(dir_source, get_dir_project());
+}
+std::string common::CompCtx::get_dir_vendor() const
+{
+  return resolve_path(dir_vendor, get_dir_project());
+}
+std::string common::CompCtx::get_dir_binding() const
+{
+  return resolve_path(dir_binding, get_dir_project());
+}
+std::string common::CompCtx::get_dir_ffi_json() const
+{
+  return resolve_path(dir_ffi_json, get_dir_project());
+}
+std::string common::CompCtx::get_dir_compiler() const
+{
+  return resolve_path(dir_compiler, get_dir_project());
+}
+std::string common::CompCtx::get_dir_stdlib() const
+{
+  return resolve_path(dir_stdlib, get_dir_project());
+}
+std::string common::CompCtx::get_dir_packages() const
+{
+  return resolve_path(dir_packages, get_dir_project());
+}
+
 const std::string& common::CompCtx::get_preprocess_dir() const
 {
-  static auto out = (fs::path(codegen_build_dir) / "preprocess").string();
+  static auto out = (fs::path(dir_build) / "preprocess").string();
   return out;
 }
 
 const std::string& common::CompCtx::get_debug_graph_dir() const
 {
-  static auto out = (fs::path(codegen_build_dir) / "graph").string();
+  static auto out = (fs::path(dir_build) / "graph").string();
   return out;
 }
 
 const std::string& common::CompCtx::get_llvmir_dir() const
 {
-  static auto out = (fs::path(codegen_build_dir) / "llvm-ir").string();
+  static auto out = (fs::path(dir_build) / "llvm-ir").string();
   return out;
 }
 
-const std::string& common::CompCtx::get_project_name() const
+std::string common::CompCtx::get_project_name() const
 {
-  static auto out = fs::path(project_dir).stem().string();
-  return out;
+  if (target_project_name.empty()) return fs::path(dir_project).stem().string();
+  return target_project_name;
 }
 
 const std::string& common::CompCtx::get_out_name() const
@@ -43,330 +114,177 @@ const std::string& common::CompCtx::get_config_file() const
   static std::string out;
   if (!out.empty()) return out;
 
-  if (target_config.empty() || target_config == "self") return out = current_config_file;
-  if (auto find = sub_configs.find(target_config); find != sub_configs.end()) return out = find->second;
+  if (target_sub_config.empty() || target_sub_config == "self") return out = current_config_file;
+  if (auto find = sub_configs.find(target_sub_config); find != sub_configs.end()) return out = find->second;
 
   return out = current_config_file;
 }
 
-void common::CompCtx::apply_args(int _argc, const char* _argv[])
+std::string common::CompCtx::get_target_triple() const
 {
-  argc = _argc;
-  argv = _argv;
-
-  for (int i = 2; i < argc; ++i) {
-    const std::string& arg = argv[i];
-
-    // e.g. --debug
-    auto bool_arg = [&](bool& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
-      if (arg_name.empty() && alt_arg_name.empty()) {
-        input = false;
-        return false;
-      }
-
-      bool valid_arg = false;
-
-      if (!arg_name.empty() && arg.rfind("--" + arg_name, 0) == 0) {
-        valid_arg                  = true;
-        COMPILATION_ARGS[arg_name] = "true";
-        input                      = true;
-      } else if (!arg_name.empty() && arg.rfind("--!" + arg_name, 0) == 0) {
-        valid_arg                  = true;
-        COMPILATION_ARGS[arg_name] = "false";
-        input                      = false;
-      }
-      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        valid_arg                      = true;
-        COMPILATION_ARGS[alt_arg_name] = "true";
-        input                          = true;
-      } else if (!alt_arg_name.empty() && arg.rfind("-!" + alt_arg_name, 0) == 0) {
-        valid_arg                      = true;
-        COMPILATION_ARGS[alt_arg_name] = "false";
-        input                          = false;
-      }
-
-      return valid_arg;
-    };
-
-    // e.g. --os="linux"
-    auto str_arg = [&](std::string& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
-      if (arg_name.empty() && alt_arg_name.empty()) {
-        return false;
-      }
-
-      bool valid_arg = false;
-
-      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        std::size_t pos = arg.find('=');
-        if (pos != std::string::npos) {
-          valid_arg                  = true;
-          std::string value          = arg.substr(pos + 1);
-          COMPILATION_ARGS[arg_name] = value;
-          input                      = value;
-        }
-      }
-      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        valid_arg                      = true;
-        std::string value              = arg.substr(1 + alt_arg_name.size()); // tout après "-o"
-        COMPILATION_ARGS[alt_arg_name] = value;
-        input                          = value;
-      }
-
-      return valid_arg;
-    };
-
-    // e.g. --dest="/mnt/data/my_project"
-    auto path_arg = [&](std::string& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
-      if (arg_name.empty() && alt_arg_name.empty()) {
-        return false;
-      }
-
-      bool valid_arg = false;
-
-      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        std::size_t pos = arg.find('=');
-        if (pos != std::string::npos) {
-          valid_arg                  = true;
-          std::string value          = arg.substr(pos + 1);
-          COMPILATION_ARGS[arg_name] = value;
-          input                      = fs::weakly_canonical(value);
-        }
-      }
-      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        valid_arg                      = true;
-        std::string value              = arg.substr(1 + alt_arg_name.size());
-        COMPILATION_ARGS[alt_arg_name] = value;
-        input                          = fs::weakly_canonical(value);
-      }
-
-      return valid_arg;
-    };
-
-    // e.g. --opt-level=0
-    auto size_arg = [&](size_t& input, const std::string& arg_name, const std::string& alt_arg_name = "") {
-      if (arg_name.empty() && alt_arg_name.empty()) {
-        return false;
-      }
-
-      bool valid_arg = false;
-
-      if (!arg_name.empty() && arg.rfind("--" + arg_name + "=", 0) == 0) {
-        std::size_t pos = arg.find('=');
-        if (pos != std::string::npos) {
-          std::string value          = arg.substr(pos + 1);
-          COMPILATION_ARGS[arg_name] = value;
-          valid_arg                  = true;
-          input                      = std::stoul(value);
-        }
-      }
-      if (!alt_arg_name.empty() && arg.rfind("-" + alt_arg_name, 0) == 0) {
-        std::string value              = arg.substr(1 + alt_arg_name.size());
-        COMPILATION_ARGS[alt_arg_name] = value;
-        valid_arg                      = true;
-        if (value == "s" || value == "S") {
-          profile_size_opt = true;
-          return valid_arg;
-        } else if (value == "z" || value == "Z") {
-          profile_extrem_size_opt = true;
-          return valid_arg;
-        } else {
-          try {
-            input = std::stoul(value);
-          } catch (const std::runtime_error& e) {
-            input = 0;
-          }
-        }
-      }
-
-      return valid_arg;
-    };
-
-    if (path_arg(current_config_file, "ccf")) continue;
-
-    // target
-    if (str_arg(target_abi, "abi")) continue;
-    if (str_arg(target_arch, "arch")) continue;
-    if (size_arg(target_bits, "bits")) continue;
-    if (str_arg(target_os, "os")) continue;
-    if (str_arg(target_libc, "libc")) continue;
-    if (str_arg(target_config, "config")) continue;
-
-    // profile
-    if (bool_arg(profile_debug, "debug", "d")) continue;
-    if (bool_arg(profile_debug, "release", "r")) {
-      profile_debug = false;
-      continue;
-    }
-    if (size_arg(profile_opt_level, "opt-level")) continue;
-    if (bool_arg(profile_size_opt, "size-opt", "Os")) continue;
-    if (bool_arg(profile_extrem_size_opt, "extrem-size-opt", "Oz")) continue;
-    if (size_arg(profile_opt_level, "", "O")) continue;
-
-    // logs
-    if (bool_arg(log_all, "log-all", "lall")) continue;
-    if (bool_arg(log_filesystem, "log-filesystem", "lfs")) continue;
-    if (bool_arg(log_lexer, "log-lexer", "llex")) continue;
-    if (bool_arg(log_preprocessor, "log-pre", "lpre")) continue;
-    if (bool_arg(log_parser, "log-parser", "lpar")) continue;
-    if (bool_arg(log_binder, "log-binder", "lemb")) continue;
-    if (bool_arg(log_exporter, "log-exporter", "lexp")) continue;
-    if (bool_arg(log_resolver, "log-resolver", "lres")) continue;
-    if (bool_arg(log_LLVM_IR, "log-llvm", "lllvm")) continue;
-    if (bool_arg(log_linker, "log-linker", "llink")) continue;
-
-    // warnings
-    if (bool_arg(warn_all, "warn-all", "wall")) continue;
-    if (bool_arg(warn_extra, "warn-extra", "wextra")) continue;
-    if (bool_arg(warn_pedantic, "warn-pedantic", "wpedan")) continue;
-    if (size_arg(warn_level, "warn-level")) continue;
-    if (bool_arg(warn_unused, "warn-unused", "wun")) continue;
-    if (bool_arg(warn_dead_code, "warn-dead-code", "wdc")) continue;
-    if (bool_arg(warn_as_error, "warn-as-error", "wae")) continue;
-
-    // printer
-    if (bool_arg(print_ast, "print-ast")) continue;
-
-    // define macro
-    if (arg.rfind("-D", 0) == 0) {
-      auto def    = arg.substr(2);
-      auto eq_pos = def.find('=');
-
-      std::string name, value;
-
-      if (eq_pos != std::string::npos) {
-        name  = def.substr(0, eq_pos);
-        value = def.substr(eq_pos + 1);
-      } else {
-        name  = def;
-        value = "1"; // implicit value
-      }
-      COMPILATION_ARGS[name] = value;
-      defines[name]          = value;
-
-      continue;
-    }
-
-    if (arg.rfind("-!D", 0) == 0) {
-      auto name = arg.substr(3);
-      COMPILATION_ARGS.erase(name);
-      defines.erase(name);
-    }
-
-    // undefine macro
-    if (arg.rfind("-U", 0) == 0) {
-      auto name = arg.substr(2);
-
-      COMPILATION_ARGS[name] = ""; // no value for -UName
-      undefines.push_back(name);
-      continue;
-    }
-
-    if (arg.rfind("-!U", 0) == 0) {
-      auto name = arg.substr(3);
-      COMPILATION_ARGS.erase(name);
-
-      for (auto it = undefines.begin(); it != undefines.end(); it++) {
-        if (*it == name) {
-          undefines.erase(it);
-          break;
-        }
-      }
-    }
-
-    // codegen
-    if (bool_arg(emit_bin, "emit-bin")) continue;
-    if (bool_arg(emit_llvm, "emit-llvm")) continue;
-    if (bool_arg(emit_obj, "emit-obj")) continue;
-    if (bool_arg(emit_asm, "emit-asm")) continue;
-    if (bool_arg(emit_bc, "emit-bc")) continue;
-    if (bool_arg(emit_static_lib, "emit-static-lib")) continue;
-    if (bool_arg(emit_dynamic_lib, "emit-dynamic-lib")) continue;
-
-    if (path_arg(codegen_build_dir, "build")) continue;
-
-    // project
-    if (path_arg(project_dir, "project")) continue;
-    if (path_arg(source_dir, "src")) continue;
-    if (path_arg(vendor_dir, "vendor")) continue;
-    if (path_arg(ffi_json_dir, "ffi-json")) continue;
-    if (path_arg(binding_dir, "binding")) continue;
-
-    if (arg == "--") {
-      llvm_argc = argc - i - 1;
-      std::vector<const char*> c_str_vec;
-      c_str_vec.reserve(llvm_argc);
-      for (int j = i + 1; j < argc; j++) {
-        c_str_vec.push_back(argv[j]);
-      }
-      llvm_argv = c_str_vec.data();
-      break;
-    }
-
-    std::cerr << "[velox-compiler:warning] Unknown argument '" << arg << "'" << std::endl;
+  if (!llvm_triple.empty()) return llvm_triple;
+  std::string triple;
+  triple += target_arch.empty() ? "unknown" : target_arch;
+  triple += "-";
+  triple += target_vendor.empty() ? "unknown" : target_vendor;
+  triple += "-";
+  triple += target_os.empty() ? "unknown" : target_os;
+  if (!target_abi.empty()) {
+    triple += "-";
+    triple += target_abi;
   }
+  return triple;
+}
+
+void common::CompCtx::generate_preprocessor_args()
+{
+  auto to_std_arg = [](const std::string& _str) {
+    std::string tmp = _str;
+    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
+    return "__" + tmp + "__";
+  };
+
+  auto build_arg = [&](const std::string& _str, const std::string& key) {
+    const std::string std_arg  = to_std_arg(_str);
+    PREPROCESSOR_ARGS[key]     = std_arg;
+    PREPROCESSOR_ARGS[std_arg] = "true";
+  };
+
+  PREPROCESSOR_ARGS.clear();
+
+  PREPROCESSOR_ARGS["project_name"] = target_project_name;
+  build_arg(target_arch, "arch");
+  build_arg(target_os, "os");
+  build_arg(target_vendor, "vendor");
+  build_arg(target_abi, "abi");
+  build_arg(target_size_abi, "abi_size");
+  build_arg(target_libc, "libc");
+  build_arg(target_cpu, "cpu");
+  build_arg(target_features, "features");
+
+  build_arg(ECodeModel_to_str(target_code_model), "code_model");
+  build_arg(ERelocModel_to_str(target_reloc_model), "reloc_model");
+  for (auto& emit : target_emits) {
+    PREPROCESSOR_ARGS[to_std_arg(EEmit_to_str(emit))] = "true";
+  }
+
+  if (profile_debug) {
+    PREPROCESSOR_ARGS["debug"] = "true";
+  } else {
+    PREPROCESSOR_ARGS["release"] = "true";
+  }
+
+  build_arg(EOptimization_to_str(profile_optimization), "optimization");
+
+  for (auto& log : logs) build_arg(log, "log");
+
+  for (auto& warn : warns) build_arg(warn, "warning");
+  build_arg(EWarnLevel_to_str(warn_level), "warn_level");
+
+  for (auto& debug : debugs) build_arg(debug, "debug");
+
+  for (auto& [key, val] : defines) PREPROCESSOR_ARGS[key] = val;
+
+  for (auto& undef : undefines) PREPROCESSOR_ARGS[undef] = "true";
+
+  build_arg(llvm_triple, "llvm_triple");
 }
 
 std::vector<std::string> common::CompCtx::to_args() const
 {
   std::vector<std::string> out;
+  std::vector<std::string> llvm_out;
 
-  out.push_back("--abi=" + target_abi);
-  out.push_back("--arch=" + target_arch);
-  out.push_back("--bits=" + std::to_string(target_bits));
-  out.push_back("--os=" + target_os);
+  // target
+  out.push_back("--project-name=\"" + target_project_name + "\"");
+  out.push_back("--arch=\"" + target_arch + "\"");
+  out.push_back("--os=\"" + target_os + "\"");
+  out.push_back("--vendor=\"" + target_vendor + "\"");
+  out.push_back("--abi=\"" + target_abi + "\"");
+  out.push_back("--abi-size=\"" + target_size_abi + "\"");
   out.push_back("--libc=\"" + target_libc + "\"");
-  out.push_back("--config=\"" + target_config + "\"");
+  out.push_back("--cpu=\"" + target_cpu + "\"");
+  out.push_back("--features=\"" + target_features + "\"");
+  if (target_sub_config != "self") out.push_back("--sub-config=\"" + target_sub_config + "\"");
+  switch (target_code_model) {
+  case ECodeModel::Tiny:   out.push_back("--code-model=tiny"); break;
+  case ECodeModel::Small:  out.push_back("--code-model=small"); break;
+  case ECodeModel::Kernel: out.push_back("--code-model=kernel"); break;
+  case ECodeModel::Medium: out.push_back("--code-model=medium"); break;
+  case ECodeModel::Large:  out.push_back("--code-model=large"); break;
+  }
+  switch (target_reloc_model) {
+  case ERelocModel::Static:       out.push_back("--reloc=static"); break;
+  case ERelocModel::Pic:          out.push_back("--reloc=pic"); break;
+  case ERelocModel::DynamicNoPIC: out.push_back("--reloc=pie"); break;
+  case ERelocModel::ROPI:         out.push_back("--reloc=ropi"); break;
+  case ERelocModel::RWPI:         out.push_back("--reloc=rwpi"); break;
+  case ERelocModel::ROPI_RWPI:    out.push_back("--reloc=ropi_rwpi"); break;
+  }
+  for (auto& emit : target_emits) {
+    switch (emit) {
+    case EEmit::Bin:   out.push_back("--emit-bin"); break;
+    case EEmit::LLVM:  out.push_back("--emit-llvm"); break;
+    case EEmit::Obj:   out.push_back("--emit-obj"); break;
+    case EEmit::ASM:   out.push_back("--emit-asm"); break;
+    case EEmit::BC:    out.push_back("--emit-bc"); break;
+    case EEmit::s_lib: out.push_back("--emit-s-lib"); break;
+    case EEmit::d_lib: out.push_back("--emit-d-lib"); break;
+    }
+  }
 
+  // debug
   if (profile_debug)
     out.push_back("--debug");
   else
     out.push_back("--release");
 
-  out.push_back("--opt-level=" + std::to_string(profile_opt_level));
+  switch (profile_optimization) {
+  case EOptimization::O0: out.push_back("-O0"); break;
+  case EOptimization::O1: out.push_back("-O1"); break;
+  case EOptimization::O2: out.push_back("-O2"); break;
+  case EOptimization::O3: out.push_back("-O3"); break;
+  case EOptimization::Os: out.push_back("-Os"); break;
+  case EOptimization::Oz: out.push_back("-Oz"); break;
+  }
 
-  if (profile_debug) out.push_back("--size-opt");
 
-  if (log_all) out.push_back("--log-all");
-  if (log_filesystem) out.push_back("--log-filesystem");
-  if (log_lexer) out.push_back("--log-lexer");
-  if (log_preprocessor) out.push_back("--log-pre");
-  if (log_parser) out.push_back("--log-parser");
-  if (log_binder) out.push_back("--log-binder");
-  if (log_exporter) out.push_back("--log-exporter");
-  if (log_resolver) out.push_back("--log-resolver");
-  if (log_LLVM_IR) out.push_back("--log-llvm");
-  if (log_linker) out.push_back("--log-linker");
+  for (auto& log : logs) out.push_back(common::Key_Arg_Asso::val_to_arg("log.logs", log));
 
-  if (warn_all) out.push_back("--warn-all");
-  if (warn_extra) out.push_back("--warn-extra");
-  if (warn_pedantic) out.push_back("--warn-pedantic");
-  out.push_back("--warn-level=" + std::to_string(warn_level));
-  if (warn_unused) out.push_back("--warn-unused");
-  if (warn_dead_code) out.push_back("--warn-dead-code");
-  if (warn_as_error) out.push_back("--warn-as-error");
+  for (auto& warn : warns) out.push_back(common::Key_Arg_Asso::val_to_arg("warning.warnings", warn));
 
-  if (print_ast) out.push_back("--print-ast");
+
+  switch (warn_level) {
+  case EWarnLevel::W0: out.push_back("-W0"); break;
+  case EWarnLevel::W1: out.push_back("-W1"); break;
+  case EWarnLevel::W2: out.push_back("-W2"); break;
+  case EWarnLevel::W3: out.push_back("-W3"); break;
+  }
+
+  for (auto& debug : debugs) out.push_back(common::Key_Arg_Asso::val_to_arg("debug.debugs", debug));
+
 
   for (auto [name, val] : defines) out.push_back("-D" + name + "=" + val);
 
   for (auto udef : undefines) out.push_back("-U" + udef);
 
+  out.push_back("--dir-project=\"" + dir_project + "\"");
+  out.push_back("--dir-build=\"" + dir_build + "\"");
+  out.push_back("--dir-src=\"" + dir_source + "\"");
+  out.push_back("--dir-vendor=\"" + dir_vendor + "\"");
+  out.push_back("--dir-ffi-json=\"" + dir_ffi_json + "\"");
+  out.push_back("--dir-binding=\"" + dir_binding + "\"");
+  out.push_back("--dir-compiler=\"" + dir_compiler + "\"");
+  out.push_back("--dir-stdlib=\"" + dir_stdlib + "\"");
+  out.push_back("--dir-packages=\"" + dir_packages + "\"");
 
-  if (emit_bin) out.push_back("--emit-bin");
-  if (emit_llvm) out.push_back("--emit-llvm");
-  if (emit_obj) out.push_back("--emit-obj");
-  if (emit_asm) out.push_back("--emit-asm");
-  if (emit_bc) out.push_back("--emit-bc");
-  if (emit_static_lib) out.push_back("--emit-static-lib");
-  if (emit_dynamic_lib) out.push_back("--emit-dynamic-lib");
-  out.push_back("--build=\"" + codegen_build_dir + "\"");
+  // out.push_back("--dir-ccf=\"" + current_config_file + "\"");
 
-  out.push_back("--project=\"" + project_dir + "\"");
-  out.push_back("--src=\"" + source_dir + "\"");
-  out.push_back("--vendor=\"" + vendor_dir + "\"");
-  out.push_back("--ffi-json=\"" + ffi_json_dir + "\"");
-  out.push_back("--binding=\"" + binding_dir + "\"");
-  out.push_back("--ccf=\"" + current_config_file + "\"");
+
+  if (llvm_verify_module) out.push_back("--verify-module");
+
+  if (!llvm_args.empty()) out.push_back("--");
+  for (auto& llvm_arg : llvm_args) out.push_back(llvm_arg);
 
   return out;
 }
@@ -418,6 +336,31 @@ common::CompCtx common::Sub_CompCtx::merge_context(const CompCtx& base_ctx) cons
     }
   };
 
+  auto merge_set = [&](std::set<std::string>& _dest, const std::set<std::string>& _val, EMergeMode mode) {
+    switch (mode) {
+    case EMergeMode::_union: {
+      _dest.insert(_val.begin(), _val.end());
+      break;
+    }
+    case EMergeMode::_intersection: {
+      std::set<std::string> tmp;
+      for (const auto& elem : _dest) {
+        if (_val.find(elem) != _val.end()) tmp.insert(elem);
+      }
+      _dest = tmp;
+      break;
+    }
+    case EMergeMode::_anti_intersection: {
+      std::set<std::string> tmp;
+      for (const auto& elem : _dest) {
+        if (_val.find(elem) == _val.end()) tmp.insert(elem);
+      }
+      _dest = tmp;
+      break;
+    }
+    }
+  };
+
   auto merge_map = [&](std::map<std::string, std::string>& _dest, const std::map<std::string, std::string>& _val,
                        EMergeMode mode) {
     switch (mode) {
@@ -445,41 +388,63 @@ common::CompCtx common::Sub_CompCtx::merge_context(const CompCtx& base_ctx) cons
     }
   };
 
+  auto merge_emits = [&](std::set<EEmit>& _dest, const std::set<EEmit>& _val, EMergeMode mode) {
+    switch (mode) {
+    case EMergeMode::_union: {
+      _dest.insert(_val.begin(), _val.end());
+      break;
+    }
+    case EMergeMode::_intersection: {
+      std::set<EEmit> tmp;
+      for (auto& emit : _dest) {
+        if (_val.count(emit) > 0) tmp.insert(emit);
+      }
+      _dest = tmp;
+      break;
+    }
+    case EMergeMode::_anti_intersection: {
+      std::set<EEmit> tmp;
+      for (const auto& emit : _dest) {
+        if (_val.count(emit) == 0) tmp.insert(emit);
+      }
+      _dest = tmp;
+      break;
+    }
+    }
+  };
+
   CompCtx out = base_ctx;
 
   apply_str(out.current_config_file, current_config_file);
 
-  merge_map(out.COMPILATION_ARGS, COMPILATION_ARGS, COMPILATION_ARGS_merge_mode);
+  merge_map(out.PREPROCESSOR_ARGS, PREPROCESSOR_ARGS, COMPILATION_ARGS_merge_mode);
+
+  // target
+  apply_str(out.target_project_name, target_project_name);
+  apply_str(out.target_arch, target_arch);
+  apply_str(out.target_os, target_os);
+  apply_str(out.target_abi, target_abi);
+  apply_str(out.target_size_abi, target_size_abi);
+  apply_str(out.target_libc, target_libc);
+  apply_str(out.target_cpu, target_cpu);
+  apply_str(out.target_features, target_features);
+
+  merge_emits(out.target_emits, target_emits, emits_merge_mode);
 
   // profile
   apply_bool(out.profile_debug, profile_debug, has_profile_debug);
-  apply_int(out.profile_opt_level, profile_opt_level, has_profile_opt_level);
-  apply_bool(out.profile_size_opt, profile_size_opt, has_profile_size_opt);
-  apply_bool(out.profile_extrem_size_opt, profile_extrem_size_opt, has_profile_extrem_size_opt);
+  if (has_profile_optimization) out.profile_optimization = profile_optimization;
 
   // logs
-  apply_bool(out.log_all, log_all, has_log_all);
-  apply_bool(out.log_filesystem, log_filesystem, has_log_filesystem);
-  apply_bool(out.log_lexer, log_lexer, has_log_lexer);
-  apply_bool(out.log_preprocessor, log_preprocessor, has_log_preprocessor);
-  apply_bool(out.log_parser, log_parser, has_log_parser);
-  apply_bool(out.log_binder, log_binder, has_log_binder);
-  apply_bool(out.log_exporter, log_exporter, has_log_exporter);
-  apply_bool(out.log_resolver, log_resolver, has_log_resolver);
-  apply_bool(out.log_LLVM_IR, log_LLVM_IR, has_log_LLVM_IR);
-  apply_bool(out.log_linker, log_linker, has_log_linker);
+  merge_set(out.logs, logs, logs_merge_mode);
 
   // warnings
-  apply_bool(out.warn_all, warn_all, has_warn_all);
-  apply_bool(out.warn_extra, warn_extra, has_warn_extra);
-  apply_bool(out.warn_pedantic, warn_pedantic, has_warn_pedantic);
-  apply_int(out.warn_level, warn_level, has_warn_level);
-  apply_bool(out.warn_unused, warn_unused, has_warn_unused);
-  apply_bool(out.warn_dead_code, warn_dead_code, has_warn_dead_code);
-  apply_bool(out.warn_as_error, warn_as_error, has_warn_as_error);
+  merge_set(out.logs, logs, logs_merge_mode);
+  out.warns.insert(warns.begin(), warns.end());
+  if (has_warn_level) out.warn_level = warn_level;
 
-  // dot
-  apply_bool(out.print_ast, print_ast, has_print_ast);
+  // debugs
+  merge_set(out.debugs, debugs, debug_merge_mode);
 
   // defines
   merge_map(out.defines, defines, defines_merge_mode);
@@ -487,23 +452,103 @@ common::CompCtx common::Sub_CompCtx::merge_context(const CompCtx& base_ctx) cons
   // undefines
   merge_list(out.undefines, undefines, undefines_merge_mode);
 
-  // codegen
-  apply_bool(out.emit_bin, emit_bin, has_emit_bin);
-  apply_bool(out.emit_llvm, emit_llvm, has_emit_llvm);
-  apply_bool(out.emit_obj, emit_obj, has_emit_obj);
-  apply_bool(out.emit_asm, emit_asm, has_emit_asm);
-  apply_bool(out.emit_bc, emit_bc, has_emit_bc);
-  apply_bool(out.emit_static_lib, emit_static_lib, has_emit_static_lib);
-  apply_bool(out.emit_dynamic_lib, emit_dynamic_lib, has_emit_dynamic_lib);
-  apply_bool(out.pic_mode, pic_mode, has_pic_mode);
-  apply_str(out.codegen_build_dir, codegen_build_dir);
+  // llvm
+  apply_bool(out.llvm_verify_module, llvm_verify_module, has_llvm_verify_module);
+  apply_str(out.llvm_triple, llvm_triple);
 
-  // project
-  apply_str(out.project_dir, project_dir);
-  apply_str(out.source_dir, source_dir);
-  apply_str(out.vendor_dir, vendor_dir);
-  apply_str(out.ffi_json_dir, ffi_json_dir);
-  apply_str(out.binding_dir, binding_dir);
-
+  out.generate_preprocessor_args();
   return out;
+}
+
+std::string common::CompCtx::ERelocModel_to_str(ERelocModel reloc)
+{
+  switch (reloc) {
+  case ERelocModel::Static:       return "static";
+  case ERelocModel::Pic:          return "pic";
+  case ERelocModel::DynamicNoPIC: return "pie";
+  case ERelocModel::ROPI:         return "ropi";
+  case ERelocModel::RWPI:         return "rwpi";
+  case ERelocModel::ROPI_RWPI:    return "ropi_rwpi";
+  }
+}
+std::string common::CompCtx::ECodeModel_to_str(ECodeModel code)
+{
+  switch (code) {
+  case ECodeModel::Tiny:   return "tiny";
+  case ECodeModel::Small:  return "small";
+  case ECodeModel::Kernel: return "kernel";
+  case ECodeModel::Medium: return "medium";
+  case ECodeModel::Large:  return "large";
+  }
+}
+std::string common::CompCtx::EOptimization_to_str(EOptimization opt)
+{
+  switch (opt) {
+  case EOptimization::O0: return "O0";
+  case EOptimization::O1: return "O1";
+  case EOptimization::O2: return "O2";
+  case EOptimization::O3: return "O3";
+  case EOptimization::Os: return "Os";
+  case EOptimization::Oz: return "Oz";
+  }
+}
+std::string common::CompCtx::EWarnLevel_to_str(EWarnLevel wlevel)
+{
+  switch (wlevel) {
+  case EWarnLevel::W0: return "W0";
+  case EWarnLevel::W1: return "W1";
+  case EWarnLevel::W2: return "W2";
+  case EWarnLevel::W3: return "W3";
+  }
+}
+
+std::string common::CompCtx::EEmit_to_str(EEmit emit)
+{
+  switch (emit) {
+  case EEmit::Bin:   return "bin";
+  case EEmit::LLVM:  return "llvm";
+  case EEmit::Obj:   return "obj";
+  case EEmit::ASM:   return "asm";
+  case EEmit::BC:    return "bc";
+  case EEmit::s_lib: return "s_lib";
+  case EEmit::d_lib: return "d_lib";
+  }
+}
+
+common::CompCtx::EEmit common::CompCtx::str_to_EEmit(const std::string& s)
+{
+  if (s == "bin") return EEmit::Bin;
+  if (s == "llvm") return EEmit::LLVM;
+  if (s == "obj") return EEmit::Obj;
+  if (s == "asm") return EEmit::ASM;
+  if (s == "bc") return EEmit::BC;
+  if (s == "s_lib") return EEmit::s_lib;
+  if (s == "d_lib") return EEmit::d_lib;
+
+  return EEmit::Bin;
+}
+
+
+bool common::Key_Arg_Asso::val_is_valid(const std::string& key, const std::string& val)
+{
+  for (auto& elem : kas) {
+    if (elem.config_key == key && elem.config_val == val) return true;
+  }
+  return false;
+}
+const std::string& common::Key_Arg_Asso::val_to_arg(const std::string& key, const std::string& val)
+{
+  static const std::string empty = "";
+  for (auto& elem : kas) {
+    if (elem.config_key == key) return elem.arg;
+  }
+  return empty;
+}
+const std::string& common::Key_Arg_Asso::arg_to_val(const std::string& arg)
+{
+  static const std::string empty = "";
+  for (auto& elem : kas) {
+    if (elem.arg == arg && elem.arg_alt == arg) return elem.config_val;
+  }
+  return empty;
 }

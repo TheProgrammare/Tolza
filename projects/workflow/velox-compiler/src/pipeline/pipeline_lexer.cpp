@@ -1,7 +1,6 @@
 #include "pipeline_lexer.hpp"
 
 #include <chrono>
-#include <filesystem>
 #include <iostream>
 
 #include "misc/script_info.hpp"
@@ -18,9 +17,8 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   size_t path_count = 0;
   for (auto& scr_info : scr_infos) {
     Lexer lexer(*scr_info.get());
-    if (compiler::in_binding_compilation) std::cout << "[binder] ";
     std::cout << "[lex:";
-    std::cout << color_CYAN << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET << "... " << std::flush;
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -33,7 +31,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
       std::cout << color_RED << "ERR " << color_YELLOW << milli << " ms" << color_RESET << std::endl;
     } else {
       std::cout << color_GREEN << "OK " << color_YELLOW << milli << " ms" << color_RESET;
-      std::cout << color_CYAN " (" << scr_info->tokens.size() << " tokens)" color_RESET << std::endl;
+      std::cout << " (" << scr_info->tokens.size() << " tokens)" color_RESET << std::endl;
     }
 
     path_count++;
@@ -42,7 +40,6 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
   }
 
   if (!lexErrors.empty()) {
-    if (compiler::in_binding_compilation) std::cout << color_RED "[binder] ";
     std::cerr << color_RED "[lex:ERROR] Lexer failed\n" color_RESET;
     for (auto& errs : lexErrors) {
       auto [_, fileError] = errs;
@@ -56,7 +53,6 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  if (compiler::in_binding_compilation) std::cout << color_YELLOW "[binder] ";
   std::cout << color_YELLOW "[lex:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
             << color_RESET << " | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
   std::cout << std::endl;

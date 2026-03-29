@@ -22,10 +22,10 @@ bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   std::string extension = compiler::COMP_CTX.target_os == "windows" ? ".exe" : "";
 
   std::filesystem::path dest_path =
-      std::filesystem::path(compiler::COMP_CTX.codegen_build_dir) / compiler::COMP_CTX.get_project_name();
+      std::filesystem::path(compiler::COMP_CTX.get_dir_build()) / compiler::COMP_CTX.get_project_name();
   dest_path.replace_extension(".o");
   std::filesystem::path out_bin =
-      std::filesystem::path(compiler::COMP_CTX.codegen_build_dir) / compiler::COMP_CTX.get_project_name();
+      std::filesystem::path(compiler::COMP_CTX.get_dir_build()) / compiler::COMP_CTX.get_project_name();
   out_bin.replace_extension(extension);
 
   std::string command = "clang " + dest_path.string() + " -o " + out_bin.string();

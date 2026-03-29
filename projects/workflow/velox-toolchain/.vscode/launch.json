@@ -5,8 +5,8 @@
             "name": "Debug project creation",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["cw"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["create", "workspace", "--path", "/mnt/data/Workspace/velox/projects/velox-workspace", "--name", "velox-example", "-f"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },
@@ -14,17 +14,8 @@
             "name": "Debug audit",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["audit", "${workspaceFolder}/../velox-workspace/velox-example"],
-            "env": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "Debug version",
-            "type": "lldb-dap",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["--version"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["audit", "${workspaceFolder}/../../velox-workspace/velox-example"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },
@@ -32,8 +23,8 @@
             "name": "Debug check",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["check", "${workspaceFolder}/../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["check", "workspace", "${workspaceFolder}/../../velox-workspace/velox-example"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },
@@ -41,8 +32,8 @@
             "name": "Debug gui",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["gui", "${workspaceFolder}/../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["gui", "${workspaceFolder}/../../velox-workspace/velox-example"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },
@@ -50,8 +41,8 @@
             "name": "Debug build",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-toolchain",
-            "args": ["build", "${workspaceFolder}/../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["build", "${workspaceFolder}/../../velox-workspace/velox-example/velox.toml"],
             "env": [],
             "cwd": "${workspaceFolder}",
             
@@ -61,7 +52,7 @@
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/build/release/velox",
-            "args": ["build", "${workspaceFolder}/../velox-workspace/velox-example"],
+            "args": ["build", "${workspaceFolder}/../../velox-workspace/velox-example"],
             "cwd": "${workspaceFolder}"
         }
     ]

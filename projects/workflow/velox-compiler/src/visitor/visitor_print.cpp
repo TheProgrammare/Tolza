@@ -21,6 +21,8 @@
 #include "compiler/compiler.hpp"
 #include "misc/script_info.hpp"
 
+#include "common.hpp"
+
 std::string Visitor_Print::get_file_path() const
 {
   std::filesystem::path path = std::filesystem::path(compiler::COMP_CTX.get_debug_graph_dir())
@@ -108,8 +110,8 @@ void Visitor_Print::visit(ast::Root& n)
   for (auto& elem : n.global_nodes) elem->accept(*this);
   out_print += "</ul></li>\n";
 
-  compiler::fmt_template(
-      f_template, {compiler::VELOX_COMPILER_VERSION, std::filesystem::path(scr_info.file_path).filename(), out_print});
+  common::fmt_template(f_template,
+                       {common::SOFTWARE_VERSION, std::filesystem::path(scr_info.file_path).filename(), out_print});
 
   out_file.clear();
   out_file << f_template;

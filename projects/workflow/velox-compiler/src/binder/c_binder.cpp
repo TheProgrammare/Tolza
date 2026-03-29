@@ -9,14 +9,15 @@
 #include <set>
 
 #include <compiler_context.hpp>
+#include <common.hpp>
 
 #include "binder/binder_ffi.hpp"
-#include "compiler/compiler.hpp"
+
 
 void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
 {
-  auto tmp_path = std::filesystem::path(compiler::COMP_CTX.codegen_build_dir) / "temp";
-  if (!std::filesystem::exists(tmp_path)) std::filesystem::create_directories(tmp_path);
+  auto tmp_path = std::filesystem::path(common::get_cache_dir());
+  std::filesystem::create_directories(tmp_path);
   tmp_path /= "tmp_include.c";
 
   {
@@ -27,7 +28,7 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
 
   ffi::AST ast = parse_translation_unit(_bind, tmp_path, {});
   Import   imp;
-  imp.type = Import::EImportType::user;
+  imp.type = Import::EImportType::stdlib;
   imp.path = {"ffi"};
   imp.name = "C";
 

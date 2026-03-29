@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 
+#include "common.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/script_info.hpp"
 
@@ -27,7 +28,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
   for (size_t k = 0; k < 3; k++) {
     std::string name       = passName[k];
     std::string header_txt = resolver_head_str;
-    compiler::fmt_template(header_txt, {std::to_string(k + 1), name});
+    common::fmt_template(header_txt, {std::to_string(k + 1), name});
     std::cout << header_txt << std::endl;
 
     std::vector<std::tuple<std::string, std::vector<std::string>>> resErrors;
@@ -35,8 +36,8 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     size_t count = 0;
     for (auto scr_info : scr_infos) {
       std::string section_txt = resolver_section_str;
-      compiler::fmt_template(section_txt,
-                             {name, std::to_string(++count), std::to_string(scr_infos.size()), scr_info->file_path});
+      common::fmt_template(section_txt,
+                           {name, std::to_string(++count), std::to_string(scr_infos.size()), scr_info->file_path});
       std::cout << section_txt << std::flush;
 
       auto                     start = std::chrono::high_resolution_clock::now();

@@ -77,13 +77,14 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
 std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const ast::AType&    ty,
                                                                         const ast::ALiteral& value)
 {
+  common::CompCtx ctx;
   if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&value)) {
     llvm::Type* ty = nullptr;
     switch (ptr->type) {
     case EPrimType::ptrdiff:
     case EPrimType::uSize:
     case EPrimType::bSize:
-    case EPrimType::iSize:   ty = llvm::Type::getIntNTy(v.ctx, compiler::COMP_CTX.target_bits); break;
+    case EPrimType::iSize:   ty = llvm::Type::getIntNTy(v.ctx, compiler::COMP_CTX.get_size_bit()); break;
     case EPrimType::i8:
     case EPrimType::u8:
     case EPrimType::b8:      ty = v.i8Ty; break;

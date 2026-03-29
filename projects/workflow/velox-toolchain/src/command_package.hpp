@@ -15,7 +15,7 @@ bool remove(const std::string& pkg_name);
 bool info(const std::string& pkg_name);
 bool purge(const std::string& pkg_name);
 bool check(const std::string& pkg_name);
-bool list(bool only_installed, bool only_upgradable);
+bool list(const std::string& regex, bool only_installed, bool only_upgradable);
 bool update();
 bool upgrade();
 bool clean();

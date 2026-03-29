@@ -20,6 +20,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# name
+set(SOFTWARE_NAME "velox-compiler")
+# version
+string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
+
 # ----------------------------
 # Sources
 # ----------------------------
@@ -86,4 +91,10 @@ target_link_libraries(velox-compiler
         velox_vendor
         velox-common
 )
+
+# rename final binary
+#set_target_properties(velox-compiler PROPERTIES
+    #OUTPUT_NAME "${SOFTWARE_NAME}-${SOFTWARE_VERSION}b" # beta version mode
+    #OUTPUT_NAME "${SOFTWARE_NAME}-${SOFTWARE_VERSION}" # normal version mode
+#)
 

@@ -1,5 +1,5 @@
 #include "command_package.hpp"
-#include "toolchain.hpp"
+#include "toolchain/toolchain.hpp"
 
 #include <iostream>
 
@@ -38,7 +38,7 @@ bool command::package::check(const std::string& pkg_name)
   log("Checking " + pkg_name + " ...");
   return true;
 }
-bool command::package::list(bool only_installed, bool only_upgradable)
+bool command::package::list(const std::string& regex, bool only_installed, bool only_upgradable)
 {
   std::cout << "Listing";
   if (only_installed) std::cout << " (installed)";

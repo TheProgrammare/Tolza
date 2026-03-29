@@ -1,4 +1,4 @@
-#include "pipeline_llvm-ir.hpp"
+#include "pipeline_codegen.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -80,11 +80,10 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
   return true;
 }
 
-bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
-  if (compiler::COMP_CTX.llvm_argc > 0) {
-    llvm::InitLLVM x(compiler::COMP_CTX.llvm_argc, compiler::COMP_CTX.llvm_argv);
-    llvm::cl::ParseCommandLineOptions(compiler::COMP_CTX.llvm_argc, compiler::COMP_CTX.llvm_argv);
+  if (compiler::COMP_CTX.llvm_args.size() > 0) {
+    llvm::cl::ParseCommandLineOptions(compiler::COMP_CTX.llvm_args.size(), compiler::COMP_CTX.llvm_args.data());
   }
 
   std::vector<std::tuple<std::string, std::vector<std::string>>> llvmIRErrors;
@@ -108,7 +107,7 @@ bool pipeline_start_LLVM_IR(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
     codegen_visit.visit(*scr_info->rootNode);
     scr_info->llvm_module = codegen_visit.mod;
 
-    if (compiler::COMP_CTX.emit_llvm) emit_llvm_to_file(codegen_visit);
+    if (compiler::COMP_CTX.target_emits.contains(common::CompCtx::EEmit::LLVM)) emit_llvm_to_file(codegen_visit);
 
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();

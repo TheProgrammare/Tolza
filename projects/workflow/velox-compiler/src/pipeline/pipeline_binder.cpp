@@ -16,9 +16,11 @@
 #include "compiler/compiler.hpp"
 
 #include "binder/c_binder.hpp"
-#include "pipeline.hpp"
 #include "binder/ffi-json_reader.hpp"
 #include "misc/script_info.hpp"
+#include "pipeline/pipeline_filesystem.hpp"
+
+namespace fs = std::filesystem;
 
 bool generate_script(const ffi::Bind_Package& bind)
 {
@@ -28,7 +30,7 @@ bool generate_script(const ffi::Bind_Package& bind)
     ffi::Bind_Package _bind_w_abi = bind;
     _bind_w_abi.abi               = "C";
     ffi::c::c_lib_to_velox_lib(_bind_w_abi);
-  } else if (std::filesystem::exists(bind.path)) {
+  } else if (fs::exists(bind.path)) {
     auto ast = ffi::JSON::read_ffi_json_file(bind.path);
     ffi::write_ast(ast, bind.path);
   } else {
@@ -46,11 +48,15 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
   auto                          start = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> final_duration;
 
+  std::set<std::string> scripts;
+
   size_t count = 0;
   for (const auto& bind : binds) {
-    std::cout << "[generation:" color_CYAN << ++count << "/" << binds.size() << "] " color_RESET;
+    std::cout << "[generation:" << ++count << "/" << binds.size() << "] ";
 
     bool success = generate_script(bind);
+
+    scripts.insert(bind.path);
 
     auto end = std::chrono::high_resolution_clock::now();
 
@@ -69,14 +75,11 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
             << color_RESET << " | bind files: " color_YELLOW << binds.size() << color_RESET << "\n";
   std::cout << std::endl;
 
-  compiler::in_binding_compilation = true;
-  start                            = std::chrono::high_resolution_clock::now();
-  if (!start_compilation(compiler::COMP_CTX.argc, compiler::COMP_CTX.argv)) {
-    compiler::in_binding_compilation = false;
-    return false;
-  }
-  auto end                         = std::chrono::high_resolution_clock::now();
-  compiler::in_binding_compilation = false;
+
+  start     = std::chrono::high_resolution_clock::now();
+  auto scrs = pipeline_start_filesystem_on_files(scripts);
+  compiler::COMP.prepare_scripts(scrs);
+  auto end = std::chrono::high_resolution_clock::now();
 
   milli = std::chrono::duration<double, std::milli>(end - start).count();
 
@@ -89,30 +92,30 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
 
 void binder_generate_FFI_JSON()
 {
-  std::filesystem::create_directories(compiler::COMP_CTX.ffi_json_dir);
-  std::vector<std::filesystem::path> json_files;
+  fs::create_directories(compiler::COMP_CTX.get_dir_ffi_json());
+  std::vector<fs::path> json_files;
 
   try {
-    for (const auto& entry : std::filesystem::directory_iterator(compiler::COMP_CTX.ffi_json_dir)) {
+    for (const auto& entry : fs::directory_iterator(compiler::COMP_CTX.get_dir_ffi_json())) {
       if (entry.is_regular_file() && entry.path().extension() == ".json") {
         json_files.push_back(entry.path());
       }
     }
 
     std::cout << "[binder] ";
-    std::cout << color_CYAN "Found JSON files:\n";
+    std::cout << "Found JSON files:\n";
     for (const auto& path : json_files) {
       std::cout << "  - \"" color_MAGENTA << path << color_RESET "\"\n";
     }
 
-  } catch (const std::filesystem::filesystem_error& e) {
+  } catch (const fs::filesystem_error& e) {
     std::runtime_error("Filesystem error: " + std::string(e.what()) + "\n");
   }
 
   for (auto& json_f : json_files) {
-    auto                  ast  = ffi::JSON::read_ffi_json_file(json_f);
-    std::filesystem::path path = std::filesystem::path(compiler::COMP_CTX.ffi_json_dir) / ast.bind.lang / ast.bind.lib;
-    path.replace_filename(".vlxb");
+    auto     ast  = ffi::JSON::read_ffi_json_file(json_f);
+    fs::path path = fs::path(compiler::COMP_CTX.get_dir_ffi_json()) / ast.bind.lang / ast.bind.lib;
+    path.replace_filename(".vlxbind");
     ffi::write_ast(ast, path);
   }
 }
@@ -130,17 +133,16 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
   size_t count = 1;
   for (auto& scr_info : scr_infos) {
     std::cout << "[binder:";
-    std::cout << color_CYAN << count++ << "/" << scr_infos.size() << "] " color_RESET;
+    std::cout << count++ << "/" << scr_infos.size() << "] " color_RESET;
     std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
-    std::filesystem::create_directories(compiler::COMP_CTX.binding_dir);
+    fs::create_directories(compiler::COMP_CTX.get_dir_binding());
     size_t bind_count = 0;
 
     for (const auto& extern_imp : scr_info->get_externs()) {
-      ffi::Bind_Package     bind;
-      std::filesystem::path path =
-          std::filesystem::path(compiler::COMP_CTX.binding_dir) / extern_imp->name / extern_imp->extern_lib;
-      path.replace_extension(".vlxb"); // same as .velox but for wrapper/headers
+      ffi::Bind_Package bind;
+      fs::path path = fs::path(compiler::COMP_CTX.get_dir_binding()) / extern_imp->name / extern_imp->extern_lib;
+      path.replace_extension(".vlxbind"); // same as .vlx but for wrapper/headers
       std::ofstream f(path);
       f.clear();
       f.close();
@@ -158,10 +160,14 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
     auto   end   = std::chrono::high_resolution_clock::now();
     double delta = std::chrono::duration<double, std::milli>(end - start).count();
-    std::cout << color_GREEN "OK " color_YELLOW << delta << " ms" color_CYAN " (" << bind_count << " binds)" color_RESET
-              << std::endl;
+    std::cout << color_GREEN "OK " color_YELLOW << delta << " ms (" << bind_count << " binds)" << std::endl;
     final_duration += end - start;
     final_binds += bind_count;
+  }
+
+  if (binds.empty()) {
+    std::cout << "[binder] No binds to generate, compilation continue" << std::endl;
+    return true;
   }
 
   double milli = std::chrono::duration<double, std::milli>(final_duration).count();

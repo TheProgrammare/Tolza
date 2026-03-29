@@ -19,7 +19,7 @@ std::string ESeverity_to_str(EErrorSeverity severity)
 std::string ESeverity_to_color(EErrorSeverity severity)
 {
   switch (severity) {
-  case EErrorSeverity::debug:   return color_CYAN;
+  case EErrorSeverity::debug:   return "";
   case EErrorSeverity::warning: return color_YELLOW;
   case EErrorSeverity::error:   return color_RED;
   case EErrorSeverity::fatal:   return color_RED;

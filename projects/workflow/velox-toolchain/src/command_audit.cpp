@@ -1,6 +1,6 @@
 #include "command_audit.hpp"
 
-#include "parser_command.hpp"
+#include "common.hpp"
 
 #include <filesystem>
 #include <initializer_list>
@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -131,7 +132,7 @@ void command::audit::audit_workspace(const std::string& root)
     os << std::fixed << std::setprecision(2) << std::setw(9) << std::setfill(' ') << num;
     return os.str();
   };
-  command::log("Starting audit...");
+  std::cout << "Starting audit...";
 
   CategoryStats source_code;
   CategoryStats vendor;
@@ -150,7 +151,7 @@ void command::audit::audit_workspace(const std::string& root)
     if (!entry.is_regular_file()) continue;
 
     auto ext = entry.path().extension().string();
-    if (ext != ".velox" && ext != ".vlx" && ext != ".vlxb") continue;
+    if (ext != ".vlx" && ext != ".vlxbind" && ext != ".vlxlib") continue;
 
     std::string relative_path = entry.path().lexically_relative(root).string();
 
@@ -173,8 +174,8 @@ void command::audit::audit_workspace(const std::string& root)
       size_t p       = processed.load();
       double percent = total_files == 0 ? 100.0 : (100.0 * p) / total_files;
 
-      std::cout << "\r\033[K[velox-toolchain] auditing: " << p << "/" << total_files << " (" << std::fixed
-                << std::setprecision(1) << percent << "%)" << std::flush;
+      std::cout << "\r\033[K[velox] auditing: " << p << "/" << total_files << " (" << std::fixed << std::setprecision(1)
+                << percent << "%)" << std::flush;
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -223,7 +224,7 @@ void command::audit::audit_workspace(const std::string& root)
   done = true;
   progress_thread.join();
 
-  log("\r\033[K[velox-toolchain] audit complete.");
+  std::cout << "\r\033[K[velox] audit complete.";
 
   global.global_cat.lines         = source_code.lines + vendor.lines + binder.lines;
   global.global_cat.code_lines    = source_code.code_lines + vendor.code_lines + binder.code_lines;
@@ -282,7 +283,7 @@ void command::audit::audit_workspace(const std::string& root)
   };
 
 
-  fmt_template(out, vars);
+  common::fmt_template(out, vars);
 
   std::cout << out << std::endl;
 }
