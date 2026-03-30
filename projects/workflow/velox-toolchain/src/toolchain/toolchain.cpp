@@ -30,8 +30,7 @@ void toolchain::init_autocompletion()
 void toolchain::link_stdlib()
 {
   fs::path stdpath = common::get_stdlib_dir();
-  fs::path current = fs::current_path();
-  fs::path source  = fs::current_path() / "libs" / "std";
+  fs::path source  = common::resolve_path(fs::path(common::get_exe_dir()) / ".." / ".." / ".." / "libs" / "std");
 
   fs::remove(stdpath);
   fs::create_directories(stdpath.parent_path());

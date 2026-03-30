@@ -125,7 +125,13 @@ std::string ModuleImportation::get_path() const
 
   p_out /= name;
   if (!extern_lib.empty()) p_out /= extern_lib;
-  p_out.replace_extension(".vlx");
+  switch (import_source) {
+  case EImportSource::User:        p_out.replace_extension(".vlx"); break;
+  case EImportSource::StandardLib: p_out.replace_extension(".vlxlib"); break;
+  case EImportSource::Package:     p_out.replace_extension(".vlxlib"); break;
+  case EImportSource::Extern:      p_out.replace_extension(".vlxbind"); break;
+  default:                         p_out.replace_extension(".vlx"); break;
+  }
 
   return p_out.string();
 }

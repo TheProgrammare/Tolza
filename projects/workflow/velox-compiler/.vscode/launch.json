@@ -23,9 +23,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox-compiler",
             "args": [
-                "build", "/mnt/data/Workspace/velox/projects/velox-workspace/velox-example/velox.toml"
+                "build", "~/velox/velox.toml"
             ],
-            "env": [],
             "cwd": "${workspaceFolder}"
             
         },

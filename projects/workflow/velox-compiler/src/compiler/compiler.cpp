@@ -132,10 +132,10 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   imported_modules.clear();
 
   for (auto& scr_info : scr_infos) {
-    prepared_scripts[scr_info->get_normalized_path()] = scr_info;
+    prepared_scripts[scr_info->file_path] = scr_info;
 
     for (auto& imp : scr_info->imported_mod) {
-      auto path = imp->get_normalized_path();
+      auto path = imp->get_path();
       if (!prepared_scripts.contains(path)) {
         std::cout << "module import marked " << path << std::endl;
         imported_modules.insert(path);

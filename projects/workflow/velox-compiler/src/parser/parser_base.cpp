@@ -26,6 +26,7 @@
 #include "visitor/symbol_manager.hpp"
 
 #include "misc/metacode.hpp"
+#include <iostream>
 #include <memory>
 
 parser::Parser_Base::Parser_Base(ScriptInfo& scr_info)

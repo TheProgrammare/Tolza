@@ -31,7 +31,6 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
 
   for (auto& scr_info : scr_infos) {
     for (auto& exp : scr_info->exported_mod) {
-      if (exp->is_external()) continue;
       exportations[scr_info->get_normalized_path()] = scr_info;
     }
 
