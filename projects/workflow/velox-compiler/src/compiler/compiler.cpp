@@ -44,11 +44,13 @@ namespace fs = std::filesystem;
 static const std::string pipeline_info =
     R"(
 ===============================================================================
- [Toolchain]->configuration->filesystem->[Compiler]
+ [Toolchain]->configuration->[Preparator]
 ===============================================================================
- [Compiler]->lexer->preprocessor->parser->binder->exporter->resolver->[LLVM] 
+ [Preparator]->filesystem->lexer->preprocessor->parser->[Analyser] 
 ===============================================================================
- [LLVM]->codegen->optimisation->emitter->linker->[Executable]
+ [Analyzer]->exporter->check_symbols->check_types->check_sematics->[Generator] 
+===============================================================================
+ [Generator]->codegen->optimisation->emitter->[Linker]-> executable
 ===============================================================================
 )";
 
@@ -102,31 +104,27 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   auto start = std::chrono::high_resolution_clock::now();
 
   // lexer
-  std::cout << "[build:1/10] Lexer begins" << std::endl;
   if (!pipeline_start_lexer(scr_infos)) return false;
 
 
   // preprocessor
-  std::cout << "[build:2/10] Preprocessor begins" << std::endl;
   if (!pipeline_start_preprocessor(scr_infos)) return false;
 
 
   // parser
-  std::cout << "[build:3/10] Parser begins" << std::endl;
   if (!pipeline_start_parser(scr_infos)) return false;
 
 
-  for (auto& scr_info : scr_infos) prepared_scripts[scr_info->get_normalized_path()] = scr_info;
+  for (auto& scr_info : scr_infos) prepared_scripts[scr_info->file_path] = scr_info;
 
 
   // printer
-  if (compiler::COMP_CTX.debugs.contains("ast")) {
-    std::cout << "[debug] Printing AST view at " << compiler::COMP_CTX.get_debug_graph_dir() << "\n" << std::endl;
+  static bool log_ast = compiler::COMP_CTX.debugs.contains("ast");
+  if (log_ast) {
     for (auto& info : scr_infos) Visitor_Print(*info).visit(*info->rootNode);
   }
 
   // generate bindings
-  std::cout << "[build:4/10] External Module Binder begins" << std::endl;
   if (!pipeline_start_binder(scr_infos)) return false;
 
   imported_modules.clear();
@@ -137,7 +135,6 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
     for (auto& imp : scr_info->imported_mod) {
       auto path = imp->get_path();
       if (!prepared_scripts.contains(path)) {
-        std::cout << "module import marked " << path << std::endl;
         imported_modules.insert(path);
       }
     }
@@ -159,30 +156,24 @@ bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   auto start = std::chrono::high_resolution_clock::now();
 
   // exporter
-  std::cout << "[build:5/10] Exportation begins" << std::endl;
   // import and export modules (to have all symbols for the resolution)
   if (!pipeline_start_exporter(scr_infos)) return false;
 
   // resolvers
-  std::cout << "[build:6/10] Resolver begins" << std::endl;
   // resolve symbols - resolve types - semantic analyzer
   if (!pipeline_start_resolvers(scr_infos)) return false;
 
   // LLVM IR
-  std::cout << "[build:7/10] LLVM IR begins" << std::endl;
   // generate LLVM IR code
   if (!pipeline_start_codegen(scr_infos)) return false;
 
   // optimisation
-  std::cout << "[build:8/10] LLVM optimisation" << std::endl;
   if (!pipeline_start_llvm_opti(scr_infos)) return false;
 
   // emit
-  std::cout << "[build:9/10] Emitting" << std::endl;
   if (!pipeline_start_emit(scr_infos)) return false;
 
   // linker
-  std::cout << "[build:10/10] Linker begins" << std::endl;
   // link data
   if (!pipeline_start_linker(scr_infos)) return false;
 

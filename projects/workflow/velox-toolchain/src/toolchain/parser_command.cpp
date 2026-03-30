@@ -279,6 +279,7 @@ void Command::init_command_build()
 
     auto        ctx = command::build::config_to_compilation_context(file_path);
     std::string cmd = common::TOOL_CTX.compiler_used + " build " + file_path + " ";
+    for (auto& arg : ctx.to_args()) cmd += arg + " ";
     cmd += "\n";
     exit(std::system(cmd.c_str()));
   });

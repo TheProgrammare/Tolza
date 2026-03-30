@@ -121,6 +121,7 @@ struct ScriptInfo {
   ~ScriptInfo();
 
   enum class Origin { src, vendor_lib, stdlib, pkg_lib, binding };
+  Origin Origin_from_file(const std::string& file);
 
   Origin                  origin = Origin::src;
   std::string             file_path;

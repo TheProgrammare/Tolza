@@ -4,27 +4,25 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <filesystem>
 
 #include "compiler/compiler.hpp"
+#include "compiler_context.hpp"
 #include "lexer/token_viewer.hpp"
 #include "misc/preprocessor.hpp"
 #include "misc/script_info.hpp"
 
+namespace fs = std::filesystem;
+
 bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("preprocessor");
+
   std::vector<std::tuple<std::string, std::vector<std::string>>> errs;
-
-  std::chrono::duration<double> final_duration;
-
-  const size_t files_amount = scr_infos.size();
 
   size_t count = 0;
   for (auto scr_info : scr_infos) {
     Preprocessor pre(*scr_info);
-
-    std::cout << "[preprocess:";
-    std::cout << ++count << "/" << files_amount << "] " color_RESET;
-    std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::flush;
 
     auto                      start      = std::chrono::high_resolution_clock::now();
     std::vector<Token>        final_toks = pre.preprocess();
@@ -34,17 +32,20 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
+    if (log) {
+      static size_t count = 1;
+      std::cout << "[preprocessor:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
+                << final_toks.size() << " tokens | " << milli << " ms" << std::flush;
+    }
+
     if (!err.empty()) {
       errs.push_back({scr_info->file_path, err});
-      std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+                << color_RESET << std::endl;
     } else {
       scr_info->tokens = final_toks;
       scr_info->m_meta = meta;
-      std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET;
-      std::cout << " (" << final_toks.size() << " tokens)" color_RESET << std::endl;
     }
-
-    final_duration += end - start;
   }
 
   if (!errs.empty()) {
@@ -66,13 +67,9 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
       }
       std::cerr << std::endl;
     }
+
+    return false;
   }
-
-  std::cout << color_YELLOW "[preprocess:summary] " << "duration: " << color_YELLOW
-            << std::chrono::duration<double, std::milli>(final_duration).count() << " ms" << color_RESET "\n"
-            << std::endl;
-
-  if (!errs.empty()) return false;
 
   return true;
 }

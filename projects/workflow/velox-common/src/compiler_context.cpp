@@ -214,12 +214,12 @@ std::vector<std::string> common::CompCtx::to_args() const
   case ECodeModel::Large:  out.push_back("--code-model=large"); break;
   }
   switch (target_reloc_model) {
-  case ERelocModel::Static:       out.push_back("--reloc=static"); break;
-  case ERelocModel::Pic:          out.push_back("--reloc=pic"); break;
-  case ERelocModel::DynamicNoPIC: out.push_back("--reloc=pie"); break;
-  case ERelocModel::ROPI:         out.push_back("--reloc=ropi"); break;
-  case ERelocModel::RWPI:         out.push_back("--reloc=rwpi"); break;
-  case ERelocModel::ROPI_RWPI:    out.push_back("--reloc=ropi_rwpi"); break;
+  case ERelocModel::Static:       out.push_back("--reloc-model=static"); break;
+  case ERelocModel::Pic:          out.push_back("--reloc-model=pic"); break;
+  case ERelocModel::DynamicNoPIC: out.push_back("--reloc-model=pie"); break;
+  case ERelocModel::ROPI:         out.push_back("--reloc-model=ropi"); break;
+  case ERelocModel::RWPI:         out.push_back("--reloc-model=rwpi"); break;
+  case ERelocModel::ROPI_RWPI:    out.push_back("--reloc-model=ropi_rwpi"); break;
   }
   for (auto& emit : target_emits) {
     switch (emit) {

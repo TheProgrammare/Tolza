@@ -3,49 +3,48 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 #include "compiler/compiler.hpp"
 
+#include "compiler_context.hpp"
 #include "parser/parser_base.hpp"
 #include "parser/parser_context.hpp"
 #include "visitor/symbol_manager.hpp"
 #include "misc/script_info.hpp"
 
+namespace fs = std::filesystem;
 
 bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("parser");
+
   std::vector<std::tuple<std::string, std::vector<std::string>>> parErrors;
   std::vector<std::tuple<std::string, std::vector<std::string>>> declErrors;
-
-  std::chrono::duration<double> final_duration;
-  size_t                        final_node_count = 0;
 
   size_t count = 0;
   for (auto scr_info : scr_infos) {
 
-    parser::Parser_Base inParser(*scr_info);
-
-    std::cout << "[parse:";
-    std::cout << ++count << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA "\"" << scr_info->file_path << "\"... " << std::flush;
+    parser::Parser_Base parser(*scr_info);
 
     auto                      start       = std::chrono::high_resolution_clock::now();
-    std::vector<std::string>  out_par_err = inParser.start_parsing();
-    std::vector<std::string>& out_sym_err = inParser.ctx->m_sym->decl_errors;
+    std::vector<std::string>  out_par_err = parser.start_parsing();
+    std::vector<std::string>& out_sym_err = parser.ctx->m_sym->decl_errors;
     auto                      end         = std::chrono::high_resolution_clock::now();
     double                    milli       = std::chrono::duration<double, std::milli>(end - start).count();
+
+    if (log) {
+      static size_t count = 1;
+      std::cout << "[parser:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
+                << parser.ctx->node_count << " nodes | " << milli << " ms" << std::flush;
+    }
 
     if (!out_par_err.empty() || !out_sym_err.empty()) {
       parErrors.push_back({scr_info->file_path, out_par_err});
       declErrors.push_back({scr_info->file_path, out_sym_err});
-      std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
-    } else {
-      std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET;
-      std::cout << " (" << inParser.ctx->node_count << " nodes)" color_RESET << std::endl;
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+                << color_RESET << std::endl;
     }
-
-    final_duration += end - start;
-    final_node_count += inParser.ctx->node_count;
   }
 
   if (!parErrors.empty()) {
@@ -89,12 +88,6 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       std::cerr << std::endl;
     }
   }
-
-  double milli = std::chrono::duration<double, std::milli>(final_duration).count();
-
-  std::cout << color_YELLOW "[parse:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
-            << color_RESET << " | nodes: " << color_YELLOW << final_node_count << color_RESET << "\n";
-  std::cout << std::endl;
 
   if (!declErrors.empty() || !parErrors.empty()) return false;
 

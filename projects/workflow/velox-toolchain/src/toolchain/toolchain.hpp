@@ -53,7 +53,7 @@ libc                = "%target_libc"                # musl, glibc, bionic, msvc,
 cpu                 = "%target_cpu"                 # overrides host cpu detection
 features            = "%target_features"            # ex: "+avx2,+bmi2"
 code_model          = "%target_code_model"          # tiny, small, kernel, medium, large
-reloc_model         = "%target_reloc_model"         # PIC, Static, DynamicNoPIC, ropi, rwpi, ropi_rwpi
+reloc_model         = "%target_reloc_model"         # pic, static, pie, ropi, rwpi, ropi_rwpi
 sub_config          = "%target_sub_config"          # sub .toml name to apply after this .toml 
 emits               = [                             # bin, llvm, obj, asm, bc, s_lib, d_lib
   %target_emit

@@ -13,6 +13,8 @@
 #include <compiler_context.hpp>
 #include "common.hpp"
 
+namespace fs = std::filesystem;
+
 
 Extern_Item::Extern_Item(const std::string& _name, const std::vector<std::string>& _scope, EExtern_Kind _kind,
                          const ast::AIdentifier& _id_node)
@@ -38,8 +40,8 @@ ScriptInfo::~ScriptInfo()
 
 std::string ScriptInfo::get_normalized_path() const
 {
-  std::filesystem::path path = file_path;
-  return std::filesystem::path(path).parent_path() / path.stem();
+  fs::path path = file_path;
+  return fs::path(path).parent_path() / path.stem();
 }
 
 void ScriptInfo::add_export(const ModuleExportation& exp)
@@ -104,13 +106,13 @@ std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const
 std::string ModuleImportation::get_normalized_path() const
 {
 
-  std::filesystem::path path = get_path();
+  fs::path path = get_path();
   return path.parent_path() / path.stem();
 }
 
 std::string ModuleImportation::get_path() const
 {
-  std::filesystem::path p_out;
+  fs::path p_out;
   switch (import_source) {
   case EImportSource::User:        p_out = compiler::COMP_CTX.get_dir_source(); break;
   case EImportSource::StandardLib: p_out = common::resolve_path(common::get_stdlib_dir()); break;
@@ -170,4 +172,17 @@ EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
   if (dynamic_cast<const ast::Expr_ID_Type*>(&n)) return EExtern_Kind::Type;
 
   return EExtern_Kind::Global;
+}
+
+ScriptInfo::Origin ScriptInfo::Origin_from_file(const std::string& file)
+{
+  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_source()).filename())
+    return ScriptInfo::Origin::src;
+  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_binding()).filename())
+    return ScriptInfo::Origin::binding;
+  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_vendor()).filename())
+    return ScriptInfo::Origin::vendor_lib;
+  if (file == common::get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
+  if (file == common::get_packages_dir()) return ScriptInfo::Origin::pkg_lib;
+  return ScriptInfo::Origin::src;
 }

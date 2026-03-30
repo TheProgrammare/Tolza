@@ -8,6 +8,7 @@
 #include "ast/ast_base.hpp"
 #include "common.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler_context.hpp"
 #include "misc/script_info.hpp"
 
 namespace fs = std::filesystem;
@@ -15,6 +16,8 @@ namespace fs = std::filesystem;
 
 bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("exporter");
+
   // %0 current file count
   // %1 total files count
   // %2 error inscription
@@ -41,7 +44,11 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
     }
   }
 
-  std::cout << "[export] Exports: " << exportations.size() << " | Imports: " << importations.size() << std::endl;
+
+  if (log) {
+    std::cout << "[exporter] " << exportations.size() << " exports | " << importations.size() << " imports"
+              << std::endl;
+  }
 
   bool   success = true;
   size_t count   = 0;
@@ -52,10 +59,12 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
     if (auto it = exportations.find(path); it != exportations.end()) {
       imp->target_modules.push_back(it->second);
 
-      std::string log_txt = log_str;
-      common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
-                                     imp->debug_name(), fs::path(imp_scr->file_path).filename()});
-      std::cout << log_txt << std::endl;
+      if (log) {
+        std::string log_txt = log_str;
+        common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
+                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
+        std::cout << log_txt << std::endl;
+      }
     } else {
       std::string log_txt = log_str;
       common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
@@ -69,12 +78,15 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
   auto   final_duration = end - start;
   double milli          = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  if (success)
-    std::cout << color_YELLOW "[export:summary] " color_RESET << "duration: " color_YELLOW << milli
-              << " ms\n" color_RESET << std::endl;
-  else
+  if (success) {
+    if (log) {
+      std::cout << color_YELLOW "[export:summary] " color_RESET << "duration: " color_YELLOW << milli
+                << " ms\n" color_RESET << std::endl;
+    }
+  } else {
     std::cout << color_RED "[export:ERROR] Exportation failed " color_RESET << "duration: " color_YELLOW << milli
               << " ms\n" color_RESET << std::endl;
+  }
 
   return success;
 }

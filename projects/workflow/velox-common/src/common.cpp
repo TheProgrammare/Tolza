@@ -1,8 +1,8 @@
 #include "common.hpp"
 
 #include "toolchain_context.hpp"
-#include "compiler_context.hpp"
 
+#include <iostream>
 #include <stdexcept>
 #include <filesystem>
 
@@ -190,9 +190,48 @@ std::string common::resolve_path(const std::string& s, const std::string& relati
   // Canonicalize si possible, sinon normalisation lexicale
   try {
     return fs::canonical(abs_path).string();
-  } catch (const fs::filesystem_error&) {
+  } catch (...) {
     return abs_path.lexically_normal().string();
   }
+}
+
+bool common::filesystem::is_velox_extension(const std::string& extension)
+{
+  if (extension.empty()) return false;
+  if (extension[0] == '.') return common::filesystem::velox_extensions.contains(extension.substr(1));
+
+  return common::filesystem::velox_extensions.contains(extension);
+}
+
+bool common::filesystem::is_velox_file(const std::string& file_path)
+{
+  fs::path f(file_path);
+  return is_velox_extension(f.extension().string());
+}
+
+std::set<std::string> common::filesystem::find_velox_files(const std::string& target_dir, bool is_recursive)
+{
+  std::set<std::string> out;
+  fs::path              dir(target_dir);
+
+  try {
+    if (is_recursive) {
+      for (auto& entry : fs::recursive_directory_iterator(dir)) {
+        if (fs::is_regular_file(entry) && is_velox_extension(entry.path().extension()))
+          out.insert(entry.path().string());
+      }
+    } else {
+      for (auto& entry : fs::directory_iterator(dir)) {
+        if (fs::is_regular_file(entry) && is_velox_extension(entry.path().extension()))
+          out.insert(entry.path().string());
+      }
+    }
+  } catch (const std::runtime_error& err) {
+    std::cerr << err.what() << std::endl;
+    return {};
+  }
+
+  return out;
 }
 
 void common::fmt_template(std::string& template_str, const std::initializer_list<std::string>& args)

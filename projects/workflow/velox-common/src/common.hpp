@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 
 namespace common
@@ -92,6 +93,17 @@ inline std::string DETECTED_ABI_SIZE()
   else
     return "unknown";
 }
+
+namespace filesystem
+{
+
+inline const std::set<std::string> velox_extensions = {"vlx", "vlxbind", "vlxlib"};
+
+bool                  is_velox_extension(const std::string& extension);
+bool                  is_velox_file(const std::string& file_path);
+std::set<std::string> find_velox_files(const std::string& target_dir, bool is_recursive);
+
+} // namespace filesystem
 
 std::vector<std::string> get_compiler_dirs();
 

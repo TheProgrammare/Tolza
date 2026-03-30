@@ -36,20 +36,24 @@ class App;
 class Command
 {
 public:
-  Command(CLI::App& _app, int argc, const char* argv[])
+  Command(CLI::App& _app, int _argc, const char* _argv[])
     : app(_app)
+    , argc(_argc)
+    , argv(_argv)
   {
-    init_commands(argc, argv);
+    init_commands();
   }
 
 private:
   CLI::App& app;
 
-  std::string dir_source;
-  std::string dir_dest;
+  int          argc;
+  const char** argv;
+  std::string  dir_source;
+  std::string  dir_dest;
 
-  void init_commands(int argc, const char* argv[]);
+  void init_commands();
   void init_command_cogito();
-  void init_command_build(int argc, const char* argv[]);
+  void init_command_build();
   void init_command_ffi_json();
 };

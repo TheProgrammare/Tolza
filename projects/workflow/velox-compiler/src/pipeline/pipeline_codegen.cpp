@@ -28,6 +28,8 @@
 
 void emit_llvm_to_file(const Visitor_Codegen& v)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("codegen");
+
   std::filesystem::path out_llvm_file(compiler::COMP_CTX.get_llvmir_dir());
   std::filesystem::create_directories(out_llvm_file);
   out_llvm_file /= v.mod->getName().str();
@@ -43,7 +45,7 @@ void emit_llvm_to_file(const Visitor_Codegen& v)
   }
 
   v.mod->print(out_f, nullptr);
-  std::cout << "emit llvm-ir to " color_MAGENTA << out_llvm_file << " " << std::endl;
+  if (log) std::cout << "emit llvm-ir to \"" << out_llvm_file << "\" " << std::endl;
 }
 
 bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
@@ -65,7 +67,7 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
     }
 
     if (linker.linkInModule(std::unique_ptr<llvm::Module>(scr_info->llvm_module)), flag) {
-      std::cerr << "[llvm-ir:ERROR] Link failed on script " << scr_info->file_path << std::endl;
+      std::cerr << "[linker:ERROR] Link failed on script " << scr_info->file_path << std::endl;
       failed = true;
     }
   }
@@ -73,7 +75,7 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
   if (failed) return false;
 
   if (llvm::verifyModule(*main_mod, &llvm::errs())) {
-    llvm::errs() << "[llvm-ir:ERROR] Module verification failed!\n";
+    llvm::errs() << "[linker:ERROR] Module verification failed!\n";
     return false;
   }
 
@@ -82,6 +84,8 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 
 bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("codegen");
+
   if (compiler::COMP_CTX.llvm_args.size() > 0) {
     llvm::cl::ParseCommandLineOptions(compiler::COMP_CTX.llvm_args.size(), compiler::COMP_CTX.llvm_args.data());
   }
@@ -93,14 +97,15 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
   try {
     std::filesystem::create_directories(compiler::COMP_CTX.get_llvmir_dir());
   } catch (const std::runtime_error& e) {
-    std::cerr << "[llvm-ir:ERROR] Directory creation failed: " << e.what() << std::endl;
+    std::cerr << "[codegen:ERROR] Directory creation failed: " << e.what() << std::endl;
     return false;
   }
 
   size_t count = 0;
   for (auto& scr_info : scr_infos) {
-    std::cout << "[llvm-ir:" << ++count << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA << scr_info->file_path << color_RESET "... " << std::endl;
+    if (log)
+      std::cout << "[codegen:" << ++count << "/" << scr_infos.size() << "] \"" << scr_info->file_path << "\""
+                << std::endl;
 
     auto            start = std::chrono::high_resolution_clock::now();
     Visitor_Codegen codegen_visit(*scr_info);
@@ -112,16 +117,12 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-    if (codegen_visit.errors.empty()) {
-      std::cout << color_GREEN << "OK " color_YELLOW << milli << " ms" << color_RESET << std::endl;
-
-    } else {
+    if (!codegen_visit.errors.empty()) {
       llvmIRErrors.push_back({scr_info->file_path, codegen_visit.errors});
-      std::cout << color_RED << "ERR " color_YELLOW << milli << " ms" << color_RESET << std::endl;
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+                << color_RESET << std::endl;
     }
   }
-
-  std::cout << std::endl;
 
   if (!llvmIRErrors.empty()) {
     std::cerr << color_RED "[llvm-ir] Generation failed !" color_RESET "\n";
@@ -139,10 +140,5 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
 
   if (!llvm_link(scr_infos)) return false;
 
-  auto   end            = std::chrono::high_resolution_clock::now();
-  auto   final_duration = end - start;
-  double milli          = std::chrono::duration<double, std::milli>(final_duration).count();
-
-  std::cout << color_YELLOW "[llvm-ir:summary] " color_RESET "duration: " color_YELLOW << milli << " ms\n" << std::endl;
   return true;
 }

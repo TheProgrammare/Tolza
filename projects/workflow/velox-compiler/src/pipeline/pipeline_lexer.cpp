@@ -2,41 +2,38 @@
 
 #include <chrono>
 #include <iostream>
+#include <filesystem>
 
+#include "compiler_context.hpp"
 #include "misc/script_info.hpp"
 #include "compiler/compiler.hpp"
 #include "lexer/lexer.hpp"
 
+namespace fs = std::filesystem;
+
 bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("lexer");
+
   std::vector<std::tuple<std::string, std::vector<std::string>>> lexErrors;
 
-  std::chrono::duration<double> final_duration;
-  size_t                        final_toks = 0;
+  size_t final_toks = 0;
 
-  size_t path_count = 0;
   for (auto& scr_info : scr_infos) {
     Lexer lexer(*scr_info.get());
-    std::cout << "[lex:";
-    std::cout << path_count + 1 << "/" << scr_infos.size() << "] " color_RESET;
-    std::cout << color_MAGENTA << scr_info->file_path << color_RESET << "... " << std::flush;
 
     auto start = std::chrono::high_resolution_clock::now();
     lexer.tokenize(std::set<char>{EOF});
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-    if (!lexer.errors.empty()) {
-      lexErrors.push_back({scr_info->file_path, lexer.errors});
-      std::cout << color_RED << "ERR " << color_YELLOW << milli << " ms" << color_RESET << std::endl;
-    } else {
-      std::cout << color_GREEN << "OK " << color_YELLOW << milli << " ms" << color_RESET;
-      std::cout << " (" << scr_info->tokens.size() << " tokens)" color_RESET << std::endl;
-    }
+    if (!lexer.errors.empty()) lexErrors.push_back({scr_info->file_path, lexer.errors});
 
-    path_count++;
-    final_duration += end - start;
-    final_toks += scr_info->tokens.size();
+    if (log) {
+      static size_t count = 1;
+      std::cout << "[lexer:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
+                << lexer.scr_info.tokens.size() << " tokens | " << milli << " ms" << std::flush;
+    }
   }
 
   if (!lexErrors.empty()) {
@@ -50,12 +47,5 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
     return false;
   }
-
-  double milli = std::chrono::duration<double, std::milli>(final_duration).count();
-
-  std::cout << color_YELLOW "[lex:summary] " << color_RESET << "duration: " << color_YELLOW << milli << " ms"
-            << color_RESET << " | tokens: " << color_YELLOW << final_toks << color_RESET << "\n";
-  std::cout << std::endl;
-
   return true;
 }
