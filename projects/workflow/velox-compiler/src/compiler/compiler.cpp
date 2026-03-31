@@ -58,30 +58,34 @@ static const std::string binder_info = "%0 files + %1 binding files = %2 total f
 
 bool Compiler::start_compilation()
 {
+  static const bool mute = compiler::COMP_CTX.mute;
+
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (!compiler::COMP_CTX.current_config_file.empty()) {
+  if (!compiler::COMP_CTX.current_config_file.empty() && !mute) {
     std::cout << "\n[build:warning] Raw compilation command detected, "
                  "please use 'velox-toolchain' to develop proprely with the Velox programming language.\n"
               << std::endl;
   }
 
-  std::cout << "[velox-compiler] Compilation Started" << pipeline_info << std::endl;
-  std::cout << "  Config file used: " << compiler::COMP_CTX.current_config_file << std::endl;
+  if (!mute) {
+    std::cout << "[velox-compiler] Compilation Started" << pipeline_info << std::endl;
+    std::cout << "  Config file used: " << compiler::COMP_CTX.current_config_file << std::endl;
+  }
 
 
   // filesystem
-  std::cout << "[build] File system begins" << std::endl;
-
   std::filesystem::path target_dir = compiler::COMP_CTX.get_dir_source();
   auto                  scr_infos  = pipeline_start_filesystem(target_dir.string());
 
   if (scr_infos.empty()) {
-    std::cout << "[build] No files found at the source folder path: " << target_dir << "\n";
-    std::cout << "[build] Check if the source folder path is correct." << target_dir << "\n";
-    std::cout << "Or start your project by creating your first script in the source "
-                 "folder path."
-              << target_dir << std::endl;
+    if (!mute) {
+      std::cout << "[build] No files found at the source folder path: " << target_dir << "\n";
+      std::cout << "[build] Check if the source folder path is correct." << target_dir << "\n";
+      std::cout << "Or start your project by creating your first script in the source "
+                   "folder path."
+                << target_dir << std::endl;
+    }
     return false;
   }
 
@@ -153,6 +157,8 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
 
 bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static const bool mute = compiler::COMP_CTX.mute;
+
   auto start = std::chrono::high_resolution_clock::now();
 
   // exporter
@@ -188,7 +194,7 @@ bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   std::string fmt_end = end_log;
   common::fmt_template(fmt_end, {std::to_string(actual_duration), compiler::COMP_CTX.dir_build});
 
-  std::cout << fmt_end << std::endl;
+  if (!mute) std::cout << fmt_end << std::endl;
 
   return true;
 }

@@ -16,7 +16,6 @@
  */
 
 #include <CLIUtils/CLI11.hpp>
-#include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
 #include "common.hpp"
 

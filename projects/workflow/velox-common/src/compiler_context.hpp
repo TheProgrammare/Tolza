@@ -50,6 +50,8 @@ struct CompCtx {
   int          argc = 0;
   const char** argv = nullptr;
 
+  bool mute = false;
+
   // target
   std::string     target_project_name;
   std::string     target_arch;

@@ -85,6 +85,8 @@ void Command::init_command_build()
           ->required()
           ->type_name("<path>");
 
+  build->add_flag("--mute", compiler::COMP_CTX.mute, "Mute any output log");
+
   // target
   build->add_option("--project-name", compiler::COMP_CTX.target_project_name, "Set the target project name")
       ->type_name("<info>");
