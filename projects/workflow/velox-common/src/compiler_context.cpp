@@ -214,12 +214,12 @@ std::vector<std::string> common::CompCtx::to_args() const
   case ECodeModel::Large:  out.push_back("--code-model=large"); break;
   }
   switch (target_reloc_model) {
-  case ERelocModel::Static:       out.push_back("--reloc-model=static"); break;
-  case ERelocModel::Pic:          out.push_back("--reloc-model=pic"); break;
-  case ERelocModel::DynamicNoPIC: out.push_back("--reloc-model=pie"); break;
-  case ERelocModel::ROPI:         out.push_back("--reloc-model=ropi"); break;
-  case ERelocModel::RWPI:         out.push_back("--reloc-model=rwpi"); break;
-  case ERelocModel::ROPI_RWPI:    out.push_back("--reloc-model=ropi_rwpi"); break;
+  case ERelocModel::Static:    out.push_back("--reloc-model=static"); break;
+  case ERelocModel::PIC:       out.push_back("--reloc-model=pic"); break;
+  case ERelocModel::PIE:       out.push_back("--reloc-model=pie"); break;
+  case ERelocModel::ROPI:      out.push_back("--reloc-model=ropi"); break;
+  case ERelocModel::RWPI:      out.push_back("--reloc-model=rwpi"); break;
+  case ERelocModel::ROPI_RWPI: out.push_back("--reloc-model=ropi_rwpi"); break;
   }
   for (auto& emit : target_emits) {
     switch (emit) {
@@ -463,12 +463,12 @@ common::CompCtx common::Sub_CompCtx::merge_context(const CompCtx& base_ctx) cons
 std::string common::CompCtx::ERelocModel_to_str(ERelocModel reloc)
 {
   switch (reloc) {
-  case ERelocModel::Static:       return "static";
-  case ERelocModel::Pic:          return "pic";
-  case ERelocModel::DynamicNoPIC: return "pie";
-  case ERelocModel::ROPI:         return "ropi";
-  case ERelocModel::RWPI:         return "rwpi";
-  case ERelocModel::ROPI_RWPI:    return "ropi_rwpi";
+  case ERelocModel::Static:    return "static";
+  case ERelocModel::PIC:       return "pic";
+  case ERelocModel::PIE:       return "pie";
+  case ERelocModel::ROPI:      return "ropi";
+  case ERelocModel::RWPI:      return "rwpi";
+  case ERelocModel::ROPI_RWPI: return "ropi_rwpi";
   }
 }
 std::string common::CompCtx::ECodeModel_to_str(ECodeModel code)

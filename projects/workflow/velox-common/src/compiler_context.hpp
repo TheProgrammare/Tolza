@@ -30,7 +30,7 @@ struct CompCtx {
   {
   }
 
-  enum class ERelocModel { Static, Pic, DynamicNoPIC, ROPI, RWPI, ROPI_RWPI };
+  enum class ERelocModel { Static, PIC, PIE, ROPI, RWPI, ROPI_RWPI };
   enum class ECodeModel { Tiny, Small, Kernel, Medium, Large };
   enum class EOptimization { O0, O1, O2, O3, Os, Oz };
   enum class EWarnLevel { W0, W1, W2, W3 };
@@ -61,7 +61,7 @@ struct CompCtx {
   std::string     target_cpu;
   std::string     target_features;
   ECodeModel      target_code_model  = ECodeModel::Small;
-  ERelocModel     target_reloc_model = ERelocModel::Pic;
+  ERelocModel     target_reloc_model = ERelocModel::PIC;
   std::string     target_sub_config;
   std::set<EEmit> target_emits = {EEmit::Bin};
 

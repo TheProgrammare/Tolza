@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include <llvm/Target/TargetMachine.h>
-#include "llvm/IR/IRPrintingPasses.h"
+#include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/TargetParser/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -20,6 +20,8 @@
 
 bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
+  static bool log = compiler::COMP_CTX.logs.contains("optimization");
+
   if (scr_infos.empty()) return true;
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -46,12 +48,12 @@ bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& sc
 
   llvm::Reloc::Model reloc;
   switch (compiler::COMP_CTX.target_reloc_model) {
-  case common::CompCtx::ERelocModel::Static:       reloc = llvm::Reloc::Static; break;
-  case common::CompCtx::ERelocModel::Pic:          reloc = llvm::Reloc::PIC_; break;
-  case common::CompCtx::ERelocModel::DynamicNoPIC: reloc = llvm::Reloc::DynamicNoPIC; break;
-  case common::CompCtx::ERelocModel::ROPI:         reloc = llvm::Reloc::ROPI; break;
-  case common::CompCtx::ERelocModel::RWPI:         reloc = llvm::Reloc::RWPI; break;
-  case common::CompCtx::ERelocModel::ROPI_RWPI:    reloc = llvm::Reloc::ROPI_RWPI; break;
+  case common::CompCtx::ERelocModel::Static:    reloc = llvm::Reloc::Static; break;
+  case common::CompCtx::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
+  case common::CompCtx::ERelocModel::PIE:       reloc = llvm::Reloc::DynamicNoPIC; break;
+  case common::CompCtx::ERelocModel::ROPI:      reloc = llvm::Reloc::ROPI; break;
+  case common::CompCtx::ERelocModel::RWPI:      reloc = llvm::Reloc::RWPI; break;
+  case common::CompCtx::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
   }
 
   // Init target machine
@@ -114,8 +116,9 @@ bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& sc
   auto   final_duration = end - start;
   double milli          = std::chrono::duration<double, std::milli>(final_duration).count();
 
-  std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << milli << " ms\n"
-            << std::endl;
+  if (log)
+    std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << milli << " ms\n"
+              << std::endl;
 
   return true;
 }
