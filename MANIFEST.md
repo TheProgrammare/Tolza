@@ -63,11 +63,11 @@ This project uses the following open-source libraries:
 | udecimal       | `udeci`           | `10ud`                       | 128 bits : 0-96 bits value, 96-103 bits scale, 103-128 padding |
 | decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
 | no type        | `u0`   |  | 
-| byte          | `u8`          | `"a"u8` `"a"b` | 8 bits, character exception representation, or partial utf8 |
-| string         | `str`            | `"hello"s` `"hello"str` | fat pointer { ptr'b8, i32 } -> byte pointer, size len, utf8 and null terminated  |
-| C string          | `c_str`          | `"hello"c_str` `"hello"c` | ptr'u8 on start of table, utf8 and null terminated : C convention |
+| cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits storage, can be partial codepoint or simple ascii character |
+| string         | `str`            | `"hello"s` `"hello"str` | fat pointer { ptr'cune, i32 } -> byte pointer, size len, utf8 and null terminated, i/o encoding dependent  |
+| C string          | `c_str`          | `"hello"c_str` `"hello"c` | ptr'cune on start of table, utf8 and null terminated : C convention |
 | rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"` default one character | on 32 bits : 1 code point  |                   
-| text | `text`           | `"hello"t` `"world"` default | fat pointer { ptr'rune, i32 } -> rune pointer, size len, utf32 |
+| text | `text`           | `"hello"t` `"world"` default | fat pointer { ptr'rune, i32 } -> rune pointer, size len, encoding utf32 |
 | opaque ptr     | `ptr'u0`           | `...`                      | bsize bit      |
 | unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
 | shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
