@@ -164,6 +164,7 @@ Placement e.g. (place possible: `@`)
 | remain         | `%rem%`      | remainder singed with dividend |
 | modulo         | `%mod%`      | euclidian remainder (modulo not negative if divisor>0) |
 | quotient       | `%quo%`      | euclidian quotient      |
+| quotient       | `%divrem%`   | euclidian quotient      |
 | power          | `**`         |                         |
 | increment      | `++`         |                         |
 | decrement      | `--`         |                         |
