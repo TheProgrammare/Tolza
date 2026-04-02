@@ -148,7 +148,7 @@ fn main() {
 }
 ```
 Explanation:
-- `import extern C::stdio` declares the external library to import
+- `import ext: C::stdio` declares the external library to import
 - `C::printf` references the function in the library using the language namespace
 - The compiler generates a binding script linking the external function automatically
 
@@ -158,9 +158,10 @@ Explanation:
 - ❌ An object-oriented language
 - ❌ A garbage-collected language
 - ❌ A dynamic or scripting language
+- ❌ A language killer (the C language and his lib is the ally of Velox !)
 - ❌ A language optimized for minimal syntax or beginner friendliness (it's depends of the approach)
 
-Velox prioritizes predictability and correctness over convenience.
+Velox prioritizes predictability and convenience.
 
 # Project Status
 
