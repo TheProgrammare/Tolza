@@ -1167,18 +1167,26 @@ pattern element kind | e.g. | info |
 
 # Module Import / Export
 The import and exportation of the code use the LLVM declare/extern
-- Exports are also modules 
-- To export the module in the root module, use <br>`# native`<br>`export <name> {...}`
+- Exports are also modules
+- Exports names are the file name, the path is relative to the language path standarization
+  - `/file_name/script_name.vlx` -> `import file_name::script_name`
+ 
+The module import / export can specify the search source by an "importa" keyword :
+- `usr:` `$` : search in user scripts
+- `ext:` `?` : search in bindings
+- `std:` `@` : search in standard library
+- `pkg:` `#` : search in packages library
 
 | type | syntax | e.g. | info |
 |-|-|-|-|
-| export module | optional: `[#native]` <br> `export <name> {...}` | `export math {...}` | Exports the current code as a module under its own namespace. If native is used, importing it will expose all symbols directly in the file’s root scope.  |
+| export module | `export {...}` | `export { fn add(ref my_comp: a, ref my_comp: b) -> isize {...} }` | Exports the current code as a module under its own namespace. If native is used, importing it will expose all symbols directly in the file’s root scope.  |
 | export also the imported module (mirror) | `[#native]` <br> `export import <name>` | `export import math` | Declares that when this module is imported, the specified module(s) will also be imported automatically. If native is used, those symbols are also imported into the file’s root scope. | 
-| export to other language | `export <name> extern <lang> {...}`  | `export math extern C {...}` | callable from another language | 
+| export to other language | `export extern "lang" {...}`  | `export extern "C" {...}` | callable from another language | 
 | import from module | `import <name>` | `import city` | import the code be the module name (by default is import user, else, will import from the standard lib) |
-| import from standard module | `import @<name>` | `import @core` | import from the standard lib |
-| import from user module | `import $<name>` | `import $math` | import from user script and imported lib |
-| import from external language lib | `import extern <lang>::<lib>` | `import extern C::stdio` | C is natively handled, will generate automatically a parallel bind folder and imported in the script with the wrapper used |
+| import from standard module | `import @<name>` `import std: <name>` | `import @core` `import std: core` | import from the standard lib `lib/std/...` |
+| import from packages module | `import #<name>` `import pkg: <name>` | `import #sci_math` `import pkg: sci_math` | import from the package lib `lib/packages/...` |
+| import from user module | `import $<name>` `import usr: <name>` | `import $my_script` `import usr: my_script` | import from user script `project/src/...` or from `project/vendor/...` |
+| import from external language lib | `import ext: <lang>::<lib>` `import ?<lang>::<lib>` | `import etx: C::stdio` `import ?C::stdio` | C is natively handled, will generate automatically a parallel bind folder and imported in the script with the wrapper used `project/bindings/...`|
 
 > Elements exportable :
 entity, role, component, system, generic, function, global, enum, metacode, type
@@ -1556,7 +1564,7 @@ result = await calculate(args...) // or directly await calculate(args...)
 - There is no need for a specialized “thread fn” declaration: any normal function can be spawned via async or await.
 
 # Bindgen
-Bindgen is external binds auto generated scripts when a user use `# import extern lang::lib`
+Bindgen is external binds auto generated scripts when a user use `import ext: lang::lib`
 
 The bindgen will store the importations of the external lib and generate all the wrapper needed when the user use the external lib in his script
 
@@ -1564,7 +1572,7 @@ user script:
 ```
 // entity_messages.vlx
 
-import extern C::stdio
+import ext: C::stdio
 
 fn speak(s: str) {
   C::printf(s)
@@ -1573,13 +1581,12 @@ fn speak(s: str) {
 
 bindgen script:
 ```
-// C_bind.vlxb
+// file: bindings/C/stdio.vlxbind
 
-export C {
-
-# extern 
-fn printf(_Format: str, args: addr...) -> u0;
-
+export {
+extern "C" {
+  fn printf(_Format: str, args: addr...) -> u0;
+}
 }
 ```
-LLVM will mark these functions externals (`# extern`) and search in C ABI (`export C {...}`)
+LLVM will mark these functions externals (`extern`) and search in C ABI
