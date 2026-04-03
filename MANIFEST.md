@@ -64,8 +64,8 @@ This project uses the following open-source libraries:
 | decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
 | no type        | `u0`   |  | 
 | cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits storage, can be partial codepoint or simple ascii character |
-| string         | `str`            | `"hello"s` `"hello"str` | fat pointer { ptr'cune, i32 } -> byte pointer, size len, utf8 and null terminated, i/o encoding dependent  |
-| C string          | `c_str`          | `"hello"c_str` `"hello"c` | ptr'cune on start of table, utf8 and null terminated : C convention |
+| string         | `str`            | `"hello"s` `"hello"str` | fat pointer { ptr'cune, i32 } -> byte pointer, size len, null terminated, i/o encoding dependent  |
+| C string          | `c_str`          | `"hello"c_str` `"hello"c` | ptr'cune on start of table, null terminated : C convention |
 | rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"` default one character | on 32 bits : 1 code point  |                   
 | text | `text`           | `"hello"t` `"world"` default | fat pointer { ptr'rune, i32 } -> rune pointer, size len, encoding utf32 |
 | opaque ptr     | `ptr'u0`           | `...`                      | bsize bit      |
@@ -96,7 +96,7 @@ no memory loss allowed
 | numeric        | numeric -> floating                      |
 | floating       | `f32` -> `f64` -> `f128` (`fisize` is api dependend) |
 | decimal        | inferior decimal -> superior decimal      |
-| ascii          | `ascii` -> `utf32` latin1 -> utf32 |
+| cunei          | `cune` -> `rune` ascii -> utf32 |
 | str            | `str` -> `text` place every str ascii on last utf32 byte (Big endian) |
 | text           | `text` -> `str` place every utf32 4 bytes (Big endian) on every str ascii (except for the ascii compatible characters) 
 
