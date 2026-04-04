@@ -72,10 +72,44 @@ This project uses the following open-source libraries:
 | unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
 | shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
 | function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
-| static table   | `[T; N]`       | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | N*size + bisize (pointer) |
-| static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | N*size + bisize (pointer) |
-| dynamic  table  | `[T]`            | same of static table, but literal is instanciation only | List entity |
-| dynamic matrix  | `[T]*D` | same of static matrix, but literal is instanciation only  | Matrix entity    |
+
+
+# Primitive tables
+All primitive tables are fat pointers, there is no raw table like in C
+
+| type | syntax | literal | data structure | info
+|-|-|-|-|-|
+| static table   | `[T; N]` | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | `{ data: ptr'T, size: usize }` | |
+| dynamic table (list)  | `[T]` | | `{ data: ptr'T, capa: usize, size: usize }` |  |
+| static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | `{ data: ptr'T, size: usize, dim_size: usize }` |  |
+| dynamic matrix  | `[T]*D` | same of static matrix, but literal is instanciation only, dimensions are static !  | `{data: ptr'T, capa: ptr'usize, size: ptr'usize, dim_size: usize }` | Matrix entity |
+| static hyper | `T*[D]` | matrix with static tables but dynamic dimensions | `{ data: ptr'ptr'T, size: usize, dim_capa: usize, dim_size: usize }`
+| dynamic hyper | `[T]*[D]` | matrix with dynamic tables and dynamic dimensions | `{ data: ptr'ptr'T,  capa: ptr'ptr'usize, size: ptr'ptr'usize, dim_capa: usize, dim_size: usize}`
+
+## Primitve table data access
+| Note: any field access are possible if the primitive table have it
+
+e.g. `'size` works on static table, dynamic table, static matrix but dynamic matrix returns `ptr'usize` 
+
+| type | syntax | return type | info | target
+|-|-|-|-|-|
+| get size | `my_table'size` | `usize` | return the size of any table | on `size:`
+| get table data | `my_table'data` | `ptr'T` | return table raw data | on `data:`
+| get dynamic table capacity | `my_table'capa` | `usize` | return dynamic table capacity | on `cpacity:`
+| get matrix dimension | `my_matrix'dim` | `usize` | return dimension of matrix | on `dim_size:`
+| get matrix dimension data | `my_matrix'data[dim]` | `ptr'T` | return matrix raw data start from dimension offset | on `data + dimension`
+| get hyper dimension | `my_hyper'dim` | `usize` | return hyper dimension
+| get hyper capacity | `my_hyper'capa` | `usize` | return hyper dimension capacity
+
+## Primitive table fields
+| table | data | size | capa | dim_size | dim_capa |
+|-|-|-|-|-|-|
+| static table   | `ptr'T` | `usize` | X | X | X |
+| dynamic table  | `ptr'T` | `usize` | `usize` | X | X |
+| static matrix  | `ptr'T` | `usize` | X | `usize` | X |
+| dynamic matrix | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | X |
+| static hyper   | `ptr'ptr'T` | `usize` | X | `usize` | `usize` |
+| dynamic hyper  | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | `usize` |
 
 ## Complex
 | type | syntax | literal | size |
