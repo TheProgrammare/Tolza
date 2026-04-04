@@ -45,10 +45,12 @@ The Zen-C programming language demonstrates a clear commitment to modernizing C,
 This project uses the following open-source libraries:
 
 - https://json.nlohmann.me – for reading and writing JSON syntax.
-- https://github.com/benhoyt/inih – for reading INI configuration files.
+- https://github.com/marzer/tomlplusplus - for reading and writing toml syntax.
+- https://github.com/CLIUtils/CLI11 - for CLI commands.
+
 
 > Thanks to the authors for their excellent open-source work!</br>
-> header-only, no install required
+> header-only, no installation required
 
 # Type
 ## Primitives
@@ -63,12 +65,12 @@ This project uses the following open-source libraries:
 | udecimal       | `udeci`           | `10ud`                       | 128 bits : 0-96 bits value, 96-103 bits scale, 103-128 padding |
 | decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
 | no type        | `u0`   |  | 
-| cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits storage, can be partial codepoint or simple ascii character |
-| string         | `str`            | `"hello"s` `"hello"str` | fat pointer { ptr'cune, i32 } -> byte pointer, size len, null terminated, i/o encoding dependent  |
-| C string          | `c_str`          | `"hello"c_str` `"hello"c` | ptr'cune on start of table, null terminated : C convention |
-| rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"` default one character | on 32 bits : 1 code point  |                   
-| text | `text`           | `"hello"t` `"world"` default | fat pointer { ptr'rune, i32 } -> rune pointer, size len, encoding utf32 |
-| opaque ptr     | `ptr'u0`           | `...`                      | bsize bit      |
+| cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits textual storage, can be partial codepoint or simple ascii character |
+| string         | `str`            | `"hello"s` `"hello"str` | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
+| C string          | `c_str`          | `"hello"c_str` `"hello"c` | raw pointer `ptr'cune` , null terminated : C convention |
+| rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"` default one character | 32 bits : 1 code point, encoding utf32  |                   
+| text | `text`           | `"hello"t` `"world"` default literal text | fat pointer `{ data: ptr'rune, size: i32 }`, encoding utf32 |
+| opaque ptr     | `ptr'u0`           |  | bsize bit      |
 | unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
 | shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
 | function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
@@ -77,14 +79,14 @@ This project uses the following open-source libraries:
 # Primitive tables
 All primitive tables are fat pointers, there is no raw table like in C
 
-| type | syntax | literal |  info
-|-|-|-|-|-|
+| type | syntax | literal |  info |
+|-|-|-|-|
 | static table   | `[T; N]` | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | compile time table size
-| dynamic table (list)  | `[T]` | dynamic table size
-| static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` (make 3d matrix of 4 elements for each dimension) | static table of static tables 
-| dynamic matrix  | `[T]*D` | | same of static matrix, but literal is instanciation only, dimensions are static !  | static table of dynamic tables
-| static hyper | `T*[D]` | | matrix with static tables but dynamic dimensions | dynamic table of static tables
-| dynamic hyper | `[T]*[D]` | | matrix with dynamic tables and dynamic dimensions | dynamic table of dynamic tables
+| dynamic table (list)  | `[T]` | `{ 1, 2, 3, 4}d`,<br> `{ 0..4 = 8 }d` | dynamic table size
+| static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` | static table of static tables 
+| dynamic matrix  | `[T]*D` | `{{0,0,0},{0,0,0},{0,0,0}}d` `{ 1, 2, 3, 4}d*3` | same of static matrix, but literal is instanciation only, dimensions are static !  | static table of dynamic tables
+| static hyper | `T*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}h` `{ 1, 2, 3, 4}h*3` | matrix with static tables but dynamic dimensions | dynamic table of static tables
+| dynamic hyper | `[T]*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}hd` `{ 1, 2, 3, 4}hd*3` | matrix with dynamic tables and dynamic dimensions | dynamic table of dynamic tables
 
 ## Primitive table fields
 Access to any table field by the suffix operator like `my_table'size` 
@@ -92,15 +94,16 @@ table overhead structures are designed by the same order
 
 | table | `'data` | `'size` | `'capa` | `'dim_size` | `'dim_capa` |
 |-|-|-|-|-|-|
-| static table   | `ptr'T` | `usize` | X | X | X |
-| dynamic table  | `ptr'T` | `usize` | `usize` | X | X |
-| static matrix  | `ptr'T` | `usize` | X | `usize` | X |
-| dynamic matrix | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | X |
-| static hyper   | `ptr'ptr'T` | `usize` | X | `usize` | `usize` |
+| static table   | `ptr'T` | `usize` | NO | NO | NO |
+| dynamic table  | `ptr'T` | `usize` | `usize` | NO | NO |
+| static matrix  | `ptr'T` | `usize` | NO | `usize` | NO |
+| dynamic matrix | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | NO |
+| static hyper   | `ptr'ptr'T` | `usize` | NO | `usize` | `usize` |
 | dynamic hyper  | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | `usize` |
 
-| e.g. get matrix 3rd sub table capacity  `my_dy_matrix'capa[2]`
-| e.g. get hyper size `my_hyper'dim_size`, because `'size` used on hyper will return the pointer of sub tables size
+> e.g. get matrix 3rd sub table capacity  `my_dy_matrix'capa'at(2)` for the `'at()` syntax, check ![Pointer Operations](#pointer-operations)
+
+> e.g. get hyper size `my_hyper'dim_size`, because `'size` used on hyper will return the pointer of sub tables size
 
 ## Complex
 | type | syntax | literal | size |
@@ -116,7 +119,7 @@ table overhead structures are designed by the same order
 no memory loss allowed 
 
 |      type      |                   cast to                 |
-|----------------|-------------------------------------------|
+|-|-|
 | numeric        | `b/u/i 8` -> `b/u/i 16` -> `b/u/i 32` -> `b/u/i 64` -> `b/u/i 128` (`b/u/i size` are api dependend) |
 | numeric        | numeric -> floating                      |
 | floating       | `f32` -> `f64` -> `f128` (`fisize` is api dependend) |
