@@ -58,8 +58,8 @@ This project uses the following open-source libraries:
 |-|-|-|-|
 | boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
 | binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0bsize` | 8-128 bits |
-| integral       | `isize` `i8`-`i128` | `0 ` `-1` `10isize`         | 8-128 bits |
-| unsigned       | `usize` `u8`-`u128` | `0 ` `10usize`              | 8-128 bits |
+| integral       | `isize` `i8`-`i128` | `0 ` `-1` `1i` `10isize`         | 8-128 bits |
+| unsigned       | `usize` `u8`-`u128` | `0 ` `1u` `10usize`              | 8-128 bits |
 | floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
 | decimal        | `deci`           | `0.0` `-1.0` `10d` default | 128 bits : 0-96 bits value + sign MSB, 96-103 bits scale, 103-128 padding |
 | udecimal       | `udeci`           | `10ud`                       | 128 bits : 0-96 bits value, 96-103 bits scale, 103-128 padding |
