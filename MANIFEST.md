@@ -57,13 +57,12 @@ This project uses the following open-source libraries:
 |      type      |      syntax      |            literal           |      size      |
 |-|-|-|-|
 | boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
-| binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0bsize` | 8-128 bits |
-| integral       | `isize` `i8`-`i128` | `0 ` `-1` `1i` `10isize`         | 8-128 bits |
-| unsigned       | `usize` `u8`-`u128` | `0 ` `1u` `10usize`              | 8-128 bits |
-| floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10fsize`   | 32-128 bits |
-| decimal        | `deci`           | `0.0` `-1.0` `10d` default | 128 bits : 0-96 bits value + sign MSB, 96-103 bits scale, 103-128 padding |
-| udecimal       | `udeci`           | `10ud`                       | 128 bits : 0-96 bits value, 96-103 bits scale, 103-128 padding |
-| decimal constructor    | `<size>d<size>`  | `3d2` -> `000.00`            | numbers*8  bit |
+| binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0b64` | 8-128 bits |
+| integral       | `isize` `i8`-`i128` | `0 ` `-1` `1i` `10i32`         | 8-128 bits |
+| unsigned       | `usize` `u8`-`u128` | `0 ` `1u` `10u64`              | 8-128 bits |
+| floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10f64`   | 32-128 bits |
+| decimal | `dN` `32dN`-`128dN` | `200.45d2` | 32-128 bits, N decimal scale (static) |
+| unsigned decimal | `udN` `32udN`-`128udN` | `200.45ud2` | 32-128 bits, N decimal scale (static) |
 | no type        | `u0`   |  | 
 | cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits textual storage, can be partial codepoint or simple ascii character |
 | string         | `str`            | `"hello"s` `"hello"str` | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
@@ -75,8 +74,14 @@ This project uses the following open-source libraries:
 | shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
 | function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
 
+## Decimal (fixed point)
+Decimal representation of number with fixed igures after the comma.
 
-# Primitive tables
+| type | syntax | literal | data layout |
+|-|-|-|-|
+| decimal 32 | `dN` | `250.45d2` | raw bits : i32 bits - 
+
+## Primitive tables
 All primitive tables are fat pointers, there is no raw table like in C
 
 | type | syntax | literal |  info |
@@ -88,7 +93,7 @@ All primitive tables are fat pointers, there is no raw table like in C
 | static hyper | `T*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}h` `{ 1, 2, 3, 4}h*3` | matrix with static tables but dynamic dimensions | dynamic table of static tables
 | dynamic hyper | `[T]*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}hd` `{ 1, 2, 3, 4}hd*3` | matrix with dynamic tables and dynamic dimensions | dynamic table of dynamic tables
 
-## Primitive table fields
+### Primitive table fields
 Access to any table field by the suffix operator like `my_table'size` 
 table overhead structures are designed by the same order
 
