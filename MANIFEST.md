@@ -60,26 +60,38 @@ This project uses the following open-source libraries:
 | binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0b64` | 8-128 bits |
 | integral       | `isize` `i8`-`i128` | `0 ` `-1` `1i` `10i32`         | 8-128 bits |
 | unsigned       | `usize` `u8`-`u128` | `0 ` `1u` `10u64`              | 8-128 bits |
-| floating       | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10f64`   | 32-128 bits |
-| decimal | `dN` `dN:S` `32dN`-`128dN` | `200.45d2` `10d4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
+| floating (floatting-point) | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10f64`   | 32-128 bits |
+| decimal (fixed-point) | `dN` `dN:S` `32dN`-`128dN` | `200.45d2` `10d4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
 | unsigned decimal | `udN` `udN:S` `32udN`-`128udN` | `200.45ud2` `10ud4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
 | no type        | `u0`   |  | 
-| cunei          | `cune`          | `"a"cune` `"a"cu` | 8 bits textual storage, can be partial codepoint or simple ascii character |
-| string         | `str`            | `"hello"s` `"hello"str` | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
+| cunei          | `cune`          | `"a"cune` `"a"cu` default one character | 8 bits textual storage, can be partial codepoint or simple ascii character |
+| string         | `str`            | `"hello"s` `"hello"str` default literal text | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
 | C string          | `c_str`          | `"hello"c_str` `"hello"c` | raw pointer `ptr'cune` , null terminated : C convention |
-| rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"` default one character | 32 bits : 1 code point, encoding utf32  |                   
-| text | `text`           | `"hello"t` `"world"` default literal text | fat pointer `{ data: ptr'rune, size: i32 }`, encoding utf32 |
+| rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"`  | 32 bits : 1 code point, encoding utf32  |                   
+| text | `text`           | `"hello"t` `"world"`  | fat pointer `{ data: ptr'rune, size: i32 }`, encoding utf32 |
 | opaque ptr     | `ptr'u0`           |  | bsize bit      |
 | unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
 | shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
 | function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
 
-## Decimal (fixed point)
-Decimal representation of number with fixed igures after the comma.
+## Literal strings
 
-| type | syntax | literal | data layout |
+Literal type annotation
+| type | syntax | position | info |
 |-|-|-|-|
-| decimal 32 | `dN` | `250.45d2` | raw bits : i32 bits - 
+| literal string | `"my string"` | none | default string, returns `str` type (`{ ptr'cune, i32 }`) |
+| literal c string | `"my c string"c` | suffix | c convention string, returns `c_str` type (`ptr'cune`) |
+| literal text string | `"my text string"t` | suffix | explicit utf32, returns `text` type (`{ ptr'rune, i32 }`) |
+
+Literal reading mode
+| mode | syntax | position | info |
+|-|-|-|-|
+| partial raw literal | `r"C:my\windows\path"` | prefix | disable escape, can't read `"` character |
+| total raw literal | `r#"my "particular" string"#` | prefix and suffix | disable escape and can read `"` character, can't read `"#` |
+| multiline literal | `"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | enable escape, can read `"` or `""` chracter, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
+| raw multiline literal | `r"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | dsiable escape, can read `"` or `""` chracter, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
+
+> Note: Literal type annotation and literal reading mode are cumulative on the same literal
 
 ## Primitive tables
 All primitive tables are fat pointers, there is no raw table like in C
