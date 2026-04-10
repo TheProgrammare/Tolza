@@ -11,12 +11,14 @@ namespace ast
 namespace operation
 {
 struct Cast_As final : public AExpression {
-  std::unique_ptr<AExpression> valueCasted;
-  std::unique_ptr<AType>       typeCasted;
+  std::unique_ptr<AExpression> expression;
+  std::shared_ptr<AType>       type;
 
   enum class ECastType { AS, AS_REINTERPRET, AS_SAFE };
 
   ECastType cast_type = ECastType::AS;
+
+  SET_R_VAL
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
@@ -37,6 +39,8 @@ struct Is final : public AExpression {
 
   Is();
 
+  SET_R_VAL
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 
@@ -52,6 +56,8 @@ struct In final : public AExpression {
 
   In();
 
+  SET_R_VAL
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 
@@ -66,6 +72,8 @@ struct Assignment final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
   ETransfertType               assignmentType = ETransfertType::Copy;
+
+  SET_R_VAL
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
@@ -87,6 +95,8 @@ struct Binary final : public AExpression {
   std::unique_ptr<AExpression> right;
   EBinOpType                   op = EBinOpType::Add;
 
+  SET_R_VAL
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 
@@ -106,6 +116,8 @@ struct Unary final : public AExpression {
   // or
   // sign
   bool                         pre_operator = false;
+
+  SET_R_VAL
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
@@ -128,6 +140,8 @@ struct Interval final : public AExpression {
 
   Interval();
 
+  SET_R_VAL
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 
@@ -145,6 +159,8 @@ struct Ptr_Dist final : public AExpression {
   std::unique_ptr<AExpression> right;
 
   Ptr_Dist();
+
+  SET_R_VAL
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;

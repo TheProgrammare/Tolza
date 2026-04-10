@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "ast_base.hpp"
 
@@ -18,7 +19,7 @@ struct Primitive;
 
 struct Ptr final : public AType {
   EPtrType               pointer_type = EPtrType::raw_ptr;
-  std::unique_ptr<AType> inner;
+  std::shared_ptr<AType> inner;
 
   llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
@@ -35,26 +36,23 @@ struct Ptr final : public AType {
 };
 
 struct Table final : public AType {
-  std::optional<size_t> table_size; // nullopt = dynamic
-  std::unique_ptr<Node> sizeSymbol;
+  size_t table_size; // 0 = dynamic
+  [[maybe_unused]]
+  std::unique_ptr<AExpression> sizeSymbol;
 
-  std::unique_ptr<AType> inner;
+  std::shared_ptr<AType> inner;
 
   llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
   std::string mangle_type() const override
   {
-    if (table_size) return "list_" + inner->mangle_type();
-    return "arr" + std::to_string(table_size.value()) + "_" + inner->mangle_type();
+    if (table_size > 0) return "sTbl" + inner->mangle_type();
+    return "dTbl" + std::to_string(table_size) + "_" + inner->mangle_type();
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Table*>(&other)) {
-      if (table_size.has_value() != table_size.has_value()) return false;
-
-      if (table_size) {
-        if (table_size.value() != ptr->table_size.value()) return false;
-      }
+      if (table_size != ptr->table_size) return false;
 
       return inner->is_same(*ptr->inner);
     }
@@ -62,9 +60,66 @@ struct Table final : public AType {
   }
   std::string debug_str() const override
   {
-    if (table_size)
-      return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size.value()) + "]";
+    if (table_size) return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size) + "]";
     return "type table[" + sizeSymbol->debug_str() + "]";
+  }
+  void accept(Visitor_Base& v) override;
+};
+
+struct Matrix final : public AType {
+  Table  tbl;
+  size_t dimension_size;
+  [[maybe_unused]]
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+
+  std::string mangle_type() const override
+  {
+    if (tbl.table_size > 0) return "sMtx" + tbl.inner->mangle_type() + "_" + std::to_string(dimension_size);
+    return "dMtx" + std::to_string(tbl.table_size) + "_" + tbl.inner->mangle_type() + "_"
+           + std::to_string(dimension_size);
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Matrix*>(&other)) {
+      if (dimension_size != ptr->dimension_size) return false;
+      return tbl.is_same(ptr->tbl);
+    }
+    return false;
+  }
+  std::string debug_str() const override
+  {
+    if (tbl.table_size)
+      return "type matrix[" + tbl.sizeSymbol->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]*"
+             + std::to_string(dimension_size);
+    return "type matrix[" + tbl.sizeSymbol->debug_str() + "]*" + std::to_string(dimension_size);
+  }
+  void accept(Visitor_Base& v) override;
+};
+
+struct Hyper final : public AType {
+  Table                        tbl;
+  std::unique_ptr<AExpression> dimensionSymbol;
+
+  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+
+  std::string mangle_type() const override
+  {
+    if (tbl.table_size > 0) return "sHpr" + tbl.inner->mangle_type();
+    return "dHpr" + std::to_string(tbl.table_size) + "_" + tbl.inner->mangle_type();
+  }
+  bool compare_with(const AType& other) const override
+  {
+    if (auto ptr = dynamic_cast<const Hyper*>(&other)) {
+      return tbl.is_same(ptr->tbl);
+    }
+    return false;
+  }
+  std::string debug_str() const override
+  {
+    if (tbl.table_size)
+      return "type hyper[" + tbl.sizeSymbol->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]";
+    return "type hyper[" + tbl.sizeSymbol->debug_str() + "]";
   }
   void accept(Visitor_Base& v) override;
 };
@@ -134,7 +189,7 @@ struct Function_Proto final : public AType {
 
   [[maybe_unused]] std::vector<std::shared_ptr<declaration::local::Parameter>>                 parameters;
   [[maybe_unused]] std::vector<std::unique_ptr<declaration::local::Generic_Parameter_Element>> gen_parameters;
-  [[maybe_unused]] std::unique_ptr<Tuple>                                                      returnType;
+  [[maybe_unused]] std::shared_ptr<ast::AType>                                                 returnType;
 
   bool isVariadic = false;
 

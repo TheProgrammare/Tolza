@@ -58,7 +58,6 @@ struct CompCtx {
   std::string     target_os;
   std::string     target_vendor;
   std::string     target_abi;
-  std::string     target_size_abi;
   std::string     target_libc;
   std::string     target_cpu;
   std::string     target_features;
@@ -118,7 +117,7 @@ struct CompCtx {
   bool                     llvm_verify_module = true;
   std::vector<const char*> llvm_args;
 
-  size_t get_size_bit() const;
+  size_t get_arch_size() const;
 
   const std::string& get_preprocess_dir() const;
 

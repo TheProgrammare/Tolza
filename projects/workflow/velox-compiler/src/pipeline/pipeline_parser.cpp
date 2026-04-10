@@ -24,6 +24,7 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   size_t count = 0;
   for (auto scr_info : scr_infos) {
+    if (scr_info->tokens.empty()) continue;
 
     parser::Parser_Base parser(*scr_info);
 

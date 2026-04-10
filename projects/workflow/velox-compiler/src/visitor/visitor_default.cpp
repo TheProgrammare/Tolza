@@ -88,7 +88,7 @@ void Visitor_Default::visit(ast::Root& n)
 // ============ DECLARATION ============
 void Visitor_Default::visit(ast::declaration::Global& n)
 {
-  n.type->accept(*this);
+  if (n.type) n.type->accept(*this);
   n.expression->accept(*this);
 }
 void Visitor_Default::visit(ast::declaration::Function& n)
@@ -282,7 +282,7 @@ void Visitor_Default::visit(ast::declaration::cop::Entity_Op& n)
 {
   n.codeblock->accept(*this);
 }
-void Visitor_Default::visit(ast::declaration::cop::Entity_OpIndex& n)
+void Visitor_Default::visit(ast::declaration::cop::Entity_Access_Op& n)
 {
   n.codeblock->accept(*this);
   n.return_type->accept(*this);
@@ -372,14 +372,14 @@ void Visitor_Default::visit(ast::literal::Floating& n)
 {
 }
 
-void Visitor_Default::visit(ast::literal::ASCII& n)
+void Visitor_Default::visit(ast::literal::CUNE& n)
 {
 }
-void Visitor_Default::visit(ast::literal::UTF32& n)
+void Visitor_Default::visit(ast::literal::RUNE& n)
 {
 }
 
-void Visitor_Default::visit(ast::literal::Text& n)
+void Visitor_Default::visit(ast::literal::Text_Pure& n)
 {
 }
 void Visitor_Default::visit(ast::literal::Text_Interpolation& n)
@@ -524,6 +524,14 @@ void Visitor_Default::visit(ast::expression::Ptr_Val& n)
 {
   n.target->accept(*this);
 }
+void Visitor_Default::visit(ast::expression::Mut_Of& n)
+{
+  n.target->accept(*this);
+}
+void Visitor_Default::visit(ast::expression::Ref_Of& n)
+{
+  n.target->accept(*this);
+}
 void Visitor_Default::visit(ast::expression::Addr_Of& n)
 {
   n.target->accept(*this);
@@ -605,8 +613,8 @@ void Visitor_Default::visit(ast::statement::Match_Case& n)
 // ============ OPERATION ============
 void Visitor_Default::visit(ast::operation::Cast_As& n)
 {
-  n.valueCasted->accept(*this);
-  n.typeCasted->accept(*this);
+  n.expression->accept(*this);
+  n.type->accept(*this);
 }
 void Visitor_Default::visit(ast::operation::Is& n)
 {

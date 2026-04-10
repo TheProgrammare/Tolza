@@ -22,6 +22,8 @@ struct Parser_Declaration_COP {
   void parse_entity_declaration(std::shared_ptr<ast::declaration::cop::Entity> n_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Op>
   _entity_op(std::shared_ptr<ast::declaration::cop::Entity> inEntity);
+  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Access_Op>
+  _entity_access_op(std::shared_ptr<ast::declaration::cop::Entity> parent_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Cast>
   _entity_cast(std::shared_ptr<ast::declaration::cop::Entity> inEntity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::System>      system();

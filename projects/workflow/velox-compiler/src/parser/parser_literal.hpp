@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "ast/ast_base.hpp"
 #include "ast/ast_forward.hpp"
 
 namespace parser
@@ -22,9 +23,9 @@ private:
   [[nodiscard]] std::unique_ptr<ast::literal::Decimal>          literal_decimal();
   [[nodiscard]] std::unique_ptr<ast::literal::Floating>         literal_floating_point();
   [[nodiscard]] std::unique_ptr<ast::literal::Integral>         literal_integral();
-  [[nodiscard]] std::unique_ptr<ast::literal::ASCII>            literal_ascii();
+  [[nodiscard]] std::unique_ptr<ast::literal::CUNE>             literal_cune();
   [[nodiscard]] std::unique_ptr<ast::literal::Format_Specifier> format_specifier();
-  [[nodiscard]] std::unique_ptr<ast::literal::Textual_Format>   literal_textual();
+  [[nodiscard]] std::unique_ptr<ast::ALiteral>                  literal_textual();
   [[nodiscard]] std::unique_ptr<ast::ALiteral>                  literal_table();
   [[nodiscard]] std::unique_ptr<ast::literal::Table_Population> literal_table_population();
   [[nodiscard]] std::unique_ptr<ast::literal::Tuple>            literal_tuple();

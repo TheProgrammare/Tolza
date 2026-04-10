@@ -24,25 +24,28 @@ struct Visitor_Type : public Visitor_Default {
   std::shared_ptr<ast::AType> resolve_type(ast::Node& n, ast::AType& input_type, bool silentError = false);
 
 
-  ast::AType* get_inferred_type(ast::Node& node, bool is_prototype_expected = false) const;
+  std::shared_ptr<ast::AType> get_inferred_type(ast::Node& node, bool is_prototype_expected = false) const;
 
-  ast::AType* get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const;
+  std::shared_ptr<ast::AType> get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const;
 
   // expression inferred type;
   void visit(ast::Expr_ID& n) override;
   void visit(ast::Expr_ID_Qualified& n) override;
   void visit(ast::Expr_ID_Type& n) override;
 
+  void visit(ast::declaration::Global& n) override;
+  void visit(ast::declaration::Function& n) override;
+
   void visit(ast::declaration::local::Pattern_Enum& n) override;
   void visit(ast::declaration::local::Pattern_Tuple& n) override;
   void visit(ast::declaration::local::Pattern_Entity& n) override;
   void visit(ast::declaration::local::Pattern_Component& n) override;
 
-  void visit(ast::declaration::Global& n) override;
 
   void visit(ast::declaration::local::Variable& n) override;
   void visit(ast::declaration::local::Variable_Binding& n) override;
 
+  void visit(ast::statement::Return& n) override;
 
   void visit(ast::expression::If_Ternary& n) override;
   void visit(ast::expression::Member_Access& n) override;
@@ -56,12 +59,16 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::expression::Ptr_At& n) override;
   void visit(ast::expression::Ptr_Offset& n) override;
   void visit(ast::expression::Ptr_Val& n) override;
+  void visit(ast::expression::Mut_Of& n) override;
+  void visit(ast::expression::Ref_Of& n) override;
   void visit(ast::expression::Addr_Of& n) override;
   void visit(ast::expression::Size_Of& n) override;
   void visit(ast::expression::GetBits& n) override;
   void visit(ast::expression::Move& n) override;
   void visit(ast::expression::New_Ptr& n) override;
 
+  void visit(ast::literal::Integral& n) override;
+  void visit(ast::literal::Floating& n) override;
   void visit(ast::literal::Table& n) override;
   void visit(ast::literal::Map& n) override;
   void visit(ast::literal::Text_Interpolation& n) override;
@@ -71,6 +78,17 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::literal::Structured_Data& n) override;
   void visit(ast::literal::Entity& n) override;
   void visit(ast::literal::Iterator& n) override;
+
+  void visit(ast::operation::Cast_As& n) override;
+  void visit(ast::operation::Is& n) override;
+  void visit(ast::operation::In& n) override;
+  void visit(ast::operation::Assignment& n) override;
+  void visit(ast::operation::Binary& n) override;
+  void visit(ast::operation::Unary& n) override;
+  void visit(ast::operation::Interval& n) override;
+  void visit(ast::operation::Ptr_Dist& n) override;
+
+
   // exception: non typed expression
   // void visit(ast::statement::GoTo &n) override;
 };

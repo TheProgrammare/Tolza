@@ -102,7 +102,6 @@ std::string command::workspace::write_config_file(const std::string& path, const
   ctx.target_os           = common::DETECTED_OS;
   ctx.target_vendor       = common::DETECTED_VENDOR;
   ctx.target_abi          = common::DETECTED_ABI;
-  ctx.target_size_abi     = common::DETECTED_ABI_SIZE();
   auto config_txt         = compiler_context_to_config(ctx);
   return write_file(fs::path(path) / name, config_txt);
 }
@@ -212,7 +211,6 @@ std::string command::workspace::compiler_context_to_config(const common::CompCtx
       {"target_os",            ctx.target_os                 },
       {"target_vendor",        ctx.target_vendor             },
       {"target_abi",           ctx.target_abi                },
-      {"target_size_abi",      ctx.target_size_abi           },
       {"target_libc",          ctx.target_libc               },
       {"target_cpu",           ctx.target_cpu                },
       {"target_features",      ctx.target_features           },

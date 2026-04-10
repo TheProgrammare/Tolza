@@ -52,18 +52,20 @@ public:
   void                          tokenize_identifier();
   void                          tokenize_keyword();
   std::pair<TokTy, std::string> getToken();
-  void                          addToken(TokTy type);
-  bool                          eat();
+  void                          add_token(TokTy type, bool do_not_move = false);
   void                          add_error(ErrorCode code, const std::string& msg, const std::string& hint);
   TokTy                         classifyNumerals(std::string& outValue);
   TokTy                         classifyKeyword(std::string& outWord);
   TokTy                         classifyFormatSpec(std::string& outFormat);
 
+  void start_buffer();
+
   ScriptInfo&              scr_info;
   StreamTracker            stream;
   std::vector<std::string> errors;
   std::string              buffer;
-  char                     ch = '\0';
+  size_t                   buffer_start_line = 1;
+  size_t                   buffer_start_col  = 1;
 };
 
 const std::vector<std::pair<std::string_view, TokTy>>& get_sorted_keywords();

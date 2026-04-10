@@ -27,6 +27,30 @@
 #include "lexer/token.hpp"
 #include "codegen/llvm_forward.hpp"
 
+#define SET_R_VAL                                                                                                      \
+  bool is_lvalue() const override                                                                                      \
+  {                                                                                                                    \
+    return false;                                                                                                      \
+  };
+
+#define SET_L_VAL                                                                                                      \
+  bool is_lvalue() const override                                                                                      \
+  {                                                                                                                    \
+    return true;                                                                                                       \
+  };
+
+#define SET_FORCED_R_VAL                                                                                               \
+  bool is_forced_rvalue() const override                                                                               \
+  {                                                                                                                    \
+    return true;                                                                                                       \
+  };
+
+#define SET_FORCED_L_VAL                                                                                               \
+  bool is_forced_lvalue() const override                                                                               \
+  {                                                                                                                    \
+    return true;                                                                                                       \
+  };
+
 struct ScriptInfo;
 struct Symbol_Data;
 struct Visitor_Base;
@@ -121,7 +145,7 @@ struct AType : virtual Node, Trait_LLVM_Typed {
 
 inline EPassMode get_defaultParamPassmode(ast::AType& node);
 
-using INFERRED_TYPE = AType*;
+using INFERRED_TYPE = std::shared_ptr<AType>;
 using SYM_REF       = Symbol_Data*;
 
 struct ADeclaration : virtual Node, Trait_LLVM_Passage {
@@ -165,11 +189,36 @@ struct AExpression : virtual Node, Trait_LLVM_Value {
   // for struct, enum, union
   size_t        in_type_position = 0;
 
+  [[nodiscard]] virtual bool is_lvalue() const = 0;
+  [[nodiscard]] virtual bool is_rvalue() const
+  {
+    return !is_lvalue();
+  };
+  // for variadic C convention violation
+  // force the pass mode by copy instead of reference
+  [[nodiscard]] virtual bool is_forced_rvalue() const
+  {
+    return false;
+  }
+  // for variadic C convention violation
+  // force the pass mode by reference instead of copy
+  // rewind: variadic args dosen't have type and pass mode
+  [[nodiscard]] virtual bool is_forced_lvalue() const
+  {
+    return false;
+  }
+
+
   virtual ~AExpression() = default;
 };
 
 // for every node who contains a value coded
 struct ALiteral : virtual AExpression {
+
+  SET_R_VAL
+
+  SET_FORCED_R_VAL
+
   virtual ~ALiteral() = default;
 };
 
@@ -190,6 +239,8 @@ struct AIdentifier : virtual AExpression {
   {
     return get_base_name() == other.get_base_name() && mangle_qualified_name() == other.mangle_qualified_name();
   }
+
+  SET_L_VAL
 
   virtual ~AIdentifier() = default;
 };
@@ -254,6 +305,7 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   bool qualification_at_parent_scope  = false; // e.g. super::math::add()
   bool qualification_at_current_scope = false; // e.g. self::math::add()
 
+
   bool operator==(const Expr_ID_Qualified& other) const noexcept
   {
     return mangle_local_name() == other.mangle_local_name();
@@ -289,8 +341,8 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
 
 // for every node who need a type resolution
 struct Expr_ID_Type final : public AIdentifier, AType {
-  std::unique_ptr<AIdentifier>                         name;
-  [[maybe_unused]] std::vector<std::unique_ptr<AType>> gen_args;
+  AIdentifier*                                         name = nullptr;
+  [[maybe_unused]] std::vector<std::shared_ptr<AType>> gen_args;
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
@@ -322,16 +374,14 @@ struct Expr_ID_Type final : public AIdentifier, AType {
   }
 
   std::string mangle_type() const override;
-  bool        compare_with(const AType& other) const override
-  {
-    // ID type is compared according to his type inferred
-    return inferred_type->is_same(other);
-  }
+  bool        compare_with(const AType& other) const override;
 
   std::span<const std::string> get_qualification_path() const override
   {
     return name->get_qualification_path();
   }
+
+  SET_R_VAL
 
   std ::string debug_str() const override;
 

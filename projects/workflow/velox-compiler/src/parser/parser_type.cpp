@@ -27,9 +27,9 @@ std::tuple<bool, bool, bool> parser::Parser_Type::get_type_annotation()
   return {type_isConst, type_isOptional, type_isVolatile};
 }
 
-std::unique_ptr<ast::type::Table> parser::Parser_Type::table(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Table> parser::Parser_Type::table(bool isConst, bool isOptional, bool isVolatile)
 {
-  auto table             = ctx.Create_Node<ast::type::Table>(ctx.tok_v.peek(-1));
+  auto table             = ctx.Create_Type<ast::type::Table>(ctx.tok_v.peek(-1));
   table->type_isConst    = isConst;
   table->type_isOptional = isOptional;
   table->type_isVolatile = isVolatile;
@@ -53,9 +53,9 @@ std::unique_ptr<ast::type::Table> parser::Parser_Type::table(bool isConst, bool 
   return table;
 }
 
-std::unique_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool isOptional, bool isVolatile)
 {
-  auto ptr          = ctx.Create_Node<ast::type::Ptr>(ctx.tok_v.peek());
+  auto ptr          = ctx.Create_Type<ast::type::Ptr>(ctx.tok_v.peek());
   ptr->pointer_type = TokTy_to_EPtrType(ctx.tok_v.peek().type);
   ctx.tok_v.next(); // consume ptr
 
@@ -75,10 +75,10 @@ std::unique_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool 
   return ptr;
 }
 
-std::unique_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool isConst, bool isOptional, bool isVolatile)
 {
   auto tok             = ctx.tok_v.next();
-  auto pri             = ctx.Create_Node<ast::type::Primitive>(tok);
+  auto pri             = ctx.Create_Type<ast::type::Primitive>(tok);
   pri->type_isConst    = isConst;
   pri->type_isOptional = isOptional;
   pri->type_isVolatile = isVolatile;
@@ -92,21 +92,19 @@ std::unique_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool isCons
   return pri;
 }
 
-std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
 {
-  std::unique_ptr<ast::Expr_ID_Type> result;
+  std::shared_ptr<ast::Expr_ID_Type> result;
 
   auto base_tok = ctx.tok_v.peek();
   auto id       = ctx.p_expr->identifier();
 
-  if (ctx.tok_v.match_any({TokTy::OPEN_BRACKETS, TokTy::TURBO_FISH})) {
-    result       = ctx.p_expr->identifier_typed();
-    result->name = std::move(id);
+  if (ctx.tok_v.match_any({TokTy::OPEN_BRACKETS, TokTy::TURBO_FISH}))
+    result = ctx.p_expr->identifier_typed();
+  else
+    result = ctx.Create_Type<ast::Expr_ID_Type>(base_tok);
 
-  } else {
-    result       = ctx.Create_Node<ast::Expr_ID_Type>(base_tok);
-    result->name = std::move(id);
-  }
+  result->name = id.release();
 
   result->type_isConst    = isConst;
   result->type_isOptional = isOptional;
@@ -120,7 +118,7 @@ std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bo
   return result;
 }
 
-std::unique_ptr<ast::type::Tuple> parser::Parser_Type::tuple(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Tuple> parser::Parser_Type::tuple(bool isConst, bool isOptional, bool isVolatile)
 {
   auto tu             = explicit_tuple();
   tu->type_isConst    = isConst;
@@ -135,7 +133,7 @@ std::unique_ptr<ast::type::Tuple> parser::Parser_Type::tuple(bool isConst, bool 
   return tu;
 }
 
-std::unique_ptr<ast::type::Function_Proto> parser::Parser_Type::function_proto(bool isConst, bool isOptional,
+std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::function_proto(bool isConst, bool isOptional,
                                                                                bool isVolatile)
 {
   auto proto             = explicit_function_proto();
@@ -151,7 +149,7 @@ std::unique_ptr<ast::type::Function_Proto> parser::Parser_Type::function_proto(b
   return std::unique_ptr<ast::type::Function_Proto>(proto.get());
 }
 
-std::unique_ptr<ast::AType> parser::Parser_Type::parse_type()
+std::shared_ptr<ast::AType> parser::Parser_Type::parse_type()
 {
   auto [isConst, isOptional, isVolatile] = get_type_annotation();
 
@@ -179,11 +177,11 @@ std::unique_ptr<ast::AType> parser::Parser_Type::parse_type()
   return nullptr;
 };
 
-std::unique_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
+std::shared_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
 {
   static const std::string hint = "define named tuple like `(filed1: i32, ...)`.";
 
-  auto tuple        = ctx.Create_Node<ast::type::Tuple>(ctx.tok_v.peek());
+  auto tuple        = ctx.Create_Type<ast::type::Tuple>(ctx.tok_v.peek());
   bool endByParen   = ctx.tok_v.match(TokTy::OPEN_PAREN);
   bool isNamedTuple = ctx.tok_v.peek(1).type == TokTy::COLON; // (name: type, ...) or (type, ...)
 
@@ -206,9 +204,9 @@ std::unique_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
   return tuple;
 }
 
-std::unique_ptr<ast::type::Get_Expr_Type> parser::Parser_Type::expr_get_expr_type()
+std::shared_ptr<ast::type::Get_Expr_Type> parser::Parser_Type::expr_get_expr_type()
 {
-  auto node = ctx.Create_Node<ast::type::Get_Expr_Type>(ctx.tok_v.peek(-1));
+  auto node = ctx.Create_Type<ast::type::Get_Expr_Type>(ctx.tok_v.peek(-1));
   ctx.tok_v.expect(129, TokTy::OPEN_PAREN, "Expected start arg '('.",
                    "define get type at compilation time like: `comptime::type(var)`");
   node->target = ctx.p_expr->parse_expression();
@@ -226,7 +224,7 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
 
   ctx.tok_v.match_any({TokTy::FUNCTION, TokTy::LAMBDA});
 
-  auto type = ctx.Create_Node<ast::type::Function_Proto>(ctx.tok_v.peek());
+  auto type = ctx.Create_Type<ast::type::Function_Proto>(ctx.tok_v.peek());
 
   // check
   // parameters
@@ -240,9 +238,13 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
   // check
   // return
   if (ctx.tok_v.match(TokTy::ARROW)) {
-    type->returnType = ctx.p_type->explicit_tuple();
+    if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
+      type->returnType = ctx.p_type->explicit_tuple();
+    } else {
+      type->returnType = ctx.p_type->parse_type();
+    }
   } else {
-    type->returnType = std::unique_ptr<ast::type::Tuple>(ast::type::get_void_return_type());
+    type->returnType = ast::type::get_void_type();
   }
 
   return type;

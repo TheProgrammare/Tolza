@@ -37,5 +37,5 @@ public:
   explicit Int128(const std::string& s, uint8_t radix = 10);
 
   void        string_to_i128(const std::string& s, int base = 10);
-  std::string i128_to_string(int base = 10) const;
+  std::string i128_to_string(int radix = 10) const;
 };

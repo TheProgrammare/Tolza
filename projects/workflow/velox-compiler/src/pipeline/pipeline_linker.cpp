@@ -28,7 +28,7 @@ bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       std::filesystem::path(compiler::COMP_CTX.get_dir_build()) / compiler::COMP_CTX.get_project_name();
   out_bin.replace_extension(extension);
 
-  std::string command = "clang " + dest_path.string() + " -o " + out_bin.string();
+  std::string command = "clang \"" + dest_path.string() + "\" -o \"" + out_bin.string() + "\"";
 
   std::cout << "[linker] Clang linking command:\n  " << command << std::endl;
   if (auto err_code = system(command.c_str()); err_code != 0) {

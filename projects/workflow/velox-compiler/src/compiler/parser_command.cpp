@@ -94,7 +94,6 @@ void Command::init_command_build()
   build->add_option("--os", compiler::COMP_CTX.target_os, "e.g. linux, windows, macos")->type_name("<info>");
   build->add_option("--vendor", compiler::COMP_CTX.target_vendor, "e.g. pc, apple, ...")->type_name("<info>");
   build->add_option("--abi", compiler::COMP_CTX.target_abi, "e.g. gnu, msvc")->type_name("<info>");
-  build->add_option("--abi-size", compiler::COMP_CTX.target_size_abi, "e.g. LP64, ILP32, LLP64")->type_name("<info>");
   build->add_option("--libc", compiler::COMP_CTX.target_libc, "e.g. glibc, musl, bionic, msvc")->type_name("<info>");
   build->add_option("--cpu", compiler::COMP_CTX.target_cpu, "e.g. generic, core-avx2, znver4")->type_name("<info>");
   build->add_option("--features", compiler::COMP_CTX.target_features, "e.g. \"+avx2,+bmi2,-sse2\"")
@@ -212,7 +211,7 @@ void Command::init_command_build()
   add_opt_path("--dir-packages", compiler::COMP_CTX.dir_packages, "Set the packages directory");
 
   build->add_option("--triple", compiler::COMP_CTX.llvm_triple, "Override profile info for the llvm triple")
-      ->type_name("<arch-vendor-sys-abi>");
+      ->type_name("<arch-vendor-sys-env>");
   build->add_flag("--verify-module", compiler::COMP_CTX.llvm_verify_module,
                   "Enable llvm verification before and after passes");
 
@@ -223,9 +222,11 @@ void Command::init_command_build()
       ->take_all();
 
   build->callback([&]() {
-    std::cout << "Command executed: " << std::endl;
-    for (int i = 0; i < argc; i++) std::cout << argv[i] << " ";
-    std::cout << std::endl;
+    if (!compiler::COMP_CTX.mute) {
+      std::cout << "Command executed: " << std::endl;
+      for (int i = 0; i < argc; i++) std::cout << argv[i] << " ";
+      std::cout << std::endl;
+    }
 
     if (compiler::COMP.start_compilation())
       exit(0);

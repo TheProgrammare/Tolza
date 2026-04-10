@@ -489,7 +489,7 @@ std::unique_ptr<meta::Cond_Base> Preprocessor::process_condition()
       else
         lhs = std::make_unique<meta::Cond_Or>(std::move(lhs), std::move(rhs));
     } else {
-      break; // pas un opérateur → fin
+      break; // no op -> end
     }
   }
 

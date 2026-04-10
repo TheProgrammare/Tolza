@@ -24,7 +24,6 @@
 
 int main(int argc, const char* argv[])
 {
-  toolchain::init_autocompletion();
   common::init_toolchain_context();
 
   CLI::App app{"Velox toolchain (" + common::SOFTWARE_VERSION + ")", "velox"};

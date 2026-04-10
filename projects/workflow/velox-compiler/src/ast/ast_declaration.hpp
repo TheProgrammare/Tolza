@@ -108,7 +108,7 @@ struct Flag final : public ADeclaration, AType {
 
 struct Union final : public ADeclaration, AType {
   // field name, field type
-  std::vector<std::pair<std::string, std::unique_ptr<ast::AType>>> fields;
+  std::vector<std::pair<std::string, std::shared_ptr<ast::AType>>> fields;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   llvm::Type*  codegen_ty(Visitor_Codegen& v) override;

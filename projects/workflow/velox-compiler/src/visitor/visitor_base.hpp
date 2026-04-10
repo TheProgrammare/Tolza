@@ -105,7 +105,7 @@ struct Visitor_Base {
   virtual void visit(ast::declaration::cop::Entity_Del& n)       = 0;
   virtual void visit(ast::declaration::cop::Entity_Cast& n)      = 0;
   virtual void visit(ast::declaration::cop::Entity_Op& n)        = 0;
-  virtual void visit(ast::declaration::cop::Entity_OpIndex& n)   = 0;
+  virtual void visit(ast::declaration::cop::Entity_Access_Op& n) = 0;
   virtual void visit(ast::declaration::cop::Entity_Transfert& n) = 0;
 
   virtual void visit(ast::declaration::cop::System& n)      = 0;
@@ -134,10 +134,10 @@ struct Visitor_Base {
   virtual void visit(ast::literal::Decimal& n)  = 0;
   virtual void visit(ast::literal::Floating& n) = 0;
 
-  virtual void visit(ast::literal::ASCII& n) = 0;
-  virtual void visit(ast::literal::UTF32& n) = 0;
+  virtual void visit(ast::literal::CUNE& n) = 0;
+  virtual void visit(ast::literal::RUNE& n) = 0;
 
-  virtual void visit(ast::literal::Text& n)               = 0;
+  virtual void visit(ast::literal::Text_Pure& n)          = 0;
   virtual void visit(ast::literal::Text_Interpolation& n) = 0;
   virtual void visit(ast::literal::Textual_Element& n)    = 0;
   virtual void visit(ast::literal::Textual_Format& n)     = 0;
@@ -176,6 +176,8 @@ struct Visitor_Base {
   virtual void visit(ast::expression::Ptr_At& n)     = 0;
   virtual void visit(ast::expression::Ptr_Offset& n) = 0;
   virtual void visit(ast::expression::Ptr_Val& n)    = 0;
+  virtual void visit(ast::expression::Mut_Of& n)     = 0;
+  virtual void visit(ast::expression::Ref_Of& n)     = 0;
   virtual void visit(ast::expression::Addr_Of& n)    = 0;
   virtual void visit(ast::expression::Size_Of& n)    = 0;
   virtual void visit(ast::expression::GetBits& n)    = 0;

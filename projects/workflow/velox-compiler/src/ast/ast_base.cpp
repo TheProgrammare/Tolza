@@ -169,3 +169,13 @@ std::string ast::Expr_ID_Type::debug_str() const
   if (!gen_args.empty()) out += "&gt;";
   return out;
 }
+
+
+bool ast::Expr_ID_Type::compare_with(const AType& other) const
+{
+  if (auto ptr = dynamic_cast<const Expr_ID_Type*>(&other)) {
+    bool same_name = name->mangle_qualified_name() == ptr->name->mangle_qualified_name();
+    return same_name;
+  }
+  return false;
+}

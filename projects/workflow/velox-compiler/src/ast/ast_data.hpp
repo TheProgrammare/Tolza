@@ -9,14 +9,26 @@ using TokTy = ETokenType;
 enum class EUnaryOpType {
   NONE,
   // arithmetic
-  _not,   // not !
-  _plus,  // as positive +
-  _minus, // as negative -
+  _not,         // not !
+  _plus,        // as positive +
+  _minus,       // as negative -
+  _invert_sign, // invert sign
 };
 
 [[nodiscard]] EUnaryOpType TokTy_to_EUnaryOpType(TokTy tok);
 
 [[nodiscard]] std::string EUnaryOpType_to_str(EUnaryOpType opTy);
+
+enum class EAccessOpType {
+  Index,      // NO BIN OP AST USED, index[i] -> T
+  IndexBound, // NO BIN OP AST USED, index?[i] -> T?
+  Slice,      // NO BIN OP AST USED, slicing[start..end] -> Slice<T>
+  SliceBound, // NO BIN OP AST USED, slicing?[start..end] -> Slice<T>?
+  bSlice,     // NO BIN OP AST USED, slicing bits ~[start..end]
+};
+
+[[nodiscard]] std::string EAccessOpType_to_str(EAccessOpType opTy);
+
 
 enum class EBinOpType {
   NONE,
@@ -30,10 +42,6 @@ enum class EBinOpType {
   Rem,    // remain %rem% signed with dividend
   Divrem, // quotien + remainder in one operation %divrem%
   Pow,    // power **
-  Sign,   // singator +- to set sign
-  Index,  // index [i]
-  Slice,  // slicing [start..end]
-  bSlice, // slicing bits ~[start..end]
   // comparator
   Gre,    // greater >
   Low,    // lower <
@@ -75,6 +83,53 @@ enum class EBinOpType {
 
 [[nodiscard]] std::string EBinOpType_to_str(EBinOpType opTy);
 
+
+constexpr auto k_boolean_op = {
+    EBinOpType::_eq,  EBinOpType::_in,   EBinOpType::_nin, EBinOpType::_is,  EBinOpType::_nis, EBinOpType::_neq,
+
+    EBinOpType::_and, EBinOpType::_nand, EBinOpType::_or,  EBinOpType::_xor, EBinOpType::_nor, EBinOpType::_xnor,
+};
+
+constexpr auto k_textual_op = {
+    EBinOpType::_eq,  EBinOpType::_in,   EBinOpType::_nin, EBinOpType::_is, EBinOpType::_nis, EBinOpType::_neq,
+
+    EBinOpType::_eqs, EBinOpType::_neqs,
+
+    EBinOpType::Add,
+};
+
+constexpr auto k_bitwise_op = {
+    EBinOpType::_eq,    EBinOpType::_in,     EBinOpType::_nin,  EBinOpType::_is,
+    EBinOpType::_nis,   EBinOpType::_neq,
+
+    EBinOpType::_b_and, EBinOpType::_b_nand, EBinOpType::_b_or, EBinOpType::_b_xor,
+    EBinOpType::_b_nor, EBinOpType::_b_xnor,
+
+    EBinOpType::ls0,    EBinOpType::ls1,     EBinOpType::lsa,   EBinOpType::rs0,
+    EBinOpType::rs1,    EBinOpType::rsa,     EBinOpType::lr,    EBinOpType::rr,
+};
+
+constexpr auto k_decimal_op = {
+    EBinOpType::Add,    EBinOpType::Sub,   EBinOpType::Mul,    EBinOpType::Div,    EBinOpType::Mod,  EBinOpType::Rem,
+    EBinOpType::Divrem, EBinOpType::Pow,
+
+    EBinOpType::Gre,    EBinOpType::Low,   EBinOpType::Gre_eq, EBinOpType::Low_eq,
+
+    EBinOpType::_eq,    EBinOpType::_in,   EBinOpType::_nin,   EBinOpType::_is,    EBinOpType::_nis, EBinOpType::_neq,
+
+    EBinOpType::_eqs,   EBinOpType::_neqs,
+};
+
+constexpr auto k_integral_op = {
+    EBinOpType::Add, EBinOpType::Sub,    EBinOpType::Mul,    EBinOpType::Div,    EBinOpType::Mod,  EBinOpType::Quo,
+    EBinOpType::Rem, EBinOpType::Divrem, EBinOpType::Pow,
+
+    EBinOpType::Gre, EBinOpType::Low,    EBinOpType::Gre_eq, EBinOpType::Low_eq,
+
+    EBinOpType::_eq, EBinOpType::_in,    EBinOpType::_nin,   EBinOpType::_is,    EBinOpType::_nis, EBinOpType::_neq,
+};
+
+
 enum class ECapability { NONE, Ref, Mut, Copy, Clone, Move };
 [[nodiscard]] ECapability TokTy_to_ECapability(TokTy tok);
 [[nodiscard]] std::string ECapability_to_str(ECapability capa);
@@ -93,8 +148,8 @@ enum class EExprPassMode { NONE, Mut, Ref, Copy, Move };
 enum class EPrimType {
   NONE,
   boolean,
-  ASCII,
-  UTF32,
+  cune,
+  rune,
   c_str,
   str,
   text,
@@ -118,12 +173,20 @@ enum class EPrimType {
   b128,
   ptrdiff,
   fSize,
+  f16,
   f32,
   f64,
+  f80,
   f128,
   u0,
-  deci,
-  udeci,
+  d32,
+  d64,
+  d128,
+  dSize,
+  ud32,
+  ud64,
+  ud128,
+  udSize,
   Enum,
   Flag,
   Component,
@@ -133,11 +196,17 @@ enum class EPrimType {
   Function,
   Fn_Proto,
   tuple,
-  Array,
+  STable,
+  DTable,
+  SMatrix,
+  DMatrix,
+  SHyper,
+  DHyper,
   map,
   Range,
   Iterator,
   Slice,
+  COUNT,
 };
 
 [[nodiscard]] bool EPrimType_is_signed(EPrimType type);
@@ -240,21 +309,6 @@ enum class EScopeType {
 
 [[nodiscard]] size_t EPrimType_to_bits(EPrimType type);
 [[nodiscard]] size_t EPrimType_to_bytes(EPrimType type);
-
-// [isUnsigned][num
-// of
-// digit]
-constexpr size_t size_byte_udeci[2][30] = {
-    {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 13, 14, 14},
-    {1, 1, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 7, 8, 8, 9, 9,  10, 10, 10, 11, 11, 12, 12, 12, 13, 13},
-};
-
-constexpr size_t size_bit_udeci[2][30] = {
-    {4, 7, 10, 14, 17, 20, 23, 27, 30, 34, 37, 40, 43, 47, 50,
-     53, 56, 60, 63, 66, 69, 73, 76, 79, 82, 86, 89, 92, 95, 98},
-    {5, 8, 11, 15, 18, 21, 24, 28, 31, 35, 38, 41, 44, 48, 51,
-     54, 57, 61, 64, 67, 70, 74, 77, 80, 83, 87, 90, 93, 96, 99}
-};
 
 [[nodiscard]] bool is_op_handled(EPrimType src, EBinOpType op);
 [[nodiscard]] bool is_cast_explicit(EPrimType src, EPrimType target);

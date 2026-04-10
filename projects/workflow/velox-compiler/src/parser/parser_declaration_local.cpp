@@ -242,12 +242,13 @@ std::unique_ptr<ast::declaration::local::CodeBlock> parser::Parser_Declaration_L
   auto cb          = ctx.Create_Node<ast::declaration::local::CodeBlock>(ctx.tok_v.peek(-1));
 
   while (!ctx.tok_v.is_end()) {
+    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+
     if (auto instruction = ctx.p_base->parse_instruction(); instruction.is_valid())
       cb->elements.push_back(std::move(instruction));
 
     // one instruction
     if (inline_code) break;
-    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
   return cb;

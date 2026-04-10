@@ -82,17 +82,7 @@ inline constexpr char DETECTED_ABI[] =
     "unknown";
 #endif
 
-inline std::string DETECTED_ABI_SIZE()
-{
-  if (sizeof(void*) == 8 && sizeof(long) == 8 && sizeof(int) == 4)
-    return "LP64";
-  else if (sizeof(void*) == 4 && sizeof(long) == 4 && sizeof(int) == 4)
-    return "ILP32";
-  else if (sizeof(void*) == 8 && sizeof(long) == 4 && sizeof(int) == 4)
-    return "LLP64";
-  else
-    return "unknown";
-}
+inline constexpr size_t DETECTED_ARCH_SIZE = sizeof(void*) * 8;
 
 namespace filesystem
 {

@@ -1,6 +1,9 @@
 
 #pragma once
 
+#include <llvm-19/llvm/IR/DerivedTypes.h>
+#include <llvm-19/llvm/IR/Type.h>
+#include <memory>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -22,9 +25,9 @@ struct Visitor_Codegen {
   Visitor_Codegen(ScriptInfo& _scr_info);
 
 
-  llvm::LLVMContext& ctx;
-  llvm::Module*      mod = nullptr;
-  llvm::IRBuilder<>& builder;
+  llvm::LLVMContext&            ctx;
+  std::unique_ptr<llvm::Module> __module;
+  llvm::IRBuilder<>&            builder;
 
   std::unordered_map<std::string, llvm::Value*> locals;
 
@@ -33,8 +36,13 @@ struct Visitor_Codegen {
 
   LLVM_Tools& tools;
 
-  llvm::Function* init_func;
+  llvm::Function* init_func = nullptr;
 
+  mutable std::vector<std::string> errors;
+
+  void visit(ast::Root& n);
+
+  llvm::Module* mod;
 
   // llvm types
   llvm::Type* const u0Ty;
@@ -46,13 +54,16 @@ struct Visitor_Codegen {
   llvm::Type* const i128Ty;
   llvm::Type* const iSizeTy;
 
+  llvm::Type* const f16Ty;
   llvm::Type* const f32Ty;
   llvm::Type* const f64Ty;
+  llvm::Type* const f80Ty;
   llvm::Type* const f128Ty;
   llvm::Type* const fSizeTy;
 
-  llvm::Type* const strTy;
-  llvm::Type* const cstrTy;
+  llvm::StructType* const textTy;
+  llvm::StructType* const strTy;
+  llvm::Type* const       cstrTy;
 
   llvm::Constant* const get_zero;
 
@@ -60,8 +71,6 @@ struct Visitor_Codegen {
   llvm::BasicBlock* current_bb_continue;
 
   void build_init_func();
-
-  mutable std::vector<std::string> errors;
 
 
   void error_add(ErrorCode code, const ast::Node& n, const std::string& msg, const std::string& hint) const;
@@ -72,7 +81,8 @@ struct Visitor_Codegen {
   llvm::Function* generate_stub(ast::type::Function_Proto& proto, const std::string& name,
                                 llvm::Function::LinkageTypes link_ty);
 
-  llvm::Value* load_if_needed(llvm::Value* val, llvm::Type* type_hint);
+  llvm::Value* ensure_rvalue(ast::AExpression& expr, const std::string& name = "");
+  llvm::Value* ensure_lvalue(ast::AExpression& expr, const std::string& name = "");
 
   // ============ AST ============
   void visit(ast::Node& n);
@@ -88,7 +98,6 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::Expr_ID_Type& n);
   llvm::Type*  visit_ty(ast::Expr_ID_Type& n);
 
-  void visit(ast::Root& n);
 
   // ============ DECLARATION ============
   llvm::Value*    visit(ast::declaration::Global& n);
@@ -144,7 +153,7 @@ struct Visitor_Codegen {
   llvm::Function* visit(ast::declaration::cop::Entity_Del& n);
   llvm::Function* visit(ast::declaration::cop::Entity_Cast& n);
   llvm::Function* visit(ast::declaration::cop::Entity_Op& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_OpIndex& n);
+  llvm::Function* visit(ast::declaration::cop::Entity_Access_Op& n);
   llvm::Function* visit(ast::declaration::cop::Entity_Transfert& n);
 
   llvm::Function* visit(ast::declaration::cop::System& n);
@@ -173,10 +182,10 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::literal::Decimal& n);
   llvm::Value* visit(ast::literal::Floating& n);
 
-  llvm::Value* visit(ast::literal::ASCII& n);
-  llvm::Value* visit(ast::literal::UTF32& n);
+  llvm::Value* visit(ast::literal::CUNE& n);
+  llvm::Value* visit(ast::literal::RUNE& n);
 
-  llvm::Value* visit(ast::literal::Text& n);
+  llvm::Value* visit(ast::literal::Text_Pure& n);
   llvm::Value* visit(ast::literal::Text_Interpolation& n);
   llvm::Value* visit(ast::literal::Textual_Element& n);
   llvm::Value* visit(ast::literal::Textual_Format& n);
@@ -215,6 +224,8 @@ struct Visitor_Codegen {
   llvm::Value* visit(ast::expression::Ptr_At& n);
   llvm::Value* visit(ast::expression::Ptr_Offset& n);
   llvm::Value* visit(ast::expression::Ptr_Val& n);
+  llvm::Value* visit(ast::expression::Mut_Of& n);
+  llvm::Value* visit(ast::expression::Ref_Of& n);
   llvm::Value* visit(ast::expression::Addr_Of& n);
   llvm::Value* visit(ast::expression::Size_Of& n);
   llvm::Value* visit(ast::expression::GetBits& n);

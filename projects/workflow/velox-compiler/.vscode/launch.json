@@ -1,12 +1,14 @@
 {
     "version": "0.2.0",
     "configurations": [
-         {
+        {
             "name": "Debug about",
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox-compiler",
-            "args": ["--about"],
+            "args": [
+                "--about"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -14,7 +16,9 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox-compiler",
-            "args": ["cogito"],
+            "args": [
+                "cogito"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -23,17 +27,46 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox-compiler",
             "args": [
-                "build", "~/velox-test/velox.toml"
+                "build",
+                "/home/flo/velox-test/velox.toml",
+                "--project-name=velox.toml",
+                "--arch=x86_64",
+                "--os=linux-gnu",
+                "--vendor=pc",
+                "--abi=gnu",
+                "--code-model=small",
+                "--reloc-model=pic",
+                "--emit-bin",
+                "--emit-llvm",
+                "--emit-obj",
+                "--release",
+                "--mute",
+                "-O0",
+                "--log-emit",
+                "--debug-ast",
+                "-W0",
+                "--dir-project=/home/flo/velox-test",
+                "--dir-build=/home/flo/velox-test/build",
+                "--dir-src=/home/flo/velox-test/src",
+                "--dir-vendor=/home/flo/velox-test/vendor",
+                "--dir-ffi-json=/home/flo/velox-test/binding/ffi_json",
+                "--dir-binding=/home/flo/velox-test/binding",
+                "--dir-compiler=/home/flo/bin/velox-compiler",
+                "--dir-stdlib=/home/flo/.local/share/velox/lib/std",
+                "--dir-packages=/home/flo/.local/share/velox/lib/packages",
+                "--verify-module",
             ],
             "cwd": "${workspaceFolder}"
-            
         },
         {
             "name": "Release",
             "type": "node",
             "request": "launch",
             "program": "${workspaceFolder}/build/release/velox-compiler",
-            "args": ["build", "${workspaceFolder}/../../../velox-workspace/velox-example"],
+            "args": [
+                "build",
+                "${workspaceFolder}/../../../velox-workspace/velox-example"
+            ],
             "cwd": "${workspaceFolder}"
         }
     ]

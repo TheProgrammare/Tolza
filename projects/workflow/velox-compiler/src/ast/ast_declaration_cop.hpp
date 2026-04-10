@@ -125,6 +125,7 @@ struct Entity final : public ADeclaration, AType {
 
   std::shared_ptr<local::Generic_Parameter_Element> gen_params;
   std::vector<std::shared_ptr<Entity_Op>>           operators;
+  std::vector<std::shared_ptr<Entity_Access_Op>>    op_access;
   std::vector<std::shared_ptr<Entity_Cast>>         casts;
 
   bool isDestructible = true;
@@ -133,6 +134,7 @@ struct Entity final : public ADeclaration, AType {
   bool isExtCastable  = true;
 
   [[nodiscard]] bool contains_op(EBinOpType op, const AType* return_type) const;
+  [[nodiscard]] bool contains_access_op(EAccessOpType op, const AType* return_type) const;
   [[nodiscard]] bool contains_cast(const AType& target_type, bool isCastFrom) const;
   [[nodiscard]] bool contains_comp(const Component& target_comp) const;
 
@@ -192,7 +194,7 @@ struct Entity_Cast final : public ACallable, ADeclaration {
   std::shared_ptr<Entity> parent_entity;
 
   std::unique_ptr<Node>  source;
-  std::unique_ptr<AType> target;
+  std::shared_ptr<AType> target;
 
   bool isSourceSelf = false;
 
@@ -210,7 +212,7 @@ struct Entity_Cast final : public ACallable, ADeclaration {
   void accept(Visitor_Base& v) override;
 };
 
-struct Entity_Op : public ACallable, ADeclaration {
+struct Entity_Op final : public ACallable, ADeclaration {
   std::shared_ptr<Entity> parent_entity;
 
   EBinOpType operatorType = EBinOpType::Add;
@@ -230,11 +232,16 @@ struct Entity_Op : public ACallable, ADeclaration {
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
-struct Entity_OpIndex final : public Entity_Op {
+struct Entity_Access_Op final : ACallable, ADeclaration {
+  std::shared_ptr<Entity> parent_entity;
+
   // nullptr = usize by default other non int type = map like Range = always return a Slice
   std::string parameter_name;
 
-  std::unique_ptr<AType> return_type;
+  EAccessOpType operatorType = EAccessOpType::Index;
+
+
+  std::shared_ptr<AType> return_type;
 
   llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
   llvm::Function* codegen(Visitor_Codegen& v) override;

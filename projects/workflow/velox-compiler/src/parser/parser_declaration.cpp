@@ -279,6 +279,8 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
     fn->extern_call_convention = pattern->at_str(1, 0);
   }
 
+  ctx.current_function = fn.get();
+
   ctx.m_sym->add_decl(fn);
   ctx.m_sym->enter_scope(fn->name, EScopeType::Function);
 
@@ -292,6 +294,7 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   if (!fn->is_external) fn->codeblock = ctx.p_loc->code_block_instruction();
 
   ctx.m_sym->exit_scope();
+  ctx.current_function = nullptr;
 
   return fn;
 }

@@ -54,7 +54,7 @@ TypeAlias json_to_typealias(const json& j);
 // Helpers pour convertir string → enum
 EType                     str_to_etype(const std::string& s);
 EPassMode                 str_to_passmode(const std::string& s);
-CallConvention            str_to_callconvention(const std::string& s);
+ECallConvention           str_to_callconvention(const std::string& s);
 // size, align
 std::pair<size_t, size_t> EType_size_and_align(EType ty);
 // size, align

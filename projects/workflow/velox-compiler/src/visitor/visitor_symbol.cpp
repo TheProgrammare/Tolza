@@ -119,14 +119,14 @@ void Visitor_Symbol::visit(ast::expression::Call& n)
         // variadic prameters resolved in visitor type on expression inferred type
       } else {
         auto& param        = fn_ptr->prototype->parameters[arg_count];
-        arg->inferred_type = param->type.get();
+        arg->inferred_type = param->type;
         arg_count++;
       }
     } else {
       bool found = false;
       for (auto& param : fn_ptr->prototype->parameters) {
         if (param->name == arg->name) {
-          arg->inferred_type = param->type.get();
+          arg->inferred_type = param->type;
           found              = true;
           break;
         }

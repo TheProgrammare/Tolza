@@ -2,8 +2,12 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <iostream>
+#include <llvm-19/llvm/ADT/APInt.h>
+#include <llvm-19/llvm/IR/Intrinsics.h>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include <llvm/IR/GlobalValue.h>
@@ -31,6 +35,7 @@
 #include <compiler_context.hpp>
 
 #include "ast/ast_data.hpp"
+#include "ast/ast_inferred_type_singleton.hpp"
 #include "codegen_tools.hpp"
 #include "static_evaluation.hpp"
 #include "compiler/compiler.hpp"
@@ -56,7 +61,8 @@
 Visitor_Codegen::Visitor_Codegen(ScriptInfo& _scr_info)
   : scr_info(_scr_info)
   , ctx(compiler::LLVM_CTX)
-  , mod(new llvm::Module(std::filesystem::path(_scr_info.file_path).filename().stem().c_str(), ctx))
+  , __module(std::make_unique<llvm::Module>(std::filesystem::path(_scr_info.file_path).filename().stem().c_str(), ctx))
+  , mod(__module.get())
   , builder(*new llvm::IRBuilder<>(ctx))
   , tools(*new LLVM_Tools(*this))
   , eval(*new Static_Evaluator(*this))
@@ -67,12 +73,17 @@ Visitor_Codegen::Visitor_Codegen(ScriptInfo& _scr_info)
   , i32Ty(llvm::Type::getInt32Ty(ctx))
   , i64Ty(llvm::Type::getInt64Ty(ctx))
   , i128Ty(llvm::Type::getInt128Ty(ctx))
-  , iSizeTy(llvm::Type::getIntNTy(ctx, compiler::COMP_CTX.get_size_bit()))
+  , iSizeTy(llvm::Type::getIntNTy(ctx, compiler::COMP_CTX.get_arch_size()))
+  , f16Ty(llvm::Type::getHalfTy(ctx))
   , f32Ty(llvm::Type::getFloatTy(ctx))
   , f64Ty(llvm::Type::getDoubleTy(ctx))
+  , f80Ty(llvm::Type::getX86_FP80Ty(ctx))
   , f128Ty(llvm::Type::getFP128Ty(ctx))
-  , fSizeTy(compiler::COMP_CTX.get_size_bit() == 32 ? f32Ty : f64Ty)
-  , strTy(llvm::StructType::get(ctx, {i32Ty->getPointerTo(), i32Ty}))
+  , fSizeTy(compiler::COMP_CTX.get_arch_size() == 32   ? f32Ty
+            : compiler::COMP_CTX.get_arch_size() == 64 ? f64Ty
+                                                       : f128Ty)
+  , strTy(llvm::StructType::get(ctx, {i8Ty->getPointerTo(), i32Ty}))
+  , textTy(llvm::StructType::get(ctx, {i32Ty->getPointerTo(), i32Ty}))
   , cstrTy(llvm::Type::getInt8Ty(ctx)->getPointerTo())
   , get_zero(llvm::ConstantInt::get(i32Ty, 0))
 {
@@ -85,8 +96,9 @@ void Visitor_Codegen::build_init_func()
   auto ty = llvm::FunctionType::get(u0Ty, false);
   auto fn = llvm::Function::Create(ty, llvm::Function::ExternalLinkage, "init_module_" + mod->getName(), *mod);
 
-  auto bb = llvm::BasicBlock::Create(ctx, "entry", fn);
-  builder.CreateRetVoid();
+  auto              bb = llvm::BasicBlock::Create(ctx, "entry", fn);
+  llvm::IRBuilder<> irb(bb);
+  irb.CreateRetVoid();
 
   init_func = fn;
 }
@@ -118,35 +130,25 @@ void Visitor_Codegen::error_two_lines(ErrorCode code, const ast::Node& first, co
   errors.push_back(out);
 }
 
-llvm::Value* Visitor_Codegen::load_if_needed(llvm::Value* val, llvm::Type* type_hint)
+llvm::Value* Visitor_Codegen::ensure_rvalue(ast::AExpression& expr, const std::string& name)
 {
-  if (val->getType()->isPointerTy()) {
-    if (llvm::isa<llvm::AllocaInst>(val)) {
-      // we must specify the real type pointed
-      return builder.CreateLoad(type_hint, val);
-    }
-  }
-  return val; // already value
+  if (expr.is_rvalue()) return expr.codegen(*this);
+
+  auto val = expr.codegen(*this);
+  auto ty  = expr.inferred_type->codegen_ty(*this);
+  // load the value
+  return builder.CreateLoad(ty, val, name);
 }
 
-/*
-llvm::Value* Visitor_Codegen::visit(ast::Root& n)
+
+llvm::Value* Visitor_Codegen::ensure_lvalue(ast::AExpression& expr, const std::string& name)
 {
-  llvm::Value* last_valid = nullptr;
+  if (expr.is_lvalue()) return expr.codegen(*this);
 
-  for (auto& elem : n.global_nodes) {
-    last_valid = elem->codegen(*this);
-  }
-  // test main fn
-  auto fn_ty   = llvm::FunctionType::get(builder.getInt32Ty(), false);
-  auto main_fn = llvm::Function::Create(fn_ty, llvm::Function::ExternalLinkage, "main", mod);
-
-  auto entry = llvm::BasicBlock::Create(ctx, "entry", main_fn);
-  builder.SetInsertPoint(entry);
-  builder.CreateRet(builder.getInt32(0));
-  mod->print(llvm::outs(), nullptr);
+  error_add(225, expr, "Expected a lvalue expression.", "a lvalue is frequently a variable.");
   return nullptr;
-}*/
+}
+
 
 llvm::Function* Visitor_Codegen::generate_stub(ast::type::Function_Proto& proto, const std::string& name,
                                                llvm::Function::LinkageTypes link_ty)
@@ -155,6 +157,12 @@ llvm::Function* Visitor_Codegen::generate_stub(ast::type::Function_Proto& proto,
 
   auto fn_ty = llvm::cast<llvm::FunctionType>(proto.codegen_ty(*this));
   auto fn    = llvm::Function::Create(fn_ty, link_ty, name, *mod);
+
+  size_t idx = 0;
+  for (auto& arg : fn->args()) {
+    auto& node_param     = proto.parameters[idx++];
+    node_param->llvm_arg = &arg;
+  }
 
   return fn;
 }
@@ -231,63 +239,76 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::Global& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-
   auto ty = n.type->codegen_ty(*this);
-  if (n.kind == EVariableKind::Const) {
-    if (n.is_external) {
-      return n.llvm_value =
-                 new llvm::GlobalVariable(*mod, ty, true, llvm::GlobalVariable::ExternalLinkage, nullptr, n.name);
-    }
-    if (auto expr = eval.evaluate_expression(*n.expression)) {
-      if (auto expr_const = tools.create_constant(*n.expression->inferred_type, *expr.value())) {
-        return n.llvm_value = new llvm::GlobalVariable(*mod, ty, true,
-                                                       n.is_exported ? llvm::GlobalVariable::ExternalLinkage
-                                                                     : llvm::GlobalVariable::InternalLinkage,
-                                                       expr_const.value(), n.name);
-      }
+
+  if (n.is_external) {
+    return n.llvm_value = new llvm::GlobalVariable(*mod, ty, true, llvm::GlobalVariable::ExternalLinkage,
+                                                   tools.get_zeroinitializer(*n.type), n.name);
+  }
+
+  auto       linkage  = n.is_exported ? llvm::GlobalVariable::ExternalLinkage : llvm::GlobalVariable::InternalLinkage;
+  const bool is_const = n.kind != EVariableKind::Var;
+
+  if (!n.expression) {
+    return n.llvm_value =
+               new llvm::GlobalVariable(*mod, ty, is_const, linkage, tools.get_zeroinitializer(*n.type), n.name);
+  }
+
+  if (auto expr = eval.evaluate_expression(*n.expression)) {
+    if (auto expr_const = tools.create_constant(*expr.value())) {
+      return n.llvm_value = new llvm::GlobalVariable(*mod, ty, is_const,
+                                                     n.is_exported ? llvm::GlobalVariable::ExternalLinkage
+                                                                   : llvm::GlobalVariable::InternalLinkage,
+                                                     expr_const.value(), n.name);
+    } else {
+      error_add(223, *n.expression, expr_const.error(), "");
+      return nullptr;
     }
   } else {
-    auto glo = new llvm::GlobalVariable(
-        *mod, ty, false, n.is_exported ? llvm::GlobalVariable::ExternalLinkage : llvm::GlobalVariable::InternalLinkage,
-        nullptr, n.name);
+    error_add(222, *n.expression, expr.error(), "");
+    return nullptr;
+  }
 
+  /*
     build_init_func();
     auto&             bb = init_func->getEntryBlock();
     llvm::IRBuilder<> irb(&bb);
     irb.SetInsertPoint(bb.getTerminator()); // before ret
+
     irb.CreateStore(n.expression->codegen(*this), glo);
 
     return n.llvm_value = glo;
-  }
+  */
 }
+
+// ============ FUNCTION ============
 llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 {
   if (n.llvm_fn) return n.llvm_fn;
 
   const bool is_main = n.name == "main";
 
-  llvm::Function::LinkageTypes linkage =
-      n.is_exported || n.is_external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
+  llvm::Function* fn = nullptr;
 
-  llvm::FunctionType* fn_ty;
-
-  if (is_main) {
-    linkage = llvm::Function::ExternalLinkage;
-
-    std::vector<llvm::Type*> param_tys;
-    for (auto& param : n.prototype->parameters) param_tys.emplace_back(param->type->codegen_ty(*this));
-    fn_ty = llvm::FunctionType::get(i32Ty, param_tys, false);
+  if (n.symbol->llvm_symbol) {
+    fn = llvm::cast<llvm::Function>(n.symbol->llvm_symbol);
   } else {
-    fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
-  }
+    llvm::Function::LinkageTypes linkage =
+        n.is_exported || n.is_external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
 
-  auto fn = llvm::Function::Create(fn_ty, linkage, n.name, *mod);
+    llvm::FunctionType* fn_ty;
 
-  // store arguments to nodes to access references from symbol
-  size_t idx = 0;
-  for (auto& arg : fn->args()) {
-    auto& node_param     = n.prototype->parameters[idx++];
-    node_param->llvm_arg = &arg;
+    // special main function case
+    if (is_main) {
+      linkage = llvm::Function::ExternalLinkage;
+      std::vector<llvm::Type*> param_tys;
+      for (auto& param : n.prototype->parameters) param_tys.emplace_back(param->type->codegen_ty(*this));
+      fn_ty = llvm::FunctionType::get(i32Ty, param_tys, false);
+    } else {
+      fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
+    }
+
+    fn = generate_stub(*n.prototype, n.name, linkage);
   }
 
   if (!n.codeblock) return fn;
@@ -297,10 +318,13 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 
   n.codeblock->codegen_pass(*this);
 
-  if (is_main)
-    builder.CreateRet(llvm::ConstantInt::get(i32Ty, 0));
-  else if (!entry->getTerminator())
-    builder.CreateRetVoid();
+  // TERMINATE BLOCKS PROPERLY
+  if (!builder.GetInsertBlock()->getTerminator()) {
+    if (is_main)
+      builder.CreateRet(llvm::ConstantInt::get(i32Ty, 0));
+    else
+      builder.CreateRetVoid();
+  }
 
   return n.llvm_fn = fn;
 }
@@ -487,7 +511,7 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Variable& n)
 
   if (n.kind == EVariableKind::Const) {
     if (auto ptr = eval.evaluate_expression(*n.expression)) {
-      if (auto val_const = tools.create_constant(*n.type, *ptr.value())) {
+      if (auto val_const = tools.create_constant(*ptr.value())) {
         return n.llvm_value = val_const.value();
       }
     }
@@ -495,9 +519,9 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Variable& n)
 
   llvm::AllocaInst* alloca;
   if (auto ptr_ty_table = dynamic_cast<ast::type::Table*>(n.type.get())) {
-    if (ptr_ty_table->table_size.has_value()) {
+    if (ptr_ty_table->table_size > 0) {
       auto ty = ptr_ty_table->inner->codegen_ty(*this);
-      alloca  = builder.CreateAlloca(ty, builder.getInt32(ptr_ty_table->table_size.value()), n.name);
+      alloca  = builder.CreateAlloca(ty, builder.getInt32(ptr_ty_table->table_size), n.name);
     } else {
       auto ty = n.type->codegen_ty(*this);
       alloca  = builder.CreateAlloca(ty, nullptr, n.name);
@@ -642,7 +666,7 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::cop::Entity_Op& n)
 {
   return nullptr;
 }
-llvm::Function* Visitor_Codegen::visit(ast::declaration::cop::Entity_OpIndex& n)
+llvm::Function* Visitor_Codegen::visit(ast::declaration::cop::Entity_Access_Op& n)
 {
   return nullptr;
 }
@@ -757,7 +781,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Integral& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  if (auto ptr = tools.create_constant(*n.inferred_type, n)) return n.llvm_value = ptr.value();
+  if (auto ptr = tools.create_constant(n)) return n.llvm_value = ptr.value();
   return nullptr;
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Decimal& n)
@@ -765,7 +789,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Decimal& n)
   if (n.llvm_value) return n.llvm_value;
 
 
-  if (auto ptr = tools.create_constant(*n.inferred_type, n)) return n.llvm_value = ptr.value();
+  if (auto ptr = tools.create_constant(n)) return n.llvm_value = ptr.value();
   return nullptr;
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Floating& n)
@@ -773,19 +797,18 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Floating& n)
   if (n.llvm_value) return n.llvm_value;
 
 
-  if (auto ptr = tools.create_constant(*n.inferred_type, n)) return n.llvm_value = ptr.value();
+  if (auto ptr = tools.create_constant(n)) return n.llvm_value = ptr.value();
 
   return nullptr;
 }
 
-llvm::Value* Visitor_Codegen::visit(ast::literal::ASCII& n)
+llvm::Value* Visitor_Codegen::visit(ast::literal::CUNE& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-
   return n.llvm_value = llvm::ConstantInt::get(i8Ty, n.val);
 }
-llvm::Value* Visitor_Codegen::visit(ast::literal::UTF32& n)
+llvm::Value* Visitor_Codegen::visit(ast::literal::RUNE& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
@@ -798,7 +821,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::UTF32& n)
   return n.llvm_value = llvm::ConstantInt::get(i32Ty, codePoint);
 }
 
-llvm::Value* Visitor_Codegen::visit(ast::literal::Text& n)
+llvm::Value* Visitor_Codegen::visit(ast::literal::Text_Pure& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
@@ -830,8 +853,9 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Element& n)
 }
 llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Format& n)
 {
-  if (n.is_pure_literal_text) return n.values[0].val->codegen(*this);
-
+  if (n.values.size() == 1 && n.values[0].kind == ast::literal::Textual_Element::Kind::Text) {
+    return n.values[0].val->codegen(*this);
+  }
   for (auto& elem : n.values) {
     elem.val->codegen(*this);
   }
@@ -1012,33 +1036,31 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call& n)
   if (n.llvm_value) return n.llvm_value;
 
   llvm::Function* fn_callee;
-  if (!n.function_symbol->llvm_symbol) {
-    if (auto ptr = dynamic_cast<ast::AIdentifier*>(n.callee.get())) {
-      fn_callee = generate_stub(*n.function_proto, ptr->get_base_name(),
-                                n.function_symbol->symbol->_scr_info == n._scr_info ? llvm::Function::InternalLinkage
-                                                                                    : llvm::Function::ExternalLinkage);
-    }
-  } else {
+
+  // if already generated
+  if (n.function_symbol->llvm_symbol) {
     fn_callee = llvm::cast<llvm::Function>(n.function_symbol->llvm_symbol);
+  }
+  // else, generate a stub
+  else {
+    llvm::Function::LinkageTypes linkage = n.function_symbol->is_external || n.function_symbol->is_exported
+                                               ? llvm::Function::ExternalLinkage
+                                               : llvm::Function::InternalLinkage;
+
+    auto ptr  = dynamic_cast<ast::AIdentifier*>(n.callee.get());
+    fn_callee = generate_stub(*n.function_proto, ptr->get_base_name(), linkage);
+
+    n.function_symbol->llvm_symbol = fn_callee;
   }
 
   size_t                    count = 0;
   std::vector<llvm::Value*> args;
   for (auto& arg : n.param_args) {
-    llvm::Value* load     = nullptr;
-    auto         arg_llvm = load_if_needed(arg->codegen(*this), arg->inferred_type->codegen_ty(*this));
-
-    if (arg->fn_type->isVariadic && count > arg->fn_type->parameters.size() - 1)
-      arg_llvm->setName("arg");
-    else if (arg->name.empty())
-      arg_llvm->setName(arg->fn_type->parameters[count]->name);
-    else
-      arg_llvm->setName(arg->name);
-
-    args.emplace_back(arg_llvm);
+    args.emplace_back(arg->codegen(*this));
     count++;
   }
-  auto result = builder.CreateCall(fn_callee, args, n.callee->debug_str());
+  std::string call_name = n.function_proto->returnType != ast::type::get_void_type() ? n.callee->debug_str() : "";
+  auto        result    = builder.CreateCall(fn_callee, args, call_name);
 
   return n.llvm_value = result;
 }
@@ -1046,7 +1068,32 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call_Argument& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  return n.llvm_value = n.expression->codegen(*this);
+  // variadic arguement
+  // assume C conventions
+  if (n.variadic_arg) {
+    if (n.expression->is_forced_lvalue()) {
+      return ensure_lvalue(*n.expression);
+    }
+    return n.llvm_value = ensure_rvalue(*n.expression);
+  }
+
+  switch (n.fn_param_type->passMode) {
+  case EPassMode::Move:
+  case EPassMode::Mut:
+  case EPassMode::Ref:   return n.llvm_value = ensure_lvalue(*n.expression);
+  case EPassMode::Copy:
+  case EPassMode::Clone: return n.llvm_value = ensure_rvalue(*n.expression, "arg." + n.fn_param_type->name);
+  case EPassMode::Addr:  {
+    llvm::Value* ptr     = ensure_lvalue(*n.expression);
+    llvm::Type*  ptrTy   = ptr->getType();
+    llvm::Value* storage = builder.CreateAlloca(ptrTy, nullptr, "addr.storage");
+    builder.CreateStore(ptr, storage);
+    return n.llvm_value = storage;
+  }
+  case EPassMode::NONE: {
+    return n.llvm_value = n.expression->codegen(*this);
+  }
+  }
 }
 llvm::Value* Visitor_Codegen::visit(ast::expression::Call_System& n)
 {
@@ -1074,6 +1121,34 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Ptr_Val& n)
 {
   return nullptr;
 }
+llvm::Value* Visitor_Codegen::visit(ast::expression::Mut_Of& n)
+{
+  if (n.llvm_value) return n.llvm_value;
+
+  auto targetPtr = n.target->codegen(*this);
+
+  if (!targetPtr->getType()->isPointerTy()) {
+    throw std::runtime_error("& requires an lvalue expression");
+  }
+
+  // return the pointer directly
+  n.llvm_value = targetPtr;
+  return targetPtr;
+}
+llvm::Value* Visitor_Codegen::visit(ast::expression::Ref_Of& n)
+{
+  if (n.llvm_value) return n.llvm_value;
+
+  auto targetPtr = n.target->codegen(*this);
+
+  if (!targetPtr->getType()->isPointerTy()) {
+    throw std::runtime_error("& requires an lvalue expression");
+  }
+
+  // return the pointer directly
+  n.llvm_value = targetPtr;
+  return targetPtr;
+}
 llvm::Value* Visitor_Codegen::visit(ast::expression::Addr_Of& n)
 {
   return nullptr;
@@ -1097,124 +1172,138 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::New_Ptr& n)
 }
 
 // ============ STATEMENT ============
+
+// ============ IF STATEMENT ============
 void Visitor_Codegen::visit(ast::statement::If& n)
 {
   auto function = builder.GetInsertBlock()->getParent();
 
-  auto bb_then = llvm::BasicBlock::Create(ctx, "then", function);
+  auto bb_then  = llvm::BasicBlock::Create(ctx, "if.then", function);
+  auto bb_merge = llvm::BasicBlock::Create(ctx, "if.merge", function);
 
-  auto cond = n.evaluator.node->codegen(*this);
+  llvm::Value* cond = n.evaluator.node ? n.evaluator.node->codegen(*this) : nullptr;
 
   if (n.alternative_statement) {
-    auto bb_else = llvm::BasicBlock::Create(ctx, "else", function);
+    auto bb_else = llvm::BasicBlock::Create(ctx, "if.alt." + n.alternative_statement->debug_str(), function);
     builder.CreateCondBr(cond, bb_then, bb_else);
 
     builder.SetInsertPoint(bb_then);
     n.codeblock->codegen_pass(*this);
+    if (!builder.GetInsertBlock()->getTerminator()) builder.CreateBr(bb_merge);
 
     builder.SetInsertPoint(bb_else);
     visit(*n.alternative_statement.get());
+    if (!builder.GetInsertBlock()->getTerminator()) builder.CreateBr(bb_merge);
   } else {
-    auto bb_merge = llvm::BasicBlock::Create(ctx, "merge", function);
-    builder.CreateCondBr(cond, bb_then, bb_merge);
+    if (cond)
+      builder.CreateCondBr(cond, bb_then, bb_merge);
+    else
+      builder.CreateBr(bb_then);
 
     builder.SetInsertPoint(bb_then);
     n.codeblock->codegen_pass(*this);
-
-    builder.SetInsertPoint(bb_merge);
+    if (!builder.GetInsertBlock()->getTerminator()) builder.CreateBr(bb_merge);
   }
+
+  builder.SetInsertPoint(bb_merge);
 }
+
+// ============ FOR LOOP ============
 void Visitor_Codegen::visit(ast::statement::For& n)
 {
   auto function = builder.GetInsertBlock()->getParent();
 
   llvm::AllocaInst* index_alloca = n.index ? llvm::cast<llvm::AllocaInst>(n.index->codegen(*this)) : nullptr;
-  if (index_alloca) index_alloca->setName("i");
 
-  if (auto ptr = dynamic_cast<ast::literal::Range*>(n.expression.get())) {
-    auto start = ptr->start->codegen(*this);
-    auto end   = ptr->end->codegen(*this);
+  if (index_alloca) index_alloca->setName("for.index");
 
-    if (index_alloca) builder.CreateStore(start, index_alloca);
+  auto* range = dynamic_cast<ast::literal::Range*>(n.expression.get());
+  if (!range) return;
 
+  auto start = ensure_rvalue(*range->start);
+  auto end   = ensure_rvalue(*range->end);
 
-    auto bb_header = llvm::BasicBlock::Create(ctx, "header.for", function);
-    auto bb_body   = llvm::BasicBlock::Create(ctx, "body", function);
-    auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
+  if (index_alloca) builder.CreateStore(start, index_alloca);
 
-    builder.CreateBr(bb_header); // jump
+  auto bb_header = llvm::BasicBlock::Create(ctx, "for.header", function);
+  auto bb_body   = llvm::BasicBlock::Create(ctx, "for.body", function);
+  auto bb_after  = llvm::BasicBlock::Create(ctx, "for.after", function);
 
-    // Header
-    builder.SetInsertPoint(bb_header);
-    if (index_alloca) {
-      auto index_load = builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca);
-      index_load->setName("i");
+  builder.CreateBr(bb_header);
 
-      auto cond = builder.CreateICmpEQ(index_load, end);
-      cond->setName("is_ended");
-      // auto cond = builder.CreateICmpEQ(index_load, end);
-      builder.CreateCondBr(cond, bb_after, bb_body);
-    }
+  // HEADER
+  builder.SetInsertPoint(bb_header);
 
-    current_bb_break    = bb_after;
-    current_bb_continue = bb_header;
+  llvm::Value* index = index_alloca ? builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca) : nullptr;
 
-    builder.SetInsertPoint(bb_body);
-    n.codeblock->codegen_pass(*this);
+  // IMPORTANT: canonical loop condition = index < end
+  llvm::Value* cond = builder.CreateICmpULT(index, end);
 
-    // incrementation
-    auto one = llvm::ConstantInt::get(index_alloca->getAllocatedType(), 1);
-    one->setName("one");
-    auto index_load = builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca);
-    index_load->setName("i");
-    auto incr = builder.CreateAdd(one, index_load);
-    incr->setName("i");
-    builder.CreateStore(incr, index_alloca);
+  builder.CreateCondBr(cond, bb_body, bb_after);
 
-    builder.CreateBr(bb_header);
-
-    current_bb_break    = nullptr;
-    current_bb_continue = nullptr;
-
-    builder.SetInsertPoint(bb_after);
-  }
-}
-void Visitor_Codegen::visit(ast::statement::Loop& n)
-{
-  auto function = builder.GetInsertBlock()->getParent();
-
-  auto bb_header = llvm::BasicBlock::Create(ctx, "loop", function);
-  auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
-
-  builder.CreateBr(bb_header); // jump
-
+  // BODY
   current_bb_break    = bb_after;
   current_bb_continue = bb_header;
 
-  // body : loop {...}
-  builder.SetInsertPoint(bb_header);
+  builder.SetInsertPoint(bb_body);
+
   n.codeblock->codegen_pass(*this);
-  builder.CreateBr(bb_header);
+
+  if (!builder.GetInsertBlock()->getTerminator()) {
+    if (index_alloca) {
+      llvm::Value* old = builder.CreateLoad(index_alloca->getAllocatedType(), index_alloca);
+      llvm::Value* one = llvm::ConstantInt::get(index_alloca->getAllocatedType(), 1);
+      llvm::Value* inc = builder.CreateAdd(old, one);
+      builder.CreateStore(inc, index_alloca);
+    }
+
+    builder.CreateBr(bb_header);
+  }
 
   current_bb_break    = nullptr;
   current_bb_continue = nullptr;
 
-  // after : } ...
+  // EXIT
   builder.SetInsertPoint(bb_after);
 }
+// ============ LOOP ============
+void Visitor_Codegen::visit(ast::statement::Loop& n)
+{
+  auto function = builder.GetInsertBlock()->getParent();
+
+  auto bb_header = llvm::BasicBlock::Create(ctx, "loop.header", function);
+  auto bb_body   = llvm::BasicBlock::Create(ctx, "loop.body", function);
+  auto bb_after  = llvm::BasicBlock::Create(ctx, "loop.after", function);
+
+  builder.CreateBr(bb_header);
+
+  current_bb_break    = bb_after;
+  current_bb_continue = bb_header;
+
+  builder.SetInsertPoint(bb_header);
+  builder.CreateBr(bb_body);
+
+  builder.SetInsertPoint(bb_body);
+  n.codeblock->codegen_pass(*this);
+
+  if (!builder.GetInsertBlock()->getTerminator()) builder.CreateBr(bb_header);
+
+  current_bb_break    = nullptr;
+  current_bb_continue = nullptr;
+
+  builder.SetInsertPoint(bb_after);
+}
+// ============ WHILE LOOP ============
 void Visitor_Codegen::visit(ast::statement::While& n)
 {
   auto function = builder.GetInsertBlock()->getParent();
 
-  // Blocks
-  auto bb_header = llvm::BasicBlock::Create(ctx, "while", function);
-  auto bb_body   = llvm::BasicBlock::Create(ctx, "body", function);
-  auto bb_after  = llvm::BasicBlock::Create(ctx, "after", function);
+  auto bb_header = llvm::BasicBlock::Create(ctx, "while.header", function);
+  auto bb_body   = llvm::BasicBlock::Create(ctx, "while.body", function);
+  auto bb_after  = llvm::BasicBlock::Create(ctx, "while.after", function);
 
-  // Init jump on header
   builder.CreateBr(bb_header);
 
-  // Header
   builder.SetInsertPoint(bb_header);
 
   llvm::Value* cond = nullptr;
@@ -1224,69 +1313,77 @@ void Visitor_Codegen::visit(ast::statement::While& n)
     cond = ptr->codegen(*this);
 
   if (n.isDo) {
-    // Do-while : body first
     builder.CreateBr(bb_body);
   } else {
-    // While classique : test cond before body
     builder.CreateCondBr(cond, bb_body, bb_after);
   }
 
   current_bb_break    = bb_after;
   current_bb_continue = bb_header;
 
-  // Body
   builder.SetInsertPoint(bb_body);
   n.codeblock->codegen_pass(*this);
 
   current_bb_break    = nullptr;
   current_bb_continue = nullptr;
 
-  // Do-while cond
   if (n.isDo) {
-    llvm::Value* condDo = nullptr;
-    if (auto ptr = n.evaluator.get_condition())
-      condDo = ptr->codegen(*this);
-    else if (auto ptr = n.evaluator.get_pattern())
-      condDo = ptr->codegen(*this);
-
+    llvm::Value* condDo = n.evaluator.get_condition() ? n.evaluator.get_condition()->codegen(*this)
+                                                      : n.evaluator.get_pattern()->codegen(*this);
     builder.CreateCondBr(condDo, bb_body, bb_after);
   } else {
-    // While : end of body, return to header for cond
-    builder.CreateBr(bb_header);
+    if (!builder.GetInsertBlock()->getTerminator()) builder.CreateBr(bb_header);
   }
 
-  // After
   builder.SetInsertPoint(bb_after);
 }
+
+// ============ GOTO / LABEL ============
 void Visitor_Codegen::visit(ast::statement::GoTo& n)
 {
-  if (auto bb = llvm::cast<llvm::BasicBlock>(n.label_sym->codegen_pass(*this))) builder.CreateBr(bb);
+  builder.CreateBr(n.label_sym->llvm_bb);
 }
+
 llvm::Value* Visitor_Codegen::visit(ast::statement::GoTo_Label& n)
 {
-  if (n.llvm_bb) return n.llvm_bb;
+  if (!n.llvm_bb) {
+    auto function = builder.GetInsertBlock()->getParent();
+    n.llvm_bb     = llvm::BasicBlock::Create(ctx, n.name, function);
+  }
 
-  auto function = builder.GetInsertBlock()->getParent();
-
-  auto label = llvm::BasicBlock::Create(ctx, n.name, function);
-  builder.SetInsertPoint(label);
+  builder.SetInsertPoint(n.llvm_bb);
   n.codeblock->codegen_pass(*this);
-  return n.llvm_bb = label;
+
+  if (!builder.GetInsertBlock()->getTerminator()) {
+    auto dead = llvm::BasicBlock::Create(ctx, "label.dead", builder.GetInsertBlock()->getParent());
+    builder.CreateBr(dead);
+    builder.SetInsertPoint(dead);
+  }
+
+  return n.llvm_bb;
 }
+
+// ============ RETURN / BREAK / CONTINUE ============
 llvm::ReturnInst* Visitor_Codegen::visit(ast::statement::Return& n)
 {
-  auto val = n.value->codegen(*this);
+  auto ret = n.value ? builder.CreateRet(n.value->codegen(*this)) : builder.CreateRetVoid();
 
-  return builder.CreateRet(val);
+  auto dead = llvm::BasicBlock::Create(ctx, "fn.dead", builder.GetInsertBlock()->getParent());
+  builder.SetInsertPoint(dead);
+
+  return ret;
 }
+
 llvm::BranchInst* Visitor_Codegen::visit(ast::statement::Break& n)
 {
   return current_bb_break ? builder.CreateBr(current_bb_break) : nullptr;
 }
+
 llvm::BranchInst* Visitor_Codegen::visit(ast::statement::Continue& n)
 {
   return current_bb_continue ? builder.CreateBr(current_bb_continue) : nullptr;
 }
+
 void Visitor_Codegen::visit(ast::statement::Match& n)
 {
 }
@@ -1297,6 +1394,23 @@ void Visitor_Codegen::visit(ast::statement::Match_Case& n)
 // ============ OPERATION ============
 llvm::Value* Visitor_Codegen::visit(ast::operation::Cast_As& n)
 {
+  if (n.llvm_value) return n.llvm_value;
+
+  auto expr      = ensure_rvalue(*n.expression);
+  auto target_ty = n.type->codegen_ty(*this);
+
+  switch (n.cast_type) {
+  case ast::operation::Cast_As::ECastType::AS: {
+    if (dynamic_cast<ast::type::Primitive*>(n.expression->inferred_type.get())
+        && dynamic_cast<ast::type::Primitive*>(n.expression->inferred_type.get())) {
+      return n.llvm_value = tools.primitive_coerce(expr, expr->getType(), target_ty);
+    }
+  }
+  case ast::operation::Cast_As::ECastType::AS_REINTERPRET: {
+    return n.llvm_value = builder.CreateBitCast(expr, target_ty);
+  }
+  case ast::operation::Cast_As::ECastType::AS_SAFE: return n.llvm_value = builder.CreateBitCast(expr, target_ty);
+  }
   return nullptr;
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Is& n)
@@ -1309,15 +1423,436 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::In& n)
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Assignment& n)
 {
-  return nullptr;
+  if (n.llvm_value) return n.llvm_value;
+
+  return n.llvm_value = builder.CreateStore(n.right->codegen(*this), n.left->codegen(*this));
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
 {
-  return nullptr;
+  auto l_ptr = ensure_rvalue(*n.left, "bin.l");
+  auto r_ptr = ensure_rvalue(*n.right, "bin.r");
+
+  auto op_ty      = n.inferred_type;
+  auto llvm_op_ty = op_ty->llvm_type;
+
+  using Func = std::function<void()>;
+
+  auto arith = [&](Func fn_sint, Func fn_uint, Func fn_float) {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (EPrimType_is_floating(ptr->type)) {
+        if (fn_float) fn_float();
+      } else if (EPrimType_is_integral(ptr->type)) {
+        if (EPrimType_is_signed(ptr->type)) {
+          if (fn_sint) fn_sint();
+        } else {
+          if (fn_uint)
+            fn_uint();
+          else if (fn_sint)
+            fn_sint();
+        }
+      }
+    }
+  };
+
+  auto byte = [&](Func bin) {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (ptr->type == EPrimType::boolean || EPrimType_is_byte(ptr->type)) {
+        bin();
+      }
+    }
+  };
+
+
+  llvm::Value* op;
+
+  switch (n.op) {
+  case EBinOpType::NONE:
+  case EBinOpType::Add:  {
+    arith([&]() { op = builder.CreateAdd(l_ptr, r_ptr, "bin.add"); }, nullptr,
+          [&]() { op = builder.CreateFAdd(l_ptr, r_ptr, "bin.add"); });
+
+    break;
+  }
+  case EBinOpType::Sub: {
+    arith([&]() { op = builder.CreateSub(l_ptr, r_ptr, "bin.sub"); }, nullptr,
+          [&]() { op = builder.CreateFSub(l_ptr, r_ptr, "bin.sub"); });
+
+    break;
+  }
+  case EBinOpType::Mul: {
+    arith([&]() { op = builder.CreateMul(l_ptr, r_ptr, "bin.mul"); }, nullptr,
+          [&]() { op = builder.CreateFMul(l_ptr, r_ptr, "bin.mul"); });
+
+    break;
+  }
+  case EBinOpType::Div: {
+    arith(
+        [&]() {
+          auto fl = builder.CreateSIToFP(l_ptr, fSizeTy);
+          auto fr = builder.CreateSIToFP(r_ptr, fSizeTy);
+          op      = builder.CreateFDiv(fl, fr, "bin.div");
+        },
+        [&]() {
+          auto fl = builder.CreateUIToFP(l_ptr, fSizeTy);
+          auto fr = builder.CreateUIToFP(r_ptr, fSizeTy);
+          op      = builder.CreateFDiv(fl, fr, "bin.div");
+        },
+        [&]() { op = builder.CreateFDiv(l_ptr, r_ptr, "bin.div"); });
+
+    break;
+  }
+  case EBinOpType::Mod: {
+    arith(
+        [&]() {
+          auto rem    = builder.CreateSRem(l_ptr, r_ptr, "bin.rem");
+          auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
+          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+        },
+        [&]() {
+          auto rem    = builder.CreateURem(l_ptr, r_ptr, "bin.rem");
+          auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
+          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+        },
+        nullptr);
+
+    break;
+  }
+  case EBinOpType::Quo: {
+    arith(
+        [&]() {
+          auto rem    = builder.CreateSRem(l_ptr, r_ptr, "bin.rem");
+          auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
+          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSDiv(builder.CreateSub(l_ptr, mod), r_ptr, "bin.quo");
+        },
+        [&]() {
+          auto rem    = builder.CreateURem(l_ptr, r_ptr, "bin.rem");
+          auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
+          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSDiv(builder.CreateSub(l_ptr, mod), r_ptr, "bin.quo");
+        },
+        nullptr);
+
+    break;
+  }
+  case EBinOpType::Rem: {
+    arith([&]() { op = builder.CreateSRem(l_ptr, r_ptr, "bin.rem"); },
+          [&]() { op = builder.CreateURem(l_ptr, r_ptr, "bin.rem"); },
+          [&]() { op = builder.CreateFRem(l_ptr, r_ptr, "bin.rem"); });
+
+    break;
+  }
+  case EBinOpType::Divrem: break;
+  case EBinOpType::Pow:    {
+    arith(
+        [&]() {
+          auto pow_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::powi, {llvm_op_ty, llvm_op_ty});
+
+          op = builder.CreateCall(pow_fn, {l_ptr, r_ptr}, "bin.pow");
+        },
+        nullptr,
+        [&]() {
+          auto pow_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::pow, {llvm_op_ty, llvm_op_ty});
+
+          op = builder.CreateCall(pow_fn, {l_ptr, r_ptr}, "bin.pow");
+        });
+  }
+  case EBinOpType::Gre: {
+    arith([&]() { op = builder.CreateICmpSGT(l_ptr, r_ptr, "bin.gre"); },
+          [&]() { op = builder.CreateICmpUGT(l_ptr, r_ptr, "bin.gre"); },
+          [&]() { op = builder.CreateFCmpOGT(l_ptr, r_ptr, "bin.gre"); });
+
+    byte([&]() { op = builder.CreateICmpUGT(l_ptr, r_ptr, "bin.gre"); });
+
+    break;
+  }
+  case EBinOpType::Low: {
+    arith([&]() { op = builder.CreateICmpSLT(l_ptr, r_ptr, "bin.low"); },
+          [&]() { op = builder.CreateICmpULT(l_ptr, r_ptr, "bin.low"); },
+          [&]() { op = builder.CreateFCmpOLT(l_ptr, r_ptr, "bin.low"); });
+
+    byte([&]() { op = builder.CreateICmpULT(l_ptr, r_ptr, "bin.low"); });
+
+    break;
+  }
+  case EBinOpType::Gre_eq: {
+    arith([&]() { op = builder.CreateICmpSGE(l_ptr, r_ptr, "bin.gre_eq"); },
+          [&]() { op = builder.CreateICmpUGE(l_ptr, r_ptr, "bin.gre_eq"); },
+          [&]() { op = builder.CreateFCmpOGE(l_ptr, r_ptr, "bin.gre_eq"); });
+
+    byte([&]() { op = builder.CreateICmpUGE(l_ptr, r_ptr, "bin.gre_eq"); });
+
+    break;
+  }
+  case EBinOpType::Low_eq: {
+    arith([&]() { op = builder.CreateICmpSLE(l_ptr, r_ptr, "bin.low_eq"); },
+          [&]() { op = builder.CreateICmpULE(l_ptr, r_ptr, "bin.low_eq"); },
+          [&]() { op = builder.CreateFCmpOLE(l_ptr, r_ptr, "bin.low_eq"); });
+
+    byte([&]() { op = builder.CreateICmpULE(l_ptr, r_ptr, "bin.low_eq"); });
+
+    break;
+  }
+  case EBinOpType::_in:
+  case EBinOpType::_is:
+  case EBinOpType::_eq: {
+    arith([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpOEQ(l_ptr, r_ptr, "bin.eq"); });
+
+    byte([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); });
+
+    break;
+  }
+  case EBinOpType::_nin:
+  case EBinOpType::_nis:
+  case EBinOpType::_neq: {
+    arith([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.neq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpONE(l_ptr, r_ptr, "bin.neq"); });
+
+    byte([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.eq"); });
+
+    break;
+  }
+  case EBinOpType::_eqs: {
+    arith([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eqs"); }, nullptr,
+          [&]() { op = builder.CreateFCmpOEQ(l_ptr, r_ptr, "bin.eqs"); });
+
+    byte([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); });
+
+    break;
+  }
+  case EBinOpType::_neqs: {
+    arith([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.neq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpONE(l_ptr, r_ptr, "bin.neq"); });
+
+    byte([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.eq"); });
+
+    break;
+  }
+  case EBinOpType::_b_and:
+  case EBinOpType::_and:   {
+    byte([&]() { op = builder.CreateAnd(l_ptr, r_ptr, "bin.and"); });
+
+    break;
+  }
+  case EBinOpType::_b_nand:
+  case EBinOpType::_nand:   {
+    byte([&]() { op = builder.CreateNot(builder.CreateAnd(l_ptr, r_ptr, "bin.nand")); });
+
+    break;
+  }
+  case EBinOpType::_b_or:
+  case EBinOpType::_or:   {
+    byte([&]() { op = builder.CreateAnd(l_ptr, r_ptr, "bin.or"); });
+
+    break;
+  }
+  case EBinOpType::_b_xor:
+  case EBinOpType::_xor:   {
+    byte([&]() { op = builder.CreateXor(l_ptr, r_ptr, "bin.xor"); });
+
+    break;
+  }
+  case EBinOpType::_b_nor:
+  case EBinOpType::_nor:   {
+    byte([&]() { op = builder.CreateNot(builder.CreateOr(l_ptr, r_ptr, "bin.nor")); });
+
+    break;
+  }
+  case EBinOpType::_b_xnor:
+  case EBinOpType::_xnor:   {
+    byte([&]() { op = builder.CreateNot(builder.CreateXor(l_ptr, r_ptr, "bin.xnor")); });
+
+    break;
+  }
+  case EBinOpType::ls0: {
+    byte([&]() { op = builder.CreateShl(l_ptr, r_ptr, "bin.ls0"); });
+
+    break;
+  }
+  case EBinOpType::ls1: {
+    auto all_ones = builder.getInt32(~0);
+    auto shifted  = builder.CreateShl(l_ptr, r_ptr, "bin.ls0");
+    auto mask     = builder.CreateLShr(all_ones, builder.CreateSub(builder.getInt32(32), r_ptr), "bin.mask");
+    op            = builder.CreateOr(shifted, mask, "ls1");
+  }
+  // impossible
+  case EBinOpType::lsa: break;
+  case EBinOpType::rs0: {
+    byte([&]() { op = builder.CreateLShr(l_ptr, r_ptr, "bin.rs0"); });
+
+    break;
+  }
+  case EBinOpType::rs1: {
+    auto lshr     = builder.CreateLShr(l_ptr, r_ptr, "lshr");
+    auto all_ones = builder.getInt32(~0);
+    auto shifted  = builder.CreateSub(builder.getInt32(32), r_ptr, "bin.shifted");
+    auto mask     = builder.CreateShl(all_ones, shifted, "bin.mask");
+    op            = builder.CreateOr(lshr, mask, "bin.rs1");
+  }
+  case EBinOpType::rsa: {
+    byte([&]() { op = builder.CreateAShr(l_ptr, r_ptr, "bin.rsa"); });
+
+    break;
+  }
+  case EBinOpType::lr: {
+    byte([&]() {
+      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshl, {l_ptr->getType()});
+      op           = builder.CreateCall(fshr_fn, {l_ptr, l_ptr, r_ptr}, "bin.lr");
+    });
+
+    break;
+  }
+  case EBinOpType::rr: {
+    byte([&]() {
+      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshr, {l_ptr->getType()});
+      op           = builder.CreateCall(fshr_fn, {l_ptr, l_ptr, r_ptr}, "bin.rr");
+    });
+
+    break;
+  }
+  }
+
+  if (!op)
+    error_add(207, n, "Illegal instruction (" + EBinOpType_to_str(n.op) + " on type " + n.inferred_type->debug_str(),
+              "");
+
+  return op;
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Unary& n)
 {
-  return nullptr;
+  auto base_ptr = ensure_rvalue(*n.base, "un.base");
+
+  auto op_ty      = n.base->inferred_type;
+  auto llvm_op_ty = op_ty->llvm_type;
+
+  llvm::Value* op;
+
+  switch (n.unary_op) {
+  case EUnaryOpType::NONE: break;
+  case EUnaryOpType::_not: {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (ptr->type == EPrimType::boolean || EPrimType_is_byte(ptr->type)) {
+        op = builder.CreateNot(base_ptr, "un.not");
+      }
+    }
+
+    break;
+  }
+  case EUnaryOpType::_plus: {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (EPrimType_is_integral(ptr->type)) {
+        unsigned bits = llvm_op_ty->getIntegerBitWidth();
+        auto     mask = llvm::APInt(bits, 1);
+        mask <<= (bits - 1);
+
+        auto inv = ~mask;
+
+        op = builder.CreateAnd(base_ptr, llvm::ConstantInt::get(llvm_op_ty, inv), "un.plus");
+      } else if (EPrimType_is_floating(ptr->type)) {
+        llvm::Type* f_ty_size = nullptr;
+
+        if (ptr->type == EPrimType::f16)
+          f_ty_size = f16Ty;
+        else if (ptr->type == EPrimType::f32)
+          f_ty_size = f32Ty;
+        else if (ptr->type == EPrimType::f64)
+          f_ty_size = f64Ty;
+        else if (ptr->type == EPrimType::f80)
+          f_ty_size = f80Ty;
+        else if (ptr->type == EPrimType::f128)
+          f_ty_size = f128Ty;
+        else if (ptr->type == EPrimType::fSize)
+          f_ty_size = fSizeTy;
+
+        auto bits    = builder.CreateBitCast(base_ptr, f_ty_size);
+        auto mask    = llvm::ConstantInt::get(bits->getType(), 1u << (f_ty_size->getPrimitiveSizeInBits() - 1));
+        auto flipped = builder.CreateAnd(bits, mask);
+        op           = builder.CreateBitCast(flipped, llvm_op_ty, "un.plus");
+      }
+    }
+
+    break;
+  }
+  case EUnaryOpType::_minus: {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (EPrimType_is_integral(ptr->type)) {
+        unsigned bits = llvm_op_ty->getIntegerBitWidth();
+        auto     mask = llvm::APInt(bits, 1);
+        mask <<= (bits - 1);
+
+        auto inv = ~mask;
+
+        op = builder.CreateOr(base_ptr, llvm::ConstantInt::get(llvm_op_ty, inv), "un.minus");
+      } else if (EPrimType_is_floating(ptr->type)) {
+        llvm::Type* f_ty_size = nullptr;
+
+        if (ptr->type == EPrimType::f16)
+          f_ty_size = f16Ty;
+        else if (ptr->type == EPrimType::f32)
+          f_ty_size = f32Ty;
+        else if (ptr->type == EPrimType::f64)
+          f_ty_size = f64Ty;
+        else if (ptr->type == EPrimType::f80)
+          f_ty_size = f80Ty;
+        else if (ptr->type == EPrimType::f128)
+          f_ty_size = f128Ty;
+        else if (ptr->type == EPrimType::fSize)
+          f_ty_size = fSizeTy;
+
+        auto bits    = builder.CreateBitCast(base_ptr, f_ty_size);
+        auto mask    = llvm::ConstantInt::get(bits->getType(), 1u << (f_ty_size->getPrimitiveSizeInBits() - 1));
+        auto flipped = builder.CreateOr(bits, mask);
+        op           = builder.CreateBitCast(flipped, llvm_op_ty, "un.minus");
+      }
+    }
+
+    break;
+  }
+  case EUnaryOpType::_invert_sign: {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+      if (EPrimType_is_integral(ptr->type)) {
+        unsigned bits = llvm_op_ty->getIntegerBitWidth();
+        auto     mask = llvm::APInt(bits, 1);
+        mask <<= (bits - 1);
+
+        auto inv = ~mask;
+
+        op = builder.CreateXor(base_ptr, llvm::ConstantInt::get(llvm_op_ty, inv), "un.inv");
+      } else if (EPrimType_is_floating(ptr->type)) {
+        llvm::Type* f_ty_size = nullptr;
+
+        if (ptr->type == EPrimType::f16)
+          f_ty_size = f16Ty;
+        else if (ptr->type == EPrimType::f32)
+          f_ty_size = f32Ty;
+        else if (ptr->type == EPrimType::f64)
+          f_ty_size = f64Ty;
+        else if (ptr->type == EPrimType::f80)
+          f_ty_size = f80Ty;
+        else if (ptr->type == EPrimType::f128)
+          f_ty_size = f128Ty;
+        else if (ptr->type == EPrimType::fSize)
+          f_ty_size = fSizeTy;
+
+        auto bits    = builder.CreateBitCast(base_ptr, f_ty_size);
+        auto mask    = llvm::ConstantInt::get(bits->getType(), 1u << (f_ty_size->getPrimitiveSizeInBits() - 1));
+        auto flipped = builder.CreateXor(bits, mask);
+        op           = builder.CreateBitCast(flipped, llvm_op_ty, "un.inv");
+      }
+    }
+
+    break;
+  }
+  }
+
+  if (!op)
+    error_add(207, n,
+              "Illegal instruction (" + EUnaryOpType_to_str(n.unary_op) + " on type " + n.inferred_type->debug_str(),
+              "");
+
+
+  return op;
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Interval& n)
 {

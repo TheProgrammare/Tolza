@@ -1,7 +1,20 @@
 #include "ast_data.hpp"
 
+#include "compiler/compiler.hpp"
+#include "compiler_context.hpp"
 #include "lexer/token.hpp"
 #include <cstddef>
+
+std::string EAccessOpType_to_str(EAccessOpType opTy)
+{
+  switch (opTy) {
+  case EAccessOpType::Index:      return "[i]";
+  case EAccessOpType::IndexBound: return "?[i]";
+  case EAccessOpType::Slice:      return "[a..b]";
+  case EAccessOpType::SliceBound: return "?[a..b]";
+  case EAccessOpType::bSlice:     return "~[a..b]";
+  };
+}
 
 EBinOpType TokTy_to_EBinOpType(TokTy tok)
 {
@@ -64,10 +77,6 @@ std::string EBinOpType_to_str(EBinOpType opTy)
   case EBinOpType::Rem:     return "%rem%";
   case EBinOpType::Divrem:  return "%divrem%";
   case EBinOpType::Pow:     return "**";
-  case EBinOpType::Sign:    return "+-";
-  case EBinOpType::Index:   return "[i]";
-  case EBinOpType::Slice:   return "[a..b]";
-  case EBinOpType::bSlice:  return "~[a..b]";
 
   case EBinOpType::Gre:     return ">";
   case EBinOpType::Low:     return "<";
@@ -221,6 +230,10 @@ EExprPassMode TokTy_to_EExprPassMode(TokTy tok)
 bool EPrimType_is_signed(EPrimType type)
 {
   switch (type) {
+  case EPrimType::dSize:
+  case EPrimType::d32:
+  case EPrimType::d64:
+  case EPrimType::d128:
   case EPrimType::iSize:
   case EPrimType::i8:
   case EPrimType::i16:
@@ -229,10 +242,11 @@ bool EPrimType_is_signed(EPrimType type)
   case EPrimType::i128:
   case EPrimType::ptrdiff:
   case EPrimType::fSize:
+  case EPrimType::f16:
   case EPrimType::f32:
   case EPrimType::f64:
-  case EPrimType::f128:
-  case EPrimType::deci:    return true;
+  case EPrimType::f80:
+  case EPrimType::f128:    return true;
   default:                 return false;
   }
 }
@@ -271,8 +285,10 @@ bool EPrimType_is_byte(EPrimType type)
 bool EPrimType_is_floating(EPrimType type)
 {
   switch (type) {
+  case EPrimType::f16:
   case EPrimType::f32:
   case EPrimType::f64:
+  case EPrimType::f80:
   case EPrimType::f128:
   case EPrimType::fSize: return true;
   default:               return false;
@@ -284,9 +300,9 @@ std::string EPrimTy_to_str(EPrimType type)
 {
   switch (type) {
   case EPrimType::boolean:   return "boolean";
-  case EPrimType::ASCII:     return "ASCII";
-  case EPrimType::UTF32:     return "UTF32";
-  case EPrimType::c_str:     return "C_string";
+  case EPrimType::cune:      return "cunei";
+  case EPrimType::rune:      return "rune";
+  case EPrimType::c_str:     return "c_string";
   case EPrimType::str:       return "string";
   case EPrimType::text:      return "text";
 
@@ -314,13 +330,23 @@ std::string EPrimTy_to_str(EPrimType type)
   case EPrimType::b128:      return "b128";
 
   case EPrimType::fSize:     return "fSize";
+  case EPrimType::f16:       return "f6";
   case EPrimType::f32:       return "f32";
   case EPrimType::f64:       return "f64";
+  case EPrimType::f80:       return "f80";
   case EPrimType::f128:      return "f128";
 
+  case EPrimType::dSize:     return "dSize";
+  case EPrimType::d32:       return "d32";
+  case EPrimType::d64:       return "d64";
+  case EPrimType::d128:      return "d128";
+
+  case EPrimType::udSize:    return "udSize";
+  case EPrimType::ud32:      return "ud32";
+  case EPrimType::ud64:      return "ud64";
+  case EPrimType::ud128:     return "ud128";
+
   case EPrimType::u0:        return "Void";
-  case EPrimType::deci:      return "decimal";
-  case EPrimType::udeci:     return "unsigned decimal";
   case EPrimType::Enum:      return "Enum";
   case EPrimType::Flag:      return "Flag";
 
@@ -331,12 +357,20 @@ std::string EPrimTy_to_str(EPrimType type)
   case EPrimType::Function:  return "Function";
   case EPrimType::Fn_Proto:  return "Fnunction Proto";
   case EPrimType::tuple:     return "tuple";
-  case EPrimType::Array:     return "Array";
+
+  case EPrimType::STable:    return "STable";
+  case EPrimType::DTable:    return "DTable";
+  case EPrimType::SMatrix:   return "SMatrix";
+  case EPrimType::DMatrix:   return "DMatrix";
+  case EPrimType::SHyper:    return "SHyper";
+  case EPrimType::DHyper:    return "DHyper";
+
   case EPrimType::map:       return "map";
   case EPrimType::Range:     return "Range";
   case EPrimType::Iterator:  return "Iterator";
   case EPrimType::Slice:     return "Slice";
   case EPrimType::NONE:      return "NO PRIMITIVE TYPE";
+  case EPrimType::COUNT:     return "NO PRIMITIVE TYPE";
   }
 }
 
@@ -344,8 +378,8 @@ std::string EPrimTy_to_mangle(EPrimType type)
 {
   switch (type) {
   case EPrimType::boolean:   return "b";
-  case EPrimType::ASCII:     return "aii";
-  case EPrimType::UTF32:     return "utf";
+  case EPrimType::cune:      return "aii";
+  case EPrimType::rune:      return "utf";
   case EPrimType::c_str:     return "cstr";
   case EPrimType::str:       return "str";
   case EPrimType::text:      return "txt";
@@ -375,12 +409,22 @@ std::string EPrimTy_to_mangle(EPrimType type)
   case EPrimType::b128:      return "b128";
 
   case EPrimType::fSize:     return "fsz";
+  case EPrimType::f16:       return "f16";
   case EPrimType::f32:       return "f32";
   case EPrimType::f64:       return "f64";
+  case EPrimType::f80:       return "f80";
   case EPrimType::f128:      return "f128";
 
-  case EPrimType::deci:      return "deci";
-  case EPrimType::udeci:     return "udeci";
+  case EPrimType::dSize:     return "dSize";
+  case EPrimType::d32:       return "d32";
+  case EPrimType::d64:       return "d64";
+  case EPrimType::d128:      return "d128";
+
+  case EPrimType::udSize:    return "udSize";
+  case EPrimType::ud32:      return "ud32";
+  case EPrimType::ud64:      return "ud64";
+  case EPrimType::ud128:     return "ud128";
+
   case EPrimType::Enum:      return "en";
   case EPrimType::Flag:      return "fg";
 
@@ -391,12 +435,20 @@ std::string EPrimTy_to_mangle(EPrimType type)
   case EPrimType::Function:  return "fn";
   case EPrimType::Fn_Proto:  return "fnp";
   case EPrimType::tuple:     return "tu";
-  case EPrimType::Array:     return "arr";
+
+  case EPrimType::STable:    return "sT";
+  case EPrimType::DTable:    return "dT";
+  case EPrimType::SMatrix:   return "sM";
+  case EPrimType::DMatrix:   return "dM";
+  case EPrimType::SHyper:    return "sH";
+  case EPrimType::DHyper:    return "dH";
+
   case EPrimType::map:       return "map";
   case EPrimType::Range:     return "rng";
   case EPrimType::Iterator:  return "iter";
   case EPrimType::Slice:     return "sli";
   case EPrimType::NONE:      return "NO PRIMITIVE TYPE";
+  case EPrimType::COUNT:     return "NO PRIMITIVE TYPE";
   }
 }
 
@@ -404,8 +456,8 @@ EPrimType TokTy_to_EPrimType(TokTy tok)
 {
   switch (tok) {
   case TokTy::T_BOOL:     return EPrimType::boolean;
-  case TokTy::T_UTF32:    return EPrimType::UTF32;
-  case TokTy::T_ASCII:    return EPrimType::ASCII;
+  case TokTy::T_RUNE:     return EPrimType::rune;
+  case TokTy::T_CUNE:     return EPrimType::cune;
   case TokTy::T_C_STRING: return EPrimType::c_str;
   case TokTy::T_STRING:   return EPrimType::str;
   case TokTy::T_TEXT:     return EPrimType::text;
@@ -432,8 +484,10 @@ EPrimType TokTy_to_EPrimType(TokTy tok)
   case TokTy::T_B128:     return EPrimType::b128;
 
   case TokTy::T_FSIZE:    return EPrimType::fSize;
+  case TokTy::T_F16:      return EPrimType::f16;
   case TokTy::T_F32:      return EPrimType::f32;
   case TokTy::T_F64:      return EPrimType::f64;
+  case TokTy::T_F80:      return EPrimType::f80;
   case TokTy::T_F128:     return EPrimType::f128;
 
   case TokTy::T_U0:       return EPrimType::u0;
@@ -521,6 +575,52 @@ std::string ETransfertType_to_str(ETransfertType type)
   }
 }
 
+[[nodiscard]] size_t EPrimType_to_bits(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::boolean: return 1;
+  case EPrimType::cune:    return 8;
+  case EPrimType::rune:    return 32;
+  case EPrimType::ptrdiff:
+  case EPrimType::fSize:
+  case EPrimType::dSize:
+  case EPrimType::udSize:
+  case EPrimType::iSize:
+  case EPrimType::uSize:
+  case EPrimType::bSize:   return compiler::COMP_CTX.get_arch_size();
+  case EPrimType::i8:
+  case EPrimType::u8:
+  case EPrimType::b8:      return 8;
+  case EPrimType::f16:
+  case EPrimType::i16:
+  case EPrimType::u16:
+  case EPrimType::b16:     return 16;
+  case EPrimType::f32:
+  case EPrimType::d32:
+  case EPrimType::ud32:
+  case EPrimType::i32:
+  case EPrimType::u32:
+  case EPrimType::b32:     return 32;
+  case EPrimType::f64:
+  case EPrimType::d64:
+  case EPrimType::ud64:
+  case EPrimType::i64:
+  case EPrimType::u64:
+  case EPrimType::b64:     return 64;
+  case EPrimType::f128:
+  case EPrimType::d128:
+  case EPrimType::ud128:
+  case EPrimType::i128:
+  case EPrimType::u128:
+  case EPrimType::b128:    return 128;
+  case EPrimType::f80:     return 80;
+  default:                 return 0;
+  }
+}
+
+[[nodiscard]] size_t EPrimType_to_bytes(EPrimType type)
+{
+}
 
 bool is_op_handled(EPrimType src, EBinOpType op)
 {

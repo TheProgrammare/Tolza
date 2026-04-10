@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "ast/ast_declaration.hpp"
 #include "ast_base.hpp"
 #include "ast_evaluator.hpp"
 
@@ -19,15 +20,15 @@ struct If final : public Node, Trait_LLVM_Passage {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
   [[maybe_unused]]
   std::unique_ptr<If> alternative_statement;
-  bool                isElseNoCondition = false;
-  bool                isInline          = false;
+  bool                is_else = false;
+  bool                is_elif = false;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
 
   std::string debug_str() const override
   {
-    return "IF";
+    return is_else ? "else" : is_elif ? "elif" : "if";
   }
 };
 
@@ -85,10 +86,11 @@ struct While final : public Node, Trait_LLVM_Passage {
 
 struct GoTo_Label;
 
-// goto azerty
+// normally not an expression
 struct GoTo final : public AExpression {
   std::string label;
 
+  SET_R_VAL
 
   std::string debug_str() const override
   {
@@ -124,6 +126,8 @@ struct GoTo_Label final : public ADeclaration {
 struct Return final : public Node, Trait_LLVM_Passage {
   [[maybe_unused]]
   std::unique_ptr<AExpression> value;
+
+  ACallable* target_function = nullptr;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   std::string  debug_str() const override

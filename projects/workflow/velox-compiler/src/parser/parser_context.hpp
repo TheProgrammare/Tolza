@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "ast/ast_declaration.hpp"
 #include "visitor/symbol_manager.hpp"
 
 #include "lexer/token.hpp"
@@ -18,6 +19,9 @@ concept DerivedFromNode = std::is_base_of_v<ast::Node, NodeType> && !std::is_bas
 
 template <typename NodeType>
 concept DerivedFromDecl = std::is_base_of_v<ast::ADeclaration, NodeType> || std::is_base_of_v<ast::ALocal, NodeType>;
+
+template <typename NodeType>
+concept DerivedFromType = std::is_base_of_v<ast::AType, NodeType>;
 
 namespace meta
 {
@@ -54,6 +58,7 @@ struct Parser_Context {
 
   std::shared_ptr<ast::declaration::cop::Entity> current_entity;
   std::shared_ptr<ast::Node>                     current_other;
+  ast::ACallable*                                current_function = nullptr;
 
   bool in_extern = false;
   bool in_export = false;
@@ -96,6 +101,18 @@ struct Parser_Context {
     static_assert(!std::is_abstract_v<NodeType>, "Create_Node cannot instantiate abstract AST nodes");
 
     auto node    = std::make_unique<NodeType>(std::forward<Args>(args)...);
+    node->_token = token;
+    node->_scope = m_sym->get_current_path();
+    node_count++;
+    node->_scr_info = &scr_info;
+    return node;
+  }
+  template <DerivedFromType NodeType, typename... Args>
+  inline std::shared_ptr<NodeType> Create_Type(Token token, Args&&... args)
+  {
+    static_assert(!std::is_abstract_v<NodeType>, "Create_Rype cannot instantiate abstract AST nodes");
+
+    auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
     node->_token = token;
     node->_scope = m_sym->get_current_path();
     node_count++;

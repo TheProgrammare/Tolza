@@ -130,7 +130,6 @@ common::CompCtx command::build::config_to_compilation_context(const std::string&
   out.target_os           = tbl.at_path("target.os").value_or("");
   out.target_vendor       = tbl.at_path("target.vendor").value_or("");
   out.target_abi          = tbl.at_path("target.abi").value_or("");
-  out.target_size_abi     = tbl.at_path("target.abi_size").value_or("");
   out.target_libc         = tbl.at_path("target.libc").value_or("");
   out.target_cpu          = tbl.at_path("target.cpu").value_or("");
   out.target_features     = tbl.at_path("target.features").value_or("");
@@ -150,9 +149,9 @@ common::CompCtx command::build::config_to_compilation_context(const std::string&
     if (is_same_key(arg, "static"))
       out.target_reloc_model = common::CompCtx::ERelocModel::Static;
     else if (is_same_key(arg, "pic"))
-      out.target_reloc_model = common::CompCtx::ERelocModel::Pic;
+      out.target_reloc_model = common::CompCtx::ERelocModel::PIC;
     else if (is_same_key(arg, "pie"))
-      out.target_reloc_model = common::CompCtx::ERelocModel::DynamicNoPIC;
+      out.target_reloc_model = common::CompCtx::ERelocModel::PIE;
     else if (is_same_key(arg, "ropi"))
       out.target_reloc_model = common::CompCtx::ERelocModel::ROPI;
     else if (is_same_key(arg, "rwpi"))

@@ -48,28 +48,18 @@ struct Integral final : public ALiteral {
 };
 
 struct Decimal final : public ALiteral {
-  Int128 val;
-  size_t integral_num = 1;
-  size_t decimal_num  = 1;
-
-  bool is_unsigned = false;
+  Int128    val;
+  EPrimType raw_type = EPrimType::dSize;
+  size_t    scale    = 1;
 
   Decimal();
-  Decimal(const Int128& value, size_t _integral_num, size_t _decimal_num, bool _is_unsigned);
-
-  bool operator==(const ALiteral& other) const
-  {
-    if (auto ptr = dynamic_cast<const Decimal*>(&other))
-      return integral_num == ptr->integral_num && decimal_num == ptr->decimal_num;
-    return false;
-  }
+  Decimal(const Int128& value, size_t _scale, EPrimType _raw_type);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    if (is_unsigned) return "literal udeci(" + val.i128_to_string() + ")";
-    return "deci(" + val.i128_to_string() + ")";
+    return EPrimTy_to_str(raw_type) + "(" + val.i128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -77,7 +67,7 @@ struct Decimal final : public ALiteral {
 
 struct Floating final : public ALiteral {
   Float128  val;
-  EPrimType type = EPrimType::f64;
+  EPrimType type = EPrimType::fSize;
 
   Floating();
   Floating(const Float128& value);
@@ -93,39 +83,40 @@ struct Floating final : public ALiteral {
 };
 
 // Latin-1 encoding
-struct ASCII final : public ALiteral {
+struct CUNE final : public ALiteral {
   char val = 0x0;
 
-  ASCII();
-  ASCII(char value);
+  CUNE();
+  CUNE(char value);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "ascii(\"" + std::to_string(val) + "\")";
+    return "cunei(\"" + std::to_string(val) + "\")";
   }
 
   void accept(Visitor_Base& v) override;
 };
 
-struct UTF32 final : public ALiteral {
+struct RUNE final : public ALiteral {
   std::string codePoints;
 
-  UTF32();
-  UTF32(std::string codePoints_value);
+  RUNE();
+  RUNE(std::string codePoints_value);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "utf32(\"" + codePoints + "\")";
+    return "rune(\"" + codePoints + "\")";
   }
 
   void accept(Visitor_Base& v) override;
 };
 
-struct Text final : public ALiteral {
+
+struct Text_Pure final : public ALiteral {
   std::string val;
   EPrimType   text_type = EPrimType::text;
 
@@ -203,6 +194,8 @@ struct Text_Interpolation final : public AExpression {
   std::unique_ptr<AExpression>      expression;
   std::unique_ptr<Format_Specifier> spec;
 
+  SET_R_VAL
+
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
@@ -216,16 +209,16 @@ struct Text_Interpolation final : public AExpression {
 struct Textual_Element final {
   enum class Kind { Text, Lerp };
 
-  Kind                         kind;
-  std::unique_ptr<AExpression> val;
+  Kind         kind;
+  AExpression* val;
 
-  Textual_Element(std::unique_ptr<Text> text)
-    : val(std::move(text))
+  Textual_Element(std::unique_ptr<Text_Pure> text)
+    : val(text.release())
     , kind(Kind::Text)
   {
   }
   Textual_Element(std::unique_ptr<Text_Interpolation> lerp)
-    : val(std::move(lerp))
+    : val(lerp.release())
     , kind(Kind::Lerp)
   {
   }
@@ -237,12 +230,11 @@ struct Textual_Format final : public ALiteral {
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
-  bool is_pure_literal_text = false;
-
   std::string debug_str() const override;
 
   void accept(Visitor_Base& v) override;
 };
+
 
 struct Table_Population final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> ranges;

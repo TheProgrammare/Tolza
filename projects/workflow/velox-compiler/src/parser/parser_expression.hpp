@@ -40,6 +40,8 @@ struct Parser_Expression {
   // special memory expression
   [[nodiscard]] std::unique_ptr<ast::expression::New_Ptr>    new_ptr();
   [[nodiscard]] std::unique_ptr<ast::expression::Ptr_Val>    ptr_val();
+  [[nodiscard]] std::unique_ptr<ast::expression::Ref_Of>     ref_of();
+  [[nodiscard]] std::unique_ptr<ast::expression::Mut_Of>     mut_of();
   [[nodiscard]] std::unique_ptr<ast::expression::Addr_Of>    addr_of();
   [[nodiscard]] std::unique_ptr<ast::expression::Size_Of>    size_of();
   [[nodiscard]] std::unique_ptr<ast::expression::Move>       move();

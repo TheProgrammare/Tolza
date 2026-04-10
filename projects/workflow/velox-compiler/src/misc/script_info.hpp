@@ -26,6 +26,7 @@ enum class EExtern_Kind {
   Global,
   Enum,
   Union,
+  Flag,
   Component,
   System,
   Entity,
@@ -34,7 +35,6 @@ enum class EExtern_Kind {
 };
 
 struct Extern_Item {
-
   EExtern_Kind             kind;
   std::string              name;
   std::vector<std::string> scope;
@@ -72,7 +72,17 @@ struct ModuleImportation {
 
   std::vector<std::shared_ptr<ScriptInfo>> target_modules;
 
-  std::vector<Extern_Item> extern_references;
+  std::vector<Extern_Item> extern_fn;
+  std::vector<Extern_Item> extern_ty;
+  std::vector<Extern_Item> extern_glo;
+  std::vector<Extern_Item> extern_enum;
+  std::vector<Extern_Item> extern_union;
+  std::vector<Extern_Item> extern_flag;
+  std::vector<Extern_Item> extern_comp;
+  std::vector<Extern_Item> extern_sys;
+  std::vector<Extern_Item> extern_entity;
+  std::vector<Extern_Item> extern_gen;
+  std::vector<Extern_Item> extern_metacode;
 
   std::string get_path() const;
   std::string get_normalized_path() const;
@@ -84,7 +94,19 @@ struct ModuleImportation {
 
   void add_extern_reference(const Extern_Item& ext_item)
   {
-    extern_references.push_back(ext_item);
+    switch (ext_item.kind) {
+    case EExtern_Kind::Function:  extern_fn.push_back(ext_item); return;
+    case EExtern_Kind::Type:      extern_ty.push_back(ext_item); return;
+    case EExtern_Kind::Global:    extern_glo.push_back(ext_item); return;
+    case EExtern_Kind::Enum:      extern_enum.push_back(ext_item); return;
+    case EExtern_Kind::Union:     extern_union.push_back(ext_item); return;
+    case EExtern_Kind::Flag:      extern_flag.push_back(ext_item); return;
+    case EExtern_Kind::Component: extern_comp.push_back(ext_item); return;
+    case EExtern_Kind::System:    extern_sys.push_back(ext_item); return;
+    case EExtern_Kind::Entity:    extern_entity.push_back(ext_item); return;
+    case EExtern_Kind::Generic:   extern_gen.push_back(ext_item); return;
+    case EExtern_Kind::Metacode:  extern_metacode.push_back(ext_item); return;
+    }
   }
 
   std::string debug_name() const
@@ -141,7 +163,7 @@ struct ScriptInfo {
 
   Symbols_Manager* m_sym = nullptr;
 
-  llvm::Module* llvm_module = nullptr;
+  std::unique_ptr<llvm::Module> llvm_module;
 
   void add_export(const ModuleExportation& exp);
   void add_import(const ModuleImportation& imp);

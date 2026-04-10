@@ -89,7 +89,7 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::declaration::cop::Entity_Del& n) override;
   void visit(ast::declaration::cop::Entity_Cast& n) override;
   void visit(ast::declaration::cop::Entity_Op& n) override;
-  void visit(ast::declaration::cop::Entity_OpIndex& n) override;
+  void visit(ast::declaration::cop::Entity_Access_Op& n) override;
   void visit(ast::declaration::cop::Entity_Transfert& n) override;
 
   void visit(ast::declaration::cop::System& n) override;
@@ -118,10 +118,10 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::literal::Decimal& n) override;
   void visit(ast::literal::Floating& n) override;
 
-  void visit(ast::literal::ASCII& n) override;
-  void visit(ast::literal::UTF32& n) override;
+  void visit(ast::literal::CUNE& n) override;
+  void visit(ast::literal::RUNE& n) override;
 
-  void visit(ast::literal::Text& n) override;
+  void visit(ast::literal::Text_Pure& n) override;
   void visit(ast::literal::Text_Interpolation& n) override;
   void visit(ast::literal::Textual_Element& n) override;
   void visit(ast::literal::Textual_Format& n) override;
@@ -160,6 +160,8 @@ struct Visitor_Default : public Visitor_Base {
   void visit(ast::expression::Ptr_At& n) override;
   void visit(ast::expression::Ptr_Offset& n) override;
   void visit(ast::expression::Ptr_Val& n) override;
+  void visit(ast::expression::Mut_Of& n) override;
+  void visit(ast::expression::Ref_Of& n) override;
   void visit(ast::expression::Addr_Of& n) override;
   void visit(ast::expression::Size_Of& n) override;
   void visit(ast::expression::GetBits& n) override;

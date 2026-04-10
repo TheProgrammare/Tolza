@@ -95,6 +95,8 @@ struct Pattern : public AExpression {
   // shared because can be from a match case base reference (so a reference mirror)
   std::shared_ptr<AExpression> right;
 
+  SET_R_VAL
+
   [[maybe_unused]]
   std::shared_ptr<Node> additive_evaluator;
 };
@@ -297,7 +299,7 @@ struct Parameter final : public ALocal {
 };
 
 struct Generic_Parameter_Element final : public ALocal {
-  std::vector<std::unique_ptr<AType>> generic_references;
+  std::vector<std::shared_ptr<AType>> generic_references;
 
   std::string name;
 

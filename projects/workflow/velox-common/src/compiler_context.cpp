@@ -9,31 +9,17 @@
 namespace fs = std::filesystem;
 
 
-size_t common::CompCtx::get_size_bit() const
+size_t common::CompCtx::get_arch_size() const
 {
-  // on abi_size
-  if (!target_size_abi.empty()) {
-    std::string abi = target_size_abi;
-    // case insensible
-    for (auto& c : abi) c = std::toupper(c);
-
-    if (abi == "ILP32") {
-      return 32;
-    } else if (abi == "LP64" || abi == "LLP64" || abi == "ILP64") {
-      return 64;
-    } else {
-      // unknown, check arch
-    }
-  }
-
   // on target_arch
   if (!target_arch.empty()) {
     std::string arch = target_arch;
     for (auto& c : arch) c = std::tolower(c);
 
-    if (arch == "x86" || arch == "arm") {
+    if (arch == "x86" || arch == "arm" || arch == "wasm32") {
       return 32;
-    } else if (arch == "x86_64" || arch == "amd64" || arch == "aarch64" || arch == "riscv64") {
+    } else if (arch == "x86_64" || arch == "amd64" || arch == "aarch64" || arch == "riscv64" || arch == "wasm64"
+               || arch == "powerpc64") {
       return 64;
     }
   }
@@ -157,7 +143,6 @@ void common::CompCtx::generate_preprocessor_args()
   build_arg(target_os, "os");
   build_arg(target_vendor, "vendor");
   build_arg(target_abi, "abi");
-  build_arg(target_size_abi, "abi_size");
   build_arg(target_libc, "libc");
   build_arg(target_cpu, "cpu");
   build_arg(target_features, "features");
@@ -201,7 +186,6 @@ std::vector<std::string> common::CompCtx::to_args() const
   out.push_back("--os=\"" + target_os + "\"");
   out.push_back("--vendor=\"" + target_vendor + "\"");
   out.push_back("--abi=\"" + target_abi + "\"");
-  out.push_back("--abi-size=\"" + target_size_abi + "\"");
   out.push_back("--libc=\"" + target_libc + "\"");
   out.push_back("--cpu=\"" + target_cpu + "\"");
   out.push_back("--features=\"" + target_features + "\"");
@@ -424,7 +408,6 @@ common::CompCtx common::Sub_CompCtx::merge_context(const CompCtx& base_ctx) cons
   apply_str(out.target_arch, target_arch);
   apply_str(out.target_os, target_os);
   apply_str(out.target_abi, target_abi);
-  apply_str(out.target_size_abi, target_size_abi);
   apply_str(out.target_libc, target_libc);
   apply_str(out.target_cpu, target_cpu);
   apply_str(out.target_features, target_features);

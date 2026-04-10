@@ -128,13 +128,23 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
       f.clear();
       f.close();
 
-      bind.scr_info = scr_info;
-      bind.lang     = extern_imp->name;
-      bind.lib      = extern_imp->extern_lib;
-      bind.items    = extern_imp->extern_references;
-      bind.path     = path;
+      bind.scr_info        = scr_info;
+      bind.lang            = extern_imp->name;
+      bind.lib             = extern_imp->extern_lib;
+      bind.extern_fn       = extern_imp->extern_fn;
+      bind.extern_ty       = extern_imp->extern_ty;
+      bind.extern_glo      = extern_imp->extern_glo;
+      bind.extern_enum     = extern_imp->extern_enum;
+      bind.extern_union    = extern_imp->extern_union;
+      bind.extern_flag     = extern_imp->extern_flag;
+      bind.extern_comp     = extern_imp->extern_comp;
+      bind.extern_sys      = extern_imp->extern_sys;
+      bind.extern_entity   = extern_imp->extern_entity;
+      bind.extern_gen      = extern_imp->extern_gen;
+      bind.extern_metacode = extern_imp->extern_metacode;
+      bind.path            = path;
 
-      bind_count += bind.items.size();
+      bind_count += bind.bind_count;
 
       binds.push_back(bind);
     }

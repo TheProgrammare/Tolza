@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 
 namespace ast
 {
@@ -9,51 +10,56 @@ struct AType;
 namespace type
 {
 
-struct Tuple;
-
-ast::AType* get_bool_type();
-ast::AType* get_i8_type();
-ast::AType* get_i16_type();
-ast::AType* get_i32_type();
-ast::AType* get_i64_type();
-ast::AType* get_i128_type();
-ast::AType* get_isize_type();
+std::shared_ptr<ast::AType> get_bool_type();
+std::shared_ptr<ast::AType> get_i8_type();
+std::shared_ptr<ast::AType> get_i16_type();
+std::shared_ptr<ast::AType> get_i32_type();
+std::shared_ptr<ast::AType> get_i64_type();
+std::shared_ptr<ast::AType> get_i128_type();
+std::shared_ptr<ast::AType> get_isize_type();
 
 // unsigned integers
-ast::AType* get_u8_type();
-ast::AType* get_u16_type();
-ast::AType* get_u32_type();
-ast::AType* get_u64_type();
-ast::AType* get_u128_type();
-ast::AType* get_usize_type();
+std::shared_ptr<ast::AType> get_u8_type();
+std::shared_ptr<ast::AType> get_u16_type();
+std::shared_ptr<ast::AType> get_u32_type();
+std::shared_ptr<ast::AType> get_u64_type();
+std::shared_ptr<ast::AType> get_u128_type();
+std::shared_ptr<ast::AType> get_usize_type();
 
 // booleans
-ast::AType* get_b8_type();
-ast::AType* get_b16_type();
-ast::AType* get_b32_type();
-ast::AType* get_b64_type();
-ast::AType* get_b128_type();
-ast::AType* get_bsize_type();
-ast::AType* get_ptrdiff_type();
+std::shared_ptr<ast::AType> get_b8_type();
+std::shared_ptr<ast::AType> get_b16_type();
+std::shared_ptr<ast::AType> get_b32_type();
+std::shared_ptr<ast::AType> get_b64_type();
+std::shared_ptr<ast::AType> get_b128_type();
+std::shared_ptr<ast::AType> get_bsize_type();
+std::shared_ptr<ast::AType> get_ptrdiff_type();
 
 // floats
-ast::AType* get_f32_type();
-ast::AType* get_f64_type();
-ast::AType* get_f128_type();
-ast::AType* get_fsize_type();
+std::shared_ptr<ast::AType> get_f16_type();
+std::shared_ptr<ast::AType> get_f32_type();
+std::shared_ptr<ast::AType> get_f64_type();
+std::shared_ptr<ast::AType> get_f80_type();
+std::shared_ptr<ast::AType> get_f128_type();
+std::shared_ptr<ast::AType> get_fsize_type();
 
 // decimals
-ast::AType* get_deci_type();
-ast::AType* get_udeci_type();
+std::shared_ptr<ast::AType> get_d32_type();
+std::shared_ptr<ast::AType> get_d64_type();
+std::shared_ptr<ast::AType> get_d128_type();
+std::shared_ptr<ast::AType> get_dsize_type();
+std::shared_ptr<ast::AType> get_ud32_type();
+std::shared_ptr<ast::AType> get_ud64_type();
+std::shared_ptr<ast::AType> get_ud128_type();
+std::shared_ptr<ast::AType> get_udsize_type();
 
 // other types
-ast::AType*       get_void_type();
-ast::type::Tuple* get_void_return_type();
-ast::AType*       get_ascii_type();
-ast::AType*       get_utf32_type();
-ast::AType*       get_c_str_type();
-ast::AType*       get_str_type();
-ast::AType*       get_text_type();
+std::shared_ptr<ast::AType> get_void_type();
+std::shared_ptr<ast::AType> get_cune_type();
+std::shared_ptr<ast::AType> get_rune_type();
+std::shared_ptr<ast::AType> get_c_str_type();
+std::shared_ptr<ast::AType> get_str_type();
+std::shared_ptr<ast::AType> get_text_type();
 
 } // namespace type
   // Type

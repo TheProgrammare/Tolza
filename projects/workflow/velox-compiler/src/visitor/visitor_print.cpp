@@ -382,7 +382,7 @@ void Visitor_Print::visit(ast::declaration::cop::Entity_Op& n)
   n.codeblock->accept(*this);
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::declaration::cop::Entity_OpIndex& n)
+void Visitor_Print::visit(ast::declaration::cop::Entity_Access_Op& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   n.codeblock->accept(*this);
@@ -512,18 +512,18 @@ void Visitor_Print::visit(ast::literal::Floating& n)
   out_print += "</ul></li>\n";
 }
 
-void Visitor_Print::visit(ast::literal::ASCII& n)
+void Visitor_Print::visit(ast::literal::CUNE& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::literal::UTF32& n)
+void Visitor_Print::visit(ast::literal::RUNE& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
 
-void Visitor_Print::visit(ast::literal::Text& n)
+void Visitor_Print::visit(ast::literal::Text_Pure& n)
 {
   out_print += "<li class='node'> text " + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
@@ -709,6 +709,18 @@ void Visitor_Print::visit(ast::expression::Ptr_Val& n)
   n.target->accept(*this);
   out_print += "</ul></li>\n";
 }
+void Visitor_Print::visit(ast::expression::Mut_Of& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  n.target->accept(*this);
+  out_print += "</ul></li>\n";
+}
+void Visitor_Print::visit(ast::expression::Ref_Of& n)
+{
+  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
+  n.target->accept(*this);
+  out_print += "</ul></li>\n";
+}
 void Visitor_Print::visit(ast::expression::Addr_Of& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
@@ -749,8 +761,10 @@ void Visitor_Print::visit(ast::statement::If& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   if (auto node = n.evaluator.get_node()) node->accept(*this);
   n.codeblock->accept(*this);
-  if (n.alternative_statement) n.alternative_statement->accept(*this);
   out_print += "</ul></li>\n";
+  if (n.alternative_statement) {
+    n.alternative_statement->accept(*this);
+  }
 }
 
 void Visitor_Print::visit(ast::statement::For& n)
@@ -823,8 +837,8 @@ void Visitor_Print::visit(ast::statement::Match_Case& n)
 void Visitor_Print::visit(ast::operation::Cast_As& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
-  n.valueCasted->accept(*this);
-  n.typeCasted->accept(*this);
+  n.expression->accept(*this);
+  n.type->accept(*this);
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::operation::Is& n)

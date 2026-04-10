@@ -77,7 +77,7 @@ struct Entity_New;       // new(params...) {...}
 struct Entity_Del;       // del {...}
 struct Entity_Cast;      // cast self to TAnimal {...}
 struct Entity_Op;        // op + { self.CPosition.x += other.CPosition.y }
-struct Entity_OpIndex;   // op[a] { return self.CInventory.items[a] }
+struct Entity_Access_Op; // op[a] { return self.CInventory.items[a] }
 struct Entity_Transfert; // move {...} // copy {...} // clone {...}
 
 struct System;      // sys jump(height: f32) { A(a) + B(b) => ... other => ...}
@@ -105,7 +105,7 @@ namespace type
 struct Ptr;            // ptr' // uptr' // sptr' // wptr'
 struct Table;          // [T; N] // [T; N, N, ...] // [T; N]*D
 struct Primitive;      // i8-i128-isize u8-u128-usize b8-b128-bsize f32-f128-fsize
-                       // bool void ascii utf32 str text
+                       // bool void cune rune str c_str text
 struct Tuple;          // (T, U, V) // (a: T, b: U, c: V)
 struct Function_Proto; // fn(T, U) -> (T, U, V)
 
@@ -117,13 +117,13 @@ namespace literal
 {
 struct Boolean;  // true // false
 struct Integral; // int uint binary
-struct Decimal;  // deci udeci
+struct Decimal;  // d32-d128-dsize ud32-ud128-udsize
 struct Floating; // float double longdouble
 
-struct ASCII; // "a"ascii -> 8 bits character
-struct UTF32; // "⚜"utf32 "⚜" -> 32 bits character
+struct CUNE; // "a"cune -> 8 bits character
+struct RUNE; // "⚜"rune "⚜" -> 32 bits character
 
-struct Text;               // fat pointer of utf32 "Hello World!"
+struct Text_Pure;          // fat pointer of rune/cune "Hello World!", c string
 struct Text_Interpolation; // "{expression}" "{expression:spec}"
 struct Textual_Element;    // Text or Text_Lerp
 struct Textual_Format;     // "name is {name}"
@@ -168,6 +168,8 @@ struct Table_Access; // index [i] or slice [0..10]
 struct Ptr_At;     // my_ptr'at(i)
 struct Ptr_Offset; // my_ptr'offset(i)
 struct Ptr_Val;    // val'my_ptr
+struct Mut_Of;     // mut'a
+struct Ref_Of;     // ref'a
 struct Addr_Of;    // addr'a
 struct Size_Of;    // size'a
 struct GetBits;    // a~[0..8]

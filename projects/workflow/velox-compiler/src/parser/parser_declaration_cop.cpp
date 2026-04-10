@@ -145,7 +145,7 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
     auto comp_name = ctx.p_expr->identifier();
 
     if (auto ty = ctx.p_expr->identifier_typed()) {
-      ty->name = std::move(comp_name);
+      ty->name = comp_name.release();
       comp_id  = std::move(ty);
     } else {
       comp_id = std::move(comp_name);
@@ -186,8 +186,14 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
     parent_entity->del   = e_del;
     return;
   } else if (ctx.tok_v.match(TokTy::OP)) {
-    auto op = _entity_op(parent_entity);
-    parent_entity->operators.push_back(std::move(op));
+    if (ctx.tok_v.check_any({TokTy::INTERROGATIVE, TokTy::OPEN_SQUARE, TokTy::TILDE})) {
+      auto access = _entity_access_op(parent_entity);
+      parent_entity->op_access.push_back(std::move(access));
+    } else {
+      auto op = _entity_op(parent_entity);
+      parent_entity->operators.push_back(std::move(op));
+    }
+
     return;
   } else if (ctx.tok_v.match(TokTy::CAST)) {
     auto cast = _entity_cast(parent_entity);
@@ -204,55 +210,24 @@ std::shared_ptr<ast::declaration::cop::Entity_Op>
 parser::Parser_Declaration_COP::_entity_op(std::shared_ptr<ast::declaration::cop::Entity> parent_entity)
 {
   static const std::string hint = "define entity operator overloading like `op + { ... }`.";
-  static const std::string hint_index =
-      "define entity index overloading like:"
-      "\n  - index `op [a] -> T {...}`"
-      "\n  - range `op [r..] -> Slice<T> {...}`.";
+
   auto tok = ctx.tok_v.peek();
 
   ctx.m_sym->enter_scope("op", EScopeType::Entity_Op);
 
   std::shared_ptr<ast::declaration::cop::Entity_Op> entity_op;
 
-  // if index operator case op [] -> T { ... }
-  if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
-    auto _op_index            = ctx.Create_Decl<ast::declaration::cop::Entity_OpIndex>(tok);
-    _op_index->operatorType   = EBinOpType::Index;
-    _op_index->parameter_name = ctx.parse_name("Expected index name binding", hint_index);
-
-    if (ctx.tok_v.peek().type == TokTy::DOT && ctx.tok_v.peek(1).type == TokTy::DOT) {
-      _op_index->operatorType = EBinOpType::Slice;
-    }
-
-    ctx.tok_v.expect(23, TokTy::CLOSE_SQUARE, "Expected closed index operator ']'", hint_index);
-    ctx.tok_v.expect(24, TokTy::ARROW, "Expected explicit return type '-> T'", hint_index);
-
-    // return type expected for index operator
-    ctx.tok_v.expect(25, TokTy::ARROW, "Expected return definition '-> T' after index operator '[]' overload.",
-                     hint_index);
-
-    _op_index->return_type = ctx.p_type->parse_type();
-
-    if (_op_index->operatorType == EBinOpType::Slice) {
-      // ctx.parse_name("", hint_index);
-    }
-
-    entity_op = _op_index;
-  }
   // other operator case op + - / * ...
-  else {
-    auto _op    = ctx.Create_Decl<ast::declaration::cop::Entity_Op>(tok);
-    auto op_tok = ctx.tok_v.expect_any(27, kOperatorTokens, "Expected operator in entity operator overloading.", hint);
-    _op->operatorType = TokTy_to_EBinOpType(op_tok.type);
+  auto _op    = ctx.Create_Decl<ast::declaration::cop::Entity_Op>(tok);
+  auto op_tok = ctx.tok_v.expect_any(27, kOperatorTokens, "Expected operator in entity operator overloading.", hint);
+  _op->operatorType = TokTy_to_EBinOpType(op_tok.type);
 
-    if (ctx.tok_v.check(TokTy::ARROW))
-      ctx.tok_v.add_error(28,
-                          "Unexpected retrun type definition '-> T' after a entity operator '"
-                              + EBinOpType_to_str(_op->operatorType) + "'.",
-                          hint);
-
-    entity_op = _op;
-  }
+  if (ctx.tok_v.check(TokTy::ARROW))
+    ctx.tok_v.add_error(28,
+                        "Unexpected retrun type definition '-> T' after a entity operator '"
+                            + EBinOpType_to_str(_op->operatorType) + "'.",
+                        hint);
+  entity_op = _op;
 
   ctx.tok_v.expect(29, TokTy::OPEN_BRACE, "Expected start code block '{' after entity operator overloading.", hint);
 
@@ -263,6 +238,55 @@ parser::Parser_Declaration_COP::_entity_op(std::shared_ptr<ast::declaration::cop
   ctx.m_sym->exit_scope();
 
   return entity_op;
+}
+
+
+std::shared_ptr<ast::declaration::cop::Entity_Access_Op>
+parser::Parser_Declaration_COP::_entity_access_op(std::shared_ptr<ast::declaration::cop::Entity> parent_entity)
+{
+  static const std::string hint =
+      "define entity index overloading like:"
+      "\n  - index `op [a] -> T {...}`"
+      "\n  - range `op [r..] -> Slice<T> {...}`.";
+
+  auto tok = ctx.tok_v.peek();
+
+  ctx.m_sym->enter_scope("op", EScopeType::Entity_Op);
+
+  std::shared_ptr<ast::declaration::cop::Entity_Access_Op> entity_access;
+
+
+  // if index operator case op [] -> T { ... }
+  auto _access_op = ctx.Create_Decl<ast::declaration::cop::Entity_Access_Op>(tok);
+  _access_op->operatorType =
+      ctx.tok_v.peek(-1).type == TokTy::INTERROGATIVE ? EAccessOpType::IndexBound : EAccessOpType::Index;
+  ctx.tok_v.match(TokTy::OPEN_SQUARE); // if on bounded index
+  _access_op->parameter_name = ctx.parse_name("Expected index name binding", hint);
+
+  if (ctx.tok_v.peek().type == TokTy::DOT && ctx.tok_v.peek(1).type == TokTy::DOT) {
+    _access_op->operatorType =
+        _access_op->operatorType == EAccessOpType::IndexBound ? EAccessOpType::SliceBound : EAccessOpType::Slice;
+  }
+
+  ctx.tok_v.expect(23, TokTy::CLOSE_SQUARE, "Expected closed index operator ']'", hint);
+  ctx.tok_v.expect(24, TokTy::ARROW, "Expected explicit return type '-> T'", hint);
+
+  // return type expected for index operator
+  ctx.tok_v.expect(25, TokTy::ARROW, "Expected return definition '-> T' after index operator '[]' overload.", hint);
+
+  _access_op->return_type = ctx.p_type->parse_type();
+
+  entity_access = _access_op;
+
+  ctx.tok_v.expect(29, TokTy::OPEN_BRACE, "Expected start code block '{' after entity operator overloading.", hint);
+
+  entity_access->parent_entity = parent_entity;
+
+  entity_access->codeblock = ctx.p_loc->code_block_instruction();
+
+  ctx.m_sym->exit_scope();
+
+  return entity_access;
 }
 
 std::shared_ptr<ast::declaration::cop::Entity_Cast>

@@ -30,15 +30,15 @@ void ast::literal::Floating::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::ASCII::accept(Visitor_Base& v)
+void ast::literal::CUNE::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::UTF32::accept(Visitor_Base& v)
+void ast::literal::RUNE::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::Text::accept(Visitor_Base& v)
+void ast::literal::Text_Pure::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -108,15 +108,15 @@ llvm::Value* ast::literal::Floating::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::literal::ASCII::codegen(Visitor_Codegen& v)
+llvm::Value* ast::literal::CUNE::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::literal::UTF32::codegen(Visitor_Codegen& v)
+llvm::Value* ast::literal::RUNE::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::literal::Text::codegen(Visitor_Codegen& v)
+llvm::Value* ast::literal::Text_Pure::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
@@ -244,17 +244,23 @@ bool ast::literal::Integral::is_signed() const
 
 ast::literal::Decimal::Decimal()
 {
-  if (is_unsigned)
-    inferred_type = type::get_udeci_type();
-  else
-    inferred_type = type::get_deci_type();
+  switch (raw_type) {
+  case EPrimType::d32:    inferred_type = type::get_d32_type(); return;
+  case EPrimType::d64:    inferred_type = type::get_d64_type(); return;
+  case EPrimType::d128:   inferred_type = type::get_d128_type(); return;
+  case EPrimType::dSize:  inferred_type = type::get_dsize_type(); return;
+  case EPrimType::ud32:   inferred_type = type::get_ud32_type(); return;
+  case EPrimType::ud64:   inferred_type = type::get_ud64_type(); return;
+  case EPrimType::ud128:  inferred_type = type::get_ud128_type(); return;
+  case EPrimType::udSize: inferred_type = type::get_udsize_type(); return;
+  default:                return;
+  }
 }
 
-ast::literal::Decimal::Decimal(const Int128& value, size_t _integral_num, size_t _decimal_num, bool _is_unsigned)
+ast::literal::Decimal::Decimal(const Int128& value, size_t _scale, EPrimType _raw_type)
   : val(value)
-  , integral_num(_integral_num)
-  , decimal_num(_decimal_num)
-  , is_unsigned(_is_unsigned)
+  , scale(_scale)
+  , raw_type(_raw_type)
 {
 }
 
@@ -264,8 +270,10 @@ ast::literal::Floating::Floating()
   switch (type) {
   // signed
   // integers
+  case EPrimType::f16:   inferred_type = type::get_f16_type(); break;
   case EPrimType::f32:   inferred_type = type::get_f32_type(); break;
   case EPrimType::f64:   inferred_type = type::get_f64_type(); break;
+  case EPrimType::f80:   inferred_type = type::get_f80_type(); break;
   case EPrimType::f128:  inferred_type = type::get_f128_type(); break;
   case EPrimType::fSize: inferred_type = type::get_fsize_type(); break;
   default:               break;
@@ -278,27 +286,27 @@ ast::literal::Floating::Floating(const Float128& value)
 {
 }
 
-ast::literal::ASCII::ASCII()
+ast::literal::CUNE::CUNE()
 {
-  inferred_type = type::get_ascii_type();
+  inferred_type = type::get_cune_type();
 }
 
 
-ast::literal::ASCII::ASCII(char value)
+ast::literal::CUNE::CUNE(char value)
 {
-  inferred_type = type::get_ascii_type();
+  inferred_type = type::get_cune_type();
   val           = value;
 }
 
-ast::literal::UTF32::UTF32()
+ast::literal::RUNE::RUNE()
 {
-  inferred_type = type::get_utf32_type();
+  inferred_type = type::get_rune_type();
 }
 
-ast::literal::UTF32::UTF32(std::string codePoints_value)
+ast::literal::RUNE::RUNE(std::string codePoints_value)
 {
   codePoints    = codePoints_value;
-  inferred_type = type::get_utf32_type();
+  inferred_type = type::get_rune_type();
 }
 
 

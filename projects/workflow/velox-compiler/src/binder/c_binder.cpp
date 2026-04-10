@@ -6,12 +6,12 @@
 #include <filesystem>
 #include <fstream>
 #include <ostream>
-#include <set>
 
 #include <compiler_context.hpp>
 #include <common.hpp>
 
 #include "binder/binder_ffi.hpp"
+#include "misc/script_info.hpp"
 
 
 void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
@@ -32,7 +32,7 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
   imp.path = {"ffi"};
   imp.name = "C";
 
-  ast.imports = {imp};
+  ast.imports["C"] = imp;
 
   ffi::write_ast(ast, _bind.path);
 
@@ -48,67 +48,61 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, C
   CXLinkageKind linkage = clang_getCursorLinkage(cursor);
   if (linkage == CXLinkage_Internal) return CXChildVisit_Recurse;
 
-  std::set<std::string> ty_names;
-  std::set<std::string> fn_names;
-  std::set<std::string> gl_names;
+  auto find_item = [&](const std::vector<Extern_Item>& items, const std::string& name) -> bool {
+    for (auto item : items) {
+      // no mangling in C
+      if (item.name == name) return true;
+    }
+    return false;
+  };
 
-  for (auto& item : ast->bind.items) {
-    if (item.scope.empty() || item.scope[0] != "C") continue;
-
-    if (item.kind == EExtern_Kind::Function)
-      fn_names.insert(item.name);
-    else if (item.kind == EExtern_Kind::Global)
-      gl_names.insert(item.name);
-    else if (item.kind == EExtern_Kind::Type)
-      ty_names.insert(item.name);
-  }
 
   switch (kind) {
   case CXCursor_StructDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    if (!ty_names.contains(name)) break;
+    if (!find_item(ast->bind.extern_comp, name)) break;
 
-    if (!clang_isCursorDefinition(cursor)) break; // ignorer forward declaration
-    ffi::Comp comp = c_struct_to_comp(cursor);
-    ast->comps.push_back(std::move(comp));
+    if (!clang_isCursorDefinition(cursor)) break;
+    ffi::Comp comp        = c_struct_to_comp(cursor);
+    ast->comps[comp.name] = std::move(comp);
     break;
   }
 
   case CXCursor_UnionDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    if (!ty_names.contains(name)) break;
+    if (!find_item(ast->bind.extern_union, name)) break;
 
     if (!clang_isCursorDefinition(cursor)) break;
-    ffi::Union u = c_union_to_union(cursor);
-    ast->unions.push_back(std::move(u));
+    ffi::Union u        = c_union_to_union(cursor);
+    ast->unions[u.name] = std::move(u);
     break;
   }
 
   case CXCursor_EnumDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    if (!ty_names.contains(name)) break;
+    if (!find_item(ast->bind.extern_flag, name)) break;
 
     if (!clang_isCursorDefinition(cursor)) break;
-    ffi::Flag e = c_enum_to_flag(cursor);
-    ast->flags.push_back(std::move(e));
+    ffi::Flag e        = c_enum_to_flag(cursor);
+    ast->flags[e.name] = e;
     break;
   }
 
   case CXCursor_FunctionDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    if (!fn_names.contains(name)) break;
+    if (!find_item(ast->bind.extern_fn, name)) break;
 
-    ffi::Func f = c_function_to_func(cursor);
-    ast->funcs.push_back(std::move(f));
+    ffi::Func f        = c_function_to_func(cursor);
+    ast->funcs[f.name] = std::move(f);
     break;
   }
 
   case CXCursor_VarDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(cursor));
-    if (!fn_names.contains(name)) break;
+    if (!find_item(ast->bind.extern_glo, name)) break;
 
-    ffi::Global g = c_global_to_global(cursor);
-    ast->globals.push_back(std::move(g));
+    ffi::Global g        = c_global_to_global(cursor);
+    ast->globals[g.name] = std::move(g);
     break;
   }
 

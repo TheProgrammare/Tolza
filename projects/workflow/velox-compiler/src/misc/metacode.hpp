@@ -351,7 +351,7 @@ struct Metablock_Reuse_Param {
   enum struct EPassMode { Any, Mut, Ref, Copy, Move, Comptime, Addr };
 
   EPassMode                                   pass_mode = EPassMode::Copy;
-  std::unique_ptr<ast::AType>                 type;
+  std::shared_ptr<ast::AType>                 type;
   [[maybe_unused]] std::unique_ptr<ast::Node> defaultValue;
   bool                                        is_variadic = false;
 

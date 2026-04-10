@@ -60,10 +60,11 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression
     auto& T = *term.value();
 
     switch (ptr->unary_op) {
-    case EUnaryOpType::NONE:   break;
-    case EUnaryOpType::_not:   return boolean_not(T);
-    case EUnaryOpType::_plus:  return scalar_plus(T);
-    case EUnaryOpType::_minus: return scalar_minus(T);
+    case EUnaryOpType::NONE:         break;
+    case EUnaryOpType::_not:         return boolean_not(T);
+    case EUnaryOpType::_plus:        return scalar_plus(T);
+    case EUnaryOpType::_minus:       return scalar_minus(T);
+    case EUnaryOpType::_invert_sign: return boolean_not(T);
     }
   }
 
@@ -418,72 +419,69 @@ bool Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::A
 std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::literal::Decimal& L,
                                                                      const ast::literal::Decimal& R, EBinOpType op)
 {
-  auto to_lit = [](const llvm::APInt& value, size_t max_integral, size_t max_decimal,
-                   bool is_unsigned) -> ast::ALiteral* {
-    return new ast::literal::Decimal(Int128(value), max_integral, max_decimal, is_unsigned);
+  auto to_lit = [](const llvm::APInt& value, size_t scale, EPrimType raw_type) -> ast::ALiteral* {
+    return new ast::literal::Decimal(Int128(value), scale, raw_type);
   };
   auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
 
-  llvm::APInt L_val = *L.val.val; // copie
-  llvm::APInt R_val = *R.val.val; // copie
+  llvm::APInt L_val = *L.val.val; // copy
+  llvm::APInt R_val = *R.val.val; // copy
 
-  size_t max_decimal = std::max(L.decimal_num, R.decimal_num);
+  size_t max_scale = std::max(L.scale, R.scale);
 
-  // Aligner les décimales pour Add/Sub/Comparisons
-  auto align_decimals = [&](llvm::APInt& val, size_t val_decimal) {
-    for (size_t i = val_decimal; i < max_decimal; ++i) val = val * 10;
+  auto align_scales = [&](llvm::APInt& val, size_t val_decimal) {
+    for (size_t i = val_decimal; i < max_scale; ++i) val = val * 10;
   };
 
   switch (op) {
   case EBinOpType::Add: {
-    align_decimals(L_val, L.decimal_num);
-    align_decimals(R_val, R.decimal_num);
+    align_scales(L_val, L.scale);
+    align_scales(R_val, R.scale);
     llvm::APInt result = L_val + R_val;
-    return to_lit(result, std::max(L.integral_num, R.integral_num), max_decimal, L.is_unsigned || L.is_unsigned);
+    return to_lit(result, max_scale, L.raw_type);
   }
   case EBinOpType::Sub: {
-    align_decimals(L_val, L.decimal_num);
-    align_decimals(R_val, R.decimal_num);
+    align_scales(L_val, L.scale);
+    align_scales(R_val, R.scale);
     llvm::APInt result = L_val - R_val;
-    return to_lit(result, std::max(L.integral_num, R.integral_num), max_decimal, L.is_unsigned || L.is_unsigned);
+    return to_lit(result, max_scale, L.raw_type);
   }
   case EBinOpType::Mul: {
-    llvm::APInt result          = L_val * R_val;
-    size_t      result_decimal  = L.decimal_num + R.decimal_num;
-    size_t      result_integral = L.integral_num + R.integral_num; // simple estimation
-    return to_lit(result, result_integral, result_decimal, L.is_unsigned || L.is_unsigned);
+    llvm::APInt result       = L_val * R_val;
+    size_t      result_scale = L.scale + R.scale;
+    return to_lit(result, result_scale, L.raw_type);
   }
   case EBinOpType::Div: {
-    // On scale le dividende pour garder précision
+    // scale dividende to keep precision
     llvm::APInt scale(L_val.getBitWidth(), 1);
-    for (size_t i = 0; i < max_decimal; ++i) scale = scale * 10;
+    for (size_t i = 0; i < max_scale; ++i) scale = scale * 10;
     llvm::APInt dividend = L_val * scale;
     llvm::APInt result;
-    if (L.is_unsigned)
+    if (EPrimType_is_signed(L.raw_type))
       result = dividend.udiv(R_val);
     else
       result = dividend.sdiv(R_val);
 
-    return to_lit(result, L.integral_num, max_decimal, L.is_unsigned || L.is_unsigned);
+    return to_lit(result, max_scale, L.raw_type);
   }
   case EBinOpType::Quo: {
-    // quotient entier
+    // integral quotient
     llvm::APInt result;
-    if (L.is_unsigned)
+    if (EPrimType_is_signed(L.raw_type))
       result = L_val.udiv(R_val);
     else
       result = L_val.sdiv(R_val);
 
-    return to_lit(result, L.integral_num, 0, L.is_unsigned || L.is_unsigned);
+    return to_lit(result, 0, L.raw_type);
   }
   case EBinOpType::Rem: {
     llvm::APInt result;
-    if (L.is_unsigned)
+    if (EPrimType_is_signed(L.raw_type))
       result = L_val.urem(R_val);
     else
       result = L_val.srem(R_val);
 
-    return to_lit(result, L.integral_num, 0, L.is_unsigned || L.is_unsigned);
+    return to_lit(result, 0, L.raw_type);
   }
   case EBinOpType::Divrem: {
 
@@ -492,13 +490,13 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::
     return std::unexpected(err.print_error());
   }
   case EBinOpType::_eq: {
-    align_decimals(L_val, L.decimal_num);
-    align_decimals(R_val, R.decimal_num);
+    align_scales(L_val, L.scale);
+    align_scales(R_val, R.scale);
     return to_bool(L_val == R_val);
   }
   case EBinOpType::_neq: {
-    align_decimals(L_val, L.decimal_num);
-    align_decimals(R_val, R.decimal_num);
+    align_scales(L_val, L.scale);
+    align_scales(R_val, R.scale);
     return to_bool(L_val != R_val);
   }
   default: return std::unexpected("Unexpected operation on Decimal");

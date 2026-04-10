@@ -1,8 +1,10 @@
 #include "pipeline_codegen.hpp"
 
 #include <chrono>
+#include <exception>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -28,7 +30,7 @@
 
 void emit_llvm_to_file(const Visitor_Codegen& v)
 {
-  static bool log = compiler::COMP_CTX.logs.contains("codegen");
+  static bool log = compiler::COMP_CTX.logs.contains("emit");
 
   std::filesystem::path out_llvm_file(compiler::COMP_CTX.get_llvmir_dir());
   std::filesystem::create_directories(out_llvm_file);
@@ -45,14 +47,26 @@ void emit_llvm_to_file(const Visitor_Codegen& v)
   }
 
   v.mod->print(out_f, nullptr);
-  if (log) std::cout << "emit llvm-ir to \"" << out_llvm_file << "\" " << std::endl;
+  if (log) std::cout << "emit llvm-ir to " << out_llvm_file << std::endl;
 }
 
 bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 {
   if (scr_infos.empty()) return true;
 
-  auto& main_mod = scr_infos[0]->llvm_module;
+  llvm::Module* main_mod = scr_infos[0]->llvm_module.get();
+
+  if (!main_mod) {
+    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking." << std::endl;
+    return false;
+  }
+
+
+  if (llvm::verifyModule(*main_mod, &llvm::errs())) {
+    llvm::errs() << "[linker:ERROR] Module verification failed!\n";
+    return false;
+  }
+
 
   llvm::Linker linker(*main_mod);
 
@@ -60,13 +74,23 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 
   bool first_linked = true;
   bool failed       = false;
-  for (auto& scr_info : scr_infos) {
-    if (first_linked) {
-      first_linked = false;
-      continue;
+  for (size_t i = 1; i < scr_infos.size(); ++i) {
+    auto& scr_info = scr_infos[i];
+    if (!scr_info->llvm_module) continue; // safe
+
+
+    llvm::outs() << "[linker] verify module " << scr_info->llvm_module->getName() << "\n"
+                 << "  file: \"" << scr_info->file_path << "\"\n";
+    if (llvm::verifyModule(*scr_info->llvm_module, &llvm::errs())) {
+      llvm::errs() << "[linker:ERROR] Module verification \"" << scr_info->file_path << "\" failed !\n ";
+      return false;
     }
 
-    if (linker.linkInModule(std::unique_ptr<llvm::Module>(scr_info->llvm_module)), flag) {
+
+    std::cout << "[linker] Linking module: " << scr_info->llvm_module->getModuleIdentifier() << std::endl;
+
+    auto module_to_link = std::move(scr_info->llvm_module);
+    if (linker.linkModules(*main_mod, std::move(module_to_link))) {
       std::cerr << "[linker:ERROR] Link failed on script " << scr_info->file_path << std::endl;
       failed = true;
     }
@@ -110,7 +134,7 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
     auto            start = std::chrono::high_resolution_clock::now();
     Visitor_Codegen codegen_visit(*scr_info);
     codegen_visit.visit(*scr_info->rootNode);
-    scr_info->llvm_module = codegen_visit.mod;
+    scr_info->llvm_module = std::move(codegen_visit.__module);
 
     if (compiler::COMP_CTX.target_emits.contains(common::CompCtx::EEmit::LLVM)) emit_llvm_to_file(codegen_visit);
 

@@ -32,7 +32,7 @@ struct Visitor_Semantic : Visitor_Default {
 
   // ============ DECLARATION ============
   // void visit(ast::declaration::Global& n) override;
-  // void visit(ast::declaration::Function& n) override;
+  void visit(ast::declaration::Function& n) override;
 
   // void visit(ast::declaration::Mod& n) override;
   // void visit(ast::declaration::Export& n) override;
@@ -113,13 +113,13 @@ struct Visitor_Semantic : Visitor_Default {
   // void visit(ast::literal::Decimal& n) override;
   // void visit(ast::literal::Floating& n) override;
 
-  // void visit(ast::literal::ASCII& n) override;
-  // void visit(ast::literal::UTF32& n) override;
+  // void visit(ast::literal::CUNE& n) override;
+  // void visit(ast::literal::RUNE& n) override;
 
   // void visit(ast::literal::Text& n) override;
   // void visit(ast::literal::Text_Interpolation& n) override;
   // void visit(ast::literal::Textual_Element& n) override;
-  void visit(ast::literal::Textual_Format& n) override;
+  // void visit(ast::literal::Textual_Format& n) override;
   // void visit(ast::literal::Format_Specifier& n) override;
 
   // void visit(ast::literal::Table& n) override;
@@ -146,7 +146,7 @@ struct Visitor_Semantic : Visitor_Default {
   // void visit(ast::expression::Other& n) override;
 
   // void visit(ast::expression::Call& n) override;
-  // void visit(ast::expression::Call_Argument& n) override;
+  void visit(ast::expression::Call_Argument& n) override;
   // void visit(ast::expression::Call_System& n) override;
   // void visit(ast::expression::Call_Pipe& n) override;
 
@@ -179,11 +179,11 @@ struct Visitor_Semantic : Visitor_Default {
   // void visit(ast::statement::Match_Case& n) override;
 
   // ============ OPERATION ============
-  // void visit(ast::operation::Cast_As& n) override;
+  void visit(ast::operation::Cast_As& n) override;
   // void visit(ast::operation::Is& n) override;
   // void visit(ast::operation::In& n) override;
   // void visit(ast::operation::Assignment& n) override;
-  // void visit(ast::operation::Binary& n) override;
+  void visit(ast::operation::Binary& n) override;
   // void visit(ast::operation::Unary& n) override;
   // void visit(ast::operation::Interval& n) override;
   // void visit(ast::operation::Ptr_Dist& n) override;

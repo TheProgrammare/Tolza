@@ -69,8 +69,8 @@ std::string ffi::EType_to_str(const EType ty)
   case ffi::EType::_cstr:       return "c_str";
   case ffi::EType::_str:        return "str";
   case ffi::EType::_text:       return "text";
-  case ffi::EType::_ascii:      return "ascii";
-  case ffi::EType::_utf32:      return "utf32";
+  case ffi::EType::_cune:       return "cune";
+  case ffi::EType::_rune:       return "rune";
 
   case ffi::EType::_schar:      return "ffi::C::_schar";
   case ffi::EType::_short:      return "ffi::C::_short";
@@ -311,7 +311,7 @@ std::string ffi::typealias_to_str(const TypeAlias& _ty_alias)
 
 void ffi::write_ast(const ffi::AST& ast, const std::string& dest_file)
 {
-  if (!check_ast_generation(ast)) return;
+  // if (!check_ast_generation(ast)) return;
 
   std::filesystem::create_directories(std::filesystem::path(dest_file).parent_path());
   std::ofstream os(dest_file);
@@ -328,7 +328,7 @@ void ffi::write_ast(const ffi::AST& ast, const std::string& dest_file)
     if (!ast.imports.empty()) {
       _imp = ffi::BINDER_IMPORT_HEADER;
 
-      for (auto& elem : ast.imports) _imp += ffi::import_to_str(elem);
+      for (auto& [name, import] : ast.imports) _imp += ffi::import_to_str(import);
     }
 
     std::string header = ffi::BINDER_FILE_HEADER;
@@ -339,42 +339,42 @@ void ffi::write_ast(const ffi::AST& ast, const std::string& dest_file)
   if (!ast.enums.empty()) {
     os << ffi::BINDER_ENUM_HEADER;
 
-    for (auto& elem : ast.enums) os << ffi::enum_to_str(elem);
+    for (auto& [_, elem] : ast.enums) os << ffi::enum_to_str(elem);
   }
   if (!ast.comps.empty()) {
     os << ffi::BINDER_COMP_HEADER;
 
-    for (auto& elem : ast.comps) os << ffi::comp_to_str(elem);
+    for (auto& [_, elem] : ast.comps) os << ffi::comp_to_str(elem);
   }
   if (!ast.unions.empty()) {
     os << ffi::BINDER_UNION_HEADER;
 
-    for (auto& elem : ast.unions) os << union_to_str(elem);
+    for (auto& [_, elem] : ast.unions) os << union_to_str(elem);
   }
   if (!ast.globals.empty()) {
     os << ffi::BINDER_GLOBAL_HEADER;
 
-    for (auto& elem : ast.globals) os << global_to_str(elem);
+    for (auto& [_, elem] : ast.globals) os << global_to_str(elem);
   }
   if (!ast.funcs.empty()) {
     os << ffi::BINDER_FUNCTION_HEADER;
 
-    for (auto& elem : ast.funcs) os << func_to_str(elem);
+    for (auto& [_, elem] : ast.funcs) os << func_to_str(elem);
   }
   if (!ast.typealias.empty()) {
     os << ffi::BINDER_TYPEALIAS_HEADER;
 
-    for (auto& elem : ast.typealias) os << typealias_to_str(elem);
+    for (auto& [_, elem] : ast.typealias) os << typealias_to_str(elem);
   }
   if (!ast.flags.empty()) {
     os << ffi::BINDER_FLAG_HEADER;
 
-    for (auto& elem : ast.flags) os << flag_to_str(elem);
+    for (auto& [_, elem] : ast.flags) os << flag_to_str(elem);
   }
   if (!ast.entities.empty()) {
     os << ffi::BINDER_ENTITY_HEADER;
 
-    for (auto& elem : ast.entities) os << entity_to_str(elem);
+    for (auto& [_, elem] : ast.entities) os << entity_to_str(elem);
   }
 
   os << "\n} // " << ast.bind.abi << "\n\n} // export" << std::flush;
@@ -393,26 +393,13 @@ bool ffi::check_ast_generation(const AST& ast)
     errs.push_back(err.print_error());
   };
 
-  for (auto& item : ast.bind.items) {
-    switch (item.kind) {
-    case EExtern_Kind::Function: {
-      bool find = false;
-      for (auto& fn : ast.funcs) {
-        if (fn.name == item.name) find = true;
-      }
-      if (!find) add_err(item);
-      break;
+  for (auto& item : ast.bind.extern_fn) {
+    bool find = false;
+    for (auto& [name, fn] : ast.funcs) {
+      if (name == item.name) find = true;
     }
-    case EExtern_Kind::Type:
-    case EExtern_Kind::Global:
-    case EExtern_Kind::Enum:
-    case EExtern_Kind::Union:
-    case EExtern_Kind::Component:
-    case EExtern_Kind::System:
-    case EExtern_Kind::Entity:
-    case EExtern_Kind::Generic:
-    case EExtern_Kind::Metacode:  break;
-    }
+    if (!find) add_err(item);
+    break;
   }
 
   for (auto& err : errs) {

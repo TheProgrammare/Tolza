@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <memory>
 
+#include <llvm/IR/Module.h>
+
 #include "ast/ast_base.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"

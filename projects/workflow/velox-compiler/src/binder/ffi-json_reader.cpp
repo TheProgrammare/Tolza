@@ -34,8 +34,8 @@ ffi::EType ffi::JSON::str_to_etype(const std::string& s)
       {"fsize",      EType::_fsize     },
       {"str",        EType::_str       },
       {"text",       EType::_text      },
-      {"ascii",      EType::_ascii     },
-      {"utf32",      EType::_utf32     },
+      {"cune",       EType::_cune      },
+      {"rune",       EType::_rune      },
       {"schar",      EType::_schar     },
       {"short",      EType::_short     },
       {"long",       EType::_long      },
@@ -136,14 +136,14 @@ ffi::Prototype ffi::JSON::json_to_prototype(const json& j)
   return proto;
 }
 
-ffi::CallConvention ffi::JSON::str_to_callconvention(const std::string& s)
+ffi::ECallConvention ffi::JSON::str_to_callconvention(const std::string& s)
 {
-  if (s == "C") return CallConvention::C;
-  if (s == "std_call") return CallConvention::Stdcall;
-  if (s == "fast_call") return CallConvention::Fastcall;
-  if (s == "vector_call") return CallConvention::Vectorcall;
-  if (s == "systemv") return CallConvention::SystemV;
-  return CallConvention::C;
+  if (s == "C") return ECallConvention::C;
+  if (s == "std_call") return ECallConvention::Stdcall;
+  if (s == "fast_call") return ECallConvention::Fastcall;
+  if (s == "vector_call") return ECallConvention::Vectorcall;
+  if (s == "systemv") return ECallConvention::SystemV;
+  return ECallConvention::C;
 }
 
 ffi::Func ffi::JSON::json_to_func(const json& j)
@@ -476,35 +476,59 @@ ffi::AST ffi::JSON::read_ffi_json_file(const std::string& path)
   ast.bind.lib  = j["bind"].value("lib", "");
 
   if (j.contains("functions")) {
-    for (auto& n : j["functions"]) ast.funcs.push_back(json_to_func(n));
+    for (auto& n : j["functions"]) {
+      auto func            = json_to_func(n);
+      ast.funcs[func.name] = std::move(func);
+    }
   }
 
   if (j.contains("comps")) {
-    for (auto& n : j["components"]) ast.comps.push_back(json_to_comp(n));
+    for (auto& n : j["components"]) {
+      auto comp            = json_to_comp(n);
+      ast.comps[comp.name] = std::move(comp);
+    }
   }
 
   if (j.contains("globals")) {
-    for (auto& n : j["globals"]) ast.globals.push_back(json_to_global(n));
+    for (auto& n : j["globals"]) {
+      auto glo              = json_to_global(n);
+      ast.globals[glo.name] = std::move(glo);
+    }
   }
 
   if (j.contains("enums")) {
-    for (auto& n : j["enums"]) ast.enums.push_back(json_to_enum(n));
+    for (auto& n : j["enums"]) {
+      auto _enum            = json_to_enum(n);
+      ast.enums[_enum.name] = std::move(_enum);
+    }
   }
 
   if (j.contains("unions")) {
-    for (auto& n : j["unions"]) ast.unions.push_back(json_to_union(n));
+    for (auto& n : j["unions"]) {
+      auto _union             = json_to_union(n);
+      ast.unions[_union.name] = std::move(_union);
+    }
   }
 
   if (j.contains("flags")) {
-    for (auto& n : j["flags"]) ast.flags.push_back(json_to_flag(n));
+    for (auto& n : j["flags"]) {
+      auto _flag            = json_to_flag(n);
+      ast.flags[_flag.name] = std::move(_flag);
+    }
   }
 
   if (j.contains("entities")) {
-    for (auto& n : j["entities"]) ast.entities.push_back(json_to_entity(n));
+    for (auto& n : j["entities"]) {
+      auto entity               = json_to_entity(n);
+      ast.entities[entity.name] = std::move(entity);
+    }
   }
 
   if (j.contains("typealias")) {
-    for (auto& n : j["typealias"]) ast.typealias.push_back(json_to_typealias(n));
+    for (auto& n : j["typealias"]) {
+      auto typealias                = json_to_typealias(n);
+      ast.typealias[typealias.name] = std::move(typealias);
+    }
   }
 
   return ast;

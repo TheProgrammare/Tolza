@@ -1,5 +1,6 @@
 #include "ast_declaration_cop.hpp"
 
+#include "ast/ast_data.hpp"
 #include "ast_expression.hpp"
 #include "ast_declaration_local.hpp"
 #include "ast_literal.hpp"
@@ -41,7 +42,7 @@ void ast::declaration::cop::Entity_Op::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::declaration::cop::Entity_OpIndex::accept(Visitor_Base& v)
+void ast::declaration::cop::Entity_Access_Op::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -84,6 +85,16 @@ bool ast::declaration::cop::Component_Field::compare_with(const AType& other) co
 bool ast::declaration::cop::Entity::contains_op(EBinOpType op, const AType* return_type) const
 {
   for (auto& elem : operators) {
+    if (elem->operatorType == op) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ast::declaration::cop::Entity::contains_access_op(EAccessOpType op, const AType* return_type) const
+{
+  for (auto& elem : op_access) {
     if (elem->operatorType == op) {
       return true;
     }
@@ -187,7 +198,7 @@ llvm::Function* ast::declaration::cop::Entity_Op::codegen(Visitor_Codegen& v)
   return v.visit(*this);
 }
 
-llvm::Function* ast::declaration::cop::Entity_OpIndex::codegen(Visitor_Codegen& v)
+llvm::Function* ast::declaration::cop::Entity_Access_Op::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
@@ -218,7 +229,7 @@ llvm::Value* ast::declaration::cop::Entity_Op::codegen_pass(Visitor_Codegen& v)
   return v.visit(*this);
 }
 
-llvm::Value* ast::declaration::cop::Entity_OpIndex::codegen_pass(Visitor_Codegen& v)
+llvm::Value* ast::declaration::cop::Entity_Access_Op::codegen_pass(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }

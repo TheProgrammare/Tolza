@@ -18,7 +18,7 @@ struct IGenCond : public Node {
 
 struct Is_Type final : IGenCond {
   std::string                         srcTypename;
-  std::vector<std::unique_ptr<AType>> inType;
+  std::vector<std::shared_ptr<AType>> inType;
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
@@ -28,9 +28,7 @@ struct Is_Type final : IGenCond {
   bool type_isValid(const AType& type) const override
   {
     for (auto& _type : inType) {
-      if (auto ptr = dynamic_cast<ast::AType*>(_type.get())) {
-        // if (*ptr == type) return true;
-      }
+      // if (*ptr == type) return true;
     }
     return false;
   }
@@ -42,7 +40,7 @@ struct Is_Type final : IGenCond {
 
 struct Can_Cast final : IGenCond {
   std::string            srcTypename;        // typename
-  std::unique_ptr<AType> target;             // cast target
+  std::shared_ptr<AType> target;             // cast target
   bool                   isCastFrom = false; // false = cast to | true = cast from
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;

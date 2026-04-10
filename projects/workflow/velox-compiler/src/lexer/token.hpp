@@ -25,9 +25,9 @@ enum class ETokenType {
   T_U0,
   T_BOOL,
   // 8 bits
-  T_ASCII,
+  T_CUNE,
   // 32 bits
-  T_UTF32,
+  T_RUNE,
   T_I8,
   T_I16,
   T_I32,
@@ -47,17 +47,25 @@ enum class ETokenType {
   T_B128,
   T_BSIZE,
   T_PTRDIFF,
+  T_F16,
   T_F32,
   T_F64,
+  T_F80,
   T_F128,
   T_FSIZE,
-  T_DECIMAL,
-  T_UDECIMAL,
+  T_D32,
+  T_D64,
+  T_D128,
+  T_DSIZE,
+  T_UD32,
+  T_UD64,
+  T_UD128,
+  T_UDSIZE,
   // C string convention: i8* null terminated
   T_C_STRING,
-  // fat pointer of ASCII null terminated
+  // fat pointer of cune null terminated
   T_STRING,
-  // fat pointer of UTF32 null terminated
+  // fat pointer of rune null terminated
   T_TEXT,
   T_ARRAY,
   T_TUPLE,
@@ -84,7 +92,7 @@ enum class ETokenType {
   L_TEXTUAL,
   TRUE,
   FALSE,
-  L_ASCII,
+  L_CUNE,
   L_ARRAY,
   // variable kind
   LET,
@@ -285,8 +293,9 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"?",         ETokenType::INTERROGATIVE   },
     {"u0",        ETokenType::T_U0            },
     {"bool",      ETokenType::T_BOOL          },
-    {"ascii",     ETokenType::T_ASCII         },
-    {"utf32",     ETokenType::T_UTF32         },
+    {"cune",      ETokenType::T_CUNE          },
+    {"rune",      ETokenType::T_RUNE          },
+    {"fsize",     ETokenType::T_FSIZE         },
     {"isize",     ETokenType::T_ISIZE         },
     {"usize",     ETokenType::T_USIZE         },
     {"i8",        ETokenType::T_I8            },
@@ -304,14 +313,22 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"i128",      ETokenType::T_I64           },
     {"u128",      ETokenType::T_U64           },
     {"b128",      ETokenType::T_B128          },
+    {"f16",       ETokenType::T_F16           },
     {"f32",       ETokenType::T_F32           },
     {"f64",       ETokenType::T_F64           },
+    {"f80",       ETokenType::T_F80           },
     {"f128",      ETokenType::T_F128          },
     {"c_str",     ETokenType::T_C_STRING      },
     {"str",       ETokenType::T_STRING        },
     {"text",      ETokenType::T_TEXT          },
-    {"deci",      ETokenType::T_DECIMAL       },
-    {"udeci",     ETokenType::T_UDECIMAL      },
+    {"dsize",     ETokenType::T_DSIZE         },
+    {"d32",       ETokenType::T_D32           },
+    {"d64",       ETokenType::T_D64           },
+    {"d128",      ETokenType::T_D128          },
+    {"udsize",    ETokenType::T_UDSIZE        },
+    {"ud32",      ETokenType::T_UD32          },
+    {"ud64",      ETokenType::T_UD64          },
+    {"ud128",     ETokenType::T_UD128         },
     {"ptrdiff",   ETokenType::T_PTRDIFF       },
     // metacode or static table key
     {"#",         ETokenType::HASHTAG         },
@@ -612,14 +629,16 @@ const std::initializer_list<ETokenType> kPointerTokens = {
 };
 
 const std::initializer_list<ETokenType> kPrimitiveTypeTokens = {
-    ETokenType::T_U0,    ETokenType::T_BOOL,    ETokenType::T_ASCII,   ETokenType::T_C_STRING, ETokenType::T_STRING,
-    ETokenType::T_UTF32, ETokenType::T_TEXT,    ETokenType::T_USIZE,   ETokenType::L_BIN,      ETokenType::L_HEX,
-    ETokenType::L_OCT,   ETokenType::L_I,       ETokenType::L_U,       ETokenType::L_F,        ETokenType::T_I8,
-    ETokenType::T_I16,   ETokenType::T_I32,     ETokenType::T_I64,     ETokenType::T_I128,     ETokenType::T_ISIZE,
-    ETokenType::T_U8,    ETokenType::T_U16,     ETokenType::T_U32,     ETokenType::T_U64,      ETokenType::T_U128,
-    ETokenType::T_USIZE, ETokenType::T_B8,      ETokenType::T_B16,     ETokenType::T_B32,      ETokenType::T_B64,
-    ETokenType::T_B128,  ETokenType::T_BSIZE,   ETokenType::T_F32,     ETokenType::T_F64,      ETokenType::T_F128,
-    ETokenType::T_FSIZE, ETokenType::T_PTRDIFF, ETokenType::T_DECIMAL, ETokenType::T_UDECIMAL,
+    ETokenType::T_U0,    ETokenType::T_BOOL,   ETokenType::T_CUNE,  ETokenType::T_C_STRING, ETokenType::T_STRING,
+    ETokenType::T_RUNE,  ETokenType::T_TEXT,   ETokenType::T_USIZE, ETokenType::L_BIN,      ETokenType::L_HEX,
+    ETokenType::L_OCT,   ETokenType::L_I,      ETokenType::L_U,     ETokenType::L_F,        ETokenType::T_I8,
+    ETokenType::T_I16,   ETokenType::T_I32,    ETokenType::T_I64,   ETokenType::T_I128,     ETokenType::T_ISIZE,
+    ETokenType::T_U8,    ETokenType::T_U16,    ETokenType::T_U32,   ETokenType::T_U64,      ETokenType::T_U128,
+    ETokenType::T_USIZE, ETokenType::T_B8,     ETokenType::T_B16,   ETokenType::T_B32,      ETokenType::T_B64,
+    ETokenType::T_B128,  ETokenType::T_BSIZE,  ETokenType::T_F16,   ETokenType::T_F32,      ETokenType::T_F64,
+    ETokenType::T_F80,   ETokenType::T_F128,   ETokenType::T_FSIZE, ETokenType::T_PTRDIFF,  ETokenType::T_D32,
+    ETokenType::T_D64,   ETokenType::T_D128,   ETokenType::T_DSIZE, ETokenType::T_UD32,     ETokenType::T_UD64,
+    ETokenType::T_UD128, ETokenType::T_UDSIZE,
 };
 const std::initializer_list<ETokenType> kIntegerTypeTokens = {
     ETokenType::T_I8, ETokenType::T_I16, ETokenType::T_I32, ETokenType::T_I64, ETokenType::T_I128, ETokenType::T_ISIZE,
@@ -636,10 +655,7 @@ const std::initializer_list<ETokenType> kBinTypTokens = {
     ETokenType::T_B8, ETokenType::T_B16, ETokenType::T_B32, ETokenType::T_B64, ETokenType::T_B128, ETokenType::T_BSIZE,
 };
 const std::initializer_list<ETokenType> kFloatingTypeTokens = {
-    ETokenType::T_F32,
-    ETokenType::T_F64,
-    ETokenType::T_F128,
-    ETokenType::T_FSIZE,
+    ETokenType::T_F16, ETokenType::T_F32, ETokenType::T_F64, ETokenType::T_F80, ETokenType::T_F128, ETokenType::T_FSIZE,
 };
 const std::initializer_list<ETokenType> kNumericTypeTokens = {
     ETokenType::L_BIN,  ETokenType::L_HEX,   ETokenType::L_OCT,   ETokenType::L_I,       ETokenType::L_U,
@@ -649,8 +665,10 @@ const std::initializer_list<ETokenType> kNumericTypeTokens = {
     ETokenType::T_B32,  ETokenType::T_B64,   ETokenType::T_B128,  ETokenType::T_BSIZE,   ETokenType::T_F32,
     ETokenType::T_F64,  ETokenType::T_F128,  ETokenType::T_FSIZE, ETokenType::T_PTRDIFF,
 };
-const std::initializer_list<ETokenType> kDecimalTypeTokens = {ETokenType::L_DECIMAL, ETokenType::L_UDECIMAL,
-                                                              ETokenType::T_DECIMAL, ETokenType::T_UDECIMAL};
+const std::initializer_list<ETokenType> kDecimalTypeTokens = {
+    ETokenType::L_DECIMAL, ETokenType::L_UDECIMAL, ETokenType::T_D32,  ETokenType::T_D64,   ETokenType::T_D128,
+    ETokenType::T_DSIZE,   ETokenType::T_UD32,     ETokenType::T_UD64, ETokenType::T_UD128, ETokenType::T_UDSIZE,
+};
 const std::initializer_list<ETokenType> kBooleanTypeTokens = {ETokenType::TRUE, ETokenType::FALSE, ETokenType::T_BOOL};
 
 const std::initializer_list<ETokenType> kModificatorOpTokens = {
@@ -671,25 +689,28 @@ const std::initializer_list<ETokenType> kFormatypeTokens = {
     ETokenType::S_TEXTUAL_EXPR_END,
 };
 const std::initializer_list<ETokenType> kTypeTokens = {
-    ETokenType::T_I8,      ETokenType::T_I16,      ETokenType::T_I32,      ETokenType::T_I64,     ETokenType::T_I128,
-    ETokenType::T_ISIZE,   ETokenType::T_U8,       ETokenType::T_U16,      ETokenType::T_U32,     ETokenType::T_U64,
-    ETokenType::T_U128,    ETokenType::T_USIZE,    ETokenType::T_B8,       ETokenType::T_B16,     ETokenType::T_B32,
-    ETokenType::T_B64,     ETokenType::T_B128,     ETokenType::T_BSIZE,    ETokenType::T_F32,     ETokenType::T_F64,
-    ETokenType::T_F128,    ETokenType::T_FSIZE,    ETokenType::T_BOOL,     ETokenType::T_UTF32,   ETokenType::T_ASCII,
-    ETokenType::T_DECIMAL, ETokenType::T_UDECIMAL, ETokenType::T_C_STRING, ETokenType::T_STRING,  ETokenType::T_TEXT,
-    ETokenType::FUNCTION,  ETokenType::IDENTIFIER, ETokenType::TYPE,       ETokenType::T_PTRDIFF,
+    ETokenType::T_I8,       ETokenType::T_I16,     ETokenType::T_I32,   ETokenType::T_I64,    ETokenType::T_I128,
+    ETokenType::T_ISIZE,    ETokenType::T_U8,      ETokenType::T_U16,   ETokenType::T_U32,    ETokenType::T_U64,
+    ETokenType::T_U128,     ETokenType::T_USIZE,   ETokenType::T_B8,    ETokenType::T_B16,    ETokenType::T_B32,
+    ETokenType::T_B64,      ETokenType::T_B128,    ETokenType::T_BSIZE, ETokenType::T_F16,    ETokenType::T_F32,
+    ETokenType::T_F64,      ETokenType::T_F80,     ETokenType::T_F128,  ETokenType::T_FSIZE,  ETokenType::T_BOOL,
+    ETokenType::T_RUNE,     ETokenType::T_CUNE,    ETokenType::T_D32,   ETokenType::T_D64,    ETokenType::T_D128,
+    ETokenType::T_DSIZE,    ETokenType::T_UD32,    ETokenType::T_UD64,  ETokenType::T_UD128,  ETokenType::T_UDSIZE,
+    ETokenType::T_C_STRING, ETokenType::T_STRING,  ETokenType::T_TEXT,  ETokenType::FUNCTION, ETokenType::IDENTIFIER,
+    ETokenType::TYPE,       ETokenType::T_PTRDIFF,
 };
 const std::initializer_list<ETokenType> kHybridKeyNamespace = {
-    ETokenType::T_I8,      ETokenType::T_I16,      ETokenType::T_I32,      ETokenType::T_I64,     ETokenType::T_I128,
-    ETokenType::T_ISIZE,   ETokenType::T_U8,       ETokenType::T_U16,      ETokenType::T_U32,     ETokenType::T_U64,
-    ETokenType::T_U128,    ETokenType::T_USIZE,    ETokenType::T_B8,       ETokenType::T_B16,     ETokenType::T_B32,
-    ETokenType::T_B64,     ETokenType::T_B128,     ETokenType::T_BSIZE,    ETokenType::T_F32,     ETokenType::T_F64,
-    ETokenType::T_F128,    ETokenType::T_FSIZE,    ETokenType::T_BOOL,     ETokenType::T_UTF32,   ETokenType::T_ASCII,
-    ETokenType::T_DECIMAL, ETokenType::T_UDECIMAL, ETokenType::T_C_STRING, ETokenType::T_STRING,  ETokenType::T_TEXT,
-    ETokenType::FUNCTION,  ETokenType::IDENTIFIER, ETokenType::TYPE,       ETokenType::T_U0,      ETokenType::CAST,
-    ETokenType::FUNCTION,  ETokenType::LAMBDA,     ETokenType::FLAG,       ETokenType::PTR,       ETokenType::UPTR,
-    ETokenType::SPTR,      ETokenType::WPTR,       ETokenType::ENTITY,     ETokenType::COMPONENT, ETokenType::GENERIC,
-    ETokenType::T_PTRDIFF,
+    ETokenType::T_I8,       ETokenType::T_I16,     ETokenType::T_I32,   ETokenType::T_I64,     ETokenType::T_I128,
+    ETokenType::T_ISIZE,    ETokenType::T_U8,      ETokenType::T_U16,   ETokenType::T_U32,     ETokenType::T_U64,
+    ETokenType::T_U128,     ETokenType::T_USIZE,   ETokenType::T_B8,    ETokenType::T_B16,     ETokenType::T_B32,
+    ETokenType::T_B64,      ETokenType::T_B128,    ETokenType::T_BSIZE, ETokenType::T_F16,     ETokenType::T_F32,
+    ETokenType::T_F64,      ETokenType::T_F80,     ETokenType::T_F128,  ETokenType::T_FSIZE,   ETokenType::T_BOOL,
+    ETokenType::T_RUNE,     ETokenType::T_CUNE,    ETokenType::T_D32,   ETokenType::T_D64,     ETokenType::T_D128,
+    ETokenType::T_DSIZE,    ETokenType::T_UD32,    ETokenType::T_UD64,  ETokenType::T_UD128,   ETokenType::T_UDSIZE,
+    ETokenType::T_C_STRING, ETokenType::T_STRING,  ETokenType::T_TEXT,  ETokenType::FUNCTION,  ETokenType::IDENTIFIER,
+    ETokenType::TYPE,       ETokenType::T_U0,      ETokenType::CAST,    ETokenType::FUNCTION,  ETokenType::LAMBDA,
+    ETokenType::FLAG,       ETokenType::PTR,       ETokenType::UPTR,    ETokenType::SPTR,      ETokenType::WPTR,
+    ETokenType::ENTITY,     ETokenType::COMPONENT, ETokenType::GENERIC, ETokenType::T_PTRDIFF,
 };
 const std::initializer_list<ETokenType> kLogicalTokens = {ETokenType::AND, ETokenType::NAND, ETokenType::OR,
                                                           ETokenType::XOR, ETokenType::NOR,  ETokenType::XNOR,
@@ -713,15 +734,17 @@ const std::initializer_list<ETokenType> kGenArgsValidTokens = {
     ETokenType::IDENTIFIER,    ETokenType::STATIC_ACCESS,  ETokenType::PTR,        ETokenType::UPTR,
     ETokenType::SPTR,          ETokenType::WPTR,           ETokenType::TICK,       ETokenType::HASHTAG,
     ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::IDENTIFIER, ETokenType::T_BOOL,
-    ETokenType::T_UTF32,       ETokenType::T_ASCII,        ETokenType::T_DECIMAL,  ETokenType::T_UDECIMAL,
-    ETokenType::T_STRING,      ETokenType::T_TEXT,         ETokenType::FUNCTION,   ETokenType::IDENTIFIER,
-    ETokenType::TYPE,          ETokenType::COMMA,          ETokenType::LET,        ETokenType::T_PTRDIFF,
+    ETokenType::T_RUNE,        ETokenType::T_CUNE,         ETokenType::T_D32,      ETokenType::T_D64,
+    ETokenType::T_D128,        ETokenType::T_DSIZE,        ETokenType::T_UD32,     ETokenType::T_UD64,
+    ETokenType::T_UD128,       ETokenType::T_UDSIZE,       ETokenType::T_STRING,   ETokenType::T_TEXT,
+    ETokenType::FUNCTION,      ETokenType::IDENTIFIER,     ETokenType::TYPE,       ETokenType::COMMA,
+    ETokenType::LET,           ETokenType::T_PTRDIFF,
 };
 
 const std::initializer_list<ETokenType> kLiteralTokens = {
     ETokenType::IDENTIFIER, ETokenType::L_BIN, ETokenType::L_OCT,     ETokenType::L_HEX,      ETokenType::L_I,
     ETokenType::L_U,        ETokenType::L_F,   ETokenType::L_DECIMAL, ETokenType::L_UDECIMAL, ETokenType::L_TEXTUAL,
-    ETokenType::TRUE,       ETokenType::FALSE, ETokenType::L_ASCII,   ETokenType::L_ARRAY,
+    ETokenType::TRUE,       ETokenType::FALSE, ETokenType::L_CUNE,    ETokenType::L_ARRAY,
 };
 const std::initializer_list<ETokenType> kInvalidCodeTokens = {
     ETokenType::METACODE,
@@ -782,12 +805,14 @@ const std::initializer_list<ETokenType> kIndentifiable = {
     // mod key
     ETokenType::MOD,
     // type keys
-    ETokenType::TYPE, ETokenType::T_U0, ETokenType::T_BOOL, ETokenType::ENUM, ETokenType::T_UTF32, ETokenType::T_ASCII,
-    ETokenType::T_ISIZE, ETokenType::T_USIZE, ETokenType::T_BSIZE, ETokenType::T_I8, ETokenType::T_U8, ETokenType::T_B8,
-    ETokenType::T_I16, ETokenType::T_U16, ETokenType::T_B16, ETokenType::T_I32, ETokenType::T_U32, ETokenType::T_B32,
-    ETokenType::T_I64, ETokenType::T_U64, ETokenType::T_B64, ETokenType::T_I128, ETokenType::T_U128, ETokenType::T_B128,
-    ETokenType::T_F32, ETokenType::T_F64, ETokenType::T_F128, ETokenType::T_C_STRING, ETokenType::T_STRING,
-    ETokenType::T_TEXT, ETokenType::T_DECIMAL, ETokenType::T_UDECIMAL, ETokenType::T_TEXT, ETokenType::T_PTRDIFF,
+    ETokenType::TYPE, ETokenType::T_U0, ETokenType::T_BOOL, ETokenType::ENUM, ETokenType::T_RUNE, ETokenType::T_CUNE,
+    ETokenType::T_ISIZE, ETokenType::T_USIZE, ETokenType::T_BSIZE, ETokenType::T_FSIZE, ETokenType::T_I8,
+    ETokenType::T_U8, ETokenType::T_B8, ETokenType::T_I16, ETokenType::T_U16, ETokenType::T_B16, ETokenType::T_I32,
+    ETokenType::T_U32, ETokenType::T_B32, ETokenType::T_I64, ETokenType::T_U64, ETokenType::T_B64, ETokenType::T_I128,
+    ETokenType::T_U128, ETokenType::T_B128, ETokenType::T_F16, ETokenType::T_F32, ETokenType::T_F64, ETokenType::T_F80,
+    ETokenType::T_F128, ETokenType::T_C_STRING, ETokenType::T_STRING, ETokenType::T_TEXT, ETokenType::T_D32,
+    ETokenType::T_D64, ETokenType::T_D128, ETokenType::T_DSIZE, ETokenType::T_UD32, ETokenType::T_UD64,
+    ETokenType::T_UD128, ETokenType::T_UDSIZE, ETokenType::T_TEXT, ETokenType::T_PTRDIFF,
     // boolean
     // literals
     ETokenType::TRUE, ETokenType::FALSE,

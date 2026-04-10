@@ -21,7 +21,7 @@ libc                = ""                # musl, glibc, bionic, msvc, ...
 cpu                 = ""                 # overrides host cpu detection
 features            = ""            # ex: "+avx2,+bmi2"
 code_model          = "small"          # tiny, small, kernel, medium, large
-reloc_model         = "pic"         # PIC, Static, DynamicNoPIC, ropi, rwpi, ropi_rwpi
+reloc_model         = "pic"         # pic, static, pie, ropi, rwpi, ropi_rwpi
 sub_config          = ""          # sub .toml name to apply after this .toml 
 emits               = [                             # bin, llvm, obj, asm, bc, s_lib, d_lib
   "bin", "llvm", "obj", "asm", "bc", "s_lib", "d_lib", 

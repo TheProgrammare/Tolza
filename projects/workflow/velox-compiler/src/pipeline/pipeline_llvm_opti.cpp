@@ -26,7 +26,7 @@ bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& sc
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  llvm::Module* mod = scr_infos[0]->llvm_module;
+  llvm::Module* mod = scr_infos[0]->llvm_module.get();
 
 
   // Init backends

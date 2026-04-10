@@ -5,6 +5,8 @@
 #include <stdio.h>
 
 #include <llvm/ADT/APFloat.h>
+#include <string>
+#include <vector>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_data.hpp"
@@ -12,6 +14,9 @@
 #include "ast/ast_literal.hpp"
 #include "ast/ast_expression.hpp"
 
+#include "ast/ast_numeric_128_bits.hpp"
+#include "ast/ast_type.hpp"
+#include "lexer/token.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 
@@ -40,8 +45,8 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silen
     return literal_integral();
     // literal
     // character
-  case TokTy::L_ASCII:
-    return literal_ascii();
+  case TokTy::L_CUNE:
+    return literal_cune();
     // literal
     // string
   case TokTy::L_TEXTUAL:
@@ -79,33 +84,38 @@ std::unique_ptr<ast::literal::Decimal> parser::Parser_Literal::literal_decimal()
 {
   auto literal = ctx.Create_Node<ast::literal::Decimal>(ctx.tok_v.peek());
 
-  size_t      decimal_pos = ctx.tok_v.peek().val.find('.');
-  std::string before_comma;
-  std::string after_comma;
-
-  if (decimal_pos != std::string::npos) {
-    // Part before comma
-    before_comma = ctx.tok_v.peek().val.substr(0, decimal_pos);
-    // Part after comma (no point)
-    after_comma  = ctx.tok_v.peek().val.substr(decimal_pos + 1);
-  } else
-    ctx.tok_v.add_error(81, "Expected an point '.' in lietral decimal.",
-                        "define literal decimal like:\n  - `0000.00d`\n  - `520.15d`\n  - "
-                        "`10.544ud`\n  - `10.25deci`\n  - `20.54udeci`");
-
-  literal->integral_num = before_comma.length();
-  literal->decimal_num  = after_comma.length();
-  literal->is_unsigned  = literal->_token.type == TokTy::L_UDECIMAL;
+  std::string decimal_val = ctx.tok_v.peek().val;
+  size_t      decimal_pos = decimal_val.find('.');
+  literal->scale          = decimal_pos == 0 ? 0 : decimal_val.size() - decimal_pos;
+  std::string raw_val     = decimal_val;
+  std::erase(raw_val, '.');
 
   ctx.tok_v.next(); // consume literal
 
-  ETokenType deciKind;
+  // post literal type like 99.999ud or 99.999d32
+  if (ctx.tok_v.check_any(kDecimalTypeTokens)) literal->raw_type = TokTy_to_EPrimType(ctx.tok_v.next().type);
 
-  // post literal type like 99.999udeci or 99.999deci
-  if (ctx.tok_v.check_any(kDecimalTypeTokens))
-    deciKind = ctx.tok_v.next().type;
-  else
-    deciKind = ctx.tok_v.peek().type == TokTy::L_DECIMAL ? TokTy::T_DECIMAL : TokTy::T_UDECIMAL;
+  // post decimal explicit scale
+  if (ctx.tok_v.check(TokTy::L_I)) {
+    literal->scale = std::stoi(ctx.tok_v.next().val);
+  }
+  if (ctx.tok_v.match(TokTy::COLON) && ctx.tok_v.check(TokTy::L_I)) {
+    size_t bits_size = std::stoi(ctx.tok_v.next().val);
+
+    if (bits_size == 32)
+      literal->raw_type = EPrimType::i32;
+    else if (bits_size == 64)
+      literal->raw_type = EPrimType::i64;
+    else if (bits_size == 128)
+      literal->raw_type = EPrimType::i128;
+    else
+      ctx.tok_v.add_error_tok(220, ctx.tok_v.peek(-1), "Illegal decimal type size.",
+                              "define a decimal type size like: `<decimal>:S`, S must be equals to 32, 64 or 128.");
+
+    auto api = llvm::APInt(bits_size, raw_val, 10);
+
+    literal->val = Int128(api);
+  }
 
   return literal;
 }
@@ -115,11 +125,11 @@ std::unique_ptr<ast::literal::Floating> parser::Parser_Literal::literal_floating
   auto literal = ctx.Create_Node<ast::literal::Floating>(ctx.tok_v.peek());
   literal->val.string_to_f128(ctx.tok_v.peek().val);
 
-  ETokenType floatKind;
-
   // post literal type like 9.99f32 9.99f64
-  if (ctx.tok_v.check_any(kFloatingTypeTokens)) {
-    floatKind = ctx.tok_v.next().type;
+  if (ctx.tok_v.match_any(kFloatingTypeTokens)) {
+    literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+  } else if (ctx.tok_v.match_val("f")) {
+    literal->type = EPrimType::fSize;
   } else {
     ctx.tok_v.next();
 
@@ -138,17 +148,13 @@ std::unique_ptr<ast::literal::Floating> parser::Parser_Literal::literal_floating
 
     maxF64.convertToDouble();
 
-    if (!apf.isFinite())
-      floatKind = TokTy::T_F128;
-    else if (apf.compare(maxF32) != llvm::APFloat::cmpGreaterThan)
-      floatKind = TokTy::T_F32;
-    else if (apf.compare(maxF64) != llvm::APFloat::cmpGreaterThan)
-      floatKind = TokTy::T_F64;
-    else
-      floatKind = TokTy::T_F128;
+    // post literal type like 10f32 0f
+    if (ctx.tok_v.match_any(kFloatingTypeTokens)) {
+      literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+    } else if (ctx.tok_v.match_val("f")) {
+      literal->type = EPrimType::fSize;
+    }
   }
-
-  literal->type = TokTy_to_EPrimType(floatKind);
 
   return literal;
 }
@@ -169,22 +175,22 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
     switch (literalTok.type) {
     case TokTy::L_BIN: {
       api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
-      literal->type = EPrimType::b64;
+      literal->type = EPrimType::bSize;
       break;
     }
     case TokTy::L_OCT: {
       api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 8);
-      literal->type = EPrimType::b64;
+      literal->type = EPrimType::bSize;
       break;
     }
     case TokTy::L_HEX: {
       api           = llvm::APInt(bitWidth, literalTok.val, 16);
-      literal->type = EPrimType::b64;
+      literal->type = EPrimType::bSize;
       break;
     }
     case TokTy::L_I: {
       api           = llvm::APInt(bitWidth, literalTok.val, 10);
-      literal->type = EPrimType::b64;
+      literal->type = EPrimType::iSize;
       break;
     }
     default: throw std::runtime_error("Token literal non supporté");
@@ -206,37 +212,48 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
   }
 
   // post literal type like 10i8 0u32
-  if (ctx.tok_v.check_any(kIntegerTypeTokens)) {
-    literal->type = TokTy_to_EPrimType(ctx.tok_v.peek().type);
-    ctx.tok_v.next(); // consume type
+  if (ctx.tok_v.match_any(kIntegerTypeTokens)) {
+    literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+  } else if (ctx.tok_v.match_val("i")) {
+    literal->type = EPrimType::iSize;
+  } else if (ctx.tok_v.match_val("u")) {
+    literal->type = EPrimType::uSize;
+  } else if (ctx.tok_v.match_val("b")) {
+    literal->type = EPrimType::bSize;
   }
 
   return literal;
 }
 
-std::unique_ptr<ast::literal::ASCII> parser::Parser_Literal::literal_ascii()
+std::unique_ptr<ast::literal::CUNE> parser::Parser_Literal::literal_cune()
 {
-  auto literal = ctx.Create_Node<ast::literal::ASCII>(ctx.tok_v.peek());
+  auto literal = ctx.Create_Node<ast::literal::CUNE>(ctx.tok_v.peek());
   literal->val = ctx.tok_v.next().val[0];
   return literal;
 }
 
-std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_textual()
+std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_textual()
 {
   auto ftext = ctx.Create_Node<ast::literal::Textual_Format>(ctx.tok_v.peek());
 
   bool first_elem = true;
   while (!ctx.tok_v.is_end()) {
     if (ctx.tok_v.check(TokTy::L_TEXTUAL)) {
-      auto text = ctx.Create_Node<ast::literal::Text>(ctx.tok_v.peek());
+      auto text = ctx.Create_Node<ast::literal::Text_Pure>(ctx.tok_v.peek());
       text->val = ctx.tok_v.next().val;
 
-      if (ctx.tok_v.match(TokTy::T_STRING)) {
+      if (ctx.tok_v.match(TokTy::T_STRING) || ctx.tok_v.match_val("s")) {
         text->inferred_type = ast::type::get_str_type();
         text->text_type     = EPrimType::str;
-      } else if (ctx.tok_v.match(TokTy::T_C_STRING)) {
+      } else if (ctx.tok_v.match(TokTy::T_C_STRING) || ctx.tok_v.match_val("c")) {
         text->inferred_type = ast::type::get_c_str_type();
         text->text_type     = EPrimType::c_str;
+      } else if (ctx.tok_v.match(TokTy::T_CUNE) || ctx.tok_v.match_val("cu")) {
+        text->inferred_type = ast::type::get_cune_type();
+        text->text_type     = EPrimType::cune;
+      } else if (ctx.tok_v.match(TokTy::T_RUNE) || ctx.tok_v.match_val("r")) {
+        text->inferred_type = ast::type::get_rune_type();
+        text->text_type     = EPrimType::rune;
       } else {
         text->inferred_type = ast::type::get_text_type();
         text->text_type     = EPrimType::text;
@@ -244,7 +261,9 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
       if (first_elem) ftext->inferred_type = text->inferred_type;
       first_elem = false;
 
-      ftext->values.push_back(std::move(text));
+      auto txt_elem = ast::literal::Textual_Element(std::move(text));
+
+      ftext->values.push_back(std::move(txt_elem));
       continue;
     } else if (ctx.tok_v.match(TokTy::S_TEXTUAL_EXPR_START)) {
       auto lerp        = ctx.Create_Node<ast::literal::Text_Interpolation>(ctx.tok_v.peek(-1));
@@ -261,6 +280,12 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
       continue;
     }
     break;
+  }
+
+  if (ftext->values.size() == 1) {
+    if (auto ptr = dynamic_cast<ast::literal::Text_Pure*>(ftext->values[0].val)) {
+      return std::unique_ptr<ast::literal::Text_Pure>(ptr);
+    }
   }
 
   return ftext;
@@ -332,7 +357,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
 
   // prefix numeric
   if (ctx.tok_v.match(TokTy::HASHTAG)) {
-    ctx.tok_v.expect(85, TokTy::L_ASCII, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
+    ctx.tok_v.expect(85, TokTy::L_CUNE, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
     char prefix = ctx.tok_v.peek(-1).val[0];
 
     switch (prefix) {
@@ -384,7 +409,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
   }
 
   // display format
-  if (ctx.tok_v.match_any({TokTy::L_ASCII, TokTy::PERCENTAGE})) {
+  if (ctx.tok_v.match_any({TokTy::L_CUNE, TokTy::PERCENTAGE})) {
     switch (ctx.tok_v.peek(-1).val[0]) {
     case 's': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::String; break;
     case 'b': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Binary; break;

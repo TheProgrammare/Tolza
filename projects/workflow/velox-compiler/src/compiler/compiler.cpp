@@ -70,7 +70,7 @@ bool Compiler::start_compilation()
 
   if (!mute) {
     std::cout << "[velox-compiler] Compilation Started" << pipeline_info << std::endl;
-    std::cout << "  Config file used: " << compiler::COMP_CTX.current_config_file << std::endl;
+    std::cout << "  Config file used: \"" << compiler::COMP_CTX.current_config_file << "\"" << std::endl;
   }
 
 
@@ -119,14 +119,11 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   if (!pipeline_start_parser(scr_infos)) return false;
 
 
-  for (auto& scr_info : scr_infos) prepared_scripts[scr_info->file_path] = scr_info;
-
-
-  // printer
-  static bool log_ast = compiler::COMP_CTX.debugs.contains("ast");
-  if (log_ast) {
-    for (auto& info : scr_infos) Visitor_Print(*info).visit(*info->rootNode);
+  for (auto& scr_info : scr_infos) {
+    if (scr_info->tokens.empty()) continue;
+    prepared_scripts[scr_info->file_path] = scr_info;
   }
+
 
   // generate bindings
   if (!pipeline_start_binder(scr_infos)) return false;
@@ -134,6 +131,8 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   imported_modules.clear();
 
   for (auto& scr_info : scr_infos) {
+    if (scr_info->tokens.empty()) continue;
+
     prepared_scripts[scr_info->file_path] = scr_info;
 
     for (auto& imp : scr_info->imported_mod) {
@@ -169,6 +168,12 @@ bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   // resolve symbols - resolve types - semantic analyzer
   if (!pipeline_start_resolvers(scr_infos)) return false;
 
+  // printer
+  static bool log_ast = compiler::COMP_CTX.debugs.contains("ast");
+  if (log_ast) {
+    for (auto& info : scr_infos) Visitor_Print(*info).visit(*info->rootNode);
+  }
+
   // LLVM IR
   // generate LLVM IR code
   if (!pipeline_start_codegen(scr_infos)) return false;
@@ -189,7 +194,7 @@ bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
 
   constexpr char end_log[] =
       "[velox-compiler] Compilation finish successfully !\n"
-      "Duration: " color_YELLOW "%0 ms\n" color_RESET "  Find the executable at " color_MAGENTA "%1" color_RESET;
+      "Duration: " color_YELLOW "%0 ms\n" color_RESET "  Find the executable at " color_MAGENTA "\"%1\"" color_RESET;
 
   std::string fmt_end = end_log;
   common::fmt_template(fmt_end, {std::to_string(actual_duration), compiler::COMP_CTX.dir_build});

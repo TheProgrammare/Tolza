@@ -4,205 +4,247 @@
 #include "ast_type.hpp"
 
 
-ast::AType* ast::type::get_bool_type()
+std::shared_ptr<ast::AType> ast::type::get_bool_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::boolean);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::boolean);
   return prim;
 }
 
-ast::AType* ast::type::get_i8_type()
+std::shared_ptr<ast::AType> ast::type::get_i8_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::i8);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::i8);
   return prim;
 }
 
-ast::AType* ast::type::get_i16_type()
+std::shared_ptr<ast::AType> ast::type::get_i16_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::i16);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::i16);
   return prim;
 }
 
-ast::AType* ast::type::get_i32_type()
+std::shared_ptr<ast::AType> ast::type::get_i32_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::i32);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::i32);
   return prim;
 }
 
-ast::AType* ast::type::get_i64_type()
+std::shared_ptr<ast::AType> ast::type::get_i64_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::i64);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::i64);
   return prim;
 }
 
-ast::AType* ast::type::get_i128_type()
+std::shared_ptr<ast::AType> ast::type::get_i128_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::i128);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::i128);
   return prim;
 }
 
-ast::AType* ast::type::get_isize_type()
+std::shared_ptr<ast::AType> ast::type::get_isize_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::iSize);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::iSize);
   return prim;
 }
 
 // unsigned integers
-ast::AType* ast::type::get_u8_type()
+std::shared_ptr<ast::AType> ast::type::get_u8_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u8);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u8);
   return prim;
 }
 
-ast::AType* ast::type::get_u16_type()
+std::shared_ptr<ast::AType> ast::type::get_u16_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u16);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u16);
   return prim;
 }
 
-ast::AType* ast::type::get_u32_type()
+std::shared_ptr<ast::AType> ast::type::get_u32_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u32);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u32);
   return prim;
 }
 
-ast::AType* ast::type::get_u64_type()
+std::shared_ptr<ast::AType> ast::type::get_u64_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u64);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u64);
   return prim;
 }
 
-ast::AType* ast::type::get_u128_type()
+std::shared_ptr<ast::AType> ast::type::get_u128_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u128);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u128);
   return prim;
 }
 
-ast::AType* ast::type::get_usize_type()
+std::shared_ptr<ast::AType> ast::type::get_usize_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::uSize);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::uSize);
   return prim;
 }
 
 // booleans
-ast::AType* ast::type::get_b8_type()
+std::shared_ptr<ast::AType> ast::type::get_b8_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::b8);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::b8);
   return prim;
 }
 
-ast::AType* ast::type::get_b16_type()
+std::shared_ptr<ast::AType> ast::type::get_b16_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::b16);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::b16);
   return prim;
 }
 
-ast::AType* ast::type::get_b32_type()
+std::shared_ptr<ast::AType> ast::type::get_b32_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::b32);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::b32);
   return prim;
 }
 
-ast::AType* ast::type::get_b64_type()
+std::shared_ptr<ast::AType> ast::type::get_b64_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::b64);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::b64);
   return prim;
 }
 
-ast::AType* ast::type::get_b128_type()
+std::shared_ptr<ast::AType> ast::type::get_b128_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::b128);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::b128);
   return prim;
 }
 
-ast::AType* ast::type::get_bsize_type()
+std::shared_ptr<ast::AType> ast::type::get_bsize_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::bSize);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::bSize);
   return prim;
 }
 
-ast::AType* ast::type::get_ptrdiff_type()
+std::shared_ptr<ast::AType> ast::type::get_ptrdiff_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::ptrdiff);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::ptrdiff);
   return prim;
 }
 
 // floats
-ast::AType* ast::type::get_f32_type()
+std::shared_ptr<ast::AType> ast::type::get_f16_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::f32);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::f16);
   return prim;
 }
 
-ast::AType* ast::type::get_f64_type()
+std::shared_ptr<ast::AType> ast::type::get_f32_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::f64);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::f32);
   return prim;
 }
 
-ast::AType* ast::type::get_f128_type()
+std::shared_ptr<ast::AType> ast::type::get_f64_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::f128);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::f64);
   return prim;
 }
 
-ast::AType* ast::type::get_fsize_type()
+std::shared_ptr<ast::AType> ast::type::get_f80_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::fSize);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::f80);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_f128_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::f128);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_fsize_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::fSize);
   return prim;
 }
 
 // decimals
-ast::AType* ast::type::get_deci_type()
+
+std::shared_ptr<ast::AType> ast::type::get_d32_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::deci);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::d32);
   return prim;
 }
 
-ast::AType* ast::type::get_udeci_type()
+std::shared_ptr<ast::AType> ast::type::get_d64_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::udeci);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::d64);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_d128_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::d128);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_dsize_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::dSize);
+  return prim;
+}
+std::shared_ptr<ast::AType> ast::type::get_ud32_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::ud32);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_ud64_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::ud64);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_ud128_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::ud128);
+  return prim;
+}
+
+std::shared_ptr<ast::AType> ast::type::get_udsize_type()
+{
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::udSize);
   return prim;
 }
 
 // other types
-ast::AType* ast::type::get_void_type()
+std::shared_ptr<ast::AType> ast::type::get_void_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::u0);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::u0);
   return prim;
 }
 
-ast::type::Tuple* ast::type::get_void_return_type()
+std::shared_ptr<ast::AType> ast::type::get_cune_type()
 {
-  static ast::type::Tuple* tuple = new Tuple();
-  return tuple;
-}
-
-ast::AType* ast::type::get_ascii_type()
-{
-  static ast::AType* prim = new Primitive(EPrimType::ASCII);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::cune);
   return prim;
 }
 
-ast::AType* ast::type::get_utf32_type()
+std::shared_ptr<ast::AType> ast::type::get_rune_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::UTF32);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::rune);
   return prim;
 }
 
-ast::AType* ast::type::get_str_type()
+std::shared_ptr<ast::AType> ast::type::get_str_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::str);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::str);
   return prim;
 }
 
-ast::AType* ast::type::get_c_str_type()
+std::shared_ptr<ast::AType> ast::type::get_c_str_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::c_str);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::c_str);
   return prim;
 }
 
-ast::AType* ast::type::get_text_type()
+std::shared_ptr<ast::AType> ast::type::get_text_type()
 {
-  static ast::AType* prim = new Primitive(EPrimType::text);
+  static std::shared_ptr<ast::AType> prim = std::make_shared<Primitive>(EPrimType::text);
   return prim;
 }

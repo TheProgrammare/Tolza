@@ -53,6 +53,14 @@ void ast::expression::Ptr_Val::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+void ast::expression::Mut_Of::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+void ast::expression::Ref_Of::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
 void ast::expression::Addr_Of::accept(Visitor_Base& v)
 {
   v.visit(*this);
@@ -120,6 +128,14 @@ llvm::Value* ast::expression::Ptr_Offset::codegen(Visitor_Codegen& v)
   return v.visit(*this);
 }
 llvm::Value* ast::expression::Ptr_Val::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::expression::Mut_Of::codegen(Visitor_Codegen& v)
+{
+  return v.visit(*this);
+}
+llvm::Value* ast::expression::Ref_Of::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }

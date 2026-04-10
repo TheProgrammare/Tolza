@@ -93,12 +93,9 @@ void Int128::string_to_i128(const std::string& s, int base)
   *val = tmp;
 }
 
-std::string Int128::i128_to_string(int base) const
+std::string Int128::i128_to_string(int radix) const
 {
-  if (base != 10 && base != 16) {
-    throw std::invalid_argument("Base must be 10 or 16");
-  }
   llvm::SmallVector<char, 128> buf;
-  val->toString(buf, base, true);
+  val->toString(buf, radix, true);
   return std::string(buf.begin(), buf.end());
 }

@@ -28,11 +28,26 @@ namespace ffi
 
 struct Bind_Package {
   std::shared_ptr<ScriptInfo> scr_info;
-  std::vector<Extern_Item>    items;
-  std::string                 lang;
-  std::string                 lib;
-  std::string                 abi;
-  std::string                 path;
+
+  // mangle name, data
+  std::vector<Extern_Item> extern_fn;
+  std::vector<Extern_Item> extern_ty;
+  std::vector<Extern_Item> extern_glo;
+  std::vector<Extern_Item> extern_enum;
+  std::vector<Extern_Item> extern_union;
+  std::vector<Extern_Item> extern_flag;
+  std::vector<Extern_Item> extern_comp;
+  std::vector<Extern_Item> extern_sys;
+  std::vector<Extern_Item> extern_entity;
+  std::vector<Extern_Item> extern_gen;
+  std::vector<Extern_Item> extern_metacode;
+
+  std::string lang;
+  std::string lib;
+  std::string abi;
+  std::string path;
+
+  size_t bind_count = 0;
 };
 
 enum class EPassMode {
@@ -71,8 +86,8 @@ enum class EType {
   _cstr,
   _str,
   _text,
-  _ascii,
-  _utf32,
+  _cune,
+  _rune,
   _schar,
   _short,
   _long,
@@ -156,6 +171,8 @@ struct Type {
 };
 
 struct Prototype {
+  Prototype() = default;
+
   Type return_type;
   bool is_variadic = false;
 
@@ -163,13 +180,13 @@ struct Prototype {
   std::vector<std::tuple<ffi::EPassMode, Type, bool>> params;
 };
 
-enum class CallConvention { C, Stdcall, Fastcall, Vectorcall, SystemV };
+enum class ECallConvention { C, Stdcall, Fastcall, Vectorcall, SystemV };
 
 struct Func {
   std::string              name;
   std::vector<std::string> param_names;
   Prototype                proto;
-  CallConvention           call_convention = CallConvention::C;
+  ECallConvention          call_convention = ECallConvention::C;
 };
 
 struct Entity {
@@ -230,16 +247,16 @@ struct Import {
 };
 
 struct AST {
-  Bind_Package           bind;
-  std::vector<Import>    imports;
-  std::vector<Comp>      comps;
-  std::vector<Union>     unions;
-  std::vector<Flag>      flags;
-  std::vector<Enum>      enums;
-  std::vector<Entity>    entities;
-  std::vector<Func>      funcs;
-  std::vector<Global>    globals;
-  std::vector<TypeAlias> typealias;
+  Bind_Package                     bind;
+  std::map<std::string, Import>    imports;
+  std::map<std::string, Comp>      comps;
+  std::map<std::string, Union>     unions;
+  std::map<std::string, Flag>      flags;
+  std::map<std::string, Enum>      enums;
+  std::map<std::string, Entity>    entities;
+  std::map<std::string, Func>      funcs;
+  std::map<std::string, Global>    globals;
+  std::map<std::string, TypeAlias> typealias;
 };
 
 [[nodiscard]] ffi::EPassMode type_to_passMode(const Type& ty);

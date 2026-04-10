@@ -22,6 +22,7 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
   size_t count = 0;
   for (auto scr_info : scr_infos) {
+    if (scr_info->tokens.empty()) continue;
     Preprocessor pre(*scr_info);
 
     auto                      start      = std::chrono::high_resolution_clock::now();

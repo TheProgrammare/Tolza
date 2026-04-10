@@ -80,13 +80,15 @@ std::unique_ptr<ast::statement::If> parser::Parser_Statement::if_statement()
   // else or else if case
   if (ctx.tok_v.match(TokTy::ELIF)) {
     std::unique_ptr<ast::statement::If> elifState;
-    elifState                    = if_statement(); // recursive call
-    elifState->isElseNoCondition = false;
+    elifState          = if_statement(); // recursive call
+    elifState->is_elif = true;
+
+    ifState->alternative_statement = std::move(elifState);
   } else if (ctx.tok_v.match(TokTy::ELSE)) {
     std::unique_ptr<ast::statement::If> elseState;
-    elseState                    = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek(-2)); // peek to else token
-    elseState->codeblock         = ctx.p_loc->code_block_instruction();
-    elseState->isElseNoCondition = true;
+    elseState            = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek(-2)); // peek to else token
+    elseState->codeblock = ctx.p_loc->code_block_instruction();
+    elseState->is_else   = true;
 
     ifState->alternative_statement = std::move(elseState);
   }
@@ -287,6 +289,8 @@ std::unique_ptr<ast::statement::Return> parser::Parser_Statement::return_flow()
   auto node = ctx.Create_Node<ast::statement::Return>(ctx.tok_v.peek());
 
   ctx.tok_v.match(TokTy::RETURN);
+
+  node->target_function = ctx.current_function;
 
   if (ctx.tok_v.match(TokTy::SEMICOLON)) return node;
   if (ctx.tok_v.check(TokTy::CLOSE_BRACE)) return node;

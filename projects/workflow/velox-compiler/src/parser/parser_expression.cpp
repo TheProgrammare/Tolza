@@ -24,8 +24,22 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression()
   if (ctx.tok_v.check(TokTy::IF)) return if_ternary();
   if (ctx.tok_v.check(TokTy::NEW)) return new_ptr();
   if (ctx.tok_v.check(TokTy::CAPA_MOVE_OF)) return move();
+  if (ctx.tok_v.check(TokTy::CAPA_MUT_OF)) return mut_of();
+  if (ctx.tok_v.check(TokTy::CAPA_REF_OF)) return ref_of();
 
-  return ctx.p_op->try_operation();
+  auto op = ctx.p_op->try_operation();
+
+  while (!ctx.tok_v.is_end()) {
+    if (!ctx.tok_v.check_any(kOperatorTokens)) return op;
+
+    auto node   = ctx.Create_Node<ast::operation::Binary>(ctx.tok_v.peek());
+    node->left  = std::move(op);
+    node->op    = TokTy_to_EBinOpType(ctx.tok_v.next().type);
+    node->right = parse_expression();
+    op          = std::move(node);
+  }
+
+  return op;
 }
 std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression_term()
 {
@@ -49,23 +63,23 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::base_expression()
   EExprPassMode pass_mode = TokTy_to_EExprPassMode(ctx.tok_v.peek().type);
   if (pass_mode != EExprPassMode::NONE) ctx.tok_v.next();
 
-  if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
+  if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
     base_expr = parse_expression();
     ctx.tok_v.expect(78, TokTy::CLOSE_PAREN, "Expected end of nested expression ')'", "");
+    return base_expr;
   }
 
   if (auto lit = ctx.p_lit->try_literal(true)) {
-    base_expr = std::move(lit);
+    return lit;
   } else if (ctx.tok_v.check_any(kStartIdentifier)) {
-    base_expr = identifier();
+    return identifier();
   }
 
-  if (!base_expr)
-    ctx.tok_v.add_error(79, "Unexpected '" + ctx.tok_v.peek().val + "' keyword.",
-                        "define a term with literal, identifier, ternary if, tuple, nested "
-                        "expression '()', literal array '{}' or nothing '_'.");
+  ctx.tok_v.add_error(79, "Unexpected '" + ctx.tok_v.peek().val + "' keyword.",
+                      "define a term with literal, identifier, ternary if, tuple, nested "
+                      "expression '()', literal array '{}' or nothing '_'.");
 
-  return base_expr;
+  return nullptr;
 }
 
 
@@ -119,7 +133,7 @@ parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> b
       base_expr = ptr_offset(std::move(base_expr));
     }
     // table access
-    else if (ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
+    else if (ctx.tok_v.match(TokTy::INTERROGATIVE) || ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
       base_expr = table_access(std::move(base_expr));
     }
     // end of access operator
@@ -166,8 +180,9 @@ std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std:
   }
 
   ctx.tok_v.next(); // consume as
-  asCast->valueCasted = std::move(expr);
-  asCast->typeCasted  = ctx.p_type->parse_type();
+  asCast->expression    = std::move(expr);
+  asCast->type          = ctx.p_type->parse_type();
+  asCast->inferred_type = asCast->type;
 
   return asCast;
 }
@@ -246,12 +261,17 @@ parser::Parser_Expression::system_call(std::unique_ptr<ast::AExpression> target_
 
 std::unique_ptr<ast::expression::If_Ternary> parser::Parser_Expression::if_ternary()
 {
-  auto ternary = ctx.Create_Node<ast::expression::If_Ternary>(ctx.tok_v.peek());
+  const std::string hint = "define ternary if like: if <condition> => <true_expression> [else => <false_expression>]";
+
+  auto ternary = ctx.Create_Node<ast::expression::If_Ternary>(ctx.tok_v.next());
 
   ternary->evaluator = ctx.p_loc->parse_evaluator(nullptr);
+
+  ctx.tok_v.expect(209, TokTy::INJECT, "Expected inject token '=>' after condition.", hint);
   ternary->true_line = ctx.p_expr->parse_expression();
 
   if (ctx.tok_v.match(TokTy::ELSE)) {
+    ctx.tok_v.match(TokTy::INJECT);
     ternary->false_line = ctx.p_expr->parse_expression();
   }
 
@@ -348,9 +368,11 @@ parser::Parser_Expression::member_access(std::unique_ptr<ast::AExpression> left)
 std::unique_ptr<ast::expression::Table_Access>
 parser::Parser_Expression::table_access(std::unique_ptr<ast::AExpression> target)
 {
+  const bool is_bound = ctx.tok_v.peek(-1).type == TokTy::INTERROGATIVE;
   ctx.tok_v.match(TokTy::OPEN_SQUARE);
 
   auto table_access      = ctx.Create_Node<ast::expression::Table_Access>(ctx.tok_v.peek(-1));
+  table_access->bounded  = is_bound;
   table_access->target   = std::move(target);
   table_access->selector = ctx.p_expr->parse_expression();
 
@@ -390,6 +412,23 @@ std::unique_ptr<ast::expression::Ptr_Val> parser::Parser_Expression::ptr_val()
 {
   auto node = ctx.Create_Node<ast::expression::Ptr_Val>(ctx.tok_v.peek());
   ctx.tok_v.match(TokTy::VAL_OF);
+  node->target = ctx.p_expr->parse_expression();
+
+  return node;
+}
+
+std::unique_ptr<ast::expression::Ref_Of> parser::Parser_Expression::ref_of()
+{
+  auto node = ctx.Create_Node<ast::expression::Ref_Of>(ctx.tok_v.peek());
+  ctx.tok_v.match(TokTy::CAPA_REF_OF);
+  node->target = ctx.p_expr->parse_expression();
+
+  return node;
+}
+std::unique_ptr<ast::expression::Mut_Of> parser::Parser_Expression::mut_of()
+{
+  auto node = ctx.Create_Node<ast::expression::Mut_Of>(ctx.tok_v.peek());
+  ctx.tok_v.match(TokTy::CAPA_MUT_OF);
   node->target = ctx.p_expr->parse_expression();
 
   return node;
