@@ -37,6 +37,7 @@ Any volunteer, but here are a few ideas on how you can make yourself useful base
 | non programmer | good for educative/novice approach, for explicit documentation |
 | linguist | pertinent for the code syntax, the human readable approach |
 | manager | good view for scalable projects, pertinent workflow and workspace | 
+| marketing | competent for the language promotion, can create slogans and memory check for the learning | 
 
 # Project Objectives
 **Summary** This project aims to address practical and concrete needs in a reasonable way, through both the Velox language and its toolchain. 
