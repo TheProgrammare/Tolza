@@ -7,7 +7,7 @@ Avant de considérer de contribuer à ce projet, veuillez lire quelques document
 
 ## Contribuer au code
 1. Cloner ce répertoire sur votre machine
-2. Suivez les instruction de ![Contributing Code](CONTRIBUTING_CODE.md) pour l'intallation logiciel
+2. Suivez les instructions de ![Contributing Code](CONTRIBUTING_CODE.md) pour l'intallation logiciel
 3. Contribuez au code en respectant ![Pull Request Rules](CONTRIBUTING_CODE.md#Pull-Request-Rules)
 4. Rédigez (en anglais ou français) ![pull request template](PULL_REQUEST_TEMPLATE.md) pour expliquer le pull request
 > Si vous innovez, ajoutez ![RFC template](RFC_TEMPLATE.md) pour expliquer et justifier l'innovation
@@ -29,6 +29,7 @@ N'importe quel volontaire, mais il y a quelques suggestions sur comment vous pou
 | non développeur | bon pour l'éducation et approche novice, pour la documentation explicite |
 | linguiste | pertinent pour la syntaxe de code, apporche de documentation explicite |
 | manager | bonne vue de projets échelonnable, espace de travaille et flux de travail pertinent | 
+| communicant | compétent pour la promotion du langage, peut inventer des slogans et des mnémotechniques pour l'apprentissage | 
 
 # Objectifs du Projet
 **Résumé**
