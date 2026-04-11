@@ -29,7 +29,7 @@ N'importe quel volontaire, mais il y a quelques suggestions sur comment vous pou
 | non développeur | bon pour l'éducation et approche novice, pour la documentation explicite |
 | linguiste | pertinent pour la syntaxe de code, apporche de documentation explicite |
 | manager | bonne vue de projets échelonnable, espace de travaille et flux de travail pertinent | 
-| communicant | compétent pour la promotion du langage, peut inventer des slogans et des mnémotechniques pour l'apprentissage | 
+| communicant | compétent pour la promotion du langage, peut inventer des slogans et des mémotechniques pour l'apprentissage | 
 
 # Objectifs du Projet
 **Résumé**
