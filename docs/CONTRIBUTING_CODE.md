@@ -99,10 +99,10 @@ or go to down-left cogwheel > Settings
 ## General conventions
 Any pull request must be made with some minimal requirements:
 - No compilation errors
-- No compilation warnings (excepts some LLVM deprecated source code and false positive include unused `pipeline_headers.hpp` `parser_headers.hpp` `ast_headers.hpp`)
+- No compilation warnings (excepts some so-called unused headers in some `.cpp`, these are false positives)
 - No undefined behavior under the C++23 standard.
 - No memory leak
-- No unformatted code (use `.clang-format` by running the bash script `format-all-command.sh`)
+- No unformatted code (use `.clang-format` by running the bash script `format-all.sh`)
 - No syntax and/or behaviour innovations without a ![RFC template](RFC_TEMPLATE.md) to explain and justify the innovation
 - No mixed pull request: one pull request for one concept/innovation/domains, excepts necessary multi coverage
 - English only comments (or french with english version)
@@ -133,20 +133,23 @@ Any pull request must be made with some minimal requirements:
 - functions, variables, namespace: use snake_case
 - `constexpr` or `static const` constants: prefix `k_` + snake_case
 - macros: UPPER_CASE
-- Types: PascalCase
+- Types: PascalCase, and _ for distinct logic
 - parameters: prefix `p_` + snake_case
 - generic types: `T` `U` `V`
 
 ## Error Handlers
 The project have some error handling
+
+The error diagnostic is effective but imperfect
+
 > Note: most of the time, an error contains a error code, message, hint, code localisation (from line+column or from a token)
 
 - lexer: use `add_error`
 - parser: use `ctx.tok_v`, the token checking can handle error, you can add errors directly from current token `ctx.tok_v.add_error` or specific token `ctx.tok_v.add_error_tok`
-- visitors: use `error_add` for classic visitor error or `error_two_lines` for visitor error on two scripts (e.g. when a imported function is called with wrong arguments)
+- visitors: use `add_error` for classic visitor error or `add_error_two_nodes` for visitor error on two scripts (e.g. when a imported function is called with wrong arguments)
 
-For custom error report on code, use the class `Error_Diagnostic` from the script `error_output.hpp`
-> Any error reported on code must have a unique error code, the `Error_Diagnostic` class only receive static error code
+For custom error report on code, use the class `Error_Diagnostic` `Error_Diagnostic_Two` from the script `error_output.hpp`
+> Any error reported on code must have a unique error code
 
 Keep in mind, that the toolchain and the compiler must never failed, they reports only the errors
 
@@ -158,6 +161,6 @@ Currently, any error added will throw a runtime error to inspect any possible er
 # Project Coding Pattern
 There is some convention to code properly.
 
-To build `velox-toolchain` or `velox-compiler`, please use the  designed bash script `build-velox-debug.sh` or `build-velox-release.sh` for debug or release build. Located at the root of each sub-project.
+To build `velox-toolchain` or `velox-compiler`, please use the  designed bash script `build-debug.sh` or `build-release.sh` for debug or release build. Located at the root of each sub-project.
 
 To test your code, please use the designed `launch.json` script, or create your custom `.json` launch event.
