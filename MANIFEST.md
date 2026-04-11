@@ -54,25 +54,25 @@ This project uses the following open-source libraries:
 
 # Type
 ## Primitives
-|      type      |      syntax      |            literal           |      size      |
+| type | syntax | literal | size |
 |-|-|-|-|
-| boolean        | `bool`           | `true` `false`               | 1 bit (but 8 bit aligned)          |
-| binary         | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0b64` | 8-128 bits |
-| integral       | `isize` `i8`-`i128` | `0 ` `-1` `1i` `10i32`         | 8-128 bits |
-| unsigned       | `usize` `u8`-`u128` | `0 ` `1u` `10u64`              | 8-128 bits |
-| floating (floatting-point) | `fsize` `f32`-`f128` | `0.0f` `-1.0f` `10f64`   | 32-128 bits |
+| boolean | `bool` | `true` `false` | 1 bit (but 8 bit aligned) |
+| binary | `bsize` `b8`-`b128` | `0b10010010` `0x0F` `0b64` | 8-128 bits |
+| integral | `isize` `i8`-`i128` | `0` `-1` `1i` `10i32` default integral | 8-128 bits |
+| unsigned | `usize` `u8`-`u128` | `1u` `10u64` | 8-128 bits |
+| floating (floatting-point) | `fsize` `f32`-`f128` | `0.0` `.0` `-1.0f` `10f64` default point | 32-128 bits |
 | decimal (fixed-point) | `dN` `dN:S` `32dN`-`128dN` | `200.45d2` `10d4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
 | unsigned decimal | `udN` `udN:S` `32udN`-`128udN` | `200.45ud2` `10ud4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
-| no type        | `u0`   |  | 
-| cunei          | `cune`          | `"a"cune` `"a"cu` default one character | 8 bits textual storage, can be partial codepoint or simple ascii character |
-| string         | `str`            | `"hello"s` `"hello"str` default literal text | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
-| C string          | `c_str`          | `"hello"c_str` `"hello"c` | raw pointer `ptr'cune` , null terminated : C convention |
-| rune      | `rune`           | `"⚜"rune` `"⚜"r` `"⚜"`  | 32 bits : 1 code point, encoding utf32  |                   
-| text | `text`           | `"hello"t` `"world"`  | fat pointer `{ data: ptr'rune, size: i32 }`, encoding utf32 |
-| opaque ptr     | `ptr'u0`           |  | bsize bit      |
-| unique ptr     | `uptr'T`           | `uptr'i32`                      | bsize bit      |
-| shared ptr     | `sptr'u0`           | `sptr'i32`                      | bsize bit      |
-| function prototype | `fn() -> ()`           | `fn(i32, i32) -> (i32)` |       |
+| no type | `u0` |  | 
+| cunei | `cune` | `"a"cune` `"a"cu` default one character | 8 bits textual storage, can be partial codepoint or simple ascii character |
+| string | `str` | `"hello"s` `"hello"str` default literal text | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
+| C string | `c_str` | `"hello"c_str` `"hello"c` | raw pointer `ptr'cune` , null terminated : C convention |
+| rune | `rune` | `"⚜"rune` `"⚜"r` `"⚜"` | 32 bits : 1 code point, encoding utf32  |                   
+| text | `text` | `"hello"t` `"world"` | fat pointer `{ data: ptr'rune, size: i32 }`, encoding utf32 |
+| opaque ptr | `ptr'u0` |  | bsize bit |
+| unique ptr | `uptr'T` | `uptr'i32` | bsize bit |
+| shared ptr | `sptr'u0` | `sptr'i32` | bsize bit |
+| function prototype | `fn() -> ()` | `fn(i32, i32) -> (i32)` | |
 
 ## Literal strings
 
@@ -98,29 +98,25 @@ All primitive tables are fat pointers, there is no raw table like in C
 
 | type | syntax | literal |  info |
 |-|-|-|-|
-| static table   | `[T; N]` | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | compile time table size
-| dynamic table (list)  | `[T]` | `{ 1, 2, 3, 4}d`,<br> `{ 0..4 = 8 }d` | dynamic table size
-| static matrix   | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` | static table of static tables 
-| dynamic matrix  | `[T]*D` | `{{0,0,0},{0,0,0},{0,0,0}}d` `{ 1, 2, 3, 4}d*3` | same of static matrix, but literal is instanciation only, dimensions are static !  | static table of dynamic tables
-| static hyper | `T*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}h` `{ 1, 2, 3, 4}h*3` | matrix with static tables but dynamic dimensions | dynamic table of static tables
-| dynamic hyper | `[T]*[D]` | `{{0,0,0},{0,0,0},{0,0,0}}hd` `{ 1, 2, 3, 4}hd*3` | matrix with dynamic tables and dynamic dimensions | dynamic table of dynamic tables
+| static array | `[T; N]` | `{ 1, 2, 3, 4}`,<br> `{ 0..4 = 8 }` (4 elements equals to 8) | compile time table size
+| dynamic array | `[T]` | `{ 1, 2, 3, 4}d`,<br> `{ 0..4 = 8 }d` | dynamic table size
+| static tensor | `[T; N, N, ...]`,<br> `[T; N]*D` | `{{0,0,0},{0,0,0},{0,0,0}}` `{ 1, 2, 3, 4}*3` | compile time dimension size
+| dynamic tensor | `[T]*_` | `{{0,0,0},{0,0,0},{0,0,0}}d` `{ 1, 2, 3, 4}d*3` | dynamic dimension size
 
 ### Primitive table fields
 Access to any table field by the suffix operator like `my_table'size` 
 table overhead structures are designed by the same order
 
-| table | `'data` | `'size` | `'capa` | `'dim_size` | `'dim_capa` |
-|-|-|-|-|-|-|
-| static table   | `ptr'T` | `usize` | NO | NO | NO |
-| dynamic table  | `ptr'T` | `usize` | `usize` | NO | NO |
-| static matrix  | `ptr'T` | `usize` | NO | `usize` | NO |
-| dynamic matrix | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | NO |
-| static hyper   | `ptr'ptr'T` | `usize` | NO | `usize` | `usize` |
-| dynamic hyper  | `ptr'ptr'T` | `ptr'usize` | `ptr'usize` | `usize` | `usize` |
+| table | `'data` | `'size` | `'capa` |
+|-|-|-|-|
+| static array | `ptr'T` | `usize` array | NO |
+| dynamic array | `ptr'T` | `usize` array | `usize` array |
+| static tensor | `ptr'T` |  `usize` dimension | NO |
+| dynamic tensor | `ptr'T` | `usize` dimension | `usize` dimension |
 
-> e.g. get matrix 3rd sub table capacity  `my_dy_matrix'capa'at(2)` for the `'at()` syntax, check ![Pointer Operations](#pointer-operations)
+> e.g. get tensor 3rd sub table capacity  `my_dy_tensor'data'at(2)` for the `'at()` syntax, check ![Pointer Operations](#pointer-operations)
 
-> e.g. get hyper size `my_hyper'dim_size`, because `'size` used on hyper will return the pointer of sub tables size
+> e.g. get tensor dimension size `my_tensor'size`,
 
 ## Complex
 | type | syntax | literal | size |
