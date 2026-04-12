@@ -10,6 +10,7 @@
 #include "ast/ast_literal.hpp"
 #include "ast/ast_numeric_128_bits.hpp"
 #include "ast/ast_operation.hpp"
+#include "codegen/visitor_codegen.hpp"
 #include "codegen_tools.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
@@ -26,10 +27,10 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression
   if (auto ptr = dynamic_cast<ast::ALiteral*>(&value)) {
     return ptr;
   } else if (auto ptr = dynamic_cast<ast::Expr_ID*>(&value)) {
-    auto expr = tools->get_symbol_expression(*ptr->symbol);
+    auto expr = tools->get_symbol_expression(*ptr->identifier_symbol);
 
   } else if (auto ptr = dynamic_cast<ast::Expr_ID_Qualified*>(&value)) {
-    auto expr = tools->get_symbol_expression(*ptr->symbol);
+    auto expr = tools->get_symbol_expression(*ptr->identifier_symbol);
   } else if (auto ptr = dynamic_cast<ast::operation::Binary*>(&value)) {
     auto lhs = evaluate_expression(*ptr->left);
     if (!lhs) return std::unexpected(lhs.error());
@@ -42,16 +43,16 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression
 
     if (auto L_ptr = dynamic_cast<ast::literal::Integral*>(&L)) {
       auto R_ptr = dynamic_cast<ast::literal::Integral*>(&R);
-      return integral(*L_ptr, *R_ptr, ptr->op);
-    } else if (auto L_ptr = dynamic_cast<ast::literal::Floating*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Floating*>(&R);
-      return floating(*L_ptr, *R_ptr, ptr->op);
-    } else if (auto L_ptr = dynamic_cast<ast::literal::Decimal*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Decimal*>(&R);
-      return decimal(*L_ptr, *R_ptr, ptr->op);
+      return integral(*L_ptr, *R_ptr, ptr->op_ty);
+    } else if (auto L_ptr = dynamic_cast<ast::literal::Floating_Point*>(&L)) {
+      auto R_ptr = dynamic_cast<ast::literal::Floating_Point*>(&R);
+      return floating(*L_ptr, *R_ptr, ptr->op_ty);
+    } else if (auto L_ptr = dynamic_cast<ast::literal::Fixed_Point*>(&L)) {
+      auto R_ptr = dynamic_cast<ast::literal::Fixed_Point*>(&R);
+      return decimal(*L_ptr, *R_ptr, ptr->op_ty);
     } else if (auto L_ptr = dynamic_cast<ast::literal::Boolean*>(&L)) {
       auto R_ptr = dynamic_cast<ast::literal::Boolean*>(&R);
-      return boolean(*L_ptr, *R_ptr, ptr->op);
+      return boolean(*L_ptr, *R_ptr, ptr->op_ty);
     }
   } else if (auto ptr = dynamic_cast<ast::operation::Unary*>(&value)) {
     auto term = evaluate_expression(*ptr->base);
@@ -68,7 +69,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression
     }
   }
 
-  Error_Diagnostic err(169, *value._scr_info, value._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+  Error_Diagnostic err(v.scr_info, 169, value._scr_info, value._token, compiler::EPhase::llvmir,
                        "The expression can't be evaluated at compilation time", "");
   return std::unexpected(err.print_error());
 }
@@ -100,11 +101,11 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       if (is_signed) {
         auto L_f = L_val.signedRoundToDouble();
         auto R_f = R_val.signedRoundToDouble();
-        return new ast::literal::Floating(Float128(L_f / R_f));
+        return new ast::literal::Floating_Point(Float128(L_f / R_f));
       } else {
         auto L_f = L_val.roundToDouble();
         auto R_f = R_val.roundToDouble();
-        return new ast::literal::Floating(Float128(L_f / R_f));
+        return new ast::literal::Floating_Point(Float128(L_f / R_f));
       }
     }
     case EBinOpType::Mod: {
@@ -143,7 +144,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       }
     }
     case EBinOpType::Divrem: {
-      Error_Diagnostic err(170, *L._scr_info, L._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+      Error_Diagnostic err(v.scr_info, 170, L._scr_info, L._token, compiler::EPhase::llvmir,
                            "Unexpected operation for compilation time evaluation.", "");
       return std::unexpected(err.print_error());
     }
@@ -196,7 +197,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       return to_bool(L_val.ne(R_val));
     }
     default: {
-      Error_Diagnostic err(171, *L._scr_info, L._token, {R._token}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+      Error_Diagnostic err(v.scr_info, 171, L._scr_info, L._token, compiler::EPhase::llvmir,
                            "Unexpected operation on integral.", "");
       return std::unexpected(err.print_error());
     }
@@ -264,21 +265,20 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       return to_lit(Int128(L_val.rotr(R_val.getLimitedValue())));
     }
     default: {
-      Error_Diagnostic err(172, *L._scr_info, L._token, {R._token}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+      Error_Diagnostic err(v.scr_info, 172, L._scr_info, L._token, compiler::EPhase::llvmir,
                            "Unexpected operation on byte.", "");
       return std::unexpected(err.print_error());
     }
     }
   } else {
-    Error_Diagnostic err(173, *L._scr_info, L._token, {R._token}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
-                         "Unexpected type.", "");
+    Error_Diagnostic err(v.scr_info, 173, L._scr_info, L._token, compiler::EPhase::llvmir, "Unexpected type.", "");
     return std::unexpected(err.print_error());
   }
 }
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::floating(const ast::literal::Floating& L,
-                                                                      const ast::literal::Floating& R, EBinOpType op)
+std::expected<ast::ALiteral*, std::string>
+Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::literal::Floating_Point& R, EBinOpType op)
 {
-  auto to_lit  = [](const Float128& value) { return new ast::literal::Floating(value); };
+  auto to_lit  = [](const Float128& value) { return new ast::literal::Floating_Point(value); };
   auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
 
   auto& L_val = *L.val.val;
@@ -319,7 +319,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::floating(const ast:
     return to_lit(Float128(r));
   }
   case EBinOpType::Quo: {
-    Error_Diagnostic err(174, *L._scr_info, L._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+    Error_Diagnostic err(v.scr_info, 174, L._scr_info, L._token, compiler::EPhase::llvmir,
                          "Unexpected opration for floating type, use floor(fsize)", "");
   }
   case EBinOpType::Rem: {
@@ -337,7 +337,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::floating(const ast:
   }
   case EBinOpType::Divrem: {
 
-    Error_Diagnostic err(175, *L._scr_info, L._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+    Error_Diagnostic err(v.scr_info, 175, L._scr_info, L._token, compiler::EPhase::llvmir,
                          "Unexpected operation for compilation time evaluation.", "");
     return std::unexpected(err.print_error());
   }
@@ -383,7 +383,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::floating(const ast:
     return to_bool(L_val != R_val);
   }
   default: {
-    Error_Diagnostic err(176, *L._scr_info, L._token, {R._token}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+    Error_Diagnostic err(v.scr_info, 176, L._scr_info, L._token, compiler::EPhase::llvmir,
                          "Unexpected operation on byte.", "");
     return std::unexpected(err.print_error());
   }
@@ -416,11 +416,11 @@ bool Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::A
   return diff.ule(maxULP);
 }
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::literal::Decimal& L,
-                                                                     const ast::literal::Decimal& R, EBinOpType op)
+std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::literal::Fixed_Point& L,
+                                                                     const ast::literal::Fixed_Point& R, EBinOpType op)
 {
   auto to_lit = [](const llvm::APInt& value, size_t scale, EPrimType raw_type) -> ast::ALiteral* {
-    return new ast::literal::Decimal(Int128(value), scale, raw_type);
+    return new ast::literal::Fixed_Point(Int128(value), scale, raw_type);
   };
   auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
 
@@ -485,7 +485,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::
   }
   case EBinOpType::Divrem: {
 
-    Error_Diagnostic err(177, *L._scr_info, L._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+    Error_Diagnostic err(v.scr_info, 177, L._scr_info, L._token, compiler::EPhase::llvmir,
                          "Unexpected operation for compilation time evaluation.", "");
     return std::unexpected(err.print_error());
   }
@@ -528,7 +528,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean(const ast::
   case EBinOpType::_b_nor:
   case EBinOpType::_nor:    return to_bool(!(L_val || R_val));
   default:                  {
-    Error_Diagnostic err(178, *L._scr_info, L._token, {R._token}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+    Error_Diagnostic err(v.scr_info, 178, L._scr_info, L._token, compiler::EPhase::llvmir,
                          "Unexpected operation on boolean.", "");
     return std::unexpected(err.print_error());
   }
@@ -542,8 +542,8 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean_not(const a
   if (auto ptr = dynamic_cast<const ast::literal::Boolean*>(&term)) {
     return to_bool(!ptr->val);
   } else {
-    Error_Diagnostic err(179, *term._scr_info, term._token, {term._token}, compiler::EPhase::llvmir,
-                         EErrorSeverity::error, {}, "Unexpected operation 'not' on term.", "");
+    Error_Diagnostic err(v.scr_info, 179, term._scr_info, term._token, compiler::EPhase::llvmir,
+                         "Unexpected operation 'not' on term.", "");
     return std::unexpected(err.print_error());
   }
 }
@@ -553,17 +553,17 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_minus(const 
     llvm::APInt& val = *ptr->val.val;
     if (!val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Floating*>(&term)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&term)) {
     llvm::APFloat& val = *ptr->val.val;
     if (!val.isNegative()) val.changeSign();
-    return new ast::literal::Floating(Float128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Decimal*>(&term)) {
+    return new ast::literal::Floating_Point(Float128(val));
+  } else if (auto ptr = dynamic_cast<const ast::literal::Fixed_Point*>(&term)) {
     llvm::APInt& val = *ptr->val.val;
     if (!val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
   } else {
-    Error_Diagnostic err(180, *term._scr_info, term._token, {term._token}, compiler::EPhase::llvmir,
-                         EErrorSeverity::error, {}, "Unexpected operation 'minus' on term.", "");
+    Error_Diagnostic err(v.scr_info, 180, term._scr_info, term._token, compiler::EPhase::llvmir,
+                         "Unexpected operation 'minus' on term.", "");
     return std::unexpected(err.print_error());
   }
 }
@@ -573,17 +573,17 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_plus(const a
     llvm::APInt& val = *ptr->val.val;
     if (val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Floating*>(&term)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&term)) {
     llvm::APFloat& val = *ptr->val.val;
     if (val.isNegative()) val.changeSign();
-    return new ast::literal::Floating(Float128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Decimal*>(&term)) {
+    return new ast::literal::Floating_Point(Float128(val));
+  } else if (auto ptr = dynamic_cast<const ast::literal::Fixed_Point*>(&term)) {
     llvm::APInt& val = *ptr->val.val;
     if (val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
   } else {
-    Error_Diagnostic err(181, *term._scr_info, term._token, {term._token}, compiler::EPhase::llvmir,
-                         EErrorSeverity::error, {}, "Unexpected operation 'minus' on term.", "");
+    Error_Diagnostic err(v.scr_info, 181, term._scr_info, term._token, compiler::EPhase::llvmir,
+                         "Unexpected operation 'minus' on term.", "");
     return std::unexpected(err.print_error());
   }
 }

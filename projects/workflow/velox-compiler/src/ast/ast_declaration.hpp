@@ -4,7 +4,6 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "ast/ast_data.hpp"
@@ -45,7 +44,7 @@ struct Enum_Element final : public AType {
 struct Enum final : public ADeclaration, AType {
   std::vector<std::unique_ptr<Enum_Element>> variants;
 
-  bool                       isGlobal              = true;
+  bool                       is_global             = true;
   size_t                     discriminant_max      = 0;
   [[maybe_unused]] EPrimType discriminant_int_type = EPrimType::u8;
 
@@ -54,7 +53,7 @@ struct Enum final : public ADeclaration, AType {
 
   std::string debug_str() const override
   {
-    return "declaration enum \"" + name + "\"";
+    return "declaration enum \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -63,12 +62,12 @@ struct Enum final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "en_" + mangle_id(name);
+    return "en_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Enum*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }
@@ -84,7 +83,7 @@ struct Flag final : public ADeclaration, AType {
 
   std::string debug_str() const override
   {
-    return "declaration flag \"" + name + "\"";
+    return "declaration flag \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -93,12 +92,12 @@ struct Flag final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "fg_" + mangle_id(name);
+    return "fg_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Flag*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }
@@ -115,7 +114,7 @@ struct Union final : public ADeclaration, AType {
 
   std::string debug_str() const override
   {
-    return "declaration union \"" + name + "\"";
+    return "declaration union \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -124,12 +123,12 @@ struct Union final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "uo_" + mangle_id(name);
+    return "uo_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Union*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }
@@ -144,7 +143,7 @@ struct Mod : public ADeclaration {
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   std::string  debug_str() const override
   {
-    return "declaration mod \"" + name + "\"";
+    return "declaration mod \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -175,7 +174,7 @@ struct Extern final : public Mod {
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   std::string  debug_str() const override
   {
-    return "extern \"" + name + "\"";
+    return "extern \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -206,7 +205,7 @@ struct Mod_Alias final : public ADeclaration {
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   std::string  debug_str() const override
   {
-    return "mod " + name + " = " + module->debug_str();
+    return "mod " + declaration_name + " = " + module->debug_str();
   }
   ESymbolType get_symbol_type() const override
   {
@@ -216,27 +215,18 @@ struct Mod_Alias final : public ADeclaration {
   void accept(Visitor_Base& v) override;
 };
 
-struct Type_Alias final : public ADeclaration, AType {
+struct Type_Alias final : public ADeclaration {
   std::shared_ptr<AType> type;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "type " + name + " = " + type->debug_str();
+    return "type " + declaration_name + " = " + type->debug_str();
   }
   ESymbolType get_symbol_type() const override
   {
     return ESymbolType::Type_Alias;
-  }
-  std::string mangle_type() const override
-  {
-    return type->mangle_type();
-  }
-  bool compare_with(const AType& other) const override
-  {
-    return type->is_same(other);
   }
 
   void accept(Visitor_Base& v) override;
@@ -245,15 +235,15 @@ struct Type_Alias final : public ADeclaration, AType {
 // gen name<T, U,...> { condition }
 struct Generic final : public ADeclaration, AType {
   std::vector<std::shared_ptr<AType>>                  gen_args;
-  std::set<std::string>                                targetGenericSymbols; // generic typenames
-  std::vector<std::shared_ptr<ast::generic::IGenCond>> conditions;           // generic conditions
+  std::set<std::string>                                target_gen_sym; // generic typenames
+  std::vector<std::shared_ptr<ast::generic::IGenCond>> conditions;     // generic conditions
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "generic \"" + name + "\"";
+    return "generic \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -262,12 +252,12 @@ struct Generic final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "gn_" + mangle_id(name);
+    return "gn_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Generic*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }

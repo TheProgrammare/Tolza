@@ -56,24 +56,24 @@ void ScriptInfo::add_import(const ModuleImportation& imp)
   imported_mod.push_back(std::make_unique<ModuleImportation>(imp));
 }
 
-std::shared_ptr<ModuleExportation> ScriptInfo::get_export_module(const std::string& path)
+std::shared_ptr<ModuleExportation> ScriptInfo::get_export_module(const std::string& p_path)
 {
   for (const auto& exp : exported_mod) {
-    if (exp->script_exported->file_path == path) return exp;
+    if (exp->script_exported->file_path == p_path) return exp;
   }
 
   return nullptr;
 }
 
-std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const std::string> path)
+std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const std::string> p_path)
 {
   size_t                             bigger_seg_compatible = -1;
   std::shared_ptr<ModuleImportation> last_imp_found;
   for (const auto& imp : imported_mod) {
-    if (imp->path.size() > path.size()) continue;
+    if (imp->path.size() > p_path.size()) continue;
 
     if (imp->path.empty()) {
-      if (imp->name == path[0]) {
+      if (imp->name == p_path[0]) {
         bigger_seg_compatible = 0;
         last_imp_found        = imp;
         continue;
@@ -82,7 +82,7 @@ std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const
 
     for (size_t i = 0; i < imp->path.size(); i++) {
       if (i == 0) {
-        if (imp->path[0] == path[0]) {
+        if (imp->path[0] == p_path[0]) {
           if (bigger_seg_compatible == -1 || bigger_seg_compatible < i) {
             bigger_seg_compatible = i;
             last_imp_found        = imp;
@@ -91,7 +91,7 @@ std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const
           break;
         }
       }
-      if (imp->path[i] != path[i]) {
+      if (imp->path[i] != p_path[i]) {
         if (bigger_seg_compatible == -1 || bigger_seg_compatible < i) {
           bigger_seg_compatible = i;
           last_imp_found        = imp;
@@ -176,15 +176,15 @@ EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
   return EExtern_Kind::Global;
 }
 
-ScriptInfo::Origin ScriptInfo::Origin_from_file(const std::string& file)
+ScriptInfo::Origin ScriptInfo::Origin_from_file(const std::string& p_file)
 {
-  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_source()).filename())
+  if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_source()).filename())
     return ScriptInfo::Origin::src;
-  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_binding()).filename())
+  if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_binding()).filename())
     return ScriptInfo::Origin::binding;
-  if (fs::path(file).filename() == fs::path(compiler::COMP_CTX.get_dir_vendor()).filename())
+  if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_vendor()).filename())
     return ScriptInfo::Origin::vendor_lib;
-  if (file == common::get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
-  if (file == common::get_packages_dir()) return ScriptInfo::Origin::pkg_lib;
+  if (p_file == common::get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
+  if (p_file == common::get_packages_dir()) return ScriptInfo::Origin::pkg_lib;
   return ScriptInfo::Origin::src;
 }

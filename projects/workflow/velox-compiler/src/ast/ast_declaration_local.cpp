@@ -171,7 +171,7 @@ std::string ast::declaration::local::Tuple_Destructuring::debug_str() const
   }
   out += " [";
   for (auto& elem : elements) {
-    out += elem->name + ", ";
+    out += elem->declaration_name + ", ";
   }
   return out + "]";
 }
@@ -183,8 +183,8 @@ std::string ast::declaration::local::Lambda::debug_str() const
 
 std::string ast::declaration::local::Parameter::debug_str() const
 {
-  std::string out = EPassMode_to_str(passMode) + " " + name + ": " + type->debug_str();
-  if (isVariadic) out += "...";
+  std::string out = EPassMode_to_str(passmode) + " " + declaration_name + ": " + type->debug_str();
+  if (is_variadic) out += "...";
   if (defaultValue) out += " = " + defaultValue->debug_str();
   return out;
 }
@@ -220,7 +220,7 @@ std::string ast::declaration::local::Variable::debug_str() const
   case EVariableKind::Var:   out += "var "; break;
   case EVariableKind::NONE:  return "NO VAR KIND";
   }
-  out += name;
+  out += declaration_name;
 
   if (type) out += ": " + type->debug_str();
   return out;

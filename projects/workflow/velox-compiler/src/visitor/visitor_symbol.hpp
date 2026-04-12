@@ -23,7 +23,7 @@ struct Visitor_Symbol : public Visitor_Default {
   std::shared_ptr<ast::declaration::cop::System>    current_system;
   std::shared_ptr<ast::declaration::local::Lambda>  current_lambda;
 
-  bool resolve_sym(ast::AIdentifier& expr, Symbol_Data*& target_resolution, bool silentError = false);
+  bool resolve_sym(ast::AIdentifier& p_expr, Symbol_Data*& p_target_resolution, bool p_is_silent_error = false);
 
   void visit(ast::Expr_ID& n) override;
   void visit(ast::Expr_ID_Qualified& n) override;

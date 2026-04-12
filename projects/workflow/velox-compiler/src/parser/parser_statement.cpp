@@ -26,7 +26,7 @@
 #include "visitor/symbol_manager.hpp"
 
 
-std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool is_silent_error)
+std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool p_is_silent_error)
 {
   ctx.tok_v.match(TokTy::SEMICOLON); // consume because the parser use only for explicit end instruction
 
@@ -55,7 +55,7 @@ std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool is_sil
   default:                break;
   }
 
-  if (!is_silent_error)
+  if (!p_is_silent_error)
     ctx.tok_v.add_error(116,
                         "Unexpected '" + ctx.tok_v.peek().val + "' keyword type (" + ctx.tok_v.peek().val
                             + ") not allowed in function statement.",
@@ -118,9 +118,9 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
 
   // index
   if (ctx.tok_v.check(TokTy::IDENTIFIER)) {
-    auto index        = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-    index->name       = ctx.parse_name("", hint);
-    index->capability = ECapability::Mut;
+    auto index              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
+    index->declaration_name = ctx.parse_name("", hint);
+    index->capability       = ECapability::Mut;
 
     auto type   = ctx.Create_Node<ast::type::Primitive>(index.get()->_token);
     type->type  = EPrimType::iSize;
@@ -130,14 +130,14 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
     forState->index = std::move(index);
   }
   // items
-  if (ctx.tok_v.check_any(kCapabilityKind)) {
+  if (ctx.tok_v.check_any(k_capability)) {
     ECapability capa = TokTy_to_ECapability(ctx.tok_v.next().type);
 
     if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
       while (!ctx.tok_v.is_end()) {
-        auto item        = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-        item->capability = capa;
-        item->name       = ctx.parse_name("", hint);
+        auto item              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
+        item->capability       = capa;
+        item->declaration_name = ctx.parse_name("", hint);
 
         ctx.m_sym->add_decl(item);
         forState->items.push_back(std::move(item));
@@ -145,9 +145,9 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
         if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_PAREN)) break;
       }
     } else {
-      auto item        = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-      item->capability = capa;
-      item->name       = ctx.parse_name("", hint);
+      auto item              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
+      item->capability       = capa;
+      item->declaration_name = ctx.parse_name("", hint);
 
       ctx.m_sym->add_decl(item);
       forState->items.push_back(std::move(item));
@@ -196,13 +196,13 @@ std::unique_ptr<ast::statement::While> parser::Parser_Statement::while_statement
   ctx.m_sym->enter_scope("while", EScopeType::While);
 
   if (ctx.tok_v.match(TokTy::WHILE)) {
-    flow->isDo = false;
+    flow->is_do = false;
 
     flow->evaluator = ctx.p_loc->parse_evaluator(nullptr);
 
     flow->codeblock = ctx.p_loc->code_block_instruction();
   } else if (ctx.tok_v.match(TokTy::DO_WHILE)) {
-    flow->isDo = true;
+    flow->is_do = true;
 
     flow->codeblock = ctx.p_loc->code_block_instruction();
 
@@ -306,8 +306,8 @@ std::unique_ptr<ast::statement::GoTo_Label> parser::Parser_Statement::goto_label
 
   ctx.tok_v.match(TokTy::GOTO_LABEL);
 
-  auto goto_label  = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
-  goto_label->name = ctx.parse_name("", hint);
+  auto goto_label              = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
+  goto_label->declaration_name = ctx.parse_name("", hint);
 
   ctx.m_sym->add_decl(goto_label);
 

@@ -9,14 +9,14 @@ namespace parser
 struct Parser_Context;
 
 struct Parser_Declaration {
-  Parser_Declaration(Parser_Context& ctx)
-    : ctx(ctx)
+  Parser_Declaration(Parser_Context& p_ctx)
+    : ctx(p_ctx)
   {
   }
 
   [[nodiscard]] std::shared_ptr<ast::ADeclaration>            parse_declaration();
   // declarations
-  [[nodiscard]] std::shared_ptr<ast::ADeclaration>            module();
+  [[nodiscard]] std::shared_ptr<ast::ADeclaration>            _module();
   [[nodiscard]] std::shared_ptr<ast::declaration::Type_Alias> type_alias();
   [[nodiscard]] std::shared_ptr<ast::declaration::Enum>       enumeration();
   [[nodiscard]] std::shared_ptr<ast::declaration::Union>      _union();

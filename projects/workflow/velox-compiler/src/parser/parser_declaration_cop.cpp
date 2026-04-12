@@ -32,29 +32,29 @@ std::shared_ptr<ast::declaration::cop::Component> parser::Parser_Declaration_COP
 
   // not handled if (auto where = ctx.p_meta->metacode_where()) comp->gen_where;
 
-  comp->name = ctx.parse_name("", hint);
+  comp->declaration_name = ctx.parse_name("", hint);
   ctx.tok_v.expect(14, TokTy::OPEN_BRACE, "Expected start code block '{' after '" + comp->debug_str() + "'.", hint);
 
   // is no typed component
   if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
 
   while (!ctx.tok_v.is_end()) {
-    auto field         = ctx.Create_Decl<ast::declaration::cop::Component_Field>(ctx.tok_v.peek());
-    field->isNoDefault = ctx.metablock_contains(*field, "nodefault");
+    auto field           = ctx.Create_Decl<ast::declaration::cop::Component_Field>(ctx.tok_v.peek());
+    field->is_no_default = ctx.metablock_contains(*field, "nodefault");
 
     if (ctx.tok_v.match(TokTy::CAPA_REF))
       field->borrow = ast::declaration::cop::Component_Field::EBorrow::ref;
     else if (ctx.tok_v.match(TokTy::CAPA_MUT))
       field->borrow = ast::declaration::cop::Component_Field::EBorrow::mut;
 
-    field->name = ctx.parse_name("", hint);
+    field->declaration_name = ctx.parse_name("", hint);
     ctx.tok_v.expect(15, TokTy::COLON, "Expected type defintion symbol ':' after field name", hint);
 
     field->type = ctx.p_type->parse_type();
 
     ctx.m_sym->add_decl(field);
 
-    if (!field->isNoDefault) {
+    if (!field->is_no_default) {
       ctx.tok_v.expect(16, TokTy::ASSIGN, "Expected default value assignation '=' after field declaration", hint);
 
       field->default_value = ctx.p_expr->parse_expression();
@@ -78,10 +78,10 @@ std::shared_ptr<ast::declaration::cop::Role> parser::Parser_Declaration_COP::rol
 
   Token tok = ctx.tok_v.peek();
 
-  auto role  = ctx.Create_Decl<ast::declaration::cop::Role>(tok);
-  role->name = ctx.parse_name("", hint);
+  auto role              = ctx.Create_Decl<ast::declaration::cop::Role>(tok);
+  role->declaration_name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(role);
-  ctx.m_sym->enter_scope(role->name, EScopeType::Role);
+  ctx.m_sym->enter_scope(role->declaration_name, EScopeType::Role);
 
   ctx.tok_v.expect(17, TokTy::OPEN_BRACE, "Expected start definition '{' after role declaration.", hint);
 
@@ -108,13 +108,13 @@ std::shared_ptr<ast::declaration::cop::Entity> parser::Parser_Declaration_COP::e
   auto def_entity = ctx.Create_Decl<ast::declaration::cop::Entity>(ctx.tok_v.peek());
 
   // metacode
-  def_entity->isCastable     = !ctx.metablock_contains(*def_entity, "nocast");
-  def_entity->isExtCastable  = !ctx.metablock_contains(*def_entity, "no_extern_cast");
-  def_entity->isMoveable     = !ctx.metablock_contains(*def_entity, "no_move");
-  def_entity->isDestructible = !ctx.metablock_contains(*def_entity, "no_destruct");
-  def_entity->name           = ctx.parse_name("", hint);
-  auto entity_sym            = ctx.m_sym->add_decl(def_entity);
-  ctx.m_sym->enter_scope(def_entity->name, EScopeType::Entity);
+  def_entity->isCastable       = !ctx.metablock_contains(*def_entity, "nocast");
+  def_entity->isExtCastable    = !ctx.metablock_contains(*def_entity, "no_extern_cast");
+  def_entity->isMoveable       = !ctx.metablock_contains(*def_entity, "no_move");
+  def_entity->isDestructible   = !ctx.metablock_contains(*def_entity, "no_destruct");
+  def_entity->declaration_name = ctx.parse_name("", hint);
+  auto entity_sym              = ctx.m_sym->add_decl(def_entity);
+  ctx.m_sym->enter_scope(def_entity->declaration_name, EScopeType::Entity);
 
   ctx.tok_v.expect(18, TokTy::OPEN_BRACE, "Expected start code block '{' after entity declaration.", hint);
 
@@ -219,14 +219,13 @@ parser::Parser_Declaration_COP::_entity_op(std::shared_ptr<ast::declaration::cop
 
   // other operator case op + - / * ...
   auto _op    = ctx.Create_Decl<ast::declaration::cop::Entity_Op>(tok);
-  auto op_tok = ctx.tok_v.expect_any(27, kOperatorTokens, "Expected operator in entity operator overloading.", hint);
-  _op->operatorType = TokTy_to_EBinOpType(op_tok.type);
+  auto op_tok = ctx.tok_v.expect_any(27, k_operator, "Expected operator in entity operator overloading.", hint);
+  _op->op_ty  = TokTy_to_EBinOpType(op_tok.type);
 
   if (ctx.tok_v.check(TokTy::ARROW))
-    ctx.tok_v.add_error(28,
-                        "Unexpected retrun type definition '-> T' after a entity operator '"
-                            + EBinOpType_to_str(_op->operatorType) + "'.",
-                        hint);
+    ctx.tok_v.add_error(
+        28, "Unexpected retrun type definition '-> T' after a entity operator '" + EBinOpType_to_str(_op->op_ty) + "'.",
+        hint);
   entity_op = _op;
 
   ctx.tok_v.expect(29, TokTy::OPEN_BRACE, "Expected start code block '{' after entity operator overloading.", hint);
@@ -258,14 +257,14 @@ parser::Parser_Declaration_COP::_entity_access_op(std::shared_ptr<ast::declarati
 
   // if index operator case op [] -> T { ... }
   auto _access_op = ctx.Create_Decl<ast::declaration::cop::Entity_Access_Op>(tok);
-  _access_op->operatorType =
+  _access_op->op_ty =
       ctx.tok_v.peek(-1).type == TokTy::INTERROGATIVE ? EAccessOpType::IndexBound : EAccessOpType::Index;
   ctx.tok_v.match(TokTy::OPEN_SQUARE); // if on bounded index
   _access_op->parameter_name = ctx.parse_name("Expected index name binding", hint);
 
   if (ctx.tok_v.peek().type == TokTy::DOT && ctx.tok_v.peek(1).type == TokTy::DOT) {
-    _access_op->operatorType =
-        _access_op->operatorType == EAccessOpType::IndexBound ? EAccessOpType::SliceBound : EAccessOpType::Slice;
+    _access_op->op_ty =
+        _access_op->op_ty == EAccessOpType::IndexBound ? EAccessOpType::SliceBound : EAccessOpType::Slice;
   }
 
   ctx.tok_v.expect(23, TokTy::CLOSE_SQUARE, "Expected closed index operator ']'", hint);
@@ -380,8 +379,8 @@ std::shared_ptr<ast::declaration::cop::System> parser::Parser_Declaration_COP::s
 
   // not handled if (auto where = ctx.p_meta->metacode_where()) system->generic = where.value();
 
-  system->name      = ctx.parse_name("", hint);
-  system->prototype = ctx.p_type->explicit_function_proto();
+  system->declaration_name = ctx.parse_name("", hint);
+  system->prototype        = ctx.p_type->explicit_function_proto();
   for (auto& param : system->prototype->parameters) param->parent_function = system;
 
   auto sys_sym      = ctx.m_sym->add_decl(system);
@@ -426,14 +425,14 @@ std::shared_ptr<ast::declaration::cop::System_Case> parser::Parser_Declaration_C
 
   auto sys_case = ctx.Create_Node<ast::declaration::cop::System_Case>(ctx.tok_v.peek());
   ctx.tok_v.match(TokTy::WITH);
-  sys_case->isDefault = ctx.tok_v.match(TokTy::UNDERSCORE);
+  sys_case->is_default = ctx.tok_v.match(TokTy::UNDERSCORE);
 
-  if (!sys_case->isDefault) {
+  if (!sys_case->is_default) {
     while (!ctx.tok_v.is_end()) {
       ctx.tok_v.expect(38, TokTy::OPEN_PAREN, "Expected start binding '(' after component name pattern.", hint);
 
-      auto bind  = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-      bind->name = ctx.parse_name("", hint);
+      auto bind              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
+      bind->declaration_name = ctx.parse_name("", hint);
       ctx.m_sym->add_decl(bind);
       sys_case->bindings.push_back(bind);
 
@@ -447,7 +446,7 @@ std::shared_ptr<ast::declaration::cop::System_Case> parser::Parser_Declaration_C
 
   for (auto& instruction : sys_case->codeblock->elements) {
     if (dynamic_cast<ast::statement::Return*>(instruction.node())) {
-      sys_case->isReturn = true;
+      sys_case->is_return = true;
       break;
     }
   }

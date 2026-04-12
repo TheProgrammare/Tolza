@@ -22,33 +22,33 @@
 
 namespace fs = std::filesystem;
 
-bool generate_script(const ffi::Bind_Package& bind)
+bool generate_script(const ffi::Bind_Package& p_bind)
 {
   static bool log = compiler::COMP_CTX.logs.contains("binder");
 
 
-  if (bind.lang == "C" || bind.lang == "c") {
-    ffi::Bind_Package _bind_w_abi = bind;
+  if (p_bind.lang == "C" || p_bind.lang == "c") {
+    ffi::Bind_Package _bind_w_abi = p_bind;
     _bind_w_abi.abi               = "C";
     ffi::c::c_lib_to_velox_lib(_bind_w_abi);
-  } else if (fs::exists(bind.path)) {
-    auto ast = ffi::JSON::read_ffi_json_file(bind.path);
-    ffi::write_ast(ast, bind.path);
+  } else if (fs::exists(p_bind.path)) {
+    auto ast = ffi::JSON::read_ffi_json_file(p_bind.path);
+    ffi::write_ast(ast, p_bind.path);
   } else {
-    std::cerr << color_RED "\n[binder] FFI JSON file doesn't exists at " << bind.path << std::endl;
+    std::cerr << color_RED "\n[binder] FFI JSON file doesn't exists at " << p_bind.path << std::endl;
     return false;
   }
 
   return true;
 }
 
-bool generate_binds(const std::vector<ffi::Bind_Package>& binds)
+bool generate_binds(const std::vector<ffi::Bind_Package>& p_binds)
 {
   static bool log = compiler::COMP_CTX.logs.contains("binder");
 
   std::set<std::string> scripts;
 
-  for (const auto& bind : binds) {
+  for (const auto& bind : p_binds) {
     auto start = std::chrono::high_resolution_clock::now();
 
     bool success = generate_script(bind);
@@ -103,12 +103,12 @@ void binder_generate_FFI_JSON()
   }
 }
 
-bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log = compiler::COMP_CTX.logs.contains("binder");
 
   std::vector<ffi::Bind_Package> binds;
-  binds.reserve(scr_infos.size());
+  binds.reserve(p_scr_infos.size());
 
   auto                          start = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> final_duration;
@@ -116,7 +116,7 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& scr_i
 
   // affect all symbols imported according to the imported module name
   size_t count = 1;
-  for (auto& scr_info : scr_infos) {
+  for (auto& scr_info : p_scr_infos) {
     fs::create_directories(compiler::COMP_CTX.get_dir_binding());
     size_t bind_count = 0;
 

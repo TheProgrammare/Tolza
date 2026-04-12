@@ -14,7 +14,7 @@
 #include "misc/script_info.hpp"
 
 
-void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
+void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& p_bind)
 {
   auto tmp_path = std::filesystem::path(common::get_cache_dir());
   std::filesystem::create_directories(tmp_path);
@@ -23,10 +23,10 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
   {
     std::ofstream ofs(tmp_path);
     ofs.clear();
-    ofs << "#include <" << _bind.lib << ".h>\n";
+    ofs << "#include <" << p_bind.lib << ".h>\n";
   }
 
-  ffi::AST ast = parse_translation_unit(_bind, tmp_path, {});
+  ffi::AST ast = parse_translation_unit(p_bind, tmp_path, {});
   Import   imp;
   imp.type = Import::EImportType::stdlib;
   imp.path = {"ffi"};
@@ -34,18 +34,18 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& _bind)
 
   ast.imports["C"] = imp;
 
-  ffi::write_ast(ast, _bind.path);
+  ffi::write_ast(ast, p_bind.path);
 
   std::filesystem::remove(tmp_path);
 }
 
-CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data)
+CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_parent, CXClientData p_client_data)
 {
-  ffi::AST*    ast  = static_cast<ffi::AST*>(client_data);
-  CXCursorKind kind = clang_getCursorKind(cursor);
+  ffi::AST*    ast  = static_cast<ffi::AST*>(p_client_data);
+  CXCursorKind kind = clang_getCursorKind(p_cursor);
 
   // no interop allowed if internal
-  CXLinkageKind linkage = clang_getCursorLinkage(cursor);
+  CXLinkageKind linkage = clang_getCursorLinkage(p_cursor);
   if (linkage == CXLinkage_Internal) return CXChildVisit_Recurse;
 
   auto find_item = [&](const std::vector<Extern_Item>& items, const std::string& name) -> bool {
@@ -59,49 +59,49 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, C
 
   switch (kind) {
   case CXCursor_StructDecl: {
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+    std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
     if (!find_item(ast->bind.extern_comp, name)) break;
 
-    if (!clang_isCursorDefinition(cursor)) break;
-    ffi::Comp comp        = c_struct_to_comp(cursor);
+    if (!clang_isCursorDefinition(p_cursor)) break;
+    ffi::Comp comp        = c_struct_to_comp(p_cursor);
     ast->comps[comp.name] = std::move(comp);
     break;
   }
 
   case CXCursor_UnionDecl: {
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+    std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
     if (!find_item(ast->bind.extern_union, name)) break;
 
-    if (!clang_isCursorDefinition(cursor)) break;
-    ffi::Union u        = c_union_to_union(cursor);
+    if (!clang_isCursorDefinition(p_cursor)) break;
+    ffi::Union u        = c_union_to_union(p_cursor);
     ast->unions[u.name] = std::move(u);
     break;
   }
 
   case CXCursor_EnumDecl: {
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+    std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
     if (!find_item(ast->bind.extern_flag, name)) break;
 
-    if (!clang_isCursorDefinition(cursor)) break;
-    ffi::Flag e        = c_enum_to_flag(cursor);
+    if (!clang_isCursorDefinition(p_cursor)) break;
+    ffi::Flag e        = c_enum_to_flag(p_cursor);
     ast->flags[e.name] = e;
     break;
   }
 
   case CXCursor_FunctionDecl: {
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+    std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
     if (!find_item(ast->bind.extern_fn, name)) break;
 
-    ffi::Func f        = c_function_to_func(cursor);
+    ffi::Func f        = c_function_to_func(p_cursor);
     ast->funcs[f.name] = std::move(f);
     break;
   }
 
   case CXCursor_VarDecl: {
-    std::string name = clang_getCString(clang_getCursorSpelling(cursor));
+    std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
     if (!find_item(ast->bind.extern_glo, name)) break;
 
-    ffi::Global g        = c_global_to_global(cursor);
+    ffi::Global g        = c_global_to_global(p_cursor);
     ast->globals[g.name] = std::move(g);
     break;
   }
@@ -112,24 +112,25 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor cursor, CXCursor parent, C
   return CXChildVisit_Recurse; // continuer récursivement
 }
 
-ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& _bind, const std::string& file_path,
-                                        const std::vector<std::string>& args = {})
+ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& p_bind, const std::string& p_file_path,
+                                        const std::vector<std::string>& p_args = {})
 {
   CXIndex index = clang_createIndex(0, 0);
 
   std::vector<const char*> cargs;
-  for (const auto& s : args) cargs.push_back(s.c_str());
+  for (const auto& s : p_args) cargs.push_back(s.c_str());
 
   CXTranslationUnit tu;
-  CXErrorCode       error = clang_parseTranslationUnit2(
-      index, file_path.c_str(), cargs.data(), static_cast<int>(cargs.size()), nullptr, 0, CXTranslationUnit_None, &tu);
+  CXErrorCode       error =
+      clang_parseTranslationUnit2(index, p_file_path.c_str(), cargs.data(), static_cast<int>(cargs.size()), nullptr, 0,
+                                  CXTranslationUnit_None, &tu);
 
   assert(error == CXError_Success && "Failed to parse translation unit");
 
   CXCursor rootCursor = clang_getTranslationUnitCursor(tu);
 
   ffi::AST ast;
-  ast.bind = _bind;
+  ast.bind = p_bind;
   clang_visitChildren(rootCursor, universal_visitor, &ast);
 
   clang_disposeTranslationUnit(tu);
@@ -138,64 +139,64 @@ ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& _bind, const st
   return ast;
 }
 
-ffi::EType ffi::c::c_type_base_to_type_base(CXType cType, CXType& out_base_cType)
+ffi::EType ffi::c::c_type_base_to_type_base(CXType p_cType, CXType& p_out_base_cType)
 {
-  switch (cType.kind) {
+  switch (p_cType.kind) {
   case CXType_Char_S:
-  case CXType_SChar:      out_base_cType = cType; return ffi::EType::_schar;
-  case CXType_Short:      out_base_cType = cType; return ffi::EType::_short;
-  case CXType_Int:        out_base_cType = cType; return ffi::EType::_int;
-  case CXType_LongLong:   out_base_cType = cType; return ffi::EType::_longlong;
-  case CXType_Long:       out_base_cType = cType; return ffi::EType::_long; // target dependant
+  case CXType_SChar:      p_out_base_cType = p_cType; return ffi::EType::_schar;
+  case CXType_Short:      p_out_base_cType = p_cType; return ffi::EType::_short;
+  case CXType_Int:        p_out_base_cType = p_cType; return ffi::EType::_int;
+  case CXType_LongLong:   p_out_base_cType = p_cType; return ffi::EType::_longlong;
+  case CXType_Long:       p_out_base_cType = p_cType; return ffi::EType::_long; // target dependant
   case CXType_Char_U:
-  case CXType_UChar:      out_base_cType = cType; return ffi::EType::_uchar;
-  case CXType_UShort:     out_base_cType = cType; return ffi::EType::_ushort;
-  case CXType_UInt:       out_base_cType = cType; return ffi::EType::_uint;
-  case CXType_ULong:      out_base_cType = cType; return ffi::EType::_ulong; // target dependant
-  case CXType_ULongLong:  out_base_cType = cType; return ffi::EType::_ulonglong;
-  case CXType_Float:      out_base_cType = cType; return ffi::EType::_float;
-  case CXType_Double:     out_base_cType = cType; return ffi::EType::_double;
-  case CXType_LongDouble: out_base_cType = cType; return ffi::EType::_longdouble;
-  case CXType_Bool:       out_base_cType = cType; return ffi::EType::_bool;
-  case CXType_Void:       out_base_cType = cType; return ffi::EType::_void;
+  case CXType_UChar:      p_out_base_cType = p_cType; return ffi::EType::_uchar;
+  case CXType_UShort:     p_out_base_cType = p_cType; return ffi::EType::_ushort;
+  case CXType_UInt:       p_out_base_cType = p_cType; return ffi::EType::_uint;
+  case CXType_ULong:      p_out_base_cType = p_cType; return ffi::EType::_ulong; // target dependant
+  case CXType_ULongLong:  p_out_base_cType = p_cType; return ffi::EType::_ulonglong;
+  case CXType_Float:      p_out_base_cType = p_cType; return ffi::EType::_float;
+  case CXType_Double:     p_out_base_cType = p_cType; return ffi::EType::_double;
+  case CXType_LongDouble: p_out_base_cType = p_cType; return ffi::EType::_longdouble;
+  case CXType_Bool:       p_out_base_cType = p_cType; return ffi::EType::_bool;
+  case CXType_Void:       p_out_base_cType = p_cType; return ffi::EType::_void;
   case CXType_Pointer:    {
-    CXType pointee_type = clang_getPointeeType(cType);
-    return c_type_base_to_type_base(pointee_type, out_base_cType);
+    CXType pointee_type = clang_getPointeeType(p_cType);
+    return c_type_base_to_type_base(pointee_type, p_out_base_cType);
   }
-  case CXType_Record:          out_base_cType = cType; return ffi::EType::_comp;
-  case CXType_Enum:            out_base_cType = cType; return ffi::EType::_flag;
+  case CXType_Record:          p_out_base_cType = p_cType; return ffi::EType::_comp;
+  case CXType_Enum:            p_out_base_cType = p_cType; return ffi::EType::_flag;
   case CXType_IncompleteArray:
   case CXType_ConstantArray:   {
-    CXType pointee_type = clang_getPointeeType(cType);
-    return c_type_base_to_type_base(pointee_type, out_base_cType);
+    CXType pointee_type = clang_getPointeeType(p_cType);
+    return c_type_base_to_type_base(pointee_type, p_out_base_cType);
   }
   case CXType_FunctionProto:
-  case CXType_FunctionNoProto: out_base_cType = cType; return ffi::EType::_proto;
-  default:                     out_base_cType = cType; return ffi::EType::_alias; // typedef / unknown
+  case CXType_FunctionNoProto: p_out_base_cType = p_cType; return ffi::EType::_proto;
+  default:                     p_out_base_cType = p_cType; return ffi::EType::_alias; // typedef / unknown
   }
 }
 
-ffi::Type ffi::c::c_type_to_type(CXType cType)
+ffi::Type ffi::c::c_type_to_type(CXType p_cType)
 {
   ffi::Type vt;
   CXType    base_cType;
 
-  vt.base_type = c_type_base_to_type_base(cType, base_cType);
+  vt.base_type = c_type_base_to_type_base(p_cType, base_cType);
 
 
-  vt.is_pointer = cType.kind == CXType_Pointer;
-  vt.is_table   = cType.kind == CXType_ConstantArray || cType.kind == CXType_IncompleteArray;
+  vt.is_pointer = p_cType.kind == CXType_Pointer;
+  vt.is_table   = p_cType.kind == CXType_ConstantArray || p_cType.kind == CXType_IncompleteArray;
 
   vt.is_val_type_const    = clang_isConstQualifiedType(base_cType);
   vt.is_val_type_volatile = clang_isVolatileQualifiedType(base_cType);
 
-  if (clang_isConstQualifiedType(cType)) {
+  if (clang_isConstQualifiedType(p_cType)) {
     if (vt.is_pointer)
       vt.is_pointer_const = true;
     else
       vt.is_val_type_const = true;
   }
-  if (clang_isVolatileQualifiedType(cType)) {
+  if (clang_isVolatileQualifiedType(p_cType)) {
     if (vt.is_pointer)
       vt.is_pointer_volatile = true;
     else
@@ -203,30 +204,30 @@ ffi::Type ffi::c::c_type_to_type(CXType cType)
   }
 
 
-  if (cType.kind == CXType_Atomic) {
+  if (p_cType.kind == CXType_Atomic) {
     vt.is_atomic = true;
   }
 
 
   if (vt.is_pointer) {
-    CXType pointee       = clang_getPointeeType(cType);
+    CXType pointee       = clang_getPointeeType(p_cType);
     vt.is_pointer_double = pointee.kind == CXType_Pointer;
 
-    vt.is_pointer_const    = clang_isConstQualifiedType(cType);
-    vt.is_pointer_volatile = clang_isVolatileQualifiedType(cType);
+    vt.is_pointer_const    = clang_isConstQualifiedType(p_cType);
+    vt.is_pointer_volatile = clang_isVolatileQualifiedType(p_cType);
 
     vt.is_pointer_on_table = base_cType.kind == CXType_ConstantArray || base_cType.kind == CXType_IncompleteArray;
   }
 
   else if (vt.is_table) {
-    CXType element_type     = clang_getArrayElementType(cType);
+    CXType element_type     = clang_getArrayElementType(p_cType);
     vt.is_table_of_pointers = element_type.kind = CXType_Pointer;
   }
 
 
   if (base_cType.kind == CXType_ConstantArray) {
     vt.is_table = true;
-    vt.table_size.push_back(static_cast<size_t>(clang_getArraySize(cType)));
+    vt.table_size.push_back(static_cast<size_t>(clang_getArraySize(p_cType)));
   } else if (base_cType.kind == CXType_IncompleteArray) {
     vt.is_table = true; // flexible
   }
@@ -249,7 +250,7 @@ ffi::Type ffi::c::c_type_to_type(CXType cType)
 
 
   if (base_cType.kind == CXType_Record || base_cType.kind == CXType_Enum) {
-    CXCursor decl = clang_getTypeDeclaration(cType);
+    CXCursor decl = clang_getTypeDeclaration(p_cType);
 
     if (clang_getCursorKind(decl) == CXCursor_StructDecl) {
       vt.base_type = ffi::EType::_comp;
@@ -270,12 +271,12 @@ ffi::Type ffi::c::c_type_to_type(CXType cType)
   return vt;
 }
 
-ffi::Comp ffi::c::c_struct_to_comp(CXCursor cCur)
+ffi::Comp ffi::c::c_struct_to_comp(CXCursor p_cCur)
 {
   ffi::Comp comp;
-  comp.name = clang_getCString(clang_getCursorSpelling(cCur));
+  comp.name = clang_getCString(clang_getCursorSpelling(p_cCur));
   clang_visitChildren(
-      cCur,
+      p_cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* comp_ptr = static_cast<ffi::Comp*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
@@ -289,12 +290,12 @@ ffi::Comp ffi::c::c_struct_to_comp(CXCursor cCur)
   return comp;
 }
 
-ffi::Union ffi::c::c_union_to_union(CXCursor cCur)
+ffi::Union ffi::c::c_union_to_union(CXCursor p_cCur)
 {
   ffi::Union u;
-  u.name = clang_getCString(clang_getCursorSpelling(cCur));
+  u.name = clang_getCString(clang_getCursorSpelling(p_cCur));
   clang_visitChildren(
-      cCur,
+      p_cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* u_ptr = static_cast<ffi::Union*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
@@ -308,12 +309,12 @@ ffi::Union ffi::c::c_union_to_union(CXCursor cCur)
   return u;
 }
 
-ffi::Flag ffi::c::c_enum_to_flag(CXCursor cCur)
+ffi::Flag ffi::c::c_enum_to_flag(CXCursor p_cCur)
 {
   ffi::Flag e;
-  e.name = clang_getCString(clang_getCursorSpelling(cCur));
+  e.name = clang_getCString(clang_getCursorSpelling(p_cCur));
   clang_visitChildren(
-      cCur,
+      p_cCur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* e_ptr = static_cast<ffi::Flag*>(client_data);
         if (clang_getCursorKind(cur) == CXCursor_EnumConstantDecl) {
@@ -330,25 +331,25 @@ ffi::Flag ffi::c::c_enum_to_flag(CXCursor cCur)
   return e;
 }
 
-ffi::Global ffi::c::c_global_to_global(CXCursor cCur)
+ffi::Global ffi::c::c_global_to_global(CXCursor p_cCur)
 {
   ffi::Global g;
-  g.name     = clang_getCString(clang_getCursorSpelling(cCur));
-  g.type     = c_type_to_type(clang_getCursorType(cCur));
-  g.is_const = clang_isConstQualifiedType(clang_getCursorType(cCur));
+  g.name     = clang_getCString(clang_getCursorSpelling(p_cCur));
+  g.type     = c_type_to_type(clang_getCursorType(p_cCur));
+  g.is_const = clang_isConstQualifiedType(clang_getCursorType(p_cCur));
   return g;
 }
 
-ffi::Func ffi::c::c_function_to_func(CXCursor cCur)
+ffi::Func ffi::c::c_function_to_func(CXCursor p_cCur)
 {
   ffi::Func f;
-  f.name              = clang_getCString(clang_getCursorSpelling(cCur));
-  CXType cType        = clang_getCursorType(cCur);
+  f.name              = clang_getCString(clang_getCursorSpelling(p_cCur));
+  CXType cType        = clang_getCursorType(p_cCur);
   f.proto.return_type = c_type_to_type(clang_getResultType(cType));
 
-  int nargs = clang_Cursor_getNumArguments(cCur);
+  int nargs = clang_Cursor_getNumArguments(p_cCur);
   for (int i = 0; i < nargs; ++i) {
-    CXCursor       paramCur    = clang_Cursor_getArgument(cCur, i);
+    CXCursor       paramCur    = clang_Cursor_getArgument(p_cCur, i);
     ffi::Type      ty          = c_type_to_type(clang_getCursorType(paramCur));
     std::string    name        = clang_getCString(clang_getCursorSpelling(paramCur));
     bool           is_restrict = clang_isRestrictQualifiedType(clang_getCursorType(paramCur));

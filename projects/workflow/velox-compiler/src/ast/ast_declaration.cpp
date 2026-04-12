@@ -73,10 +73,6 @@ llvm::Type* ast::declaration::Union::codegen_ty(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Type* ast::declaration::Type_Alias::codegen_ty(Visitor_Codegen& v)
-{
-  return v.visit(*this);
-}
 llvm::Type* ast::declaration::Generic::codegen_ty(Visitor_Codegen& v)
 {
   return v.visit(*this);
@@ -169,7 +165,7 @@ llvm::Function* ast::declaration::Function::codegen(Visitor_Codegen& v)
 
 std::string ast::declaration::Function::debug_str() const
 {
-  std::string out = "fn " + name;
+  std::string out = "fn " + declaration_name;
   if (!prototype) return out + "()";
   if (!prototype->gen_parameters.empty()) out += "&lt;";
   for (size_t i = 0; i < prototype->gen_parameters.size(); i++) {
@@ -190,7 +186,7 @@ std::string ast::declaration::Function::debug_str() const
   out += ")";
 
   std::string ret;
-  if (prototype->returnType) ret = " -&gt; " + prototype->returnType->debug_str();
+  if (prototype->return_ty) ret = " -&gt; " + prototype->return_ty->debug_str();
 
   return out + ret;
 }
@@ -205,7 +201,7 @@ std::string ast::declaration::Global::debug_str() const
   case EVariableKind::Var:   out += "var "; break;
   case EVariableKind::NONE:  return "NO VAR KIND";
   }
-  out += name;
+  out += declaration_name;
 
   return out + ": " + type->debug_str();
 }

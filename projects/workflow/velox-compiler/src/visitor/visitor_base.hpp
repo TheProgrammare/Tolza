@@ -27,8 +27,8 @@ struct ScriptInfo;
 struct Visitor_Base {
   virtual ~Visitor_Base() = default;
   Visitor_Base()          = delete;
-  Visitor_Base(ScriptInfo& _scr_info)
-    : scr_info(_scr_info)
+  Visitor_Base(ScriptInfo& p_scr_info)
+    : scr_info(p_scr_info)
   {
   }
 
@@ -129,17 +129,16 @@ struct Visitor_Base {
   virtual void visit(ast::type::Get_Expr_Type& n) = 0;
 
   // ============ LITERAL ============
-  virtual void visit(ast::literal::Boolean& n)  = 0;
-  virtual void visit(ast::literal::Integral& n) = 0;
-  virtual void visit(ast::literal::Decimal& n)  = 0;
-  virtual void visit(ast::literal::Floating& n) = 0;
+  virtual void visit(ast::literal::Boolean& n)        = 0;
+  virtual void visit(ast::literal::Integral& n)       = 0;
+  virtual void visit(ast::literal::Fixed_Point& n)    = 0;
+  virtual void visit(ast::literal::Floating_Point& n) = 0;
 
   virtual void visit(ast::literal::CUNE& n) = 0;
   virtual void visit(ast::literal::RUNE& n) = 0;
 
   virtual void visit(ast::literal::Text_Pure& n)          = 0;
   virtual void visit(ast::literal::Text_Interpolation& n) = 0;
-  virtual void visit(ast::literal::Textual_Element& n)    = 0;
   virtual void visit(ast::literal::Textual_Format& n)     = 0;
   virtual void visit(ast::literal::Format_Specifier& n)   = 0;
 

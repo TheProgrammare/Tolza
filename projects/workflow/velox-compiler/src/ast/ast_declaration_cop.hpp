@@ -20,7 +20,7 @@ struct Component_Field final : public ADeclaration, AType {
 
   std::shared_ptr<AType>       type;
   std::unique_ptr<AExpression> default_value;
-  bool                         isNoDefault = false;
+  bool                         is_no_default = false;
 
   EBorrow borrow = EBorrow::None;
 
@@ -38,7 +38,7 @@ struct Component_Field final : public ADeclaration, AType {
     case EBorrow::ref:  out += "ref ";
     case EBorrow::mut:  out += "mut ";
     }
-    out += name + ": " + type->debug_str();
+    out += declaration_name + ": " + type->debug_str();
     if (default_value) out += " = " + default_value->debug_str();
     return out;
   }
@@ -66,12 +66,12 @@ struct Component final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "cp_" + mangle_id(name);
+    return "cp_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Component*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }
@@ -87,7 +87,7 @@ struct Role final : public ADeclaration, AType {
 
   std::string debug_str() const override
   {
-    return "declaration role \"" + name + "\"";
+    return "declaration role \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -96,14 +96,14 @@ struct Role final : public ADeclaration, AType {
   bool compare_with(const AType& other) const override
   {
     if (auto ptr = dynamic_cast<const Role*>(&other)) {
-      return name == ptr->name;
+      return declaration_name == ptr->declaration_name;
     }
     return false;
   }
 
   std::string mangle_type() const override
   {
-    return "rl_" + mangle_id(name);
+    return "rl_" + mangle_id(declaration_name);
   }
 
   void accept(Visitor_Base& v) override;
@@ -143,7 +143,7 @@ struct Entity final : public ADeclaration, AType {
 
   std::string debug_str() const override
   {
-    return "declaration entity \"" + name + "\"";
+    return "declaration entity \"" + declaration_name + "\"";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -152,7 +152,7 @@ struct Entity final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "et_" + mangle_id(name);
+    return "et_" + mangle_id(declaration_name);
   }
   bool compare_with(const AType& other) const override;
 
@@ -215,14 +215,14 @@ struct Entity_Cast final : public ACallable, ADeclaration {
 struct Entity_Op final : public ACallable, ADeclaration {
   std::shared_ptr<Entity> parent_entity;
 
-  EBinOpType operatorType = EBinOpType::Add;
+  EBinOpType op_ty = EBinOpType::Add;
 
   llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
   llvm::Function* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return "entity op " + EBinOpType_to_str(operatorType);
+    return "entity op " + EBinOpType_to_str(op_ty);
   }
   ESymbolType get_symbol_type() const override
   {
@@ -238,7 +238,7 @@ struct Entity_Access_Op final : ACallable, ADeclaration {
   // nullptr = usize by default other non int type = map like Range = always return a Slice
   std::string parameter_name;
 
-  EAccessOpType operatorType = EAccessOpType::Index;
+  EAccessOpType op_ty = EAccessOpType::Index;
 
 
   std::shared_ptr<AType> return_type;
@@ -284,7 +284,7 @@ struct System final : public ACallable, ADeclaration {
 
   std::string debug_str() const override
   {
-    return "declaration system \"" + name + "\"";
+    return "declaration system \"" + declaration_name + "\"";
   }
 
   bool manage_entity(const Entity& entity) const;
@@ -305,8 +305,8 @@ struct System_Case final : public Node, Trait_LLVM_Passage {
   std::vector<std::shared_ptr<local::Variable_Binding>> bindings;
   std::unique_ptr<local::CodeBlock>                     codeblock;
 
-  bool isReturn  = false;
-  bool isDefault = false;
+  bool is_return  = false;
+  bool is_default = false;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   std::string  debug_str() const override

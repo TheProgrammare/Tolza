@@ -68,8 +68,8 @@ struct Parser_Context {
   // match separator, or end instruction or and error return true if end is encounter
   [[nodiscard]] bool        match_field_separator(TokTy separator = TokTy::COMMA, TokTy end = TokTy::CLOSE_BRACE);
   // return true if end is encounter
-  [[nodiscard]] bool        match_field_any_separator(TokTy                        separator = TokTy::COMMA,
-                                                      std::initializer_list<TokTy> end       = {TokTy::CLOSE_BRACE});
+  [[nodiscard]] bool        match_field_any_separator(TokTy                        p_separator = TokTy::COMMA,
+                                                      std::initializer_list<TokTy> p_end       = {TokTy::CLOSE_BRACE});
   [[nodiscard]] std::string parse_name(const std::string& msg = "", const std::string& hint = "");
   // MetablockManager shortcut for ASTNode
   [[nodiscard]] bool        metablock_contains(const ast::Node& n, const std::string& s) const;
@@ -102,7 +102,7 @@ struct Parser_Context {
 
     auto node    = std::make_unique<NodeType>(std::forward<Args>(args)...);
     node->_token = token;
-    node->_scope = m_sym->get_current_path();
+    node->_scope = m_sym->get_current_scope();
     node_count++;
     node->_scr_info = &scr_info;
     return node;
@@ -114,7 +114,7 @@ struct Parser_Context {
 
     auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
     node->_token = token;
-    node->_scope = m_sym->get_current_path();
+    node->_scope = m_sym->get_current_scope();
     node_count++;
     node->_scr_info = &scr_info;
     return node;
@@ -124,11 +124,11 @@ struct Parser_Context {
   {
     auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
     node->_token = token;
-    node->_scope = m_sym->get_current_path();
+    node->_scope = m_sym->get_current_scope();
     node_count++;
-    node->_scr_info   = &scr_info;
-    node->is_exported = in_export;
-    node->is_external = in_extern;
+    node->_scr_info               = &scr_info;
+    node->declaration_is_exported = in_export;
+    node->declaration_is_external = in_extern;
     return node;
   };
 };

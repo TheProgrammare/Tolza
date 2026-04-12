@@ -1,6 +1,7 @@
 #include "parser_literal.hpp"
 
-#include <codecvt>
+#include <iostream>
+#include <llvm/ADT/APInt.h>
 #include <memory>
 #include <stdio.h>
 
@@ -16,33 +17,29 @@
 
 #include "ast/ast_numeric_128_bits.hpp"
 #include "ast/ast_type.hpp"
+#include "compiler/compiler.hpp"
 #include "lexer/token.hpp"
+#include "misc/error_output.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silent_error)
+std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool p_is_silent_error)
 {
   switch (ctx.tok_v.peek().type) {
   case TokTy::TRUE:
   case TokTy::FALSE:
     return literal_boolean();
     // literal
-    // decimal
-  case TokTy::L_DECIMAL:
-  case TokTy::L_UDECIMAL:
+    // float/decimal
+  case TokTy::L_D:
     return literal_decimal();
-    // literal
-    // float
-  case TokTy::L_F:
-    return literal_floating_point();
     // literal
     // integer
   case TokTy::L_BIN:
   case TokTy::L_OCT:
   case TokTy::L_HEX:
   case TokTy::L_I:
-  case TokTy::L_U:
-    return literal_integral();
+    return literal_numeric();
     // literal
     // character
   case TokTy::L_CUNE:
@@ -66,7 +63,7 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool is_silen
   default: break;
   }
 
-  if (!is_silent_error) {
+  if (!p_is_silent_error) {
     ctx.tok_v.add_error(80, "Expected literal value", "");
   }
 
@@ -80,128 +77,131 @@ std::unique_ptr<ast::literal::Boolean> parser::Parser_Literal::literal_boolean()
   return literal;
 }
 
-std::unique_ptr<ast::literal::Decimal> parser::Parser_Literal::literal_decimal()
+std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_numeric()
 {
-  auto literal = ctx.Create_Node<ast::literal::Decimal>(ctx.tok_v.peek());
+  auto tok = ctx.tok_v.next();
+  auto val = tok.val;
 
-  std::string decimal_val = ctx.tok_v.peek().val;
-  size_t      decimal_pos = decimal_val.find('.');
-  literal->scale          = decimal_pos == 0 ? 0 : decimal_val.size() - decimal_pos;
-  std::string raw_val     = decimal_val;
+  if (ctx.tok_v.check_any(k_type_integral)) {
+    return literal_integral(tok);
+  } else if (ctx.tok_v.check_any(k_type_fixed_point)) {
+    return literal_fixed_point(val);
+  } else if (ctx.tok_v.check_any(k_type_floating_point)) {
+    return literal_floating_point(val);
+  } else if (ctx.tok_v.check_val("f")) {
+    return literal_floating_point(val);
+  } else if (ctx.tok_v.check_val("d")) {
+    return literal_fixed_point(val);
+  } else if (ctx.tok_v.check_val("ud")) {
+    return literal_fixed_point(val);
+  }
+
+  return literal_integral(tok);
+}
+
+
+std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_decimal()
+{
+  std::string val = ctx.tok_v.next().val;
+
+  if (ctx.tok_v.check_any(k_type_fixed_point)) {
+    return literal_fixed_point(val);
+  } else if (ctx.tok_v.check_any(k_type_floating_point)) {
+    return literal_floating_point(val);
+  } else if (ctx.tok_v.check_val("f")) {
+    return literal_floating_point(val);
+  } else if (ctx.tok_v.check_val("d")) {
+    return literal_fixed_point(val);
+  } else if (ctx.tok_v.check_val("ud")) {
+    return literal_fixed_point(val);
+  }
+
+  return literal_floating_point(val);
+}
+
+std::unique_ptr<ast::literal::Fixed_Point> parser::Parser_Literal::literal_fixed_point(const std::string& p_val)
+{
+  auto literal = ctx.Create_Node<ast::literal::Fixed_Point>(ctx.tok_v.peek(-1));
+
+  size_t scale_pos    = p_val.find('.');
+  literal->scale      = scale_pos == 0 ? 0 : p_val.size() - scale_pos;
+  std::string raw_val = p_val;
   std::erase(raw_val, '.');
 
   ctx.tok_v.next(); // consume literal
 
   // post literal type like 99.999ud or 99.999d32
-  if (ctx.tok_v.check_any(kDecimalTypeTokens)) literal->raw_type = TokTy_to_EPrimType(ctx.tok_v.next().type);
+  if (ctx.tok_v.match_any(k_type_fixed_point))
+    literal->raw_type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+  else if (ctx.tok_v.match_val("ud"))
+    literal->raw_type = EPrimType::udSize;
+  else if (ctx.tok_v.match_val("d"))
+    literal->raw_type = EPrimType::dSize;
 
   // post decimal explicit scale
-  if (ctx.tok_v.check(TokTy::L_I)) {
+  if (ctx.tok_v.match(TokTy::COLON) && ctx.tok_v.check(TokTy::L_I)) {
     literal->scale = std::stoi(ctx.tok_v.next().val);
   }
-  if (ctx.tok_v.match(TokTy::COLON) && ctx.tok_v.check(TokTy::L_I)) {
-    size_t bits_size = std::stoi(ctx.tok_v.next().val);
 
-    if (bits_size == 32)
-      literal->raw_type = EPrimType::i32;
-    else if (bits_size == 64)
-      literal->raw_type = EPrimType::i64;
-    else if (bits_size == 128)
-      literal->raw_type = EPrimType::i128;
-    else
-      ctx.tok_v.add_error_tok(220, ctx.tok_v.peek(-1), "Illegal decimal type size.",
-                              "define a decimal type size like: `<decimal>:S`, S must be equals to 32, 64 or 128.");
+  auto api = llvm::APInt(128, raw_val, 10);
 
-    auto api = llvm::APInt(bits_size, raw_val, 10);
-
-    literal->val = Int128(api);
-  }
+  literal->val = Int128(api);
 
   return literal;
 }
 
-std::unique_ptr<ast::literal::Floating> parser::Parser_Literal::literal_floating_point()
+std::unique_ptr<ast::literal::Floating_Point> parser::Parser_Literal::literal_floating_point(const std::string& p_val)
 {
-  auto literal = ctx.Create_Node<ast::literal::Floating>(ctx.tok_v.peek());
-  literal->val.string_to_f128(ctx.tok_v.peek().val);
+  auto literal = ctx.Create_Node<ast::literal::Floating_Point>(ctx.tok_v.peek(-1));
+  literal->val.string_to_f128(p_val);
 
   // post literal type like 9.99f32 9.99f64
-  if (ctx.tok_v.match_any(kFloatingTypeTokens)) {
-    literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
-  } else if (ctx.tok_v.match_val("f")) {
-    literal->type = EPrimType::fSize;
-  } else {
-    ctx.tok_v.next();
-
-    auto&       apf = *literal->val.val;
-    const auto& sem = apf.getSemantics();
-
-    llvm::APFloat maxF32(sem);
-    llvm::APFloat maxF64(sem);
-
-    llvm::APFloat f32max(std::numeric_limits<float>::max());
-    llvm::APFloat f64max(std::numeric_limits<double>::max());
-
-    bool losesInfo;
-
-    maxF32.convertToFloat();
-
-    maxF64.convertToDouble();
-
-    // post literal type like 10f32 0f
-    if (ctx.tok_v.match_any(kFloatingTypeTokens)) {
-      literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
-    } else if (ctx.tok_v.match_val("f")) {
-      literal->type = EPrimType::fSize;
-    }
+  if (ctx.tok_v.match_any(k_type_floating_point)) {
+    literal->type                     = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
   }
+  ctx.tok_v.match_val("f");
 
   return literal;
 }
 
-std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral()
+std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral(const Token& p_tok)
 {
   static const char* hint =
       "define literal integral like:\n  - decimal: 1234\n  - bin: 0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2";
 
-  auto literalTok = ctx.tok_v.next();
-  auto literal    = ctx.Create_Node<ast::literal::Integral>(literalTok);
-
-  auto& api = *literal->val.val;
+  auto  literal = ctx.Create_Node<ast::literal::Integral>(p_tok);
+  auto& api     = *literal->val.val;
 
   unsigned bitWidth = 64;
 
   try {
-    switch (literalTok.type) {
+    switch (p_tok.type) {
     case TokTy::L_BIN: {
-      api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 2);
-      literal->type = EPrimType::bSize;
+      api = llvm::APInt(bitWidth, p_tok.val.substr(2), 2);
       break;
     }
     case TokTy::L_OCT: {
-      api           = llvm::APInt(bitWidth, literalTok.val.substr(2), 8);
-      literal->type = EPrimType::bSize;
+      api = llvm::APInt(bitWidth, p_tok.val.substr(2), 8);
       break;
     }
     case TokTy::L_HEX: {
-      api           = llvm::APInt(bitWidth, literalTok.val, 16);
-      literal->type = EPrimType::bSize;
+      api = llvm::APInt(bitWidth, p_tok.val, 16);
       break;
     }
     case TokTy::L_I: {
-      api           = llvm::APInt(bitWidth, literalTok.val, 10);
-      literal->type = EPrimType::iSize;
+      api = llvm::APInt(bitWidth, p_tok.val, 10);
       break;
     }
     default: throw std::runtime_error("Token literal non supporté");
     }
 
     if (api.getBitWidth() > 64) {
-      api           = llvm::APInt(128, literalTok.val,
-                                  (literalTok.type == TokTy::L_BIN   ? 2
-                                   : literalTok.type == TokTy::L_OCT ? 8
-                                   : literalTok.type == TokTy::L_HEX ? 16
-                                                                     : 10));
+      api           = llvm::APInt(128, p_tok.val,
+                                  (p_tok.type == TokTy::L_BIN   ? 2
+                                   : p_tok.type == TokTy::L_OCT ? 8
+                                   : p_tok.type == TokTy::L_HEX ? 16
+                                                                : 10));
       literal->type = EPrimType::i128;
     }
   } catch (const std::invalid_argument&) {
@@ -212,14 +212,18 @@ std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral
   }
 
   // post literal type like 10i8 0u32
-  if (ctx.tok_v.match_any(kIntegerTypeTokens)) {
-    literal->type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+  if (ctx.tok_v.match_any(k_type_integral)) {
+    literal->type                     = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
+    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
   } else if (ctx.tok_v.match_val("i")) {
-    literal->type = EPrimType::iSize;
+    literal->type                     = EPrimType::iSize;
+    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
   } else if (ctx.tok_v.match_val("u")) {
-    literal->type = EPrimType::uSize;
+    literal->type                     = EPrimType::uSize;
+    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
   } else if (ctx.tok_v.match_val("b")) {
-    literal->type = EPrimType::bSize;
+    literal->type                     = EPrimType::bSize;
+    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
   }
 
   return literal;
@@ -232,60 +236,52 @@ std::unique_ptr<ast::literal::CUNE> parser::Parser_Literal::literal_cune()
   return literal;
 }
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_textual()
+std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_textual()
 {
   auto ftext = ctx.Create_Node<ast::literal::Textual_Format>(ctx.tok_v.peek());
 
-  bool first_elem = true;
   while (!ctx.tok_v.is_end()) {
+
     if (ctx.tok_v.check(TokTy::L_TEXTUAL)) {
       auto text = ctx.Create_Node<ast::literal::Text_Pure>(ctx.tok_v.peek());
       text->val = ctx.tok_v.next().val;
 
+      // type inference
       if (ctx.tok_v.match(TokTy::T_STRING) || ctx.tok_v.match_val("s")) {
-        text->inferred_type = ast::type::get_str_type();
-        text->text_type     = EPrimType::str;
+        text->expression_inferred_type = ast::type::get_str_type();
+        text->text_type                = EPrimType::str;
       } else if (ctx.tok_v.match(TokTy::T_C_STRING) || ctx.tok_v.match_val("c")) {
-        text->inferred_type = ast::type::get_c_str_type();
-        text->text_type     = EPrimType::c_str;
+        text->expression_inferred_type = ast::type::get_c_str_type();
+        text->text_type                = EPrimType::c_str;
       } else if (ctx.tok_v.match(TokTy::T_CUNE) || ctx.tok_v.match_val("cu")) {
-        text->inferred_type = ast::type::get_cune_type();
-        text->text_type     = EPrimType::cune;
+        text->expression_inferred_type = ast::type::get_cune_type();
+        text->text_type                = EPrimType::cune;
       } else if (ctx.tok_v.match(TokTy::T_RUNE) || ctx.tok_v.match_val("r")) {
-        text->inferred_type = ast::type::get_rune_type();
-        text->text_type     = EPrimType::rune;
-      } else {
-        text->inferred_type = ast::type::get_text_type();
-        text->text_type     = EPrimType::text;
+        text->expression_inferred_type = ast::type::get_rune_type();
+        text->text_type                = EPrimType::rune;
       }
-      if (first_elem) ftext->inferred_type = text->inferred_type;
-      first_elem = false;
 
-      auto txt_elem = ast::literal::Textual_Element(std::move(text));
-
-      ftext->values.push_back(std::move(txt_elem));
+      ftext->values.push_back(std::move(text));
       continue;
-    } else if (ctx.tok_v.match(TokTy::S_TEXTUAL_EXPR_START)) {
+    }
+    // interpolation
+    else if (ctx.tok_v.match(TokTy::S_INTERPOLATION_START)) {
       auto lerp        = ctx.Create_Node<ast::literal::Text_Interpolation>(ctx.tok_v.peek(-1));
       lerp->expression = ctx.p_expr->parse_expression();
 
-      // if format specifier detected
       if (ctx.tok_v.match(TokTy::COLON)) {
         lerp->spec = format_specifier();
       }
+
       ftext->values.push_back(std::move(lerp));
 
-      ctx.tok_v.expect(84, TokTy::S_TEXTUAL_EXPR_END, "Expected end expression '}' in format string.",
+      ctx.tok_v.expect(84, TokTy::S_INTERPOLATION_END, "Expected end interpolation '}' in string formatted.",
                        "define format string like: `f\"you age is {now - birthday} years\"`.");
+
       continue;
     }
-    break;
-  }
 
-  if (ftext->values.size() == 1) {
-    if (auto ptr = dynamic_cast<ast::literal::Text_Pure*>(ftext->values[0].val)) {
-      return std::unique_ptr<ast::literal::Text_Pure>(ptr);
-    }
+    break;
   }
 
   return ftext;
@@ -307,7 +303,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
   auto format = ctx.Create_Node<ast::literal::Format_Specifier>(ctx.tok_v.peek());
 
   // fill + align
-  if (std::find(kFormatSpecAlign.begin(), kFormatSpecAlign.end(), ctx.tok_v.peek(1).type) != kFormatSpecAlign.end()) {
+  if (std::find(k_op_format.begin(), k_op_format.end(), ctx.tok_v.peek(1).type) != k_op_format.end()) {
     auto tok1 = ctx.tok_v.peek(0);
     auto tok2 = ctx.tok_v.peek(1);
 
@@ -384,7 +380,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
     ctx.tok_v.expect(86, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
   }
   // width from literal
-  else if (ctx.tok_v.check(TokTy::L_U)) {
+  else if (ctx.tok_v.check(TokTy::L_I)) {
     auto width    = ctx.p_expr->parse_expression_term();
     format->width = std::move(width);
   }
@@ -402,7 +398,7 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
       ctx.tok_v.expect(87, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
     }
     // precision from literal
-    else if (ctx.tok_v.check(TokTy::L_U)) {
+    else if (ctx.tok_v.check(TokTy::L_I)) {
       auto width        = ctx.p_expr->parse_expression_term();
       format->precision = std::move(width);
     }
@@ -429,14 +425,14 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
     }
   }
 
-  if (!ctx.tok_v.check(TokTy::S_TEXTUAL_EXPR_END)) {
+  if (!ctx.tok_v.check(TokTy::S_INTERPOLATION_END)) {
     ctx.tok_v.add_error(88, "Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
   }
 
   return format;
 }
 
-std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::unique_ptr<ast::AExpression> start)
+std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::unique_ptr<ast::AExpression> p_start)
 {
   static const std::string hint =
       "define range like:"
@@ -448,15 +444,24 @@ std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::
 
   auto range = ctx.Create_Node<ast::literal::Range>(ctx.tok_v.peek());
 
-  range->start = std::move(start);
+  if (!p_start) {
+    auto zero    = ctx.Create_Node<ast::literal::Integral>(ctx.tok_v.peek());
+    zero->val    = Int128(0);
+    range->start = std::move(zero);
+  } else
+    range->start = std::move(p_start);
 
   auto range_tok =
       ctx.tok_v.expect_any(89, {TokTy::RANGE, TokTy::RANGE_INCLUSIVE}, "Expected range kind '..' or '..='", hint);
 
   range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
 
-  if (!ctx.tok_v.check_any(kEndArgsListokens)) {
+  if (!ctx.tok_v.check_any(k_args_ending)) {
     range->end = ctx.p_expr->parse_expression();
+  } else {
+    auto zero  = ctx.Create_Node<ast::literal::Integral>(ctx.tok_v.peek());
+    zero->val  = Int128(0);
+    range->end = std::move(zero);
   }
 
   return range;
@@ -478,7 +483,7 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_table()
   ctx.tok_v.match(TokTy::OPEN_BRACE);
 
   if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return ctx.Create_Node<ast::literal::Table>(ctx.tok_v.peek(-1));
-  ;
+
 
   std::vector<std::unique_ptr<ast::AExpression>> values;
   std::vector<std::unique_ptr<ast::AExpression>> map_values;
@@ -546,10 +551,10 @@ std::unique_ptr<ast::literal::Table_Population> parser::Parser_Literal::literal_
   return pop;
 }
 
-std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std::unique_ptr<ast::AIdentifier> id)
+std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std::unique_ptr<ast::AIdentifier> p_id)
 {
   auto lit_entity  = ctx.Create_Node<ast::literal::Entity>(ctx.tok_v.peek());
-  lit_entity->name = std::move(id);
+  lit_entity->name = std::move(p_id);
 
   ctx.tok_v.match(TokTy::OPEN_BRACE);
   if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return lit_entity;

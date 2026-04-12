@@ -122,21 +122,26 @@ struct Node {
 };
 
 
-struct AType : virtual Node, Trait_LLVM_Typed {
-  bool type_isOptional = false;
-  bool type_isConst    = false;
-  bool type_isVolatile = false;
+struct AType : virtual Node, Trait_LLVM_Typed, std::enable_shared_from_this<AType> {
+  bool type_is_optional = false;
+  bool type_is_constant = false;
+  bool type_is_volatile = false;
 
   [[nodiscard]] virtual std::string mangle_type() const                    = 0;
   [[nodiscard]] virtual bool        compare_with(const AType& other) const = 0;
 
   [[nodiscard]] bool is_same(const AType& other) const
   {
-    if (type_isOptional != other.type_isOptional || type_isConst != other.type_isConst
-        || type_isVolatile != other.type_isVolatile)
+    if (type_is_optional != other.type_is_optional || type_is_constant != other.type_is_constant
+        || type_is_volatile != other.type_is_volatile)
       return false;
 
     return compare_with(other);
+  }
+
+  [[nodiscard]] virtual std::shared_ptr<AType> resolve()
+  {
+    return shared_from_this();
   }
 
   AType()          = default;
@@ -149,11 +154,11 @@ using INFERRED_TYPE = std::shared_ptr<AType>;
 using SYM_REF       = Symbol_Data*;
 
 struct ADeclaration : virtual Node, Trait_LLVM_Passage {
-  std::string name;
-  bool        is_exported = false;
-  bool        is_external = false;
+  std::string declaration_name;
+  bool        declaration_is_exported = false;
+  bool        declaration_is_external = false;
 
-  SYM_REF symbol = nullptr;
+  SYM_REF declaration_symbol = nullptr;
 
   ADeclaration() = default;
 
@@ -172,10 +177,10 @@ struct ACallable : virtual Node, Trait_LLVM_Callable {
   std::unique_ptr<ast::declaration::local::CodeBlock> codeblock;
   std::string                                         extern_call_convention;
 
-  bool isDefinition  = false;
-  bool isConst       = false;
-  bool isPure        = false;
-  bool isCompileTime = false;
+  bool is_def      = false;
+  bool is_const    = false;
+  bool is_pure     = false;
+  bool is_comptime = false;
 
   virtual ~ACallable() = default;
 };
@@ -185,9 +190,9 @@ struct ALocal : ADeclaration {
 };
 
 struct AExpression : virtual Node, Trait_LLVM_Value {
-  INFERRED_TYPE inferred_type    = nullptr;
+  INFERRED_TYPE expression_inferred_type    = nullptr;
   // for struct, enum, union
-  size_t        in_type_position = 0;
+  size_t        expression_in_type_position = 0;
 
   [[nodiscard]] virtual bool is_lvalue() const = 0;
   [[nodiscard]] virtual bool is_rvalue() const
@@ -223,7 +228,7 @@ struct ALiteral : virtual AExpression {
 };
 
 struct AIdentifier : virtual AExpression {
-  SYM_REF symbol = nullptr;
+  SYM_REF identifier_symbol = nullptr;
 
   // A::B::C -> C mod A { B } -> B
   [[nodiscard]] virtual const std::string&           get_base_name() const            = 0;
@@ -343,6 +348,12 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
 struct Expr_ID_Type final : public AIdentifier, AType {
   AIdentifier*                                         name = nullptr;
   [[maybe_unused]] std::vector<std::shared_ptr<AType>> gen_args;
+
+
+  std::shared_ptr<AType> resolve() override
+  {
+    return expression_inferred_type;
+  }
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   llvm::Type*  codegen_ty(Visitor_Codegen& v) override;

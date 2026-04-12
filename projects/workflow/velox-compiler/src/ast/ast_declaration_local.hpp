@@ -47,7 +47,7 @@ struct Variable_Binding final : public ALocal, Trait_LLVM_Value {
 
   std::string debug_str() const override
   {
-    return "bind " + ECapability_to_str(capability) + " " + name + "";
+    return "bind " + ECapability_to_str(capability) + " " + declaration_name + "";
   }
   ESymbolType get_symbol_type() const override
   {
@@ -179,8 +179,8 @@ struct Pattern_Component final : public Pattern {
 struct Tuple_Destructuring final : public Pattern {
   std::vector<std::shared_ptr<Variable_Binding>> elements;
 
-  EVariableKind kind     = EVariableKind::Const;
-  bool          isStatic = false;
+  EVariableKind kind      = EVariableKind::Const;
+  bool          is_static = false;
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
@@ -236,7 +236,7 @@ struct Capability final : public ALocal, Trait_LLVM_Value {
   std::string debug_str() const override
   {
     std::string str_kind = kind == ECapability::Mut ? "mut " : "ref ";
-    return "capability " + str_kind + name;
+    return "capability " + str_kind + declaration_name;
   }
   ESymbolType get_symbol_type() const override
   {
@@ -260,8 +260,8 @@ struct Capture_Member final : public Node {
 struct Lambda_Capture final : public Node {
   std::vector<std::unique_ptr<Capture_Member>> elements;
 
-  bool isAllRef      = false;
-  bool isCaptureSelf = false;
+  bool is_all_ref      = false;
+  bool is_capture_self = false;
 
   void accept(Visitor_Base& v) override;
 
@@ -277,8 +277,8 @@ struct Parameter final : public ALocal {
   [[maybe_unused]] std::unique_ptr<Node>                defaultValue;
   [[maybe_unused]] std::shared_ptr<Trait_LLVM_Callable> parent_function;
 
-  EPassMode passMode   = EPassMode::Copy;
-  bool      isVariadic = false;
+  EPassMode passmode    = EPassMode::Copy;
+  bool      is_variadic = false;
 
   llvm::Argument* llvm_arg = nullptr;
 
@@ -288,8 +288,8 @@ struct Parameter final : public ALocal {
   std::string debug_str() const override;
   bool        is_same(const Parameter& other) const
   {
-    if (isVariadic != other.isVariadic) return false;
-    if (passMode != other.passMode) return false;
+    if (is_variadic != other.is_variadic) return false;
+    if (passmode != other.passmode) return false;
     return type->is_same(*other.type);
   }
   ESymbolType get_symbol_type() const override

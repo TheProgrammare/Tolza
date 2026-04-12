@@ -9,10 +9,10 @@
 struct Visitor_Default : public Visitor_Base {
   using Visitor_Base::Visitor_Base;
 
-  void error_add(ErrorCode code, const ast::Node& n, const std::string& msg, const std::string& hint) const;
+  void add_error(ErrorCode code, const ast::Node& n, const std::string& msg, const std::string& hint) const;
 
-  void error_two_lines(ErrorCode, const ast::Node& first, const ast::Node& second, const std::string& msg,
-                       const std::string& hint) const;
+  void add_error_two_nodes(ErrorCode, const ast::Node& first, const ast::Node& second, const std::string& msg,
+                           const std::string& hint) const;
 
   compiler::EPhase current_EPhase() const
   {
@@ -115,15 +115,14 @@ struct Visitor_Default : public Visitor_Base {
   // ============ LITERAL ============
   void visit(ast::literal::Boolean& n) override;
   void visit(ast::literal::Integral& n) override;
-  void visit(ast::literal::Decimal& n) override;
-  void visit(ast::literal::Floating& n) override;
+  void visit(ast::literal::Fixed_Point& n) override;
+  void visit(ast::literal::Floating_Point& n) override;
 
   void visit(ast::literal::CUNE& n) override;
   void visit(ast::literal::RUNE& n) override;
 
   void visit(ast::literal::Text_Pure& n) override;
   void visit(ast::literal::Text_Interpolation& n) override;
-  void visit(ast::literal::Textual_Element& n) override;
   void visit(ast::literal::Textual_Format& n) override;
   void visit(ast::literal::Format_Specifier& n) override;
 

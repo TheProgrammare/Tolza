@@ -1,13 +1,12 @@
 #include "ast_literal.hpp"
 
-#include <iomanip>
 #include <memory>
 
 #include "ast/ast_numeric_128_bits.hpp"
 #include "ast_data.hpp"
 #include "ast_type.hpp"
-#include "ast_inferred_type_singleton.hpp"
 #include "ast_expression.hpp"
+#include "ast_inferred_type_singleton.hpp"
 
 #include "visitor/visitor_base.hpp"
 
@@ -22,11 +21,11 @@ void ast::literal::Integral::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::Decimal::accept(Visitor_Base& v)
+void ast::literal::Fixed_Point::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
-void ast::literal::Floating::accept(Visitor_Base& v)
+void ast::literal::Floating_Point::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -100,11 +99,11 @@ llvm::Value* ast::literal::Integral::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::literal::Decimal::codegen(Visitor_Codegen& v)
+llvm::Value* ast::literal::Fixed_Point::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
-llvm::Value* ast::literal::Floating::codegen(Visitor_Codegen& v)
+llvm::Value* ast::literal::Floating_Point::codegen(Visitor_Codegen& v)
 {
   return v.visit(*this);
 }
@@ -180,42 +179,42 @@ std::string ast::literal::Table::debug_str() const
 
 ast::literal::Boolean::Boolean()
 {
-  inferred_type = type::get_bool_type();
+  expression_inferred_type = type::get_bool_type();
 }
 
 
 ast::literal::Boolean::Boolean(bool value)
   : val(value)
 {
-  inferred_type = type::get_bool_type();
+  expression_inferred_type = type::get_bool_type();
 }
 
 ast::literal::Integral::Integral()
 {
   switch (type) {
   // signed integers
-  case EPrimType::i8:    inferred_type = type::get_i8_type(); break;
-  case EPrimType::i16:   inferred_type = type::get_i16_type(); break;
-  case EPrimType::i32:   inferred_type = type::get_i32_type(); break;
-  case EPrimType::i64:   inferred_type = type::get_i64_type(); break;
-  case EPrimType::i128:  inferred_type = type::get_i128_type(); break;
-  case EPrimType::iSize: inferred_type = type::get_isize_type(); break;
+  case EPrimType::i8:    expression_inferred_type = type::get_i8_type(); break;
+  case EPrimType::i16:   expression_inferred_type = type::get_i16_type(); break;
+  case EPrimType::i32:   expression_inferred_type = type::get_i32_type(); break;
+  case EPrimType::i64:   expression_inferred_type = type::get_i64_type(); break;
+  case EPrimType::i128:  expression_inferred_type = type::get_i128_type(); break;
+  case EPrimType::iSize: expression_inferred_type = type::get_isize_type(); break;
 
   // unsigned integers
-  case EPrimType::u8:    inferred_type = type::get_u8_type(); break;
-  case EPrimType::u16:   inferred_type = type::get_u16_type(); break;
-  case EPrimType::u32:   inferred_type = type::get_u32_type(); break;
-  case EPrimType::u64:   inferred_type = type::get_u64_type(); break;
-  case EPrimType::u128:  inferred_type = type::get_u128_type(); break;
-  case EPrimType::uSize: inferred_type = type::get_usize_type(); break;
+  case EPrimType::u8:    expression_inferred_type = type::get_u8_type(); break;
+  case EPrimType::u16:   expression_inferred_type = type::get_u16_type(); break;
+  case EPrimType::u32:   expression_inferred_type = type::get_u32_type(); break;
+  case EPrimType::u64:   expression_inferred_type = type::get_u64_type(); break;
+  case EPrimType::u128:  expression_inferred_type = type::get_u128_type(); break;
+  case EPrimType::uSize: expression_inferred_type = type::get_usize_type(); break;
 
   // booleans
-  case EPrimType::b8:    inferred_type = type::get_b8_type(); break;
-  case EPrimType::b16:   inferred_type = type::get_b16_type(); break;
-  case EPrimType::b32:   inferred_type = type::get_b32_type(); break;
-  case EPrimType::b64:   inferred_type = type::get_b64_type(); break;
-  case EPrimType::b128:  inferred_type = type::get_b128_type(); break;
-  case EPrimType::bSize: inferred_type = type::get_bsize_type(); break;
+  case EPrimType::b8:    expression_inferred_type = type::get_b8_type(); break;
+  case EPrimType::b16:   expression_inferred_type = type::get_b16_type(); break;
+  case EPrimType::b32:   expression_inferred_type = type::get_b32_type(); break;
+  case EPrimType::b64:   expression_inferred_type = type::get_b64_type(); break;
+  case EPrimType::b128:  expression_inferred_type = type::get_b128_type(); break;
+  case EPrimType::bSize: expression_inferred_type = type::get_bsize_type(); break;
   default:               break;
   }
 }
@@ -224,7 +223,7 @@ ast::literal::Integral::Integral(const Int128& value)
   : val(value)
   , type(EPrimType::iSize)
 {
-  inferred_type = type::get_isize_type();
+  expression_inferred_type = type::get_isize_type();
 }
 
 bool ast::literal::Integral::is_signed() const
@@ -242,22 +241,31 @@ bool ast::literal::Integral::is_signed() const
 }
 
 
-ast::literal::Decimal::Decimal()
+ast::literal::Text_Pure* ast::literal::Textual_Format::get_if_pure_text() const
+{
+  if (values.size() == 1) return dynamic_cast<ast::literal::Text_Pure*>(values[0].get());
+
+
+  return nullptr;
+}
+
+
+ast::literal::Fixed_Point::Fixed_Point()
 {
   switch (raw_type) {
-  case EPrimType::d32:    inferred_type = type::get_d32_type(); return;
-  case EPrimType::d64:    inferred_type = type::get_d64_type(); return;
-  case EPrimType::d128:   inferred_type = type::get_d128_type(); return;
-  case EPrimType::dSize:  inferred_type = type::get_dsize_type(); return;
-  case EPrimType::ud32:   inferred_type = type::get_ud32_type(); return;
-  case EPrimType::ud64:   inferred_type = type::get_ud64_type(); return;
-  case EPrimType::ud128:  inferred_type = type::get_ud128_type(); return;
-  case EPrimType::udSize: inferred_type = type::get_udsize_type(); return;
+  case EPrimType::d32:    expression_inferred_type = type::get_d32_type(); return;
+  case EPrimType::d64:    expression_inferred_type = type::get_d64_type(); return;
+  case EPrimType::d128:   expression_inferred_type = type::get_d128_type(); return;
+  case EPrimType::dSize:  expression_inferred_type = type::get_dsize_type(); return;
+  case EPrimType::ud32:   expression_inferred_type = type::get_ud32_type(); return;
+  case EPrimType::ud64:   expression_inferred_type = type::get_ud64_type(); return;
+  case EPrimType::ud128:  expression_inferred_type = type::get_ud128_type(); return;
+  case EPrimType::udSize: expression_inferred_type = type::get_udsize_type(); return;
   default:                return;
   }
 }
 
-ast::literal::Decimal::Decimal(const Int128& value, size_t _scale, EPrimType _raw_type)
+ast::literal::Fixed_Point::Fixed_Point(const Int128& value, size_t _scale, EPrimType _raw_type)
   : val(value)
   , scale(_scale)
   , raw_type(_raw_type)
@@ -265,22 +273,22 @@ ast::literal::Decimal::Decimal(const Int128& value, size_t _scale, EPrimType _ra
 }
 
 
-ast::literal::Floating::Floating()
+ast::literal::Floating_Point::Floating_Point()
 {
   switch (type) {
   // signed
   // integers
-  case EPrimType::f16:   inferred_type = type::get_f16_type(); break;
-  case EPrimType::f32:   inferred_type = type::get_f32_type(); break;
-  case EPrimType::f64:   inferred_type = type::get_f64_type(); break;
-  case EPrimType::f80:   inferred_type = type::get_f80_type(); break;
-  case EPrimType::f128:  inferred_type = type::get_f128_type(); break;
-  case EPrimType::fSize: inferred_type = type::get_fsize_type(); break;
+  case EPrimType::f16:   expression_inferred_type = type::get_f16_type(); break;
+  case EPrimType::f32:   expression_inferred_type = type::get_f32_type(); break;
+  case EPrimType::f64:   expression_inferred_type = type::get_f64_type(); break;
+  case EPrimType::f80:   expression_inferred_type = type::get_f80_type(); break;
+  case EPrimType::f128:  expression_inferred_type = type::get_f128_type(); break;
+  case EPrimType::fSize: expression_inferred_type = type::get_fsize_type(); break;
   default:               break;
   }
 }
 
-ast::literal::Floating::Floating(const Float128& value)
+ast::literal::Floating_Point::Floating_Point(const Float128& value)
   : val(value)
   , type(EPrimType::fSize)
 {
@@ -288,25 +296,25 @@ ast::literal::Floating::Floating(const Float128& value)
 
 ast::literal::CUNE::CUNE()
 {
-  inferred_type = type::get_cune_type();
+  expression_inferred_type = type::get_cune_type();
 }
 
 
 ast::literal::CUNE::CUNE(char value)
 {
-  inferred_type = type::get_cune_type();
-  val           = value;
+  expression_inferred_type = type::get_cune_type();
+  val                      = value;
 }
 
 ast::literal::RUNE::RUNE()
 {
-  inferred_type = type::get_rune_type();
+  expression_inferred_type = type::get_rune_type();
 }
 
 ast::literal::RUNE::RUNE(std::string codePoints_value)
 {
-  codePoints    = codePoints_value;
-  inferred_type = type::get_rune_type();
+  code_points              = codePoints_value;
+  expression_inferred_type = type::get_rune_type();
 }
 
 
@@ -314,9 +322,11 @@ std::string ast::literal::Textual_Format::debug_str() const
 {
   std::string out;
   for (auto& val : values) {
-    if (val.kind == Textual_Element::Kind::Lerp) out += "{";
-    out += val.val->debug_str();
-    if (val.kind == Textual_Element::Kind::Lerp) out += "}";
+    const bool is_interpolation = dynamic_cast<ast::literal::Text_Interpolation*>(val.get());
+
+    if (is_interpolation) out += "{";
+    out += val->debug_str();
+    if (is_interpolation) out += "}";
   }
   return out;
 }

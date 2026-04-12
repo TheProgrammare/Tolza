@@ -84,8 +84,8 @@ std::string ast::type::Function_Proto::mangle_type() const
     if (count++ != parameters.size() - 1) out += "_";
   }
 
-  if (returnType)
-    out += "_" + returnType->mangle_type();
+  if (return_ty)
+    out += "_" + return_ty->mangle_type();
   else
     out += "_u0";
 
@@ -115,7 +115,7 @@ std::string ast::type::Function_Proto::debug_str() const
   out += ")";
 
   std::string ret;
-  if (returnType) ret = " -&gt; " + returnType->debug_str();
+  if (return_ty) ret = " -&gt; " + return_ty->debug_str();
 
   return out + ret;
 }
@@ -123,12 +123,12 @@ std::string ast::type::Function_Proto::debug_str() const
 bool ast::type::Function_Proto::compare_with(const AType& other) const
 {
   if (auto ptr = dynamic_cast<const Function_Proto*>(&other)) {
-    if (isVariadic != ptr->isVariadic) return false;
+    if (is_variadic != ptr->is_variadic) return false;
     if (parameters.size() != ptr->parameters.size()) return false;
-    if ((returnType == nullptr) != (ptr->returnType == nullptr)) return false;
+    if ((return_ty == nullptr) != (ptr->return_ty == nullptr)) return false;
 
-    if (returnType) {
-      if (!returnType->is_same(*ptr->returnType)) return false;
+    if (return_ty) {
+      if (!return_ty->is_same(*ptr->return_ty)) return false;
     }
 
     for (size_t i = 0; i < parameters.size(); i++) {

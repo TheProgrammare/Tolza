@@ -17,8 +17,8 @@ struct IGenCond : public Node {
 };
 
 struct Is_Type final : IGenCond {
-  std::string                         srcTypename;
-  std::vector<std::shared_ptr<AType>> inType;
+  std::string                         source_typename;
+  std::vector<std::shared_ptr<AType>> in_type;
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
@@ -27,7 +27,7 @@ struct Is_Type final : IGenCond {
 
   bool type_isValid(const AType& type) const override
   {
-    for (auto& _type : inType) {
+    for (auto& _type : in_type) {
       // if (*ptr == type) return true;
     }
     return false;
@@ -39,9 +39,9 @@ struct Is_Type final : IGenCond {
 };
 
 struct Can_Cast final : IGenCond {
-  std::string            srcTypename;        // typename
-  std::shared_ptr<AType> target;             // cast target
-  bool                   isCastFrom = false; // false = cast to | true = cast from
+  std::string            source_typename;      // typename
+  std::shared_ptr<AType> target;               // cast target
+  bool                   is_cast_from = false; // false = cast to | true = cast from
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
@@ -55,14 +55,14 @@ struct Can_Cast final : IGenCond {
   }
   std::string debug_str() const override
   {
-    return std::string("gen cast ") + (isCastFrom ? "from" : "to");
+    return std::string("gen cast ") + (is_cast_from ? "from" : "to");
   }
 };
 
 struct Have_Op final : IGenCond {
-  std::string            targetGenSym;                   // typename
-  EBinOpType             operatorType = EBinOpType::Add; // operator
-  std::shared_ptr<AType> explicit_return_type;           // for indexation/iterator
+  std::string            target_gen_sym;          // typename
+  EBinOpType             op_ty = EBinOpType::Add; // operator
+  std::shared_ptr<AType> explicit_return_type;    // for indexation/iterator
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
 
@@ -77,7 +77,7 @@ struct Have_Op final : IGenCond {
 };
 
 struct Have_Role final : IGenCond {
-  std::string                  targetGenSym;
+  std::string                  target_gen_sym;
   std::unique_ptr<AExpression> role;
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
@@ -95,7 +95,7 @@ struct Have_Role final : IGenCond {
 };
 
 struct Use_Component final : IGenCond {
-  std::string                  targetGenSym;
+  std::string                  target_gen_sym;
   std::unique_ptr<AExpression> component;
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;
@@ -113,7 +113,7 @@ struct Use_Component final : IGenCond {
 };
 
 struct Compatible_System final : IGenCond {
-  std::string                  targetGenSym;
+  std::string                  target_gen_sym;
   std::unique_ptr<AExpression> system;
 
   std::shared_ptr<ast::declaration::Generic> parent_generic;

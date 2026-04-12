@@ -25,7 +25,8 @@ enum class EErrorSeverity { debug, warning, error, fatal };
 
 
 struct Error_Diagnostic {
-  const ScriptInfo& scr_info;
+  const ScriptInfo& pass_scr_info;
+  const ScriptInfo* node_scr_info;
 
   Token                    token;
   std::vector<Token>       tokens_inpacted;
@@ -39,10 +40,25 @@ struct Error_Diagnostic {
 
   Error_Diagnostic() = delete;
 
-  Error_Diagnostic(ErrorCode _code, const ScriptInfo& _scr_info, const Token& _token, const std::vector<Token>& _tokens,
-                   compiler::EPhase _phase, EErrorSeverity _severity, const std::vector<std::string>& _context,
-                   const std::string& _msg, const std::string& _hint)
-    : scr_info(_scr_info)
+  Error_Diagnostic(const ScriptInfo& _pass_scr_info, ErrorCode _code, const ScriptInfo* _node_scr_info,
+                   const Token& _token, compiler::EPhase _phase, const std::string& _msg, const std::string& _hint)
+    : pass_scr_info(_pass_scr_info)
+    , node_scr_info(_node_scr_info)
+    , token(_token)
+    , phase(_phase)
+    , severity(EErrorSeverity::error)
+    , code(_code)
+    , msg(_msg)
+    , hint(_hint)
+  {
+  }
+
+  Error_Diagnostic(const ScriptInfo& _pass_scr_info, ErrorCode _code, const ScriptInfo* _node_scr_info,
+                   const Token& _token, const std::vector<Token>& _tokens, compiler::EPhase _phase,
+                   EErrorSeverity _severity, const std::vector<std::string>& _context, const std::string& _msg,
+                   const std::string& _hint)
+    : pass_scr_info(_pass_scr_info)
+    , node_scr_info(_node_scr_info)
     , token(_token)
     , tokens_inpacted(_tokens)
     , phase(_phase)
@@ -54,6 +70,14 @@ struct Error_Diagnostic {
   {
   }
 
+  const ScriptInfo* get_scr_info() const
+  {
+    if (node_scr_info)
+      return node_scr_info;
+    else
+      return &pass_scr_info;
+  }
+
   // [file] file:LL:CC
   // [code] | code line
   //        |      ^^^^
@@ -62,7 +86,7 @@ struct Error_Diagnostic {
   // [context] global -> fn -> ...
   std::string print_error() const
   {
-    return print_source() + print_line() + print_messages();
+    return print_source() + print_line_cursor() + print_messages();
   }
 
   std::string print_code() const;
@@ -87,7 +111,10 @@ struct Error_Diagnostic {
     return str_msg;
   }
 
+  std::string print_cursor() const;
+
   std::string print_line() const;
+  std::string print_line_cursor() const;
 
   std::string print_source() const;
 
@@ -95,4 +122,16 @@ struct Error_Diagnostic {
   {
     return std::string();
   }
+};
+
+
+struct Error_Diagnostic_Two {
+  Error_Diagnostic_Two(const ScriptInfo& _pass_scr_info, ErrorCode code, const ast::Node& first,
+                       const ast::Node& second, compiler::EPhase _phase, const std::string& msg,
+                       const std::string& hint);
+
+  Error_Diagnostic first;
+  Error_Diagnostic second;
+
+  std::string print_error() const;
 };

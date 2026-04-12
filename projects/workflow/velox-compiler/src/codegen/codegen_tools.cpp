@@ -4,8 +4,8 @@
 #include <exception>
 #include <expected>
 
-#include <llvm-19/llvm/ADT/APFloat.h>
-#include <llvm-19/llvm/IR/Value.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/IR/Value.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -34,14 +34,14 @@
 #include "visitor/symbol_manager.hpp"
 #include "visitor_codegen.hpp"
 
-llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& target)
+llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& p_target)
 {
-  auto src = target.codegen(v);
-  auto ty  = target.inferred_type->codegen_ty(v);
+  auto src = p_target.codegen(v);
+  auto ty  = p_target.expression_inferred_type->codegen_ty(v);
 
   auto dest = v.builder.CreateAlloca(ty, nullptr, "tmp_moved");
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Entity>(target.inferred_type)) {
+  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Entity>(p_target.expression_inferred_type)) {
   }
 }
 llvm::Value* LLVM_Tools::engage_copy_semantic(ast::AExpression& target)
@@ -51,22 +51,22 @@ llvm::Value* LLVM_Tools::engage_clone_semantic(ast::AExpression& target)
 {
 }
 
-std::expected<Symbol_Data*, std::string> LLVM_Tools::find_symbol(const ast::AExpression& expr)
+std::expected<Symbol_Data*, std::string> LLVM_Tools::find_symbol(const ast::AExpression& p_expr)
 {
-  if (auto ptr = dynamic_cast<const ast::AIdentifier*>(&expr)) {
-    return ptr->symbol;
-  } else if (auto ptr = dynamic_cast<const ast::expression::Member_Access*>(&expr)) {
+  if (auto ptr = dynamic_cast<const ast::AIdentifier*>(&p_expr)) {
+    return ptr->identifier_symbol;
+  } else if (auto ptr = dynamic_cast<const ast::expression::Member_Access*>(&p_expr)) {
     return find_symbol(*ptr->right);
-  } else if (auto ptr = dynamic_cast<const ast::expression::Call*>(&expr)) {
+  } else if (auto ptr = dynamic_cast<const ast::expression::Call*>(&p_expr)) {
     return find_symbol(*ptr->callee);
-  } else if (auto ptr = dynamic_cast<const ast::expression::Call_Pipe*>(&expr)) {
+  } else if (auto ptr = dynamic_cast<const ast::expression::Call_Pipe*>(&p_expr)) {
     return find_symbol(*ptr->callee);
   }
 }
 
-std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(const Symbol_Data& symbol)
+std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(const Symbol_Data& p_symbol)
 {
-  auto decl = symbol.symbol.get();
+  auto decl = p_symbol.symbol.get();
   if (auto ptr = dynamic_cast<ast::declaration::Global*>(decl)) {
     if (ptr->expression) return ptr->expression.get();
   } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(decl)) {
@@ -74,41 +74,43 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
   } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(decl)) {
     return ptr->parent_pattern->right.get();
   }
-  Error_Diagnostic error(166, *decl->_scr_info, decl->_token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {},
+  Error_Diagnostic error(v.scr_info, 166, decl->_scr_info, decl->_token, compiler::EPhase::llvmir,
                          "The symbol don't have an expression.", "");
   return std::unexpected(error.print_error());
 }
 
 
-std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const ast::ALiteral& value)
+std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const ast::ALiteral& p_value)
 {
   common::CompCtx ctx;
-  if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&value)) {
+  if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&p_value)) {
     return get_int_constant(EPrimType_to_bits(ptr->type), 0, ptr->val.i128_to_string(), EPrimType_is_signed(ptr->type));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Floating*>(&value)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&p_value)) {
     return get_float_constant(EPrimType_to_bits(ptr->type), 0, ptr->val.float128_to_string());
-  } else if (auto ptr = dynamic_cast<const ast::literal::Decimal*>(&value)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Fixed_Point*>(&p_value)) {
     return get_int_constant(EPrimType_to_bits(ptr->raw_type), 0, ptr->val.i128_to_string(),
                             EPrimType_is_signed(ptr->raw_type));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Boolean*>(&value)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Boolean*>(&p_value)) {
     return get_int_constant(1, ptr->val);
-  } else if (auto ptr = dynamic_cast<const ast::literal::Text_Pure*>(&value)) {
-    switch (ptr->text_type) {
-    case EPrimType::c_str: return get_cstr_constant(ptr->val);
-    case EPrimType::str:   return get_str_constant(ptr->val);
-    case EPrimType::text:  {
-      std::u32string utf32;
-      try {
-        utf32 = utf8_to_utf32(ptr->val);
-      } catch (const std::exception& e) {
-        v.error_add(224, *ptr, e.what(), "");
+  } else if (auto ptr = dynamic_cast<const ast::literal::Textual_Format*>(&p_value)) {
+    if (auto txt = ptr->get_if_pure_text()) {
+      switch (txt->text_type) {
+      case EPrimType::c_str: return get_cstr_constant(txt->val);
+      case EPrimType::str:   return get_str_constant(txt->val);
+      case EPrimType::text:  {
+        std::u32string utf32;
+        try {
+          utf32 = utf8_to_utf32(txt->val);
+        } catch (const std::exception& e) {
+          v.error_add(224, *txt, e.what(), "");
+        }
+        return get_text_constant(utf32);
       }
-      return get_text_constant(utf32);
+      default: return std::unexpected("The text type is invalid (" + EPrimType_to_str(txt->text_type) + ")");
+      }
     }
-    default: return std::unexpected("The text type is invalid (" + EPrimTy_to_str(ptr->text_type) + ")");
-    }
-  } else if (auto ptr = dynamic_cast<const ast::literal::Enum*>(&value)) {
-    if (auto ptr2 = std::dynamic_pointer_cast<ast::declaration::Enum>(ptr->inferred_type)) {
+  } else if (auto ptr = dynamic_cast<const ast::literal::Enum*>(&p_value)) {
+    if (auto ptr2 = std::dynamic_pointer_cast<ast::declaration::Enum>(ptr->expression_inferred_type)) {
       // return llvm::ConstantStruct::get(v.visit(*ptr2), v.visit(ptr));
     }
     // llvm::StructType* ty = llvm::StructType::create(v.ctx, )
@@ -117,12 +119,12 @@ std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const as
   return std::unexpected("Impossible to create a constant from a complex type");
 }
 
-llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Parameter& param)
+llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Parameter& p_param)
 {
-  param.codegen_pass(v);
-  auto ty = param.type->codegen_ty(v);
+  p_param.codegen_pass(v);
+  auto ty = p_param.type->codegen_ty(v);
 
-  switch (param.passMode) {
+  switch (p_param.passmode) {
   case EPassMode::NONE:
   case EPassMode::Move:
   case EPassMode::Ref:  {
@@ -130,7 +132,7 @@ llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Paramet
       return ty;
 
     else
-      return param.type->llvm_type = ty->getPointerTo();
+      return p_param.type->llvm_type = ty->getPointerTo();
   }
   case EPassMode::Mut: {
     return ty->getPointerTo();
@@ -138,12 +140,12 @@ llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Paramet
   case EPassMode::Copy:
   case EPassMode::Clone: {
     if (!ty->isSingleValueType())
-      return param.type->llvm_type = ty->getPointerTo();
+      return p_param.type->llvm_type = ty->getPointerTo();
     else
       return ty;
   }
   case EPassMode::Addr: {
-    return param.type->llvm_type = ty->getPointerTo()->getPointerTo();
+    return p_param.type->llvm_type = ty->getPointerTo()->getPointerTo();
   }
   }
 }
@@ -370,43 +372,43 @@ std::u32string LLVM_Tools::utf8_to_utf32(const std::string& s)
 }
 
 
-llvm::Value* LLVM_Tools::primitive_coerce(llvm::Value* val, llvm::Type* src, llvm::Type* dst)
+llvm::Value* LLVM_Tools::primitive_coerce(llvm::Value* p_val, llvm::Type* p_src, llvm::Type* p_dst)
 {
-  if (src == dst) return val;
+  if (p_src == p_dst) return p_val;
 
   // int <-> int
-  if (src->isIntegerTy() && dst->isIntegerTy()) {
-    auto src_bits = src->getIntegerBitWidth();
-    auto dst_bits = dst->getIntegerBitWidth();
+  if (p_src->isIntegerTy() && p_dst->isIntegerTy()) {
+    auto src_bits = p_src->getIntegerBitWidth();
+    auto dst_bits = p_dst->getIntegerBitWidth();
 
-    if (src_bits < dst_bits) return v.builder.CreateSExt(val, dst);
-    if (src_bits > dst_bits) return v.builder.CreateTrunc(val, dst);
-    return val;
+    if (src_bits < dst_bits) return v.builder.CreateSExt(p_val, p_dst);
+    if (src_bits > dst_bits) return v.builder.CreateTrunc(p_val, p_dst);
+    return p_val;
   }
 
   // float <-> float
-  if (src->isFloatingPointTy() && dst->isFloatingPointTy()) {
-    if (src->getPrimitiveSizeInBits() < dst->getPrimitiveSizeInBits()) return v.builder.CreateFPExt(val, dst);
+  if (p_src->isFloatingPointTy() && p_dst->isFloatingPointTy()) {
+    if (p_src->getPrimitiveSizeInBits() < p_dst->getPrimitiveSizeInBits()) return v.builder.CreateFPExt(p_val, p_dst);
 
-    if (src->getPrimitiveSizeInBits() > dst->getPrimitiveSizeInBits()) return v.builder.CreateFPTrunc(val, dst);
+    if (p_src->getPrimitiveSizeInBits() > p_dst->getPrimitiveSizeInBits()) return v.builder.CreateFPTrunc(p_val, p_dst);
 
-    return val;
+    return p_val;
   }
 
   // int -> float
-  if (src->isIntegerTy() && dst->isFloatingPointTy()) return v.builder.CreateSIToFP(val, dst);
+  if (p_src->isIntegerTy() && p_dst->isFloatingPointTy()) return v.builder.CreateSIToFP(p_val, p_dst);
 
   // float -> int
-  if (src->isFloatingPointTy() && dst->isIntegerTy()) return v.builder.CreateFPToSI(val, dst);
+  if (p_src->isFloatingPointTy() && p_dst->isIntegerTy()) return v.builder.CreateFPToSI(p_val, p_dst);
 
   // ptr
-  if (src->isPointerTy() && dst->isPointerTy()) return v.builder.CreateBitCast(val, dst);
+  if (p_src->isPointerTy() && p_dst->isPointerTy()) return v.builder.CreateBitCast(p_val, p_dst);
 
   // int -> ptr
-  if (src->isIntegerTy() && dst->isPointerTy()) return v.builder.CreateIntToPtr(val, dst);
+  if (p_src->isIntegerTy() && p_dst->isPointerTy()) return v.builder.CreateIntToPtr(p_val, p_dst);
 
   // ptr -> int
-  if (src->isPointerTy() && dst->isIntegerTy()) return v.builder.CreatePtrToInt(val, dst);
+  if (p_src->isPointerTy() && p_dst->isIntegerTy()) return v.builder.CreatePtrToInt(p_val, p_dst);
 
-  return val;
+  return p_val;
 }

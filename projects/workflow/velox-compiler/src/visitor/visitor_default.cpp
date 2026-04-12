@@ -16,32 +16,24 @@
 #include "ast/ast_statement.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_type.hpp"
+#include "misc/script_info.hpp"
+#include <algorithm>
+#include <iostream>
 
 
-void Visitor_Default::error_add(ErrorCode code, const ast::Node& n, const std::string& msg,
+void Visitor_Default::add_error(ErrorCode code, const ast::Node& n, const std::string& msg,
                                 const std::string& hint) const
 {
-  auto error = Error_Diagnostic(code, scr_info, n._token, {}, current_EPhase(), EErrorSeverity::error, {}, msg, hint);
+  auto error = Error_Diagnostic(scr_info, code, n._scr_info, n._token, current_EPhase(), msg, hint);
 
   errors.push_back(error.print_error());
 }
 
-void Visitor_Default::error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second,
-                                      const std::string& msg, const std::string& hint) const
+void Visitor_Default::add_error_two_nodes(ErrorCode code, const ast::Node& first, const ast::Node& second,
+                                          const std::string& msg, const std::string& hint) const
 {
-  auto first_error = Error_Diagnostic(code, *first._scr_info, first._token, {}, current_EPhase(), EErrorSeverity::error,
-                                      {}, msg, hint);
-
-  auto second_error = Error_Diagnostic(code, *second._scr_info, second._token, {}, current_EPhase(),
-                                       EErrorSeverity::error, {}, msg, hint);
-
-  std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET;
-  out += first_error.print_line() + color_RESET;
-  out += "[to file]   " color_MAGENTA + second_error.print_source() + color_RESET;
-  out += second_error.print_line() + color_RESET;
-
-  out += first_error.print_messages() + "\n";
-  errors.push_back(out);
+  auto err = Error_Diagnostic_Two(scr_info, code, first, second, current_EPhase(), msg, hint);
+  errors.push_back(err.print_error());
 }
 
 
@@ -89,7 +81,7 @@ void Visitor_Default::visit(ast::Root& n)
 void Visitor_Default::visit(ast::declaration::Global& n)
 {
   if (n.type) n.type->accept(*this);
-  n.expression->accept(*this);
+  if (n.expression) n.expression->accept(*this);
 }
 void Visitor_Default::visit(ast::declaration::Function& n)
 {
@@ -306,7 +298,7 @@ void Visitor_Default::visit(ast::declaration::cop::System_Case& n)
 // ============ GENERIC ============
 void Visitor_Default::visit(ast::generic::Is_Type& n)
 {
-  for (auto& elem : n.inType) elem->accept(*this);
+  for (auto& elem : n.in_type) elem->accept(*this);
 }
 void Visitor_Default::visit(ast::generic::Can_Cast& n)
 {
@@ -336,7 +328,7 @@ void Visitor_Default::visit(ast::type::Ptr& n)
 }
 void Visitor_Default::visit(ast::type::Table& n)
 {
-  if (n.sizeSymbol) n.sizeSymbol->accept(*this);
+  if (n.size_sym) n.size_sym->accept(*this);
   n.inner->accept(*this);
 }
 void Visitor_Default::visit(ast::type::Primitive& n)
@@ -350,7 +342,7 @@ void Visitor_Default::visit(ast::type::Function_Proto& n)
 {
   for (auto& elem : n.parameters) elem->accept(*this);
   for (auto& elem : n.gen_parameters) elem->accept(*this);
-  if (n.returnType) n.returnType->accept(*this);
+  if (n.return_ty) n.return_ty->accept(*this);
 }
 
 void Visitor_Default::visit(ast::type::Get_Expr_Type& n)
@@ -365,10 +357,10 @@ void Visitor_Default::visit(ast::literal::Boolean& n)
 void Visitor_Default::visit(ast::literal::Integral& n)
 {
 }
-void Visitor_Default::visit(ast::literal::Decimal& n)
+void Visitor_Default::visit(ast::literal::Fixed_Point& n)
 {
 }
-void Visitor_Default::visit(ast::literal::Floating& n)
+void Visitor_Default::visit(ast::literal::Floating_Point& n)
 {
 }
 
@@ -387,13 +379,9 @@ void Visitor_Default::visit(ast::literal::Text_Interpolation& n)
   if (n.expression) n.expression->accept(*this);
   if (n.spec) n.spec->accept(*this);
 }
-void Visitor_Default::visit(ast::literal::Textual_Element& n)
-{
-  n.val->accept(*this);
-}
 void Visitor_Default::visit(ast::literal::Textual_Format& n)
 {
-  for (auto& elem : n.values) elem.val->accept(*this);
+  for (auto& elem : n.values) elem->accept(*this);
 }
 void Visitor_Default::visit(ast::literal::Format_Specifier& n)
 {

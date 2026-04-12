@@ -38,7 +38,7 @@ struct Ptr final : public AType {
 struct Table final : public AType {
   size_t table_size; // 0 = dynamic
   [[maybe_unused]]
-  std::unique_ptr<AExpression> sizeSymbol;
+  std::unique_ptr<AExpression> size_sym;
 
   std::shared_ptr<AType> inner;
 
@@ -60,8 +60,8 @@ struct Table final : public AType {
   }
   std::string debug_str() const override
   {
-    if (table_size) return "type table[" + sizeSymbol->debug_str() + " -&gt; " + std::to_string(table_size) + "]";
-    return "type table[" + sizeSymbol->debug_str() + "]";
+    if (table_size) return "type table[" + size_sym->debug_str() + " -&gt; " + std::to_string(table_size) + "]";
+    return "type table[" + size_sym->debug_str() + "]";
   }
   void accept(Visitor_Base& v) override;
 };
@@ -90,9 +90,9 @@ struct Matrix final : public AType {
   std::string debug_str() const override
   {
     if (tbl.table_size)
-      return "type matrix[" + tbl.sizeSymbol->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]*"
+      return "type matrix[" + tbl.size_sym->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]*"
              + std::to_string(dimension_size);
-    return "type matrix[" + tbl.sizeSymbol->debug_str() + "]*" + std::to_string(dimension_size);
+    return "type matrix[" + tbl.size_sym->debug_str() + "]*" + std::to_string(dimension_size);
   }
   void accept(Visitor_Base& v) override;
 };
@@ -118,8 +118,8 @@ struct Hyper final : public AType {
   std::string debug_str() const override
   {
     if (tbl.table_size)
-      return "type hyper[" + tbl.sizeSymbol->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]";
-    return "type hyper[" + tbl.sizeSymbol->debug_str() + "]";
+      return "type hyper[" + tbl.size_sym->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]";
+    return "type hyper[" + tbl.size_sym->debug_str() + "]";
   }
   void accept(Visitor_Base& v) override;
 };
@@ -137,7 +137,7 @@ struct Primitive final : public AType {
 
   std::string mangle_type() const override
   {
-    return EPrimTy_to_mangle(type);
+    return EPrimType_to_mangle(type);
   }
   bool compare_with(const AType& other) const override
   {
@@ -148,7 +148,7 @@ struct Primitive final : public AType {
   }
   std::string debug_str() const override
   {
-    return "type " + EPrimTy_to_str(type);
+    return "type " + EPrimType_to_str(type);
   }
   void accept(Visitor_Base& v) override;
 };
@@ -189,9 +189,10 @@ struct Function_Proto final : public AType {
 
   [[maybe_unused]] std::vector<std::shared_ptr<declaration::local::Parameter>>                 parameters;
   [[maybe_unused]] std::vector<std::unique_ptr<declaration::local::Generic_Parameter_Element>> gen_parameters;
-  [[maybe_unused]] std::shared_ptr<ast::AType>                                                 returnType;
+  [[maybe_unused]] std::shared_ptr<ast::AType>                                                 return_ty;
 
-  bool isVariadic = false;
+  bool is_variadic             = false;
+  bool is_explicit_return_type = false;
 
   llvm::Type* codegen_ty(Visitor_Codegen& v) override;
 
@@ -210,11 +211,11 @@ struct Get_Expr_Type final : public AType {
 
   std::string mangle_type() const override
   {
-    return target->inferred_type->mangle_type();
+    return target->expression_inferred_type->mangle_type();
   }
   bool compare_with(const AType& other) const override
   {
-    return target->inferred_type->is_same(other);
+    return target->expression_inferred_type->is_same(other);
   }
   std::string debug_str() const override
   {

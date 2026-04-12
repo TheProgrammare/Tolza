@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <utility>
+#include <iostream>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_data.hpp"
@@ -30,11 +31,11 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression()
   auto op = ctx.p_op->try_operation();
 
   while (!ctx.tok_v.is_end()) {
-    if (!ctx.tok_v.check_any(kOperatorTokens)) return op;
+    if (!ctx.tok_v.check_any(k_operator)) return op;
 
     auto node   = ctx.Create_Node<ast::operation::Binary>(ctx.tok_v.peek());
     node->left  = std::move(op);
-    node->op    = TokTy_to_EBinOpType(ctx.tok_v.next().type);
+    node->op_ty = TokTy_to_EBinOpType(ctx.tok_v.next().type);
     node->right = parse_expression();
     op          = std::move(node);
   }
@@ -71,7 +72,7 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::base_expression()
 
   if (auto lit = ctx.p_lit->try_literal(true)) {
     return lit;
-  } else if (ctx.tok_v.check_any(kStartIdentifier)) {
+  } else if (ctx.tok_v.check_any(k_start_identifier)) {
     return identifier();
   }
 
@@ -84,19 +85,19 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::base_expression()
 
 
 std::unique_ptr<ast::AExpression>
-parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> base_expr)
+parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> p_base_expr)
 {
   // is a literal expression, no suffix allowed
-  if (dynamic_cast<ast::ALiteral*>(base_expr.get())) {
+  if (dynamic_cast<ast::ALiteral*>(p_base_expr.get())) {
     // only range and cast suffix allowed
     if (ctx.tok_v.check_any({TokTy::RANGE, TokTy::RANGE_INCLUSIVE})) {
-      base_expr = ctx.p_lit->literal_range(std::move(base_expr));
+      p_base_expr = ctx.p_lit->literal_range(std::move(p_base_expr));
     }
 
     // if cast
-    if (ctx.tok_v.check_any(kCastType)) base_expr = cast_as(std::move(base_expr));
+    if (ctx.tok_v.check_any(k_cast)) p_base_expr = cast_as(std::move(p_base_expr));
 
-    return base_expr;
+    return p_base_expr;
   }
 
 
@@ -114,27 +115,27 @@ parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> b
   while (!ctx.tok_v.is_end()) {
     // member access
     if (ctx.tok_v.check(TokTy::DOT)) {
-      base_expr = member_access(std::move(base_expr));
+      p_base_expr = member_access(std::move(p_base_expr));
     }
     // function call
     else if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
-      base_expr = function_call(std::move(base_expr));
+      p_base_expr = function_call(std::move(p_base_expr));
     }
     // run system
     else if (ctx.tok_v.check(TokTy::RUN_SYSTEM)) {
-      base_expr = system_call(std::move(base_expr));
+      p_base_expr = system_call(std::move(p_base_expr));
     }
     // ptr at
     else if (ctx.tok_v.check(TokTy::PTR_AT)) {
-      base_expr = ptr_at(std::move(base_expr));
+      p_base_expr = ptr_at(std::move(p_base_expr));
     }
     // ptr offset
     else if (ctx.tok_v.match(TokTy::PTR_OFFSET)) {
-      base_expr = ptr_offset(std::move(base_expr));
+      p_base_expr = ptr_offset(std::move(p_base_expr));
     }
     // table access
     else if (ctx.tok_v.match(TokTy::INTERROGATIVE) || ctx.tok_v.match(TokTy::OPEN_SQUARE)) {
-      base_expr = table_access(std::move(base_expr));
+      p_base_expr = table_access(std::move(p_base_expr));
     }
     // end of access operator
     else {
@@ -149,26 +150,26 @@ parser::Parser_Expression::suffix_expression(std::unique_ptr<ast::AExpression> b
   // get bits
   // a~[0..8]
   if (ctx.tok_v.check(TokTy::TILDE)) {
-    base_expr = getbits(std::move(base_expr));
+    p_base_expr = getbits(std::move(p_base_expr));
     // table access on bits
     // a~[0..8][5]
     if (ctx.tok_v.check(TokTy::OPEN_SQUARE)) {
-      base_expr = table_access(std::move(base_expr));
+      p_base_expr = table_access(std::move(p_base_expr));
     }
   }
   // it's a range expression !
   else if (ctx.tok_v.check_any({TokTy::RANGE, TokTy::RANGE_INCLUSIVE})) {
-    base_expr = ctx.p_lit->literal_range(std::move(base_expr));
+    p_base_expr = ctx.p_lit->literal_range(std::move(p_base_expr));
   }
 
   // if cast
-  if (ctx.tok_v.check_any(kCastType)) base_expr = cast_as(std::move(base_expr));
+  if (ctx.tok_v.check_any(k_cast)) p_base_expr = cast_as(std::move(p_base_expr));
 
-  return base_expr;
+  return p_base_expr;
 }
 
 
-std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std::unique_ptr<ast::AExpression> expr)
+std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std::unique_ptr<ast::AExpression> p_expr)
 {
   auto asCast = ctx.Create_Node<ast::operation::Cast_As>(ctx.tok_v.peek());
 
@@ -180,9 +181,9 @@ std::unique_ptr<ast::operation::Cast_As> parser::Parser_Expression::cast_as(std:
   }
 
   ctx.tok_v.next(); // consume as
-  asCast->expression    = std::move(expr);
-  asCast->type          = ctx.p_type->parse_type();
-  asCast->inferred_type = asCast->type;
+  asCast->expression               = std::move(p_expr);
+  asCast->type                     = ctx.p_type->parse_type();
+  asCast->expression_inferred_type = asCast->type;
 
   return asCast;
 }
@@ -197,26 +198,26 @@ std::vector<std::unique_ptr<ast::expression::Call_Argument>> parser::Parser_Expr
 
   if (ctx.tok_v.match(TokTy::CLOSE_PAREN)) return {};
 
-  std::vector<std::unique_ptr<ast::expression::Call_Argument>> params;
+  std::vector<std::unique_ptr<ast::expression::Call_Argument>> args;
 
   while (!ctx.tok_v.is_end()) {
-    auto param = ctx.Create_Node<ast::expression::Call_Argument>(ctx.tok_v.peek());
+    auto argument = ctx.Create_Node<ast::expression::Call_Argument>(ctx.tok_v.peek());
 
     // if parameter invocation
     if (ctx.tok_v.check(TokTy::IDENTIFIER) && ctx.tok_v.peek(1).type == TokTy::ASSIGN) {
-      param->name = ctx.tok_v.next().val;
+      argument->name = ctx.tok_v.next().val;
 
       ctx.tok_v.expect(111, TokTy::COLON,
                        "Expected parameter assignation ':' after a parameter argument name invocation.", hint);
 
-      param->expression = ctx.p_expr->parse_expression();
-      params.push_back(std::move(param));
+      argument->expression = ctx.p_expr->parse_expression();
+      args.push_back(std::move(argument));
     }
     // ordered parameter affectation
     else {
-      param->expression = ctx.p_expr->parse_expression();
+      argument->expression = ctx.p_expr->parse_expression();
 
-      params.push_back(std::move(param));
+      args.push_back(std::move(argument));
     }
 
     // stop when an unexpected token is encounted permit to avoid ;
@@ -226,16 +227,16 @@ std::vector<std::unique_ptr<ast::expression::Call_Argument>> parser::Parser_Expr
     break;
   }
 
-  return params;
+  return args;
 }
 
 std::unique_ptr<ast::expression::Call>
-parser::Parser_Expression::function_call(std::unique_ptr<ast::AExpression> callee)
+parser::Parser_Expression::function_call(std::unique_ptr<ast::AExpression> p_callee)
 {
   ctx.tok_v.match(TokTy::OPEN_PAREN);
 
   auto call        = ctx.Create_Node<ast::expression::Call>(ctx.tok_v.peek());
-  call->callee     = std::move(callee);
+  call->callee     = std::move(p_callee);
   call->param_args = call_arguments();
 
   if (auto ptr = dynamic_cast<ast::AIdentifier*>(call->callee.get()))
@@ -245,14 +246,14 @@ parser::Parser_Expression::function_call(std::unique_ptr<ast::AExpression> calle
 }
 
 [[nodiscard]] std::unique_ptr<ast::expression::Call_System>
-parser::Parser_Expression::system_call(std::unique_ptr<ast::AExpression> target_entity)
+parser::Parser_Expression::system_call(std::unique_ptr<ast::AExpression> p_target_entity)
 {
   ctx.tok_v.match(TokTy::RUN_SYSTEM);
 
   auto base_tok = ctx.tok_v.peek(-1);
 
   auto sys_call           = ctx.Create_Node<ast::expression::Call_System>(base_tok);
-  sys_call->target_entity = std::move(target_entity);
+  sys_call->target_entity = std::move(p_target_entity);
   sys_call->callee        = identifier();
   sys_call->param_args    = call_arguments();
 
@@ -278,7 +279,7 @@ std::unique_ptr<ast::expression::If_Ternary> parser::Parser_Expression::if_terna
   return ternary;
 }
 
-std::unique_ptr<ast::AIdentifier> parser::Parser_Expression::identifier(bool no_qualified_id, bool keyword_allowed)
+std::unique_ptr<ast::AIdentifier> parser::Parser_Expression::identifier(bool p_no_qualified_id, bool p_keyword_allowed)
 {
   static const std::string hint =
       "define identifier like:"
@@ -300,7 +301,7 @@ std::unique_ptr<ast::AIdentifier> parser::Parser_Expression::identifier(bool no_
   // it's a simple id with no path
   else if (ctx.tok_v.peek(1).type != TokTy::STATIC_ACCESS) {
     auto id = ctx.Create_Node<ast::Expr_ID>(ctx.tok_v.peek());
-    if (!keyword_allowed)
+    if (!p_keyword_allowed)
       id->name = ctx.parse_name("", hint);
     else
       id->name = ctx.tok_v.next().val;
@@ -309,7 +310,7 @@ std::unique_ptr<ast::AIdentifier> parser::Parser_Expression::identifier(bool no_
   }
 
   // it's qualified id
-  if (no_qualified_id) ctx.tok_v.add_error_tok(113, ctx.tok_v.peek(-1), "Unexpected qualified id.", hint);
+  if (p_no_qualified_id) ctx.tok_v.add_error_tok(113, ctx.tok_v.peek(-1), "Unexpected qualified id.", hint);
 
   auto   id    = ctx.Create_Node<ast::Expr_ID_Qualified>(ctx.tok_v.peek());
   size_t count = 0;
@@ -354,26 +355,26 @@ std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Expression::identifier_typed()
 }
 
 std::unique_ptr<ast::expression::Member_Access>
-parser::Parser_Expression::member_access(std::unique_ptr<ast::AExpression> left)
+parser::Parser_Expression::member_access(std::unique_ptr<ast::AExpression> p_left)
 {
   ctx.tok_v.match(TokTy::DOT);
 
   auto access   = ctx.Create_Node<ast::expression::Member_Access>(ctx.tok_v.peek(-2));
-  access->left  = std::move(left);
+  access->left  = std::move(p_left);
   access->right = identifier(true);
 
   return access;
 }
 
 std::unique_ptr<ast::expression::Table_Access>
-parser::Parser_Expression::table_access(std::unique_ptr<ast::AExpression> target)
+parser::Parser_Expression::table_access(std::unique_ptr<ast::AExpression> p_target)
 {
   const bool is_bound = ctx.tok_v.peek(-1).type == TokTy::INTERROGATIVE;
   ctx.tok_v.match(TokTy::OPEN_SQUARE);
 
   auto table_access      = ctx.Create_Node<ast::expression::Table_Access>(ctx.tok_v.peek(-1));
   table_access->bounded  = is_bound;
-  table_access->target   = std::move(target);
+  table_access->target   = std::move(p_target);
   table_access->selector = ctx.p_expr->parse_expression();
 
   ctx.tok_v.expect(115, TokTy::CLOSE_SQUARE, "Expected end of table access '[' after expression.", "");
@@ -381,12 +382,12 @@ parser::Parser_Expression::table_access(std::unique_ptr<ast::AExpression> target
   return table_access;
 }
 
-std::unique_ptr<ast::expression::Ptr_At> parser::Parser_Expression::ptr_at(std::unique_ptr<ast::AExpression> expr)
+std::unique_ptr<ast::expression::Ptr_At> parser::Parser_Expression::ptr_at(std::unique_ptr<ast::AExpression> p_expr)
 {
   ctx.tok_v.match(TokTy::PTR_AT);
 
   auto ptr_at    = ctx.Create_Node<ast::expression::Ptr_At>(ctx.tok_v.peek());
-  ptr_at->target = std::move(expr);
+  ptr_at->target = std::move(p_expr);
   ptr_at->index  = ctx.p_expr->parse_expression();
   ctx.tok_v.expect(108, TokTy::CLOSE_PAREN, "Expected end of pointer at ')'.",
                    "define pointer at like: `my_ptr'at(i)`.");
@@ -395,12 +396,12 @@ std::unique_ptr<ast::expression::Ptr_At> parser::Parser_Expression::ptr_at(std::
 }
 
 std::unique_ptr<ast::expression::Ptr_Offset>
-parser::Parser_Expression::ptr_offset(std::unique_ptr<ast::AExpression> expr)
+parser::Parser_Expression::ptr_offset(std::unique_ptr<ast::AExpression> p_expr)
 {
   ctx.tok_v.match(TokTy::PTR_OFFSET);
 
   auto ptr_offset    = ctx.Create_Node<ast::expression::Ptr_Offset>(ctx.tok_v.peek());
-  ptr_offset->target = std::move(expr);
+  ptr_offset->target = std::move(p_expr);
   ptr_offset->offset = ctx.p_expr->parse_expression();
   ctx.tok_v.expect(109, TokTy::CLOSE_PAREN, "Expected end of pointer offset ')'.",
                    "define pointer offset like: `my_ptr'offset(i)`.");
@@ -443,7 +444,7 @@ std::unique_ptr<ast::expression::Addr_Of> parser::Parser_Expression::addr_of()
   return node;
 }
 
-std::unique_ptr<ast::expression::GetBits> parser::Parser_Expression::getbits(std::unique_ptr<ast::AExpression> expr)
+std::unique_ptr<ast::expression::GetBits> parser::Parser_Expression::getbits(std::unique_ptr<ast::AExpression> p_expr)
 {
   static const std::string hint = "define get bit like: `target~[0..8]` get first octect on target.";
 
@@ -452,7 +453,7 @@ std::unique_ptr<ast::expression::GetBits> parser::Parser_Expression::getbits(std
   ctx.tok_v.expect(98, TokTy::OPEN_SQUARE, "Expected start slice block '[' after a get bit operator '~'", hint);
 
   auto get_bit    = ctx.Create_Node<ast::expression::GetBits>(ctx.tok_v.peek(-2));
-  get_bit->target = std::move(expr);
+  get_bit->target = std::move(p_expr);
   get_bit->range  = ctx.p_expr->parse_expression();
 
   ctx.tok_v.expect(99, TokTy::CLOSE_SQUARE, "Expected end slice block ']' after range expression", hint);
@@ -492,7 +493,7 @@ std::unique_ptr<ast::expression::New_Ptr> parser::Parser_Expression::new_ptr()
   ctx.tok_v.match(TokTy::NEW);
 
   auto node = ctx.Create_Node<ast::expression::New_Ptr>(ctx.tok_v.peek());
-  ctx.tok_v.expect_any(100, kPointerTokens, "Expected pointer specification after 'new' token.", hint);
+  ctx.tok_v.expect_any(100, k_pointer, "Expected pointer specification after 'new' token.", hint);
   node->pointer = TokTy_to_EPtrType(ctx.tok_v.peek(-1).type);
 
   ctx.tok_v.expect(101, TokTy::TICK, "Expected tick ' between pointer and type", hint);

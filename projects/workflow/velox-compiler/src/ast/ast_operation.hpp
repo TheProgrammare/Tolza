@@ -71,7 +71,7 @@ struct In final : public AExpression {
 struct Assignment final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
-  ETransfertType               assignmentType = ETransfertType::Copy;
+  ETransfertType               assignment_type = ETransfertType::Copy;
 
   SET_R_VAL
 
@@ -80,7 +80,7 @@ struct Assignment final : public AExpression {
 
   std::string debug_str() const override
   {
-    switch (assignmentType) {
+    switch (assignment_type) {
     case ETransfertType::Copy:         return "copy=";
     case ETransfertType::Clone:        return "clone=";
     case ETransfertType::MoveSemantic: return "move=";
@@ -93,7 +93,7 @@ struct Assignment final : public AExpression {
 struct Binary final : public AExpression {
   std::unique_ptr<AExpression> left;
   std::unique_ptr<AExpression> right;
-  EBinOpType                   op = EBinOpType::Add;
+  EBinOpType                   op_ty = EBinOpType::Add;
 
   SET_R_VAL
 
@@ -102,7 +102,7 @@ struct Binary final : public AExpression {
 
   std::string debug_str() const override
   {
-    return "op bin(" + EBinOpType_to_str(op) + ")";
+    return "op bin(" + EBinOpType_to_str(op_ty) + ")";
   }
 };
 

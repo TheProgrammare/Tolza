@@ -207,8 +207,9 @@ std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
 
   auto ext_tok = ctx->tok_v.peek(-1);
 
-  auto ext_node  = ctx->Create_Decl<ast::declaration::Extern>(ext_tok);
-  ext_node->name = ctx->tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
+  auto ext_node = ctx->Create_Decl<ast::declaration::Extern>(ext_tok);
+  ext_node->declaration_name =
+      ctx->tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
 
 
   ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);

@@ -295,8 +295,33 @@ bool EPrimType_is_floating(EPrimType type)
   }
 }
 
+bool EPrimType_is_fixed(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::ud32:
+  case EPrimType::ud64:
+  case EPrimType::ud128:
+  case EPrimType::udSize:
+  case EPrimType::d32:
+  case EPrimType::d64:
+  case EPrimType::d128:
+  case EPrimType::dSize:  return true;
+  default:                return false;
+  }
+}
 
-std::string EPrimTy_to_str(EPrimType type)
+bool EPrimType_is_textual(EPrimType type)
+{
+  switch (type) {
+  case EPrimType::str:
+  case EPrimType::text:
+  case EPrimType::c_str: return true;
+  default:               return false;
+  }
+}
+
+
+std::string EPrimType_to_str(EPrimType type)
 {
   switch (type) {
   case EPrimType::boolean:   return "boolean";
@@ -374,7 +399,7 @@ std::string EPrimTy_to_str(EPrimType type)
   }
 }
 
-std::string EPrimTy_to_mangle(EPrimType type)
+std::string EPrimType_to_mangle(EPrimType type)
 {
   switch (type) {
   case EPrimType::boolean:   return "b";

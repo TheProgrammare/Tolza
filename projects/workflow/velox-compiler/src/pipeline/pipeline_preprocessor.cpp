@@ -14,14 +14,14 @@
 
 namespace fs = std::filesystem;
 
-bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log = compiler::COMP_CTX.logs.contains("preprocessor");
 
   std::vector<std::tuple<std::string, std::vector<std::string>>> errs;
 
   size_t count = 0;
-  for (auto scr_info : scr_infos) {
+  for (auto scr_info : p_scr_infos) {
     if (scr_info->tokens.empty()) continue;
     Preprocessor pre(*scr_info);
 

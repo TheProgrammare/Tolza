@@ -52,14 +52,14 @@ Global    json_to_global(const json& j);
 TypeAlias json_to_typealias(const json& j);
 
 // Helpers pour convertir string → enum
-EType                     str_to_etype(const std::string& s);
-EPassMode                 str_to_passmode(const std::string& s);
-ECallConvention           str_to_callconvention(const std::string& s);
+EType                     str_to_EType(const std::string& s);
+EPassMode                 str_to_EPassMode(const std::string& s);
+ECallConvention           str_to_ECallConvention(const std::string& s);
 // size, align
 std::pair<size_t, size_t> EType_size_and_align(EType ty);
 // size, align
 std::pair<size_t, size_t> type_size_and_align(const Type& ty);
-std::vector<FieldLayout>  generate_layout(const std::vector<Type>& types);
+std::vector<FieldLayout>  generate_layout(const std::vector<Type>& p_types);
 
 } // namespace JSON
 } // namespace ffi

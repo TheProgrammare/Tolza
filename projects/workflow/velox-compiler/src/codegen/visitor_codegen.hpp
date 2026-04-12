@@ -1,8 +1,10 @@
 
 #pragma once
 
-#include <llvm-19/llvm/IR/DerivedTypes.h>
-#include <llvm-19/llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/IRBuilder.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,8 +13,6 @@
 #include "ast/ast_base.hpp"
 #include "ast/ast_forward.hpp"
 #include "llvm_forward.hpp"
-
-#include <llvm/IR/IRBuilder.h>
 
 
 struct ScriptInfo;
@@ -82,7 +82,7 @@ struct Visitor_Codegen {
                                 llvm::Function::LinkageTypes link_ty);
 
   llvm::Value* ensure_rvalue(ast::AExpression& expr, const std::string& name = "");
-  llvm::Value* ensure_lvalue(ast::AExpression& expr, const std::string& name = "");
+  llvm::Value* ensure_lvalue(ast::AExpression& expr, bool is_silent_error = false);
 
   // ============ AST ============
   void visit(ast::Node& n);
@@ -179,15 +179,14 @@ struct Visitor_Codegen {
   // ============ LITERAL ============
   llvm::Value* visit(ast::literal::Boolean& n);
   llvm::Value* visit(ast::literal::Integral& n);
-  llvm::Value* visit(ast::literal::Decimal& n);
-  llvm::Value* visit(ast::literal::Floating& n);
+  llvm::Value* visit(ast::literal::Fixed_Point& n);
+  llvm::Value* visit(ast::literal::Floating_Point& n);
 
   llvm::Value* visit(ast::literal::CUNE& n);
   llvm::Value* visit(ast::literal::RUNE& n);
 
   llvm::Value* visit(ast::literal::Text_Pure& n);
   llvm::Value* visit(ast::literal::Text_Interpolation& n);
-  llvm::Value* visit(ast::literal::Textual_Element& n);
   llvm::Value* visit(ast::literal::Textual_Format& n);
   llvm::Value* visit(ast::literal::Format_Specifier& n);
 

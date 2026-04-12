@@ -5,4 +5,4 @@
 
 struct ScriptInfo;
 
-bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& fs_out);
+bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos);

@@ -5,6 +5,7 @@
 #include "ast/ast_declaration.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_forward.hpp"
+#include "ast/ast_literal.hpp"
 #include "visitor_default.hpp"
 
 struct Symbol_Data;
@@ -21,10 +22,12 @@ struct Visitor_Type : public Visitor_Default {
   using Visitor_Default::Visitor_Default;
 
   bool                        is_same_type(const ast::AType& p_type_1, const ast::AType& p_type_2) const;
-  std::shared_ptr<ast::AType> resolve_type(ast::Node& n, ast::AType& input_type, bool silentError = false);
+  std::shared_ptr<ast::AType> resolve_type(ast::Node& n, ast::AType& input_type, bool p_is_silent_error = false);
+
+  void ensure_expression_resolution(ast::AExpression& p_expr, std::shared_ptr<ast::AType> p_type_inferrance);
 
 
-  std::shared_ptr<ast::AType> get_inferred_type(ast::Node& node, bool is_prototype_expected = false) const;
+  std::shared_ptr<ast::AType> get_inferred_type(ast::Node& n, bool p_is_prototype_expected = false) const;
 
   std::shared_ptr<ast::AType> get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const;
 
@@ -68,16 +71,20 @@ struct Visitor_Type : public Visitor_Default {
   void visit(ast::expression::New_Ptr& n) override;
 
   void visit(ast::literal::Integral& n) override;
-  void visit(ast::literal::Floating& n) override;
+  void visit(ast::literal::Floating_Point& n) override;
   void visit(ast::literal::Table& n) override;
   void visit(ast::literal::Map& n) override;
   void visit(ast::literal::Text_Interpolation& n) override;
+  void visit(ast::literal::Text_Pure& n) override;
+  void visit(ast::literal::Textual_Format& n) override;
   void visit(ast::literal::Enum& n) override;
   void visit(ast::literal::Tuple& n) override;
   void visit(ast::literal::Range& n) override;
   void visit(ast::literal::Structured_Data& n) override;
   void visit(ast::literal::Entity& n) override;
   void visit(ast::literal::Iterator& n) override;
+
+  void visit(ast::statement::For& n) override;
 
   void visit(ast::operation::Cast_As& n) override;
   void visit(ast::operation::Is& n) override;

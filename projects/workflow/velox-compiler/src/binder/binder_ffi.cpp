@@ -188,12 +188,12 @@ std::string ffi::import_to_str(const Import& _imp)
 }
 
 
-std::string ffi::comp_to_str(const Comp& comp)
+std::string ffi::comp_to_str(const Comp& p_comp)
 {
   std::string members;
 
-  for (size_t i = 0; i < comp.fields.size(); i++) {
-    auto& [name, type] = comp.fields[i];
+  for (size_t i = 0; i < p_comp.fields.size(); i++) {
+    auto& [name, type] = p_comp.fields[i];
     std::string field  = BINDER_EXTERN_FIELD;
     common::fmt_template(field, {name, type_to_str(type)});
 
@@ -201,57 +201,57 @@ std::string ffi::comp_to_str(const Comp& comp)
   }
 
   std::string out = BINDER_EXTERN_COMP_TEMPLATE;
-  common::fmt_template(out, {comp.name, members});
+  common::fmt_template(out, {p_comp.name, members});
   return out;
 }
 
-std::string ffi::entity_to_str(const Entity& entity)
+std::string ffi::entity_to_str(const Entity& p_entity)
 {
   std::string members;
 
-  for (size_t i = 0; i < entity.components.size(); i++) {
-    auto& comp = entity.components[i];
+  for (size_t i = 0; i < p_entity.components.size(); i++) {
+    auto& comp = p_entity.components[i];
     members += "use " + comp.name + ", \n";
   }
 
   std::string out = BINDER_EXTERN_ENTITY_TEMPLATE;
-  common::fmt_template(out, {entity.name, members});
+  common::fmt_template(out, {p_entity.name, members});
   return out;
 }
 
-std::string ffi::union_to_str(const Union& _union)
+std::string ffi::union_to_str(const Union& p_union)
 {
   std::string members;
 
-  for (auto& [name, type] : _union.members) {
+  for (auto& [name, type] : p_union.members) {
     members += name + ": " + type_to_str(type) + ",\n";
   }
 
   bool test = members.empty() ? true : false;
 
   std::string out = BINDER_EXTERN_UNION_TEMPLATE;
-  common::fmt_template(out, {_union.name, members});
+  common::fmt_template(out, {p_union.name, members});
   return out;
 }
 
-std::string ffi::flag_to_str(const Flag& flag)
+std::string ffi::flag_to_str(const Flag& p_flag)
 {
   std::string members;
 
-  for (auto& [name, bits] : flag.members) {
+  for (auto& [name, bits] : p_flag.members) {
     members += name + ": " + std::to_string(bits) + ",\n";
   }
 
   std::string out = BINDER_EXTERN_FLAG_TEMPLATE;
-  common::fmt_template(out, {flag.name, ffi::EType_to_str(flag.underlying_type), members});
+  common::fmt_template(out, {p_flag.name, ffi::EType_to_str(p_flag.underlying_type), members});
   return out;
 }
 
-std::string ffi::enum_to_str(const Enum& _enum)
+std::string ffi::enum_to_str(const Enum& p_enum)
 {
   std::string members;
 
-  for (auto& [name, types] : _enum.members) {
+  for (auto& [name, types] : p_enum.members) {
     members += name + "(";
     for (size_t i = 0; i < types.size(); ++i) {
       const Type& ty = types[i];
@@ -264,138 +264,138 @@ std::string ffi::enum_to_str(const Enum& _enum)
   }
 
   std::string out = BINDER_EXTERN_ENUM_TEMPLATE;
-  common::fmt_template(out, {_enum.name, members});
+  common::fmt_template(out, {p_enum.name, members});
   return out;
 }
 
-std::string ffi::func_to_str(const Func& func)
+std::string ffi::func_to_str(const Func& p_func)
 {
   std::string params;
 
-  for (size_t i = 0; i < func.proto.params.size(); i++) {
-    auto& [pass_mode, type, is_restrict] = func.proto.params[i];
-    auto&       name                     = func.param_names[i];
+  for (size_t i = 0; i < p_func.proto.params.size(); i++) {
+    auto& [pass_mode, type, is_restrict] = p_func.proto.params[i];
+    auto&       name                     = p_func.param_names[i];
     std::string str_pass_mode            = ffi::EPassMode_to_str(pass_mode);
 
     params += str_pass_mode + " " + name + ": " + type_to_str(type);
 
-    if (i != func.proto.params.size() - 1) params += ", ";
+    if (i != p_func.proto.params.size() - 1) params += ", ";
   }
 
-  if (func.proto.is_variadic) {
-    if (func.proto.params.size() > 0) params += ", ";
+  if (p_func.proto.is_variadic) {
+    if (p_func.proto.params.size() > 0) params += ", ";
     params += "...";
   }
 
   std::string out = BINDER_EXTERN_FN_TEMPALTE;
-  common::fmt_template(out, {func.name, params, type_to_str(func.proto.return_type)});
+  common::fmt_template(out, {p_func.name, params, type_to_str(p_func.proto.return_type)});
   return out;
 }
 
-std::string ffi::global_to_str(const Global& glo)
+std::string ffi::global_to_str(const Global& p_glo)
 {
-  std::string kind = glo.is_const ? "let" : "var";
+  std::string kind = p_glo.is_const ? "let" : "var";
 
   std::string out = BINDER_EXTERN_GLOBAL_TEMPLATE;
-  common::fmt_template(out, {kind, glo.name, type_to_str(glo.type)});
+  common::fmt_template(out, {kind, p_glo.name, type_to_str(p_glo.type)});
   return out;
 }
 
-std::string ffi::typealias_to_str(const TypeAlias& _ty_alias)
+std::string ffi::typealias_to_str(const TypeAlias& p_ty_alias)
 {
   std::string out = BINDER_EXTERN_TYPEALIAS_TEMPLATE;
-  common::fmt_template(out, {_ty_alias.name, type_to_str(_ty_alias.type)});
+  common::fmt_template(out, {p_ty_alias.name, type_to_str(p_ty_alias.type)});
   return out;
 }
 
 
-void ffi::write_ast(const ffi::AST& ast, const std::string& dest_file)
+void ffi::write_ast(const ffi::AST& p_ast, const std::string& p_dest_file)
 {
   // if (!check_ast_generation(ast)) return;
 
-  std::filesystem::create_directories(std::filesystem::path(dest_file).parent_path());
-  std::ofstream os(dest_file);
+  std::filesystem::create_directories(std::filesystem::path(p_dest_file).parent_path());
+  std::ofstream os(p_dest_file);
 
-  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(dest_file).string() + "\"");
+  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(p_dest_file).string() + "\"");
 
   os.clear();
 
   {
-    std::string _lang = ast.bind.lang + std::string(labs(static_cast<long>(29 - ast.bind.lang.size())), ' ');
-    std::string _lib  = ast.bind.lib + std::string(labs(static_cast<long>(29 - ast.bind.lib.size())), ' ');
+    std::string _lang = p_ast.bind.lang + std::string(labs(static_cast<long>(29 - p_ast.bind.lang.size())), ' ');
+    std::string _lib  = p_ast.bind.lib + std::string(labs(static_cast<long>(29 - p_ast.bind.lib.size())), ' ');
     std::string _imp;
 
-    if (!ast.imports.empty()) {
+    if (!p_ast.imports.empty()) {
       _imp = ffi::BINDER_IMPORT_HEADER;
 
-      for (auto& [name, import] : ast.imports) _imp += ffi::import_to_str(import);
+      for (auto& [name, import] : p_ast.imports) _imp += ffi::import_to_str(import);
     }
 
     std::string header = ffi::BINDER_FILE_HEADER;
-    common::fmt_template(header, {_lang, _lib, _imp, ast.bind.abi});
+    common::fmt_template(header, {_lang, _lib, _imp, p_ast.bind.abi});
     os << header << std::flush;
   }
 
-  if (!ast.enums.empty()) {
+  if (!p_ast.enums.empty()) {
     os << ffi::BINDER_ENUM_HEADER;
 
-    for (auto& [_, elem] : ast.enums) os << ffi::enum_to_str(elem);
+    for (auto& [_, elem] : p_ast.enums) os << ffi::enum_to_str(elem);
   }
-  if (!ast.comps.empty()) {
+  if (!p_ast.comps.empty()) {
     os << ffi::BINDER_COMP_HEADER;
 
-    for (auto& [_, elem] : ast.comps) os << ffi::comp_to_str(elem);
+    for (auto& [_, elem] : p_ast.comps) os << ffi::comp_to_str(elem);
   }
-  if (!ast.unions.empty()) {
+  if (!p_ast.unions.empty()) {
     os << ffi::BINDER_UNION_HEADER;
 
-    for (auto& [_, elem] : ast.unions) os << union_to_str(elem);
+    for (auto& [_, elem] : p_ast.unions) os << union_to_str(elem);
   }
-  if (!ast.globals.empty()) {
+  if (!p_ast.globals.empty()) {
     os << ffi::BINDER_GLOBAL_HEADER;
 
-    for (auto& [_, elem] : ast.globals) os << global_to_str(elem);
+    for (auto& [_, elem] : p_ast.globals) os << global_to_str(elem);
   }
-  if (!ast.funcs.empty()) {
+  if (!p_ast.funcs.empty()) {
     os << ffi::BINDER_FUNCTION_HEADER;
 
-    for (auto& [_, elem] : ast.funcs) os << func_to_str(elem);
+    for (auto& [_, elem] : p_ast.funcs) os << func_to_str(elem);
   }
-  if (!ast.typealias.empty()) {
+  if (!p_ast.typealias.empty()) {
     os << ffi::BINDER_TYPEALIAS_HEADER;
 
-    for (auto& [_, elem] : ast.typealias) os << typealias_to_str(elem);
+    for (auto& [_, elem] : p_ast.typealias) os << typealias_to_str(elem);
   }
-  if (!ast.flags.empty()) {
+  if (!p_ast.flags.empty()) {
     os << ffi::BINDER_FLAG_HEADER;
 
-    for (auto& [_, elem] : ast.flags) os << flag_to_str(elem);
+    for (auto& [_, elem] : p_ast.flags) os << flag_to_str(elem);
   }
-  if (!ast.entities.empty()) {
+  if (!p_ast.entities.empty()) {
     os << ffi::BINDER_ENTITY_HEADER;
 
-    for (auto& [_, elem] : ast.entities) os << entity_to_str(elem);
+    for (auto& [_, elem] : p_ast.entities) os << entity_to_str(elem);
   }
 
-  os << "\n} // " << ast.bind.abi << "\n\n} // export" << std::flush;
+  os << "\n} // " << p_ast.bind.abi << "\n\n} // export" << std::flush;
 
   os.close();
 }
 
-bool ffi::check_ast_generation(const AST& ast)
+bool ffi::check_ast_generation(const AST& p_ast)
 {
   std::vector<std::string> errs;
 
   auto add_err = [&](const Extern_Item& item) {
-    Error_Diagnostic err(203, *ast.bind.scr_info, item.id_node->_token, {}, compiler::EPhase::binder,
-                         EErrorSeverity::error, {}, "External reference never generated.",
+    Error_Diagnostic err(*p_ast.bind.scr_info, 203, p_ast.bind.scr_info.get(), item.id_node->_token,
+                         compiler::EPhase::binder, "External reference never generated.",
                          "Check your workspace ressources, your packages, or the reference name.");
     errs.push_back(err.print_error());
   };
 
-  for (auto& item : ast.bind.extern_fn) {
+  for (auto& item : p_ast.bind.extern_fn) {
     bool find = false;
-    for (auto& [name, fn] : ast.funcs) {
+    for (auto& [name, fn] : p_ast.funcs) {
       if (name == item.name) find = true;
     }
     if (!find) add_err(item);

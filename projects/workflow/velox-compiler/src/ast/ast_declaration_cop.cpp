@@ -85,7 +85,7 @@ bool ast::declaration::cop::Component_Field::compare_with(const AType& other) co
 bool ast::declaration::cop::Entity::contains_op(EBinOpType op, const AType* return_type) const
 {
   for (auto& elem : operators) {
-    if (elem->operatorType == op) {
+    if (elem->op_ty == op) {
       return true;
     }
   }
@@ -95,7 +95,7 @@ bool ast::declaration::cop::Entity::contains_op(EBinOpType op, const AType* retu
 bool ast::declaration::cop::Entity::contains_access_op(EAccessOpType op, const AType* return_type) const
 {
   for (auto& elem : op_access) {
-    if (elem->operatorType == op) {
+    if (elem->op_ty == op) {
       return true;
     }
   }
@@ -131,7 +131,7 @@ bool ast::declaration::cop::Entity::contains_comp(const ast::declaration::cop::C
 {
   for (auto& comp : comps) {
     if (!comp) return false;
-    if (comp->name->get_base_name() == target_comp.name) return true;
+    if (comp->name->get_base_name() == target_comp.declaration_name) return true;
   }
   return false;
 }
@@ -139,7 +139,7 @@ bool ast::declaration::cop::Entity::contains_comp(const ast::declaration::cop::C
 bool ast::declaration::cop::Entity::compare_with(const AType& other) const
 {
   if (auto ptr = dynamic_cast<const Entity*>(&other)) {
-    return name == ptr->name;
+    return declaration_name == ptr->declaration_name;
   }
   return false;
 }
@@ -164,7 +164,7 @@ bool ast::declaration::cop::System::manage_component(const ast::declaration::cop
 std::string ast::declaration::cop::Component::debug_str() const
 {
   std::string out;
-  out += "comp " + name;
+  out += "comp " + declaration_name;
   if (gen_where) out += gen_where->debug_str();
   return out;
 }

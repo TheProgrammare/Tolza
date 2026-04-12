@@ -5,7 +5,7 @@
 #include <initializer_list>
 
 
-bool rule::type::op_on_primitive(EPrimType term, EBinOpType op)
+bool rule::type::can_op_primitive(EPrimType term, EBinOpType op)
 {
   auto op_handled = [&](const std::initializer_list<EBinOpType>& collection) {
     return std::find(collection.begin(), collection.end(), op) != collection.end();
@@ -58,16 +58,17 @@ bool rule::type::op_on_primitive(EPrimType term, EBinOpType op)
 }
 
 
-bool rule::type::binary_op_primitive(EPrimType lhs, EPrimType rhs)
+bool rule::type::can_binary_op_primitive(EPrimType lhs, EPrimType rhs)
 {
 }
 
-bool rule::type::binary_op_entity(const ast::declaration::cop::Entity& lhs, const ast::declaration::cop::Entity& rhs)
+bool rule::type::can_binary_op_entity(const ast::declaration::cop::Entity& lhs,
+                                      const ast::declaration::cop::Entity& rhs)
 {
 }
 
 
-bool rule::type::cast_on_primitive_as_primitve(EPrimType term, EPrimType target_type)
+bool rule::type::can_cast_on_primitive_as_primitve(EPrimType term, EPrimType target_type)
 {
   if (term == target_type) return true;
 
@@ -133,13 +134,13 @@ bool rule::type::cast_on_primitive_as_primitve(EPrimType term, EPrimType target_
 
   return table[static_cast<size_t>(term)][static_cast<size_t>(target_type)];
 }
-bool rule::type::cast_on_primitive_as_entity(EPrimType term, const ast::declaration::cop::Entity& target_type)
+bool rule::type::can_cast_on_primitive_as_entity(EPrimType term, const ast::declaration::cop::Entity& target_type)
 {
 }
-bool rule::type::cast_on_entity_as_primtive(const ast::declaration::cop::Entity& term, EPrimType target_type)
+bool rule::type::can_cast_on_entity_as_primtive(const ast::declaration::cop::Entity& term, EPrimType target_type)
 {
 }
-bool rule::type::cast_on_entity_as_entity(const ast::declaration::cop::Entity& term,
-                                          const ast::declaration::cop::Entity& target_type)
+bool rule::type::can_cast_on_entity_as_entity(const ast::declaration::cop::Entity& term,
+                                              const ast::declaration::cop::Entity& target_type)
 {
 }

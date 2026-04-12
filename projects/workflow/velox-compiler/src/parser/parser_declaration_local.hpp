@@ -12,19 +12,19 @@ namespace parser
 struct Parser_Context;
 
 struct Parser_Declaration_Local {
-  Parser_Declaration_Local(Parser_Context& ctx)
-    : ctx(ctx)
+  Parser_Declaration_Local(Parser_Context& p_ctx)
+    : ctx(p_ctx)
   {
   }
 
   [[nodiscard]] std::shared_ptr<ast::ALocal> parse_local(bool silent_error = false);
 
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Element>
-  pattern_mapping(ast::declaration::local::Pattern& parent_pattern);
+  pattern_mapping(ast::declaration::local::Pattern& p_parent_pattern);
 
-  [[nodiscard]] ast::Evaluator parse_evaluator(std::shared_ptr<ast::AExpression> comparison_ref);
+  [[nodiscard]] ast::Evaluator parse_evaluator(std::shared_ptr<ast::AExpression> p_comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern>
-  parse_pattern(std::shared_ptr<ast::AExpression> comparison_ref);
+  parse_pattern(std::shared_ptr<ast::AExpression> p_comparison_ref);
 
   [[nodiscard]] std::shared_ptr<ast::declaration::local::Variable>               variable();
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Tuple_Destructuring>    tuple_destructuring();
@@ -35,16 +35,16 @@ struct Parser_Declaration_Local {
   [[nodiscard]] std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parameters();
 
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Component>
-  component_pattern(ECapability capa, std::unique_ptr<ast::AIdentifier> comp_id,
-                    std::shared_ptr<ast::AExpression> comparison_ref);
+  component_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_comp_id,
+                    std::shared_ptr<ast::AExpression> p_comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Entity>
-  entity_pattern(ECapability capa, std::unique_ptr<ast::AIdentifier> entity_id,
-                 std::shared_ptr<ast::AExpression> comparison_ref);
+  entity_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_entity_id,
+                 std::shared_ptr<ast::AExpression> p_comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Tuple>
-  tuple_pattern(ECapability capa, std::shared_ptr<ast::AExpression> comparison_ref);
+  tuple_pattern(ECapability p_capa, std::shared_ptr<ast::AExpression> p_comparison_ref);
   [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Enum>
-  enum_pattern(ECapability capa, std::unique_ptr<ast::AIdentifier> enum_id,
-               std::shared_ptr<ast::AExpression> comparison_ref);
+  enum_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_enum_id,
+               std::shared_ptr<ast::AExpression> p_comparison_ref);
 
   parser::Parser_Context& ctx;
 };

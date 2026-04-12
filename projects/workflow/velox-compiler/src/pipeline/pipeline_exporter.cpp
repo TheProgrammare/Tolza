@@ -14,7 +14,7 @@
 namespace fs = std::filesystem;
 
 
-bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log = compiler::COMP_CTX.logs.contains("exporter");
 
@@ -32,7 +32,7 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& scr
   std::vector<std::pair<fs::path, std::pair<std::shared_ptr<ModuleImportation>, std::shared_ptr<ScriptInfo>>>>
       importations;
 
-  for (auto& scr_info : scr_infos) {
+  for (auto& scr_info : p_scr_infos) {
     for (auto& exp : scr_info->exported_mod) {
       exportations[scr_info->get_normalized_path()] = scr_info;
     }

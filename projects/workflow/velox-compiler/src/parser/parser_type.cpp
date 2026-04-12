@@ -27,12 +27,12 @@ std::tuple<bool, bool, bool> parser::Parser_Type::get_type_annotation()
   return {type_isConst, type_isOptional, type_isVolatile};
 }
 
-std::shared_ptr<ast::type::Table> parser::Parser_Type::table(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Table> parser::Parser_Type::table(bool p_is_const, bool p_is_optional, bool p_is_volatile)
 {
-  auto table             = ctx.Create_Type<ast::type::Table>(ctx.tok_v.peek(-1));
-  table->type_isConst    = isConst;
-  table->type_isOptional = isOptional;
-  table->type_isVolatile = isVolatile;
+  auto table              = ctx.Create_Type<ast::type::Table>(ctx.tok_v.peek(-1));
+  table->type_is_constant = p_is_const;
+  table->type_is_optional = p_is_optional;
+  table->type_is_volatile = p_is_volatile;
 
   ctx.tok_v.match(TokTy::OPEN_SQUARE);
 
@@ -40,34 +40,34 @@ std::shared_ptr<ast::type::Table> parser::Parser_Type::table(bool isConst, bool 
 
   // static table (sized)
   if (ctx.tok_v.match(TokTy::ARROW)) {
-    table->sizeSymbol = ctx.p_expr->parse_expression();
+    table->size_sym = ctx.p_expr->parse_expression();
   }
 
   if (ctx.tok_v.match(TokTy::CLOSE_SQUARE)) {
-    auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+    auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-    table->type_isConst    = isConst ? true : isConstP;
-    table->type_isOptional = isOptional ? true : isOptionalP;
-    table->type_isVolatile = isVolatile ? true : isVolatileP;
+    table->type_is_constant = p_is_const ? true : a_is_const;
+    table->type_is_optional = p_is_optional ? true : a_is_optional;
+    table->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   }
   return table;
 }
 
-std::shared_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool p_is_const, bool p_is_optional, bool p_is_volatile)
 {
   auto ptr          = ctx.Create_Type<ast::type::Ptr>(ctx.tok_v.peek());
   ptr->pointer_type = TokTy_to_EPtrType(ctx.tok_v.peek().type);
   ctx.tok_v.next(); // consume ptr
 
-  ptr->type_isConst    = isConst;
-  ptr->type_isOptional = isOptional;
-  ptr->type_isVolatile = isVolatile;
+  ptr->type_is_constant = p_is_const;
+  ptr->type_is_optional = p_is_optional;
+  ptr->type_is_volatile = p_is_volatile;
 
-  auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+  auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-  ptr->type_isConst    = isConst ? true : isConstP;
-  ptr->type_isOptional = isOptional ? true : isOptionalP;
-  ptr->type_isVolatile = isVolatile ? true : isVolatileP;
+  ptr->type_is_constant = p_is_const ? true : a_is_const;
+  ptr->type_is_optional = p_is_optional ? true : a_is_optional;
+  ptr->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   ctx.tok_v.expect(124, TokTy::TICK, "Expected tick ''' after pointer specification.",
                    "define pointer like:"
                    "  - `ptr'T` `std::unique_ptr'T` `std::shared_ptr'T` `std::weak_ptr'T`");
@@ -75,24 +75,25 @@ std::shared_ptr<ast::type::Ptr> parser::Parser_Type::pointer(bool isConst, bool 
   return ptr;
 }
 
-std::shared_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Primitive> parser::Parser_Type::primitive(bool p_is_const, bool p_is_optional,
+                                                                     bool p_is_volatile)
 {
-  auto tok             = ctx.tok_v.next();
-  auto pri             = ctx.Create_Type<ast::type::Primitive>(tok);
-  pri->type_isConst    = isConst;
-  pri->type_isOptional = isOptional;
-  pri->type_isVolatile = isVolatile;
-  pri->type            = TokTy_to_EPrimType(tok.type);
+  auto tok              = ctx.tok_v.next();
+  auto pri              = ctx.Create_Type<ast::type::Primitive>(tok);
+  pri->type_is_constant = p_is_const;
+  pri->type_is_optional = p_is_optional;
+  pri->type_is_volatile = p_is_volatile;
+  pri->type             = TokTy_to_EPrimType(tok.type);
 
-  auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+  auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-  pri->type_isConst    = isConst ? true : isConstP;
-  pri->type_isOptional = isOptional ? true : isOptionalP;
-  pri->type_isVolatile = isVolatile ? true : isVolatileP;
+  pri->type_is_constant = p_is_const ? true : a_is_const;
+  pri->type_is_optional = p_is_optional ? true : a_is_optional;
+  pri->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   return pri;
 }
 
-std::shared_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool p_is_const, bool p_is_optional, bool p_is_volatile)
 {
   std::shared_ptr<ast::Expr_ID_Type> result;
 
@@ -106,67 +107,67 @@ std::shared_ptr<ast::Expr_ID_Type> parser::Parser_Type::id_type(bool isConst, bo
 
   result->name = id.release();
 
-  result->type_isConst    = isConst;
-  result->type_isOptional = isOptional;
-  result->type_isVolatile = isVolatile;
+  result->type_is_constant = p_is_const;
+  result->type_is_optional = p_is_optional;
+  result->type_is_volatile = p_is_volatile;
 
-  auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+  auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-  result->type_isConst    = isConst ? true : isConstP;
-  result->type_isOptional = isOptional ? true : isOptionalP;
-  result->type_isVolatile = isVolatile ? true : isVolatileP;
+  result->type_is_constant = p_is_const ? true : a_is_const;
+  result->type_is_optional = p_is_optional ? true : a_is_optional;
+  result->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   return result;
 }
 
-std::shared_ptr<ast::type::Tuple> parser::Parser_Type::tuple(bool isConst, bool isOptional, bool isVolatile)
+std::shared_ptr<ast::type::Tuple> parser::Parser_Type::tuple(bool p_is_const, bool p_is_optional, bool p_is_volatile)
 {
-  auto tu             = explicit_tuple();
-  tu->type_isConst    = isConst;
-  tu->type_isOptional = isOptional;
-  tu->type_isVolatile = isVolatile;
+  auto tu              = explicit_tuple();
+  tu->type_is_constant = p_is_const;
+  tu->type_is_optional = p_is_optional;
+  tu->type_is_volatile = p_is_volatile;
 
-  auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+  auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-  tu->type_isConst    = isConst ? true : isConstP;
-  tu->type_isOptional = isOptional ? true : isOptionalP;
-  tu->type_isVolatile = isVolatile ? true : isVolatileP;
+  tu->type_is_constant = p_is_const ? true : a_is_const;
+  tu->type_is_optional = p_is_optional ? true : a_is_optional;
+  tu->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   return tu;
 }
 
-std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::function_proto(bool isConst, bool isOptional,
-                                                                               bool isVolatile)
+std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::function_proto(bool p_is_const, bool p_is_optional,
+                                                                               bool p_is_volatile)
 {
-  auto proto             = explicit_function_proto();
-  proto->type_isConst    = isConst;
-  proto->type_isOptional = isOptional;
-  proto->type_isVolatile = isVolatile;
+  auto proto              = explicit_function_proto();
+  proto->type_is_constant = p_is_const;
+  proto->type_is_optional = p_is_optional;
+  proto->type_is_volatile = p_is_volatile;
 
-  auto [isConstP, isOptionalP, isVolatileP] = get_type_annotation();
+  auto [a_is_const, a_is_optional, a_is_volatile] = get_type_annotation();
 
-  proto->type_isConst    = isConst ? true : isConstP;
-  proto->type_isOptional = isOptional ? true : isOptionalP;
-  proto->type_isVolatile = isVolatile ? true : isVolatileP;
+  proto->type_is_constant = p_is_const ? true : a_is_const;
+  proto->type_is_optional = p_is_optional ? true : a_is_optional;
+  proto->type_is_volatile = p_is_volatile ? true : a_is_volatile;
   return std::unique_ptr<ast::type::Function_Proto>(proto.get());
 }
 
 std::shared_ptr<ast::AType> parser::Parser_Type::parse_type()
 {
-  auto [isConst, isOptional, isVolatile] = get_type_annotation();
+  auto [isConst, p_is_optional, p_is_volatile] = get_type_annotation();
 
   switch (ctx.tok_v.peek().type) {
-  case TokTy::OPEN_SQUARE: return table(isConst, isOptional, isVolatile);
+  case TokTy::OPEN_SQUARE: return table(isConst, p_is_optional, p_is_volatile);
   case TokTy::PTR:
   case TokTy::UPTR:
   case TokTy::SPTR:
-  case TokTy::WPTR:        return pointer(isConst, isOptional, isVolatile);
-  case TokTy::OPEN_PAREN:  return tuple(isConst, isOptional, isVolatile);
-  case TokTy::FUNCTION:    return function_proto(isConst, isOptional, isVolatile);
+  case TokTy::WPTR:        return pointer(isConst, p_is_optional, p_is_volatile);
+  case TokTy::OPEN_PAREN:  return tuple(isConst, p_is_optional, p_is_volatile);
+  case TokTy::FUNCTION:    return function_proto(isConst, p_is_optional, p_is_volatile);
   default:                 break;
   }
 
-  if (ctx.tok_v.check_any(kPrimitiveTypeTokens)) return primitive(isConst, isOptional, isVolatile);
+  if (ctx.tok_v.check_any(k_type_primitive)) return primitive(isConst, p_is_optional, p_is_volatile);
 
-  if (ctx.tok_v.check(TokTy::IDENTIFIER)) return id_type(isConst, isOptional, isVolatile);
+  if (ctx.tok_v.check(TokTy::IDENTIFIER)) return id_type(isConst, p_is_optional, p_is_volatile);
 
   ctx.tok_v.add_error(126, "Unexpected type definition '" + ctx.tok_v.peek().val + "'.",
                       "define type like:"
@@ -194,7 +195,7 @@ std::shared_ptr<ast::type::Tuple> parser::Parser_Type::explicit_tuple()
       tuple->types.push_back(ctx.p_type->parse_type());
     }
 
-    if (!endByParen && ctx.match_field_any_separator(TokTy::COMMA, kEndArgsListokens)) {
+    if (!endByParen && ctx.match_field_any_separator(TokTy::COMMA, k_args_ending)) {
       ctx.tok_v.rewind(ctx.tok_v.position() - 1);
       break;
     }
@@ -215,7 +216,7 @@ std::shared_ptr<ast::type::Get_Expr_Type> parser::Parser_Type::expr_get_expr_typ
   return node;
 }
 
-std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_function_proto(bool isLam)
+std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_function_proto(bool p_is_lam)
 {
   static const std::string hint =
       "define function like:"
@@ -224,30 +225,32 @@ std::shared_ptr<ast::type::Function_Proto> parser::Parser_Type::explicit_functio
 
   ctx.tok_v.match_any({TokTy::FUNCTION, TokTy::LAMBDA});
 
-  auto type = ctx.Create_Type<ast::type::Function_Proto>(ctx.tok_v.peek());
+  auto proto = ctx.Create_Type<ast::type::Function_Proto>(ctx.tok_v.peek());
 
   // check
   // parameters
   ctx.tok_v.expect(131, TokTy::OPEN_PAREN, "Expected start parameter defintion '(' after function declaration.", hint);
-  type->parameters = parameters();
-  if (!type->parameters.empty() && type->parameters.back()->isVariadic) {
-    type->isVariadic = true;
-    type->parameters.pop_back();
+  proto->parameters = parameters();
+  if (!proto->parameters.empty() && proto->parameters.back()->is_variadic) {
+    proto->is_variadic = true;
+    proto->parameters.pop_back();
   }
 
   // check
   // return
   if (ctx.tok_v.match(TokTy::ARROW)) {
+    proto->is_explicit_return_type = true;
     if (ctx.tok_v.check(TokTy::OPEN_PAREN)) {
-      type->returnType = ctx.p_type->explicit_tuple();
+      proto->return_ty = ctx.p_type->explicit_tuple();
     } else {
-      type->returnType = ctx.p_type->parse_type();
+      proto->return_ty = ctx.p_type->parse_type();
     }
   } else {
-    type->returnType = ast::type::get_void_type();
+    proto->is_explicit_return_type = false;
+    proto->return_ty               = ast::type::get_void_type();
   }
 
-  return type;
+  return proto;
 }
 
 std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_Type::parameters()
@@ -271,7 +274,7 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
     auto param = ctx.Create_Decl<ast::declaration::local::Parameter>(ctx.tok_v.peek());
 
     if (ctx.tok_v.match(TokTy::VARIADIC)) {
-      param->isVariadic = true;
+      param->is_variadic = true;
 
       ctx.tok_v.expect(154, TokTy::CLOSE_PAREN,
                        "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
@@ -279,11 +282,11 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
       break;
     }
 
-    param->passMode = TokTy_to_EPassMode(ctx.tok_v.next().type);
-    if (param->passMode == EPassMode::NONE)
+    param->passmode = TokTy_to_EPassMode(ctx.tok_v.next().type);
+    if (param->passmode == EPassMode::NONE)
       ctx.tok_v.add_error(132, "Expected parameter pass mode before the parameter name.", hint);
 
-    param->name = ctx.parse_name("", hint);
+    param->declaration_name = ctx.parse_name("", hint);
     // check pointer parameter type
     ctx.tok_v.expect(133, TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
     param->type = ctx.p_type->parse_type();
@@ -292,9 +295,9 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
 
     // check parameter default value
     if (ctx.tok_v.match(TokTy::ASSIGN)) {
-      if (!EPassMode_Can_Default(param->passMode))
+      if (!EPassMode_Can_Default(param->passmode))
         ctx.tok_v.add_error_tok(134, ctx.tok_v.peek(-1),
-                                "Unexpected defaut value for pass mode '" + EPassMode_to_str(param->passMode) + "'.",
+                                "Unexpected defaut value for pass mode '" + EPassMode_to_str(param->passmode) + "'.",
                                 hint_passmode);
       param->defaultValue = ctx.p_expr->parse_expression();
     }

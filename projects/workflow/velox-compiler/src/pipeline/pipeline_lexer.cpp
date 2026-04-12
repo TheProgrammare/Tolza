@@ -11,7 +11,7 @@
 
 namespace fs = std::filesystem;
 
-bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log = compiler::COMP_CTX.logs.contains("lexer");
 
@@ -19,7 +19,7 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& scr_in
 
   size_t final_toks = 0;
 
-  for (auto& scr_info : scr_infos) {
+  for (auto& scr_info : p_scr_infos) {
     Lexer lexer(*scr_info.get());
 
     auto start = std::chrono::high_resolution_clock::now();

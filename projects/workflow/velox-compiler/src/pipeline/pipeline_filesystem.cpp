@@ -16,12 +16,12 @@ namespace fs = std::filesystem;
 namespace
 {
 
-std::vector<std::string> str_files(const std::set<std::string>& fPaths)
+std::vector<std::string> str_files(const std::set<std::string>& p_file_paths)
 {
   std::vector<std::string> filesStr;
-  filesStr.reserve(fPaths.size());
+  filesStr.reserve(p_file_paths.size());
 
-  for (auto& path : fPaths) {
+  for (auto& path : p_file_paths) {
     std::ifstream if_stream(path);
     if (!if_stream) {
       std::cerr << color_RED << "[file:error] " color_MAGENTA "\"" << path << "\"" color_RESET << std::endl;
@@ -34,12 +34,12 @@ std::vector<std::string> str_files(const std::set<std::string>& fPaths)
   return filesStr;
 }
 
-std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>& strFiles)
+std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>& p_text_files)
 {
   std::vector<std::vector<std::string>> lineFiles;
-  lineFiles.reserve(strFiles.size());
+  lineFiles.reserve(p_text_files.size());
 
-  for (auto& str_f : strFiles) {
+  for (auto& str_f : p_text_files) {
     std::istringstream       stream(str_f);
     std::vector<std::string> lines;
     std::string              tempL;
@@ -55,9 +55,9 @@ std::vector<std::vector<std::string>> lines_files(const std::vector<std::string>
 
 } // namespace
 
-std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string& target_dir)
+std::vector<std::shared_ptr<ScriptInfo>> pipeline_start_filesystem(const std::string& p_target_dir)
 {
-  auto filesFounds = common::filesystem::find_velox_files(target_dir, true);
+  auto filesFounds = common::filesystem::find_velox_files(p_target_dir, true);
   return pipeline_start_filesystem_on_files(filesFounds);
 }
 

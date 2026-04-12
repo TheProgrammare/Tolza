@@ -76,12 +76,13 @@ struct Other final : public AExpression {
 
 // (10, a, param3 = b, param5 = c)
 struct Call_Argument final : public AExpression {
-  [[maybe_unused]] std::string name;
-  std::unique_ptr<AExpression> expression;
+  [[maybe_unused]] std::string               name;
+  std::unique_ptr<AExpression>               expression;
   // resolved by superior node
-  ast::type::Function_Proto*   fn_type = nullptr;
+  std::shared_ptr<ast::type::Function_Proto> fn_type;
+  // if variadic_arg == true -> fn_param_type == nullptr
   [[maybe_unused]]
-  ast::declaration::local::Parameter* fn_param_type = nullptr;
+  std::shared_ptr<ast::declaration::local::Parameter> fn_param_type;
 
   bool variadic_arg = false;
 
@@ -132,8 +133,9 @@ struct Call_Pipe final : public AExpression {
   std::vector<std::shared_ptr<AType>>                      base_gen_args;
   std::vector<std::vector<std::shared_ptr<AType>>>         gen_args;
   std::vector<std::vector<std::unique_ptr<Call_Argument>>> arguments;
-  bool                                                     isMutable = false;
-  std::vector<EBinOpType>                                  mutableOperators;
+  std::vector<EBinOpType>                                  mutable_ops;
+
+  bool is_mutable = false;
 
   SET_R_VAL
 

@@ -4,14 +4,14 @@
 #include "ast_declaration_local.hpp"
 
 ast::Evaluator::Evaluator() = default;
-ast::Evaluator::Evaluator(std::unique_ptr<AExpression> _node)
+ast::Evaluator::Evaluator(std::unique_ptr<AExpression> p_node)
 {
   if (dynamic_cast<ast::declaration::local::Pattern*>(node.get()))
     kind = EKind::Pattern;
   else
     kind = EKind::Condition;
 
-  node = std::move(_node);
+  node = std::move(p_node);
 }
 
 

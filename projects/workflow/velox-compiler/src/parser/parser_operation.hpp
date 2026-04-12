@@ -12,37 +12,37 @@ namespace parser
 {
 struct Parser_Context;
 struct Parser_Operator {
-  Parser_Operator(Parser_Context& ctx)
-    : ctx(ctx)
+  Parser_Operator(Parser_Context& p_ctx)
+    : ctx(p_ctx)
   {
   }
 
   bool no_literal_cop_mode = false;
 
   [[nodiscard]] std::unique_ptr<ast::AExpression>           try_operation();
-  [[nodiscard]] std::unique_ptr<ast::operation::Assignment> assignment(std::unique_ptr<ast::AExpression> left);
+  [[nodiscard]] std::unique_ptr<ast::operation::Assignment> assignment(std::unique_ptr<ast::AExpression> p_left);
 
 private:
-  [[nodiscard]] std::unique_ptr<ast::AExpression> power();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> multiply();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> add();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> shift();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> comparison();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> equality();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> bitwise_not();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> bitwise_and_nand();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> bitwise_xor_xnor();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> bitwise_or_nor();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> logical_not();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> logical_and_nand();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> logicial_xor_xnor();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> logicial_or_nor();
-  [[nodiscard]] std::unique_ptr<ast::AExpression> memory_distance();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _15_power();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _14_scalar();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _13_cumulate();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _12_shift();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _11_comparison();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _10_equality();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _9_bitwise_not();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _8_bitwise_and_nand();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _7_bitwise_xor_xnor();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _6_bitwise_or_nor();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _5_logical_not();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _4_logical_and_nand();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _3_logicial_xor_xnor();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _2_logicial_or_nor();
+  [[nodiscard]] std::unique_ptr<ast::AExpression> _1_memory_distance();
 
   [[nodiscard]] std::unique_ptr<ast::operation::Binary>
-  Create_BinOp(std::unique_ptr<ast::AExpression> left, EBinOpType op, std::unique_ptr<ast::AExpression> right);
-  [[nodiscard]] std::unique_ptr<ast::operation::Unary> Create_UnOp(EUnaryOpType                      op,
-                                                                   std::unique_ptr<ast::AExpression> base);
+  Create_BinOp(std::unique_ptr<ast::AExpression> p_left, EBinOpType p_op, std::unique_ptr<ast::AExpression> p_right);
+  [[nodiscard]] std::unique_ptr<ast::operation::Unary> Create_UnOp(EUnaryOpType                      p_op,
+                                                                   std::unique_ptr<ast::AExpression> p_base);
 
   Parser_Context& ctx;
 };

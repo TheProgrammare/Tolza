@@ -15,7 +15,7 @@ struct Parser_Statement {
   }
 
   // decl_possible means parse_instruction can failed without error to try to parse a declaration after
-  [[nodiscard]] std::unique_ptr<ast::Node>                  parse_statement(bool is_silent_error = false);
+  [[nodiscard]] std::unique_ptr<ast::Node>                  parse_statement(bool p_is_silent_error = false);
   [[nodiscard]] std::unique_ptr<ast::statement::If>         if_statement();
   [[nodiscard]] std::unique_ptr<ast::statement::For>        for_statement();
   [[nodiscard]] std::unique_ptr<ast::statement::While>      while_statement();

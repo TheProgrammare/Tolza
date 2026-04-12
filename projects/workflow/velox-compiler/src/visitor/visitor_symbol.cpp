@@ -23,31 +23,31 @@
 
 Visitor_Symbol::~Visitor_Symbol() = default;
 
-bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, Symbol_Data*& target_resolution, bool silentError)
+bool Visitor_Symbol::resolve_sym(ast::AIdentifier& p_id, Symbol_Data*& p_target_resolution, bool p_is_silent_error)
 {
   auto local_search = [&](std::span<const std::string> scope, const std::string& name) {
     if (auto sym = scr_info.m_sym->find_local_symbol(scope, name)) {
-      target_resolution = sym;
+      p_target_resolution = sym;
       return true;
     }
     return false;
   };
 
   // from qualification
-  if (id.is_qualified_id()) {
+  if (p_id.is_qualified_id()) {
     // search on qualification
-    if (local_search(id.get_qualification_path(), id.get_base_name())) {
+    if (local_search(p_id.get_qualification_path(), p_id.get_base_name())) {
       return true;
     }
     // search in imported modules
     else {
-      if (auto imp = scr_info.get_import_module(id.get_qualification_path())) {
-        std::span<const std::string> sub_qualification =
-            std::span<const std::string>(id.get_qualification_path().begin(), id.get_qualification_path().size() - 1);
+      if (auto imp = scr_info.get_import_module(p_id.get_qualification_path())) {
+        std::span<const std::string> sub_qualification = std::span<const std::string>(
+            p_id.get_qualification_path().begin(), p_id.get_qualification_path().size() - 1);
 
         for (auto& mod : imp->target_modules) {
-          if (auto sym = mod->m_sym->find_exported_symbol(sub_qualification, id.get_base_name())) {
-            target_resolution = sym;
+          if (auto sym = mod->m_sym->find_exported_symbol(sub_qualification, p_id.get_base_name())) {
+            p_target_resolution = sym;
             return true;
           }
         }
@@ -55,33 +55,34 @@ bool Visitor_Symbol::resolve_sym(ast::AIdentifier& id, Symbol_Data*& target_reso
     }
 
     // qualification is invalid
-    if (!silentError) error_add(152, id, "Qualified symbol [" + id.debug_str() + "] definition not found!", "");
+    if (!p_is_silent_error)
+      add_error(152, p_id, "Qualified symbol [" + p_id.debug_str() + "] definition not found!", "");
     return false;
   }
 
   // from contextual scope
-  if (local_search(id._scope, id.get_base_name())) return true;
+  if (local_search(p_id._scope, p_id.get_base_name())) return true;
 
-  if (!silentError) error_add(165, id, "Symbol [" + id.get_base_name() + "] definition not found!", "");
+  if (!p_is_silent_error) add_error(165, p_id, "Symbol [" + p_id.get_base_name() + "] definition not found!", "");
   return false;
 }
 
 void Visitor_Symbol::visit(ast::Expr_ID& n)
 {
-  resolve_sym(n, n.symbol, false);
+  resolve_sym(n, n.identifier_symbol, false);
 
   Visitor_Default::visit(n);
 }
 void Visitor_Symbol::visit(ast::Expr_ID_Qualified& n)
 {
-  resolve_sym(n, n.symbol, false);
+  resolve_sym(n, n.identifier_symbol, false);
 
   Visitor_Default::visit(n);
 }
 void Visitor_Symbol::visit(ast::Expr_ID_Type& n)
 {
-  resolve_sym(n, n.symbol, false);
-  n.name->symbol = n.symbol;
+  resolve_sym(n, n.identifier_symbol, false);
+  n.name->identifier_symbol = n.identifier_symbol;
 
   Visitor_Default::visit(n);
 }
@@ -90,49 +91,49 @@ void Visitor_Symbol::visit(ast::expression::Call& n)
 {
   if (auto ptr = dynamic_cast<ast::AIdentifier*>(n.callee.get())) {
     if (resolve_sym(*ptr, n.function_symbol, false)) {
-      ptr->symbol = n.function_symbol;
+      ptr->identifier_symbol = n.function_symbol;
     } else {
-      error_add(195, n, "Impossible to find the function symbol", "");
+      add_error(195, n, "Impossible to find the function symbol", "");
       return;
     }
   } else {
-    error_add(196, n, "The callee is not an indentifier", "");
+    add_error(196, n, "The callee is not an indentifier", "");
     return;
   }
 
   ast::ACallable* fn_ptr = dynamic_cast<ast::ACallable*>(n.function_symbol->symbol.get());
   if (!fn_ptr) {
-    error_add(199, n, "The symbol must be callable type (function, system, lambda)", "");
+    add_error(199, n, "The symbol must be callable type (function, system, lambda)", "");
   }
 
-  if (n.param_args.size() > fn_ptr->prototype->parameters.size() && !fn_ptr->prototype->isVariadic) {
-    error_two_lines(200, n, *fn_ptr, "Too much parameters provided", "");
+  if (n.param_args.size() > fn_ptr->prototype->parameters.size() && !fn_ptr->prototype->is_variadic) {
+    add_error_two_nodes(200, n, *fn_ptr, "Too much parameters provided", "");
   }
 
   size_t arg_count = 0;
   for (auto& arg : n.param_args) {
-    arg->fn_type = fn_ptr->prototype.get();
+    arg->fn_type = fn_ptr->prototype;
 
     if (arg->name.empty()) {
-      if (fn_ptr->prototype->isVariadic && arg_count > fn_ptr->prototype->parameters.size()) {
+      if (fn_ptr->prototype->is_variadic && arg_count > fn_ptr->prototype->parameters.size()) {
         // variadic arg, no type inferred on parameter
         // variadic prameters resolved in visitor type on expression inferred type
       } else {
-        auto& param        = fn_ptr->prototype->parameters[arg_count];
-        arg->inferred_type = param->type;
+        auto& param                   = fn_ptr->prototype->parameters[arg_count];
+        arg->expression_inferred_type = param->type;
         arg_count++;
       }
     } else {
       bool found = false;
       for (auto& param : fn_ptr->prototype->parameters) {
-        if (param->name == arg->name) {
-          arg->inferred_type = param->type;
-          found              = true;
+        if (param->declaration_name == arg->name) {
+          arg->expression_inferred_type = param->type;
+          found                         = true;
           break;
         }
       }
 
-      if (!found) error_two_lines(201, *arg, *fn_ptr, "The parameter name dosen't exists.", "");
+      if (!found) add_error_two_nodes(201, *arg, *fn_ptr, "The parameter name dosen't exists.", "");
     }
   }
 
@@ -146,9 +147,9 @@ void Visitor_Symbol::visit(ast::statement::GoTo& n)
       n.label_sym = ptr;
       return;
     }
-    error_add(197, n, "The referenced name is not a label", "");
+    add_error(197, n, "The referenced name is not a label", "");
   }
-  error_add(198, n, "Impossible to find the label", "");
+  add_error(198, n, "Impossible to find the label", "");
 
   Visitor_Default::visit(n);
 }

@@ -81,13 +81,71 @@ enum class EBinOpType {
 
 [[nodiscard]] EBinOpType TokTy_to_EBinOpType(TokTy tok);
 
-[[nodiscard]] std::string EBinOpType_to_str(EBinOpType opTy);
+[[nodiscard]] std::string EBinOpType_to_str(EBinOpType op);
 
+[[nodiscard]] inline bool EBinOpType_is_logical(EBinOpType op)
+{
+  switch (op) {
+  case EBinOpType::_and:
+  case EBinOpType::_nand:
+  case EBinOpType::_or:
+  case EBinOpType::_xor:
+  case EBinOpType::_nor:
+  case EBinOpType::_xnor: return true;
+  default:                return false;
+  }
+}
+
+
+[[nodiscard]] inline bool EBinOpType_is_comparison(EBinOpType op)
+{
+  switch (op) {
+
+  case EBinOpType::Gre:
+  case EBinOpType::Low:
+  case EBinOpType::Gre_eq:
+  case EBinOpType::Low_eq:
+  case EBinOpType::_eq:
+  case EBinOpType::_in:
+  case EBinOpType::_nin:
+  case EBinOpType::_is:
+  case EBinOpType::_nis:
+  case EBinOpType::_neq:
+  case EBinOpType::_eqs:
+  case EBinOpType::_neqs:
+  case EBinOpType::_and:
+  case EBinOpType::_nand:
+  case EBinOpType::_or:
+  case EBinOpType::_xor:
+  case EBinOpType::_nor:
+  case EBinOpType::_xnor:  return true;
+  default:                 return false;
+  }
+}
+
+[[nodiscard]] inline bool EBinOpType_is_bitwise(EBinOpType op)
+{
+  switch (op) {
+  case EBinOpType::_b_and:
+  case EBinOpType::_b_nand:
+  case EBinOpType::_b_or:
+  case EBinOpType::_b_xor:
+  case EBinOpType::_b_nor:
+  case EBinOpType::_b_xnor:
+  case EBinOpType::ls0:
+  case EBinOpType::ls1:
+  case EBinOpType::lsa:
+  case EBinOpType::rs0:
+  case EBinOpType::rs1:
+  case EBinOpType::rsa:
+  case EBinOpType::lr:
+  case EBinOpType::rr:      return true;
+  default:                  return false;
+  }
+}
 
 constexpr auto k_boolean_op = {
-    EBinOpType::_eq,  EBinOpType::_in,   EBinOpType::_nin, EBinOpType::_is,  EBinOpType::_nis, EBinOpType::_neq,
-
-    EBinOpType::_and, EBinOpType::_nand, EBinOpType::_or,  EBinOpType::_xor, EBinOpType::_nor, EBinOpType::_xnor,
+    EBinOpType::_eq, EBinOpType::_in, EBinOpType::_nin, EBinOpType::_is, EBinOpType::_nis, EBinOpType::_neq,
 };
 
 constexpr auto k_textual_op = {
@@ -213,10 +271,13 @@ enum class EPrimType {
 [[nodiscard]] bool EPrimType_is_integral(EPrimType type);
 [[nodiscard]] bool EPrimType_is_byte(EPrimType type);
 [[nodiscard]] bool EPrimType_is_floating(EPrimType type);
+[[nodiscard]] bool EPrimType_is_fixed(EPrimType type);
+[[nodiscard]] bool EPrimType_is_textual(EPrimType type);
 
-[[nodiscard]] std::string EPrimTy_to_str(EPrimType type);
 
-[[nodiscard]] std::string EPrimTy_to_mangle(EPrimType type);
+[[nodiscard]] std::string EPrimType_to_str(EPrimType type);
+
+[[nodiscard]] std::string EPrimType_to_mangle(EPrimType type);
 
 [[nodiscard]] EPrimType TokTy_to_EPrimType(TokTy tok);
 

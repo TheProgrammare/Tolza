@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/ast_data.hpp"
 #include <memory>
 
 namespace ast
@@ -9,6 +10,8 @@ struct AType;
 
 namespace type
 {
+
+std::shared_ptr<ast::AType> get_primitive_type(EPrimType type);
 
 std::shared_ptr<ast::AType> get_bool_type();
 std::shared_ptr<ast::AType> get_i8_type();

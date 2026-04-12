@@ -264,20 +264,20 @@ struct AST {
 [[nodiscard]] std::string    EType_to_str(EType ty);
 [[nodiscard]] std::string    type_to_str(const Type& ty);
 
-[[nodiscard]] std::string import_to_str(const Import& _imp);
-[[nodiscard]] std::string comp_to_str(const Comp& _comp);
-[[nodiscard]] std::string entity_to_str(const Entity& _entity);
-[[nodiscard]] std::string func_to_str(const Func& _func);
-[[nodiscard]] std::string union_to_str(const Union& _union);
-[[nodiscard]] std::string flag_to_str(const Flag& _flag);
-[[nodiscard]] std::string enum_to_str(const Enum& _enum);
-[[nodiscard]] std::string global_to_str(const Global& _glo);
-[[nodiscard]] std::string typealias_to_str(const TypeAlias& _ty_alias);
+[[nodiscard]] std::string import_to_str(const Import& p_imp);
+[[nodiscard]] std::string comp_to_str(const Comp& p_comp);
+[[nodiscard]] std::string entity_to_str(const Entity& p_entity);
+[[nodiscard]] std::string func_to_str(const Func& p_func);
+[[nodiscard]] std::string union_to_str(const Union& p_union);
+[[nodiscard]] std::string flag_to_str(const Flag& p_flag);
+[[nodiscard]] std::string enum_to_str(const Enum& p_enum);
+[[nodiscard]] std::string global_to_str(const Global& p_glo);
+[[nodiscard]] std::string typealias_to_str(const TypeAlias& p_ty_alias);
 
 
-void write_ast(const AST& ast, const std::string& dest_file);
+void write_ast(const AST& p_ast, const std::string& p_dest_file);
 
-bool check_ast_generation(const AST& ast);
+bool check_ast_generation(const AST& p_ast);
 
 
 // %0 language

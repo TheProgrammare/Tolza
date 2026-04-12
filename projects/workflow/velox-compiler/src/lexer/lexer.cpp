@@ -1,12 +1,14 @@
-
 #include "lexer.hpp"
+
+#include <llvm/ADT/StringMap.h>
+
+#include <initializer_list>
 
 #include "misc/script_info.hpp"
 #include "misc/error_output.hpp"
 #include "compiler/compiler.hpp"
 #include "token.hpp"
-#include <initializer_list>
-#include <llvm-19/llvm/ADT/StringMap.h>
+
 
 Lexer::Lexer(ScriptInfo& _scr_info)
   : scr_info(_scr_info)
@@ -41,7 +43,7 @@ void Lexer::tokenize(const std::set<char>& exit_char)
 
     // it's a literal string
     if (stream.check('"') || (stream.check('r') && (stream.peek(1) == '"'))
-        || (stream.check('r') && stream.peek(1) == '#' && stream.peek(1) == '"')) {
+        || (stream.check('r') && stream.peek(1) == '#' && stream.peek(2) == '"')) {
       start_buffer();
       tokenize_textual();
       continue;
@@ -229,7 +231,7 @@ void Lexer::tokenize_textual()
         if (stream.check('{')) {
           if (!buffer.empty()) add_token(TokTy::L_TEXTUAL);
           start_buffer();
-          add_token(TokTy::S_TEXTUAL_EXPR_START);
+          add_token(TokTy::S_INTERPOLATION_START);
 
           start_buffer();
           tokenize({'}', ':'});
@@ -244,7 +246,7 @@ void Lexer::tokenize_textual()
           }
 
           if (stream.check('}')) {
-            add_token(TokTy::S_TEXTUAL_EXPR_END);
+            add_token(TokTy::S_INTERPOLATION_END);
             if (stream.check('"')) {
               buffer.clear();
               return;
@@ -296,19 +298,21 @@ void Lexer::tokenize_textual()
     stream.next(); // consume "
     stream.next(); // consume "
     stream.next(); // consume "
+    if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
 
-    tok_text(true, true, {'"', '"', '"'});
-  }
-  if (stream.peek(0) == 'r' && stream.peek(1) == '"' && stream.peek(2) == '"' && stream.peek(3) == '"') {
+
+    tok_text(true, true, {'\n', '"', '"', '"'});
+  } else if (stream.peek(0) == 'r' && stream.peek(1) == '"' && stream.peek(2) == '"' && stream.peek(3) == '"') {
     stream.next(); // consume r
     stream.next(); // consume "
     stream.next(); // consume "
     stream.next(); // consume "
+    if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
 
-    tok_text(false, true, {'"', '"', '"'});
+    tok_text(false, true, {'\n', '"', '"', '"'});
   } else if (stream.peek(0) == 'r' && stream.peek(1) == '#' && stream.peek(2) == '"') {
-    stream.next(); // consume "
-    stream.next(); // consume "
+    stream.next(); // consume r
+    stream.next(); // consume #
     stream.next(); // consume "
 
     tok_text(false, true, {'#', '"'});
@@ -330,7 +334,7 @@ bool Lexer::tokenize_spec()
       buffer += stream.peek(); // save peeked digit
     }
 
-    add_token(TokTy::L_U);
+    add_token(TokTy::L_I);
     return true;
   }
   // Letters
@@ -362,8 +366,8 @@ bool Lexer::tokenize_spec()
   case '}':  return false;
   default:   {
     auto error = Error_Diagnostic(
-        151, scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)), {},
-        compiler::EPhase::lexer, EErrorSeverity::error, {}, "Unexpected format specifier character",
+        scr_info, 151, &scr_info, Token("", ETokenType::NONE, Span(0, stream.get_line(), stream.get_column(), 1)),
+        compiler::EPhase::lexer, "Unexpected format specifier character",
         "define format specifier like:"
         "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
 
@@ -401,8 +405,8 @@ void Lexer::tokenize_metacode()
 
 void Lexer::tokenize_numeric()
 {
-  bool isBin = false, isOct = false, isHex = false;
-  bool isFloat = false, isDecimal = false, isuDecimal = false;
+  bool is_bin = false, is_oct = false, is_hex = false;
+  bool id_decimal = false;
 
   auto check_range_case = [&]() -> bool {
     if (stream.check('.') && stream.peek(1) == '.') {
@@ -432,21 +436,21 @@ void Lexer::tokenize_numeric()
   if (stream.check('0') && stream.peek(1) != EOF) {
     char nt = stream.peek(1);
     if (nt == 'b' || nt == 'B') {
-      isBin = true;
+      is_bin = true;
       stream.next();
       buffer += stream.peek();
     } else if (nt == 'o' || nt == 'O') {
-      isOct = true;
+      is_oct = true;
       stream.next();
       buffer += stream.peek();
     } else if (nt == 'x' || nt == 'X') {
-      isHex = true;
+      is_hex = true;
       stream.next();
       buffer += stream.peek();
     }
   }
 
-  if (!isBin && !isOct && !isHex) {
+  if (!is_bin && !is_oct && !is_hex) {
     if (is_digit(stream.peek()))
       buffer += stream.peek();
     else if (check_range_case())
@@ -462,8 +466,8 @@ void Lexer::tokenize_numeric()
       }
       // floating value : 8. or 10.f or 3.14
       else {
-        buffer  = '.';
-        isFloat = true;
+        buffer     = '.';
+        id_decimal = true;
         if (stream.peek(1) == 'f' || stream.peek(1) == 'F') stream.next(); // consume .
       }
     }
@@ -471,7 +475,7 @@ void Lexer::tokenize_numeric()
 
   while (stream.next()) {
     // Only allow 0 1 ' _
-    if (isBin) {
+    if (is_bin) {
       if (stream.check('0') || stream.check('1'))
         buffer += stream.peek();
       else if (stream.check('\'') || stream.check('_'))
@@ -482,7 +486,7 @@ void Lexer::tokenize_numeric()
       }
     }
     // Only allow 0 1 2 3 4 5 6 7 ' _
-    else if (isOct) {
+    else if (is_oct) {
       if (stream.peek() >= '0' && stream.peek() <= '7')
         buffer += stream.peek();
       else if (stream.check('\'') || stream.check('_'))
@@ -493,7 +497,7 @@ void Lexer::tokenize_numeric()
       }
     }
     // Only allow 0 1 2 3 4 5 6 7 8 9 A B C D E F ' _
-    else if (isHex) {
+    else if (is_hex) {
       if (is_digit(stream.peek()) || (stream.peek() >= 'a' && stream.peek() <= 'f')
           || (stream.peek() >= 'A' && stream.peek() <= 'F'))
         buffer += stream.peek();
@@ -517,32 +521,17 @@ void Lexer::tokenize_numeric()
         return;                                           // must stop after range creation
       } else if (stream.check('.')) {
         buffer += stream.peek();
-        isDecimal = true;
-      }
-      // floating numeric 0.0f
-      else if (stream.check('f')) {
-        isFloat = true;
-        break;
+        id_decimal = true;
       }
       // floating numeric (scientific notation) 10000e+10 100e-15
       else if (stream.check('e') || stream.check('E')) {
         buffer += stream.peek();
-        isFloat = true;
+        id_decimal = true;
         // exponent sign
         if (stream.peek(1) == '+' || stream.peek(1) == '-') {
           stream.next();
           buffer += stream.peek();
         }
-      }
-      // decimal numeric
-      else if (stream.check('d')) {
-        isDecimal = true;
-        break;
-      }
-      // udecimal numeric
-      else if (stream.check('u') && stream.peek(1) == 'd') {
-        isuDecimal = true;
-        break;
       }
       // end
       else {
@@ -552,20 +541,18 @@ void Lexer::tokenize_numeric()
     }
   }
 
-  if (isBin) return add_token(TokTy::L_BIN);
-  if (isOct) return add_token(TokTy::L_OCT);
-  if (isHex) return add_token(TokTy::L_HEX);
-  if (isFloat) return add_token(TokTy::L_F);
-  if (isDecimal) return add_token(TokTy::L_DECIMAL);
-  if (isuDecimal) return add_token(TokTy::L_UDECIMAL);
+  if (is_bin) return add_token(TokTy::L_BIN);
+  if (is_oct) return add_token(TokTy::L_OCT);
+  if (is_hex) return add_token(TokTy::L_HEX);
+  if (id_decimal) return add_token(TokTy::L_D);
 
   return add_token(TokTy::L_I);
 }
 
-Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy _type, std::string_view _key, std::string_view _search)
+Lexer::EPrefixFound Lexer::get_prefix_keyword(TokTy p_type, std::string_view p_key, std::string_view p_search)
 {
-  if (_key == _search) return EPrefixFound::All;
-  if (_search.size() < _key.size() && _key.rfind(_search, 0) == 0) return EPrefixFound::Prefix;
+  if (p_key == p_search) return EPrefixFound::All;
+  if (p_search.size() < p_key.size() && p_key.rfind(p_search, 0) == 0) return EPrefixFound::Prefix;
   return EPrefixFound::None;
 }
 
@@ -573,8 +560,8 @@ const std::vector<std::pair<std::string_view, ETokenType>>& get_sorted_keywords(
 {
   static std::vector<std::pair<std::string_view, ETokenType>> sorted;
   if (sorted.empty()) {
-    sorted.reserve(kKeywords.size());
-    for (auto& [text, type] : kKeywords) sorted.emplace_back(text, type);
+    sorted.reserve(k_keywords.size());
+    for (auto& [text, type] : k_keywords) sorted.emplace_back(text, type);
 
     // Trie décroissant par taille pour matcher le mot clé le plus long en premier
     std::stable_sort(sorted.begin(), sorted.end(),
@@ -583,13 +570,13 @@ const std::vector<std::pair<std::string_view, ETokenType>>& get_sorted_keywords(
   return sorted;
 }
 
-bool Lexer::is_valid_prefix(char prefix, std::string_view _current)
+bool Lexer::is_valid_prefix(char p_prefix, std::string_view p_current)
 {
   for (auto& [val, type] : get_sorted_keywords()) {
-    if (val.size() <= _current.size()) continue;
+    if (val.size() <= p_current.size()) continue;
     // Manual prefix comparison
-    if (val.substr(0, _current.size()) != _current) continue;
-    if (val[_current.size()] == prefix) return true;
+    if (val.substr(0, p_current.size()) != p_current) continue;
+    if (val[p_current.size()] == p_prefix) return true;
   }
   return false;
 }
@@ -698,202 +685,6 @@ void Lexer::add_error(ErrorCode code, const std::string& msg, const std::string&
   span.anteprocess_pos = scr_info.tokens.size();
   auto tok             = Token(buffer, ETokenType::NONE, span);
 
-  std::string out =
-      Error_Diagnostic(code, scr_info, tok, {}, compiler::EPhase::lexer, EErrorSeverity::error, {}, msg, hint)
-          .print_error();
+  std::string out = Error_Diagnostic(scr_info, code, &scr_info, tok, compiler::EPhase::lexer, msg, hint).print_error();
   errors.push_back(out);
-}
-
-TokTy Lexer::classifyNumerals(std::string& outValue)
-{
-  outValue.clear();
-
-  while (stream.next() && is_space(stream.peek())) {
-  }
-
-  // Check if start of number
-  if (!is_digit(stream.peek()) && stream.check('.')) {
-    stream.go_back();
-    return TokTy::UNKNOWN;
-  }
-
-  std::string buffer;
-  bool        isBin = false, isOct = false, isHex = false;
-  bool        isFloat = false, isDecimal = false, isuDecimal = false;
-
-  buffer.push_back(stream.peek());
-
-  // Check prefix bin/oct/hex
-  if (stream.check('0') && stream.peek(1) != EOF) {
-    char next = stream.peek(1);
-    if (next == 'b' || next == 'B') {
-      isBin = true;
-      stream.next();
-      buffer += stream.peek();
-    } else if (next == 'o' || next == 'O') {
-      isOct = true;
-      stream.next();
-      buffer += stream.peek();
-    } else if (next == 'x' || next == 'X') {
-      isHex = true;
-      stream.next();
-      buffer += stream.peek();
-    }
-  }
-
-  while (stream.next()) {
-    // Binary
-    if (isBin) {
-      if (stream.check('0') || stream.check('1'))
-        buffer += stream.peek();
-      else if (stream.check('\'') || stream.check('_'))
-        continue;
-      else {
-        stream.go_back();
-        break;
-      }
-    }
-    // Octal
-    else if (isOct) {
-      if (stream.peek() >= '0' && stream.peek() <= '7')
-        buffer += stream.peek();
-      else if (stream.peek('\'') || stream.peek('_'))
-        continue;
-      else {
-        stream.go_back();
-        break;
-      }
-    }
-    // Hexadecimal
-    else if (isHex) {
-      if (is_digit(stream.peek()) || (stream.peek() >= 'a' && stream.peek() <= 'f')
-          || (stream.peek() >= 'A' && stream.peek() <= 'F'))
-        buffer += stream.peek();
-      else if (stream.check('\'') || stream.check('_'))
-        continue;
-      else {
-        stream.go_back();
-        break;
-      }
-    }
-    // Numeric / float / decimal
-    else {
-      if (is_digit(stream.peek()))
-        buffer += stream.peek();
-      else if (stream.check('.') && stream.peek(1) != '.' && !isDecimal) {
-        buffer += stream.peek();
-        isDecimal = true;
-      } else if (stream.check('f')) {
-        isFloat = true;
-        break;
-      } else if (stream.check('e') || stream.check('E')) {
-        buffer += stream.peek();
-        isFloat = true;
-        if (stream.peek(1) == '+' || stream.peek(1) == '-') {
-          stream.next();
-          buffer += stream.peek();
-        }
-      } else if (stream.check('d')) {
-        isDecimal = true;
-        break;
-      } else if (stream.check('u') && stream.peek(1) == 'd') {
-        isuDecimal = true;
-        break;
-      } else {
-        stream.go_back();
-        break;
-      }
-    }
-  }
-
-  outValue = buffer;
-
-  if (isBin) return TokTy::L_BIN;
-  if (isOct) return TokTy::L_OCT;
-  if (isHex) return TokTy::L_HEX;
-  if (isFloat) return TokTy::L_F;
-  if (isDecimal) return TokTy::L_DECIMAL;
-  if (isuDecimal) return TokTy::L_UDECIMAL;
-
-  return TokTy::L_I; // standard integral
-}
-
-TokTy Lexer::classifyKeyword(std::string& outWord)
-{
-  std::string buffer(1, outWord[0]);
-  while (stream.peek(1) != EOF && !is_space(stream.peek(1)) && !is_ctrl(stream.peek(1))) {
-    stream.next();
-    buffer += stream.peek();
-  }
-
-  for (size_t len = buffer.size(); len > 0; --len) {
-    std::string candidate = buffer.substr(0, len);
-    auto        it        = kKeywords.find(candidate);
-    if (it != kKeywords.end()) {
-      outWord = candidate;
-      // Remettre les caractères restants
-      for (int i = (int)buffer.size() - 1; i >= (int)len; --i) stream.go_back();
-      return it->second;
-    }
-  }
-
-
-  if (is_alpha(buffer[0]) || buffer[0] == '_') {
-    size_t i = 1;
-    while (i < buffer.size() && (is_alnum(buffer[i]) || buffer[i] == '_')) i++;
-
-    outWord = buffer.substr(0, i);
-
-    for (int j = (int)buffer.size() - 1; j >= (int)i; --j) stream.go_back();
-
-    return TokTy::IDENTIFIER;
-  }
-
-  outWord = buffer;
-  return TokTy::UNKNOWN;
-}
-
-TokTy Lexer::classifyFormatSpec(std::string& outFormat)
-{
-  outFormat.clear();
-
-  // Unsigned integrals
-  if (is_digit(stream.peek())) {
-    outFormat += stream.peek();
-
-    while (stream.next()) {
-      // concat numbers
-      if (is_digit(stream.peek()))
-        outFormat += stream.peek();
-      else {
-        stream.go_back();
-        break;
-      }
-    }
-    return TokTy::L_U;
-  }
-  // Letters
-  else if (is_alpha(stream.peek())) {
-    outFormat += stream.peek();
-    return TokTy::L_CUNE;
-  }
-
-  // Symbols and operators;
-  outFormat += stream.peek();
-  switch (stream.peek()) {
-  case '.':  return TokTy::DOT;
-  case ',':  return TokTy::COMMA;
-  case '_':  return TokTy::UNDERSCORE;
-  case '\'': return TokTy::TICK;
-  case '+':  return TokTy::OP_PLUS;
-  case '-':  return TokTy::OP_MINUS;
-  case '<':  return TokTy::OPEN_BRACKETS;
-  case '>':  return TokTy::CLOSE_BRACKETS;
-  case '^':  return TokTy::OP_CIRCUMFLEX;
-  case '~':  return TokTy::TILDE;
-  case '=':  return TokTy::ASSIGN;
-  case '%':  return TokTy::OP_MODULO;
-  case ' ':  return TokTy::SPACE;
-  default:   return TokTy::UNKNOWN;
-  }
 }

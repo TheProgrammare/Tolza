@@ -44,7 +44,7 @@ struct For final : public Node, Trait_LLVM_Passage {
   std::vector<std::shared_ptr<declaration::local::Variable_Binding>> items;
 
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
-  bool                                           isReverse = false;
+  bool                                           is_reverse = false;
 
   llvm::Value* codegen_pass(Visitor_Codegen& v) override;
   void         accept(Visitor_Base& v) override;
@@ -71,7 +71,7 @@ struct Loop final : public Node, Trait_LLVM_Passage {
 struct While final : public Node, Trait_LLVM_Passage {
   ~While();
 
-  bool                                           isDo = false;
+  bool                                           is_do = false;
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
@@ -114,7 +114,7 @@ struct GoTo_Label final : public ADeclaration {
 
   std::string debug_str() const override
   {
-    return "LABEL[" + name + "]";
+    return "LABEL[" + declaration_name + "]";
   }
   ESymbolType get_symbol_type() const override
   {

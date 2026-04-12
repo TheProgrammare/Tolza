@@ -4,14 +4,14 @@
 
 ast::CodeBlock_instruction::CodeBlock_instruction::CodeBlock_instruction() = default;
 
-ast::CodeBlock_instruction::CodeBlock_instruction(std::shared_ptr<ALocal> _data_local)
+ast::CodeBlock_instruction::CodeBlock_instruction(std::shared_ptr<ALocal> p_data_local)
   : kind(EKind::Shared_local)
-  , data_local(_data_local)
+  , data_local(p_data_local)
 {
 }
-ast::CodeBlock_instruction::CodeBlock_instruction(std::unique_ptr<Node> _data_base)
+ast::CodeBlock_instruction::CodeBlock_instruction(std::unique_ptr<Node> p_data_base)
   : kind(EKind::Unique_base)
-  , data_base(std::move(_data_base))
+  , data_base(std::move(p_data_base))
 {
 }
 

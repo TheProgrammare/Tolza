@@ -115,17 +115,16 @@ struct Get_Expr_Type; // type(expr)
 
 namespace literal
 {
-struct Boolean;  // true // false
-struct Integral; // int uint binary
-struct Decimal;  // d32-d128-dsize ud32-ud128-udsize
-struct Floating; // float double longdouble
+struct Boolean;        // true // false
+struct Integral;       // int uint binary
+struct Fixed_Point;    // d32-d128-dsize ud32-ud128-udsize
+struct Floating_Point; // float double longdouble
 
 struct CUNE; // "a"cune -> 8 bits character
 struct RUNE; // "⚜"rune "⚜" -> 32 bits character
 
 struct Text_Pure;          // fat pointer of rune/cune "Hello World!", c string
 struct Text_Interpolation; // "{expression}" "{expression:spec}"
-struct Textual_Element;    // Text or Text_Lerp
 struct Textual_Format;     // "name is {name}"
 struct Format_Specifier;   // "{name:format_specifier}"
 

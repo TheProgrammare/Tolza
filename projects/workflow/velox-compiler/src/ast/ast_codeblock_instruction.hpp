@@ -11,8 +11,8 @@ struct CodeBlock_instruction {
   enum class EKind { None, Shared_local, Unique_base };
 
   CodeBlock_instruction();
-  CodeBlock_instruction(std::shared_ptr<ALocal> _data_local);
-  CodeBlock_instruction(std::unique_ptr<Node> _data_base);
+  CodeBlock_instruction(std::shared_ptr<ALocal> p_data_local);
+  CodeBlock_instruction(std::unique_ptr<Node> p_data_base);
 
   EKind                   kind = EKind::None;
   std::shared_ptr<ALocal> data_local;

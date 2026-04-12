@@ -19,7 +19,7 @@ struct Pattern;
 
 struct Evaluator final {
   Evaluator();
-  Evaluator(std::unique_ptr<AExpression> _node);
+  Evaluator(std::unique_ptr<AExpression> p_node);
 
   enum class EKind { None, Pattern, Condition };
   EKind kind = EKind::None;

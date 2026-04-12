@@ -18,15 +18,15 @@
 
 #include "compiler/compiler.hpp"
 
-bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_llvm_opti(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log = compiler::COMP_CTX.logs.contains("optimization");
 
-  if (scr_infos.empty()) return true;
+  if (p_scr_infos.empty()) return true;
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  llvm::Module* mod = scr_infos[0]->llvm_module.get();
+  llvm::Module* mod = p_scr_infos[0]->llvm_module.get();
 
 
   // Init backends

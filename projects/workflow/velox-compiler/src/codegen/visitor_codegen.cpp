@@ -4,24 +4,23 @@
 #include <filesystem>
 #include <functional>
 #include <iostream>
-#include <llvm-19/llvm/ADT/APInt.h>
-#include <llvm-19/llvm/IR/Intrinsics.h>
 #include <memory>
 #include <stdexcept>
 #include <vector>
 
-#include <llvm/IR/GlobalValue.h>
+
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/Casting.h>
+
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalVariable.h>
-#include <llvm/Support/Casting.h>
-#include <llvm/ADT/APFloat.h>
-#include <llvm/ADT/STLExtras.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -31,6 +30,11 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Value.h>
+
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/APInt.h>
+
 
 #include <compiler_context.hpp>
 
@@ -106,8 +110,7 @@ void Visitor_Codegen::build_init_func()
 void Visitor_Codegen::error_add(ErrorCode code, const ast::Node& n, const std::string& msg,
                                 const std::string& hint) const
 {
-  auto error =
-      Error_Diagnostic(code, scr_info, n._token, {}, compiler::EPhase::llvmir, EErrorSeverity::error, {}, msg, hint);
+  auto error = Error_Diagnostic(scr_info, code, &scr_info, n._token, compiler::EPhase::llvmir, msg, hint);
 
   errors.push_back(error.print_error());
 }
@@ -115,19 +118,8 @@ void Visitor_Codegen::error_add(ErrorCode code, const ast::Node& n, const std::s
 void Visitor_Codegen::error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second,
                                       const std::string& msg, const std::string& hint) const
 {
-  auto first_error = Error_Diagnostic(code, *first._scr_info, first._token, {}, compiler::EPhase::llvmir,
-                                      EErrorSeverity::error, {}, msg, hint);
-
-  auto second_error = Error_Diagnostic(code, *second._scr_info, second._token, {}, compiler::EPhase::llvmir,
-                                       EErrorSeverity::error, {}, msg, hint);
-
-  std::string out = "[from file] " color_MAGENTA + first_error.print_source() + color_RESET "\n";
-  out += first_error.print_line() + color_RESET "\n";
-  out += "[to file]   " color_MAGENTA + second_error.print_source() + color_RESET "\n";
-  out += second_error.print_line() + color_RESET "\n";
-
-  out += first_error.print_messages();
-  errors.push_back(out);
+  auto err = Error_Diagnostic_Two(scr_info, code, first, second, compiler::EPhase::llvmir, msg, hint);
+  errors.push_back(err.print_error());
 }
 
 llvm::Value* Visitor_Codegen::ensure_rvalue(ast::AExpression& expr, const std::string& name)
@@ -135,17 +127,17 @@ llvm::Value* Visitor_Codegen::ensure_rvalue(ast::AExpression& expr, const std::s
   if (expr.is_rvalue()) return expr.codegen(*this);
 
   auto val = expr.codegen(*this);
-  auto ty  = expr.inferred_type->codegen_ty(*this);
+  auto ty  = expr.expression_inferred_type->codegen_ty(*this);
   // load the value
   return builder.CreateLoad(ty, val, name);
 }
 
 
-llvm::Value* Visitor_Codegen::ensure_lvalue(ast::AExpression& expr, const std::string& name)
+llvm::Value* Visitor_Codegen::ensure_lvalue(ast::AExpression& expr, bool is_silent_error)
 {
   if (expr.is_lvalue()) return expr.codegen(*this);
 
-  error_add(225, expr, "Expected a lvalue expression.", "a lvalue is frequently a variable.");
+  if (!is_silent_error) error_add(225, expr, "Expected a lvalue expression.", "a lvalue is frequently a variable.");
   return nullptr;
 }
 
@@ -195,12 +187,12 @@ void Visitor_Codegen::visit(ast::AIdentifier& n)
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID& n)
 {
   if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.symbol->symbol->codegen_pass(*this);
+  return n.llvm_value = n.identifier_symbol->symbol->codegen_pass(*this);
 }
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID_Qualified& n)
 {
   if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.symbol->symbol->codegen_pass(*this);
+  return n.llvm_value = n.identifier_symbol->symbol->codegen_pass(*this);
 }
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID_Type& n)
 {
@@ -210,11 +202,11 @@ llvm::Value* Visitor_Codegen::visit(ast::Expr_ID_Type& n)
 llvm::Type* Visitor_Codegen::visit_ty(ast::Expr_ID_Type& n)
 {
   if (n.llvm_type) return n.llvm_type;
-  if (n.inferred_type) {
-    return n.llvm_type = n.inferred_type->codegen_ty(*this);
-  } else if (n.name->inferred_type) {
-    return n.llvm_type = n.name->inferred_type->codegen_ty(*this);
-  } else if (auto ptr = dynamic_cast<ast::AType*>(n.symbol->symbol.get())) {
+  if (n.expression_inferred_type) {
+    return n.llvm_type = n.expression_inferred_type->codegen_ty(*this);
+  } else if (n.name->expression_inferred_type) {
+    return n.llvm_type = n.name->expression_inferred_type->codegen_ty(*this);
+  } else if (auto ptr = dynamic_cast<ast::AType*>(n.identifier_symbol->symbol.get())) {
     return n.llvm_type = ptr->codegen_ty(*this);
   } else {
     std::cout << "type lost in addr " << &n << std::endl;
@@ -241,25 +233,26 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::Global& n)
 
   auto ty = n.type->codegen_ty(*this);
 
-  if (n.is_external) {
+  if (n.declaration_is_external) {
     return n.llvm_value = new llvm::GlobalVariable(*mod, ty, true, llvm::GlobalVariable::ExternalLinkage,
-                                                   tools.get_zeroinitializer(*n.type), n.name);
+                                                   tools.get_zeroinitializer(*n.type), n.declaration_name);
   }
 
-  auto       linkage  = n.is_exported ? llvm::GlobalVariable::ExternalLinkage : llvm::GlobalVariable::InternalLinkage;
+  auto linkage =
+      n.declaration_is_exported ? llvm::GlobalVariable::ExternalLinkage : llvm::GlobalVariable::InternalLinkage;
   const bool is_const = n.kind != EVariableKind::Var;
 
   if (!n.expression) {
-    return n.llvm_value =
-               new llvm::GlobalVariable(*mod, ty, is_const, linkage, tools.get_zeroinitializer(*n.type), n.name);
+    return n.llvm_value = new llvm::GlobalVariable(*mod, ty, is_const, linkage, tools.get_zeroinitializer(*n.type),
+                                                   n.declaration_name);
   }
 
   if (auto expr = eval.evaluate_expression(*n.expression)) {
     if (auto expr_const = tools.create_constant(*expr.value())) {
       return n.llvm_value = new llvm::GlobalVariable(*mod, ty, is_const,
-                                                     n.is_exported ? llvm::GlobalVariable::ExternalLinkage
-                                                                   : llvm::GlobalVariable::InternalLinkage,
-                                                     expr_const.value(), n.name);
+                                                     n.declaration_is_exported ? llvm::GlobalVariable::ExternalLinkage
+                                                                               : llvm::GlobalVariable::InternalLinkage,
+                                                     expr_const.value(), n.declaration_name);
     } else {
       error_add(223, *n.expression, expr_const.error(), "");
       return nullptr;
@@ -286,15 +279,16 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 {
   if (n.llvm_fn) return n.llvm_fn;
 
-  const bool is_main = n.name == "main";
+  const bool is_main = n.declaration_name == "main";
 
   llvm::Function* fn = nullptr;
 
-  if (n.symbol->llvm_symbol) {
-    fn = llvm::cast<llvm::Function>(n.symbol->llvm_symbol);
+  if (n.declaration_symbol->llvm_symbol) {
+    fn = llvm::cast<llvm::Function>(n.declaration_symbol->llvm_symbol);
   } else {
-    llvm::Function::LinkageTypes linkage =
-        n.is_exported || n.is_external ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
+    llvm::Function::LinkageTypes linkage = n.declaration_is_exported || n.declaration_is_external
+                                               ? llvm::Function::ExternalLinkage
+                                               : llvm::Function::InternalLinkage;
 
     llvm::FunctionType* fn_ty;
 
@@ -308,7 +302,15 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
       fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
     }
 
-    fn = generate_stub(*n.prototype, n.name, linkage);
+    fn = generate_stub(*n.prototype, n.declaration_name, linkage);
+
+    // param naming
+    size_t count = 0;
+    for (auto& arg : fn->args()) {
+      auto              param = n.prototype->parameters[count++];
+      const std::string name  = param->declaration_name;
+      arg.setName(name);
+    }
   }
 
   if (!n.codeblock) return fn;
@@ -415,9 +417,9 @@ void Visitor_Codegen::visit(ast::declaration::Mod_Alias& n)
 }
 llvm::Type* Visitor_Codegen::visit(ast::declaration::Type_Alias& n)
 {
-  if (n.llvm_type) return n.llvm_type;
+  if (n.type->llvm_type) return n.type->llvm_type;
 
-  return n.llvm_type = n.type->codegen_ty(*this);
+  return n.type->llvm_type = n.type->codegen_ty(*this);
 }
 
 llvm::Type* Visitor_Codegen::visit(ast::declaration::Generic& n)
@@ -492,7 +494,7 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Variable_Binding& n
   if (n.llvm_value) return n.llvm_value;
 
   auto ty     = n.type->codegen_ty(*this);
-  auto alloca = builder.CreateAlloca(ty, nullptr, n.name);
+  auto alloca = builder.CreateAlloca(ty, nullptr, n.declaration_name);
 
   if (n.parent_pattern && n.parent_pattern->right) {
     auto init_val = n.parent_pattern->right->codegen(*this);
@@ -521,18 +523,23 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Variable& n)
   if (auto ptr_ty_table = dynamic_cast<ast::type::Table*>(n.type.get())) {
     if (ptr_ty_table->table_size > 0) {
       auto ty = ptr_ty_table->inner->codegen_ty(*this);
-      alloca  = builder.CreateAlloca(ty, builder.getInt32(ptr_ty_table->table_size), n.name);
+      alloca  = builder.CreateAlloca(ty, builder.getInt32(ptr_ty_table->table_size), n.declaration_name);
     } else {
       auto ty = n.type->codegen_ty(*this);
-      alloca  = builder.CreateAlloca(ty, nullptr, n.name);
+      alloca  = builder.CreateAlloca(ty, nullptr, n.declaration_name);
     }
   } else {
     auto ty = n.type->codegen_ty(*this);
-    alloca  = builder.CreateAlloca(ty, nullptr, n.name);
+    alloca  = builder.CreateAlloca(ty, nullptr, n.declaration_name);
   }
 
   if (n.expression) {
-    builder.CreateStore(n.expression->codegen(*this), alloca, n.type->type_isVolatile);
+    auto expr = ensure_rvalue(*n.expression);
+    if (!expr) {
+      error_add(227, *n.expression, "Impossible to assign unevaluated an expression.", "");
+      return nullptr;
+    }
+    builder.CreateStore(expr, alloca, n.type->type_is_volatile);
   }
 
   return n.llvm_value = alloca;
@@ -550,16 +557,16 @@ llvm::Value* Visitor_Codegen::visit(ast::declaration::local::Capability& n)
   case ECapability::Move:
   case ECapability::Ref:
   case ECapability::Mut:  {
-    auto ty = n.right->inferred_type->codegen_ty(*this)->getPointerTo();
+    auto ty = n.right->expression_inferred_type->codegen_ty(*this)->getPointerTo();
 
-    ptr = builder.CreateAlloca(ty, nullptr, n.name);
+    ptr = builder.CreateAlloca(ty, nullptr, n.declaration_name);
     break;
   }
   case ECapability::Copy:
   case ECapability::Clone: {
-    auto ty = n.right->inferred_type->codegen_ty(*this);
+    auto ty = n.right->expression_inferred_type->codegen_ty(*this);
 
-    ptr = builder.CreateAlloca(ty, nullptr, n.name);
+    ptr = builder.CreateAlloca(ty, nullptr, n.declaration_name);
     break;
   }
   }
@@ -594,7 +601,7 @@ llvm::Type* Visitor_Codegen::visit(ast::declaration::cop::Role& n)
   std::vector<llvm::Type*> tys;
   for (auto& comp : n.components) {
     comp->codegen(*this);
-    tys.emplace_back(comp->inferred_type->codegen_ty(*this));
+    tys.emplace_back(comp->expression_inferred_type->codegen_ty(*this));
   }
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
@@ -607,7 +614,7 @@ llvm::Type* Visitor_Codegen::visit(ast::declaration::cop::Entity& n)
   std::vector<llvm::Type*> tys;
   for (auto& comp : n.comps) {
     comp->codegen(*this);
-    tys.emplace_back(comp->inferred_type->codegen_ty(*this));
+    tys.emplace_back(comp->expression_inferred_type->codegen_ty(*this));
   }
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
@@ -619,10 +626,10 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::cop::Entity_New& n)
   auto fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
 
   auto fn = llvm::Function::Create(fn_ty,
-                                   n.parent_entity->is_external || n.parent_entity->is_exported
+                                   n.parent_entity->declaration_is_external || n.parent_entity->declaration_is_exported
                                        ? llvm::Function::ExternalLinkage
                                        : llvm::Function::InternalLinkage,
-                                   n.mangle_scope() + n.name);
+                                   n.mangle_scope() + n.declaration_name);
 
   if (!n.codeblock) return fn;
 
@@ -642,10 +649,10 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::cop::Entity_Del& n)
   auto fn_ty = llvm::FunctionType::get(u0Ty, false);
 
   auto fn = llvm::Function::Create(fn_ty,
-                                   n.parent_entity->is_external || n.parent_entity->is_exported
+                                   n.parent_entity->declaration_is_external || n.parent_entity->declaration_is_exported
                                        ? llvm::Function::ExternalLinkage
                                        : llvm::Function::InternalLinkage,
-                                   n.mangle_scope() + n.name);
+                                   n.mangle_scope() + n.declaration_name);
 
   if (!n.codeblock) return fn;
 
@@ -719,6 +726,9 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Ptr& n)
   if (n.pointer_type == EPtrType::raw_ptr) {
     return n.llvm_type = llvm::PointerType::get(inner_ty, 0);
   }
+
+  // provisional
+  return n.llvm_type;
 }
 llvm::Type* Visitor_Codegen::visit(ast::type::Table& n)
 {
@@ -753,11 +763,14 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Function_Proto& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
-  auto                     ret_ty = n.returnType->codegen_ty(*this);
+  auto                     ret_ty = n.return_ty ? n.return_ty->codegen_ty(*this) : u0Ty;
   std::vector<llvm::Type*> params;
-  for (auto& param_ty : n.parameters) params.push_back(tools.generate_parameter_type(*param_ty));
+  for (auto& param_ty : n.parameters) {
+    auto llvm_ty = tools.generate_parameter_type(*param_ty);
+    params.push_back(llvm_ty);
+  }
 
-  return n.llvm_type = llvm::FunctionType::get(ret_ty, params, n.isVariadic);
+  return n.llvm_type = llvm::FunctionType::get(ret_ty, params, n.is_variadic);
 }
 
 llvm::Type* Visitor_Codegen::visit(ast::type::Get_Expr_Type& n)
@@ -765,7 +778,7 @@ llvm::Type* Visitor_Codegen::visit(ast::type::Get_Expr_Type& n)
   if (n.llvm_type) return n.llvm_type;
 
 
-  if (auto ptr = n.target->codegen(*this)) return n.llvm_type = n.target->inferred_type->llvm_type;
+  if (auto ptr = n.target->codegen(*this)) return n.llvm_type = n.target->expression_inferred_type->llvm_type;
   return nullptr;
 }
 
@@ -784,7 +797,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Integral& n)
   if (auto ptr = tools.create_constant(n)) return n.llvm_value = ptr.value();
   return nullptr;
 }
-llvm::Value* Visitor_Codegen::visit(ast::literal::Decimal& n)
+llvm::Value* Visitor_Codegen::visit(ast::literal::Fixed_Point& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
@@ -792,7 +805,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Decimal& n)
   if (auto ptr = tools.create_constant(n)) return n.llvm_value = ptr.value();
   return nullptr;
 }
-llvm::Value* Visitor_Codegen::visit(ast::literal::Floating& n)
+llvm::Value* Visitor_Codegen::visit(ast::literal::Floating_Point& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
@@ -813,10 +826,10 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::RUNE& n)
   if (n.llvm_value) return n.llvm_value;
 
 
-  assert(n.codePoints.size() == 4 && "UTF-32 character must be 4 bytes");
+  assert(n.code_points.size() == 4 && "UTF-32 character must be 4 bytes");
   uint32_t codePoint = 0;
   for (int i = 0; i < 4; ++i)
-    codePoint |= static_cast<uint32_t>(static_cast<unsigned char>(n.codePoints[i])) << (8 * i);
+    codePoint |= static_cast<uint32_t>(static_cast<unsigned char>(n.code_points[i])) << (8 * i);
 
   return n.llvm_value = llvm::ConstantInt::get(i32Ty, codePoint);
 }
@@ -847,17 +860,13 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Text_Interpolation& n)
 {
   return nullptr;
 }
-llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Element& n)
-{
-  return nullptr;
-}
 llvm::Value* Visitor_Codegen::visit(ast::literal::Textual_Format& n)
 {
-  if (n.values.size() == 1 && n.values[0].kind == ast::literal::Textual_Element::Kind::Text) {
-    return n.values[0].val->codegen(*this);
+  if (n.values.size() == 1 && dynamic_cast<ast::literal::Text_Pure*>(n.values[0].get())) {
+    return n.values[0]->codegen(*this);
   }
   for (auto& elem : n.values) {
-    elem.val->codegen(*this);
+    elem->codegen(*this);
   }
   return nullptr;
 }
@@ -888,7 +897,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Tuple& n)
 
   for (auto& val : n.values) {
     vals.emplace_back(val->codegen(*this));
-    types.emplace_back(val->inferred_type->codegen_ty(*this));
+    types.emplace_back(val->expression_inferred_type->codegen_ty(*this));
   }
 
   auto tuple_ty = llvm::StructType::get(ctx, types);
@@ -908,9 +917,9 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Range& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  auto start_ty = n.start->inferred_type->codegen_ty(*this);
-  auto end_ty   = n.end->inferred_type->codegen_ty(*this);
-  auto step_ty  = n.step->inferred_type->codegen_ty(*this);
+  auto start_ty = n.start->expression_inferred_type->codegen_ty(*this);
+  auto end_ty   = n.end->expression_inferred_type->codegen_ty(*this);
+  auto step_ty  = n.step->expression_inferred_type->codegen_ty(*this);
 
   auto range_ty = llvm::StructType::get(ctx, {start_ty, end_ty, step_ty});
 
@@ -941,13 +950,13 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Enum& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  auto tag = llvm::ConstantInt::get(i32Ty, n.in_type_position);
+  auto tag = llvm::ConstantInt::get(i32Ty, n.expression_in_type_position);
 
-  if (!n.inferred_type->llvm_type) n.inferred_type->codegen_ty(*this);
+  if (!n.expression_inferred_type->llvm_type) n.expression_inferred_type->codegen_ty(*this);
 
 
   // assume type_llvm on enum = { i32, [N x i8] } ; tag, payload
-  auto enum_ty = llvm::cast<llvm::StructType>(n.inferred_type->llvm_type);
+  auto enum_ty = llvm::cast<llvm::StructType>(n.expression_inferred_type->llvm_type);
 
   // allocate enum struct
   auto ptr = builder.CreateAlloca(enum_ty);
@@ -985,11 +994,11 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Structured_Data& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  if (!n.inferred_type->llvm_type) n.inferred_type->codegen_ty(*this);
+  if (!n.expression_inferred_type->llvm_type) n.expression_inferred_type->codegen_ty(*this);
 
 
   // assume type_llvm on structured data = { field1, field2 }
-  auto struct_ty = llvm::cast<llvm::StructType>(n.inferred_type->llvm_type);
+  auto struct_ty = llvm::cast<llvm::StructType>(n.expression_inferred_type->llvm_type);
 
   // allocate structured data
   llvm::Value* v = llvm::UndefValue::get(struct_ty);
@@ -999,7 +1008,7 @@ llvm::Value* Visitor_Codegen::visit(ast::literal::Structured_Data& n)
     auto val = field->codegen(*this);
 
     // get field position in struct
-    size_t offset = field->in_type_position;
+    size_t offset = field->expression_in_type_position;
 
     v = builder.CreateInsertValue(v, val, {(unsigned)offset});
   }
@@ -1059,8 +1068,15 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call& n)
     args.emplace_back(arg->codegen(*this));
     count++;
   }
-  std::string call_name = n.function_proto->returnType != ast::type::get_void_type() ? n.callee->debug_str() : "";
-  auto        result    = builder.CreateCall(fn_callee, args, call_name);
+
+  llvm::CallInst* result = nullptr;
+
+  if (!n.function_proto->return_ty || n.function_proto->return_ty->is_same(*ast::type::get_void_type())) {
+    result = builder.CreateCall(fn_callee, args);
+  } else {
+    std::string call_name = n.callee->debug_str();
+    result                = builder.CreateCall(fn_callee, args, call_name);
+  }
 
   return n.llvm_value = result;
 }
@@ -1077,12 +1093,16 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call_Argument& n)
     return n.llvm_value = ensure_rvalue(*n.expression);
   }
 
-  switch (n.fn_param_type->passMode) {
+  switch (n.fn_param_type->passmode) {
+  case EPassMode::Mut:  return n.llvm_value = ensure_lvalue(*n.expression);
   case EPassMode::Move:
-  case EPassMode::Mut:
-  case EPassMode::Ref:   return n.llvm_value = ensure_lvalue(*n.expression);
+  case EPassMode::Ref:  {
+    if (auto l_val = ensure_lvalue(*n.expression, true)) return n.llvm_value = l_val;
+
+    return n.llvm_value = ensure_rvalue(*n.expression);
+  }
   case EPassMode::Copy:
-  case EPassMode::Clone: return n.llvm_value = ensure_rvalue(*n.expression, "arg." + n.fn_param_type->name);
+  case EPassMode::Clone: return n.llvm_value = ensure_rvalue(*n.expression, "arg." + n.fn_param_type->declaration_name);
   case EPassMode::Addr:  {
     llvm::Value* ptr     = ensure_lvalue(*n.expression);
     llvm::Type*  ptrTy   = ptr->getType();
@@ -1312,7 +1332,7 @@ void Visitor_Codegen::visit(ast::statement::While& n)
   else if (auto ptr = n.evaluator.get_pattern())
     cond = ptr->codegen(*this);
 
-  if (n.isDo) {
+  if (n.is_do) {
     builder.CreateBr(bb_body);
   } else {
     builder.CreateCondBr(cond, bb_body, bb_after);
@@ -1327,7 +1347,7 @@ void Visitor_Codegen::visit(ast::statement::While& n)
   current_bb_break    = nullptr;
   current_bb_continue = nullptr;
 
-  if (n.isDo) {
+  if (n.is_do) {
     llvm::Value* condDo = n.evaluator.get_condition() ? n.evaluator.get_condition()->codegen(*this)
                                                       : n.evaluator.get_pattern()->codegen(*this);
     builder.CreateCondBr(condDo, bb_body, bb_after);
@@ -1348,7 +1368,7 @@ llvm::Value* Visitor_Codegen::visit(ast::statement::GoTo_Label& n)
 {
   if (!n.llvm_bb) {
     auto function = builder.GetInsertBlock()->getParent();
-    n.llvm_bb     = llvm::BasicBlock::Create(ctx, n.name, function);
+    n.llvm_bb     = llvm::BasicBlock::Create(ctx, n.declaration_name, function);
   }
 
   builder.SetInsertPoint(n.llvm_bb);
@@ -1399,10 +1419,12 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Cast_As& n)
   auto expr      = ensure_rvalue(*n.expression);
   auto target_ty = n.type->codegen_ty(*this);
 
+  if (!expr) return nullptr;
+
   switch (n.cast_type) {
   case ast::operation::Cast_As::ECastType::AS: {
-    if (dynamic_cast<ast::type::Primitive*>(n.expression->inferred_type.get())
-        && dynamic_cast<ast::type::Primitive*>(n.expression->inferred_type.get())) {
+    if (dynamic_cast<ast::type::Primitive*>(n.expression->expression_inferred_type.get())
+        && dynamic_cast<ast::type::Primitive*>(n.expression->expression_inferred_type.get())) {
       return n.llvm_value = tools.primitive_coerce(expr, expr->getType(), target_ty);
     }
   }
@@ -1425,20 +1447,30 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Assignment& n)
 {
   if (n.llvm_value) return n.llvm_value;
 
-  return n.llvm_value = builder.CreateStore(n.right->codegen(*this), n.left->codegen(*this));
+  auto val = ensure_rvalue(*n.right);
+  auto ptr = ensure_lvalue(*n.left);
+
+  if (!val) return nullptr;
+  if (!ptr) return nullptr;
+
+  return n.llvm_value = builder.CreateStore(val, ptr);
 }
 llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
 {
-  auto l_ptr = ensure_rvalue(*n.left, "bin.l");
-  auto r_ptr = ensure_rvalue(*n.right, "bin.r");
+  auto l_val = ensure_rvalue(*n.left, "bin.l");
+  auto r_val = ensure_rvalue(*n.right, "bin.r");
 
-  auto op_ty      = n.inferred_type;
+  if (!l_val) error_add(226, *n.left, "Can't be evaluated as value.", "");
+  if (!r_val) error_add(226, *n.right, "Can't be evaluated as value.", "");
+  if (!l_val || !r_val) return nullptr;
+
+  auto op_ty      = n.expression_inferred_type;
   auto llvm_op_ty = op_ty->llvm_type;
 
   using Func = std::function<void()>;
 
   auto arith = [&](Func fn_sint, Func fn_uint, Func fn_float) {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(n.left->expression_inferred_type)) {
       if (EPrimType_is_floating(ptr->type)) {
         if (fn_float) fn_float();
       } else if (EPrimType_is_integral(ptr->type)) {
@@ -1455,7 +1487,7 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
   };
 
   auto byte = [&](Func bin) {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(n.left->expression_inferred_type)) {
       if (ptr->type == EPrimType::boolean || EPrimType_is_byte(ptr->type)) {
         bin();
       }
@@ -1463,55 +1495,55 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
   };
 
 
-  llvm::Value* op;
+  llvm::Value* op = nullptr;
 
-  switch (n.op) {
+  switch (n.op_ty) {
   case EBinOpType::NONE:
   case EBinOpType::Add:  {
-    arith([&]() { op = builder.CreateAdd(l_ptr, r_ptr, "bin.add"); }, nullptr,
-          [&]() { op = builder.CreateFAdd(l_ptr, r_ptr, "bin.add"); });
+    arith([&]() { op = builder.CreateAdd(l_val, r_val, "bin.add"); }, nullptr,
+          [&]() { op = builder.CreateFAdd(l_val, r_val, "bin.add"); });
 
     break;
   }
   case EBinOpType::Sub: {
-    arith([&]() { op = builder.CreateSub(l_ptr, r_ptr, "bin.sub"); }, nullptr,
-          [&]() { op = builder.CreateFSub(l_ptr, r_ptr, "bin.sub"); });
+    arith([&]() { op = builder.CreateSub(l_val, r_val, "bin.sub"); }, nullptr,
+          [&]() { op = builder.CreateFSub(l_val, r_val, "bin.sub"); });
 
     break;
   }
   case EBinOpType::Mul: {
-    arith([&]() { op = builder.CreateMul(l_ptr, r_ptr, "bin.mul"); }, nullptr,
-          [&]() { op = builder.CreateFMul(l_ptr, r_ptr, "bin.mul"); });
+    arith([&]() { op = builder.CreateMul(l_val, r_val, "bin.mul"); }, nullptr,
+          [&]() { op = builder.CreateFMul(l_val, r_val, "bin.mul"); });
 
     break;
   }
   case EBinOpType::Div: {
     arith(
         [&]() {
-          auto fl = builder.CreateSIToFP(l_ptr, fSizeTy);
-          auto fr = builder.CreateSIToFP(r_ptr, fSizeTy);
+          auto fl = builder.CreateSIToFP(l_val, fSizeTy);
+          auto fr = builder.CreateSIToFP(r_val, fSizeTy);
           op      = builder.CreateFDiv(fl, fr, "bin.div");
         },
         [&]() {
-          auto fl = builder.CreateUIToFP(l_ptr, fSizeTy);
-          auto fr = builder.CreateUIToFP(r_ptr, fSizeTy);
+          auto fl = builder.CreateUIToFP(l_val, fSizeTy);
+          auto fr = builder.CreateUIToFP(r_val, fSizeTy);
           op      = builder.CreateFDiv(fl, fr, "bin.div");
         },
-        [&]() { op = builder.CreateFDiv(l_ptr, r_ptr, "bin.div"); });
+        [&]() { op = builder.CreateFDiv(l_val, r_val, "bin.div"); });
 
     break;
   }
   case EBinOpType::Mod: {
     arith(
         [&]() {
-          auto rem    = builder.CreateSRem(l_ptr, r_ptr, "bin.rem");
+          auto rem    = builder.CreateSRem(l_val, r_val, "bin.rem");
           auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
-          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_val, "bin.mod_adjusted"), rem, "bin.mod");
         },
         [&]() {
-          auto rem    = builder.CreateURem(l_ptr, r_ptr, "bin.rem");
+          auto rem    = builder.CreateURem(l_val, r_val, "bin.rem");
           auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
-          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_val, "bin.mod_adjusted"), rem, "bin.mod");
         },
         nullptr);
 
@@ -1520,25 +1552,25 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
   case EBinOpType::Quo: {
     arith(
         [&]() {
-          auto rem    = builder.CreateSRem(l_ptr, r_ptr, "bin.rem");
+          auto rem    = builder.CreateSRem(l_val, r_val, "bin.rem");
           auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
-          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
-          op          = builder.CreateSDiv(builder.CreateSub(l_ptr, mod), r_ptr, "bin.quo");
+          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_val, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSDiv(builder.CreateSub(l_val, mod), r_val, "bin.quo");
         },
         [&]() {
-          auto rem    = builder.CreateURem(l_ptr, r_ptr, "bin.rem");
+          auto rem    = builder.CreateURem(l_val, r_val, "bin.rem");
           auto is_neg = builder.CreateICmpSLT(rem, get_zero, "is_neg");
-          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_ptr, "bin.mod_adjusted"), rem, "bin.mod");
-          op          = builder.CreateSDiv(builder.CreateSub(l_ptr, mod), r_ptr, "bin.quo");
+          auto mod    = builder.CreateSelect(is_neg, builder.CreateAdd(rem, r_val, "bin.mod_adjusted"), rem, "bin.mod");
+          op          = builder.CreateSDiv(builder.CreateSub(l_val, mod), r_val, "bin.quo");
         },
         nullptr);
 
     break;
   }
   case EBinOpType::Rem: {
-    arith([&]() { op = builder.CreateSRem(l_ptr, r_ptr, "bin.rem"); },
-          [&]() { op = builder.CreateURem(l_ptr, r_ptr, "bin.rem"); },
-          [&]() { op = builder.CreateFRem(l_ptr, r_ptr, "bin.rem"); });
+    arith([&]() { op = builder.CreateSRem(l_val, r_val, "bin.rem"); },
+          [&]() { op = builder.CreateURem(l_val, r_val, "bin.rem"); },
+          [&]() { op = builder.CreateFRem(l_val, r_val, "bin.rem"); });
 
     break;
   }
@@ -1548,165 +1580,171 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
         [&]() {
           auto pow_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::powi, {llvm_op_ty, llvm_op_ty});
 
-          op = builder.CreateCall(pow_fn, {l_ptr, r_ptr}, "bin.pow");
+          op = builder.CreateCall(pow_fn, {l_val, r_val}, "bin.pow");
         },
         nullptr,
         [&]() {
           auto pow_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::pow, {llvm_op_ty, llvm_op_ty});
 
-          op = builder.CreateCall(pow_fn, {l_ptr, r_ptr}, "bin.pow");
+          op = builder.CreateCall(pow_fn, {l_val, r_val}, "bin.pow");
         });
+
+    break;
   }
   case EBinOpType::Gre: {
-    arith([&]() { op = builder.CreateICmpSGT(l_ptr, r_ptr, "bin.gre"); },
-          [&]() { op = builder.CreateICmpUGT(l_ptr, r_ptr, "bin.gre"); },
-          [&]() { op = builder.CreateFCmpOGT(l_ptr, r_ptr, "bin.gre"); });
+    arith([&]() { op = builder.CreateICmpSGT(l_val, r_val, "bin.gre"); },
+          [&]() { op = builder.CreateICmpUGT(l_val, r_val, "bin.gre"); },
+          [&]() { op = builder.CreateFCmpOGT(l_val, r_val, "bin.gre"); });
 
-    byte([&]() { op = builder.CreateICmpUGT(l_ptr, r_ptr, "bin.gre"); });
+    byte([&]() { op = builder.CreateICmpUGT(l_val, r_val, "bin.gre"); });
 
     break;
   }
   case EBinOpType::Low: {
-    arith([&]() { op = builder.CreateICmpSLT(l_ptr, r_ptr, "bin.low"); },
-          [&]() { op = builder.CreateICmpULT(l_ptr, r_ptr, "bin.low"); },
-          [&]() { op = builder.CreateFCmpOLT(l_ptr, r_ptr, "bin.low"); });
+    arith([&]() { op = builder.CreateICmpSLT(l_val, r_val, "bin.low"); },
+          [&]() { op = builder.CreateICmpULT(l_val, r_val, "bin.low"); },
+          [&]() { op = builder.CreateFCmpOLT(l_val, r_val, "bin.low"); });
 
-    byte([&]() { op = builder.CreateICmpULT(l_ptr, r_ptr, "bin.low"); });
+    byte([&]() { op = builder.CreateICmpULT(l_val, r_val, "bin.low"); });
 
     break;
   }
   case EBinOpType::Gre_eq: {
-    arith([&]() { op = builder.CreateICmpSGE(l_ptr, r_ptr, "bin.gre_eq"); },
-          [&]() { op = builder.CreateICmpUGE(l_ptr, r_ptr, "bin.gre_eq"); },
-          [&]() { op = builder.CreateFCmpOGE(l_ptr, r_ptr, "bin.gre_eq"); });
+    arith([&]() { op = builder.CreateICmpSGE(l_val, r_val, "bin.gre_eq"); },
+          [&]() { op = builder.CreateICmpUGE(l_val, r_val, "bin.gre_eq"); },
+          [&]() { op = builder.CreateFCmpOGE(l_val, r_val, "bin.gre_eq"); });
 
-    byte([&]() { op = builder.CreateICmpUGE(l_ptr, r_ptr, "bin.gre_eq"); });
+    byte([&]() { op = builder.CreateICmpUGE(l_val, r_val, "bin.gre_eq"); });
 
     break;
   }
   case EBinOpType::Low_eq: {
-    arith([&]() { op = builder.CreateICmpSLE(l_ptr, r_ptr, "bin.low_eq"); },
-          [&]() { op = builder.CreateICmpULE(l_ptr, r_ptr, "bin.low_eq"); },
-          [&]() { op = builder.CreateFCmpOLE(l_ptr, r_ptr, "bin.low_eq"); });
+    arith([&]() { op = builder.CreateICmpSLE(l_val, r_val, "bin.low_eq"); },
+          [&]() { op = builder.CreateICmpULE(l_val, r_val, "bin.low_eq"); },
+          [&]() { op = builder.CreateFCmpOLE(l_val, r_val, "bin.low_eq"); });
 
-    byte([&]() { op = builder.CreateICmpULE(l_ptr, r_ptr, "bin.low_eq"); });
+    byte([&]() { op = builder.CreateICmpULE(l_val, r_val, "bin.low_eq"); });
 
     break;
   }
   case EBinOpType::_in:
   case EBinOpType::_is:
   case EBinOpType::_eq: {
-    arith([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); }, nullptr,
-          [&]() { op = builder.CreateFCmpOEQ(l_ptr, r_ptr, "bin.eq"); });
+    arith([&]() { op = builder.CreateICmpEQ(l_val, r_val, "bin.eq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpOEQ(l_val, r_val, "bin.eq"); });
 
-    byte([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); });
+    byte([&]() { op = builder.CreateICmpEQ(l_val, r_val, "bin.eq"); });
 
     break;
   }
   case EBinOpType::_nin:
   case EBinOpType::_nis:
   case EBinOpType::_neq: {
-    arith([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.neq"); }, nullptr,
-          [&]() { op = builder.CreateFCmpONE(l_ptr, r_ptr, "bin.neq"); });
+    arith([&]() { op = builder.CreateICmpNE(l_val, r_val, "bin.neq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpONE(l_val, r_val, "bin.neq"); });
 
-    byte([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.eq"); });
+    byte([&]() { op = builder.CreateICmpNE(l_val, r_val, "bin.eq"); });
 
     break;
   }
   case EBinOpType::_eqs: {
-    arith([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eqs"); }, nullptr,
-          [&]() { op = builder.CreateFCmpOEQ(l_ptr, r_ptr, "bin.eqs"); });
+    arith([&]() { op = builder.CreateICmpEQ(l_val, r_val, "bin.eqs"); }, nullptr,
+          [&]() { op = builder.CreateFCmpOEQ(l_val, r_val, "bin.eqs"); });
 
-    byte([&]() { op = builder.CreateICmpEQ(l_ptr, r_ptr, "bin.eq"); });
+    byte([&]() { op = builder.CreateICmpEQ(l_val, r_val, "bin.eq"); });
 
     break;
   }
   case EBinOpType::_neqs: {
-    arith([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.neq"); }, nullptr,
-          [&]() { op = builder.CreateFCmpONE(l_ptr, r_ptr, "bin.neq"); });
+    arith([&]() { op = builder.CreateICmpNE(l_val, r_val, "bin.neq"); }, nullptr,
+          [&]() { op = builder.CreateFCmpONE(l_val, r_val, "bin.neq"); });
 
-    byte([&]() { op = builder.CreateICmpNE(l_ptr, r_ptr, "bin.eq"); });
+    byte([&]() { op = builder.CreateICmpNE(l_val, r_val, "bin.eq"); });
 
     break;
   }
   case EBinOpType::_b_and:
   case EBinOpType::_and:   {
-    byte([&]() { op = builder.CreateAnd(l_ptr, r_ptr, "bin.and"); });
+    byte([&]() { op = builder.CreateAnd(l_val, r_val, "bin.and"); });
 
     break;
   }
   case EBinOpType::_b_nand:
   case EBinOpType::_nand:   {
-    byte([&]() { op = builder.CreateNot(builder.CreateAnd(l_ptr, r_ptr, "bin.nand")); });
+    byte([&]() { op = builder.CreateNot(builder.CreateAnd(l_val, r_val, "bin.nand")); });
 
     break;
   }
   case EBinOpType::_b_or:
   case EBinOpType::_or:   {
-    byte([&]() { op = builder.CreateAnd(l_ptr, r_ptr, "bin.or"); });
+    byte([&]() { op = builder.CreateAnd(l_val, r_val, "bin.or"); });
 
     break;
   }
   case EBinOpType::_b_xor:
   case EBinOpType::_xor:   {
-    byte([&]() { op = builder.CreateXor(l_ptr, r_ptr, "bin.xor"); });
+    byte([&]() { op = builder.CreateXor(l_val, r_val, "bin.xor"); });
 
     break;
   }
   case EBinOpType::_b_nor:
   case EBinOpType::_nor:   {
-    byte([&]() { op = builder.CreateNot(builder.CreateOr(l_ptr, r_ptr, "bin.nor")); });
+    byte([&]() { op = builder.CreateNot(builder.CreateOr(l_val, r_val, "bin.nor")); });
 
     break;
   }
   case EBinOpType::_b_xnor:
   case EBinOpType::_xnor:   {
-    byte([&]() { op = builder.CreateNot(builder.CreateXor(l_ptr, r_ptr, "bin.xnor")); });
+    byte([&]() { op = builder.CreateNot(builder.CreateXor(l_val, r_val, "bin.xnor")); });
 
     break;
   }
   case EBinOpType::ls0: {
-    byte([&]() { op = builder.CreateShl(l_ptr, r_ptr, "bin.ls0"); });
+    byte([&]() { op = builder.CreateShl(l_val, r_val, "bin.ls0"); });
 
     break;
   }
   case EBinOpType::ls1: {
     auto all_ones = builder.getInt32(~0);
-    auto shifted  = builder.CreateShl(l_ptr, r_ptr, "bin.ls0");
-    auto mask     = builder.CreateLShr(all_ones, builder.CreateSub(builder.getInt32(32), r_ptr), "bin.mask");
+    auto shifted  = builder.CreateShl(l_val, r_val, "bin.ls0");
+    auto mask     = builder.CreateLShr(all_ones, builder.CreateSub(builder.getInt32(32), r_val), "bin.mask");
     op            = builder.CreateOr(shifted, mask, "ls1");
+
+    break;
   }
   // impossible
   case EBinOpType::lsa: break;
   case EBinOpType::rs0: {
-    byte([&]() { op = builder.CreateLShr(l_ptr, r_ptr, "bin.rs0"); });
+    byte([&]() { op = builder.CreateLShr(l_val, r_val, "bin.rs0"); });
 
     break;
   }
   case EBinOpType::rs1: {
-    auto lshr     = builder.CreateLShr(l_ptr, r_ptr, "lshr");
+    auto lshr     = builder.CreateLShr(l_val, r_val, "lshr");
     auto all_ones = builder.getInt32(~0);
-    auto shifted  = builder.CreateSub(builder.getInt32(32), r_ptr, "bin.shifted");
+    auto shifted  = builder.CreateSub(builder.getInt32(32), r_val, "bin.shifted");
     auto mask     = builder.CreateShl(all_ones, shifted, "bin.mask");
     op            = builder.CreateOr(lshr, mask, "bin.rs1");
+
+    break;
   }
   case EBinOpType::rsa: {
-    byte([&]() { op = builder.CreateAShr(l_ptr, r_ptr, "bin.rsa"); });
+    byte([&]() { op = builder.CreateAShr(l_val, r_val, "bin.rsa"); });
 
     break;
   }
   case EBinOpType::lr: {
     byte([&]() {
-      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshl, {l_ptr->getType()});
-      op           = builder.CreateCall(fshr_fn, {l_ptr, l_ptr, r_ptr}, "bin.lr");
+      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshl, {l_val->getType()});
+      op           = builder.CreateCall(fshr_fn, {l_val, l_val, r_val}, "bin.lr");
     });
 
     break;
   }
   case EBinOpType::rr: {
     byte([&]() {
-      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshr, {l_ptr->getType()});
-      op           = builder.CreateCall(fshr_fn, {l_ptr, l_ptr, r_ptr}, "bin.rr");
+      auto fshr_fn = llvm::Intrinsic::getDeclaration(mod, llvm::Intrinsic::fshr, {l_val->getType()});
+      op           = builder.CreateCall(fshr_fn, {l_val, l_val, r_val}, "bin.rr");
     });
 
     break;
@@ -1714,7 +1752,10 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Binary& n)
   }
 
   if (!op)
-    error_add(207, n, "Illegal instruction (" + EBinOpType_to_str(n.op) + " on type " + n.inferred_type->debug_str(),
+    error_add(207, n,
+              "Illegal operation  (" + EBinOpType_to_str(n.op_ty) + ") between types: \n\""
+                  + n.left->expression_inferred_type->debug_str() + "\" " + EBinOpType_to_str(n.op_ty) + " \""
+                  + n.right->expression_inferred_type->debug_str() + "\"",
               "");
 
   return op;
@@ -1723,7 +1764,7 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Unary& n)
 {
   auto base_ptr = ensure_rvalue(*n.base, "un.base");
 
-  auto op_ty      = n.base->inferred_type;
+  auto op_ty      = n.base->expression_inferred_type;
   auto llvm_op_ty = op_ty->llvm_type;
 
   llvm::Value* op;
@@ -1848,7 +1889,8 @@ llvm::Value* Visitor_Codegen::visit(ast::operation::Unary& n)
 
   if (!op)
     error_add(207, n,
-              "Illegal instruction (" + EUnaryOpType_to_str(n.unary_op) + " on type " + n.inferred_type->debug_str(),
+              "Illegal unary operation (" + EUnaryOpType_to_str(n.unary_op) + ") on type \""
+                  + n.expression_inferred_type->debug_str() + "\"",
               "");
 
 

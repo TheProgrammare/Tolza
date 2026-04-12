@@ -1,5 +1,6 @@
 #include "misc/error_output.hpp"
 
+#include "ast/ast_base.hpp"
 #include "misc/script_info.hpp"
 
 #include <sstream>
@@ -75,33 +76,104 @@ std::string Error_Diagnostic::print_code() const
          + color_RESET "] ";
 }
 
+std::string Error_Diagnostic::print_cursor() const
+{
+  const size_t finalCursorSize = token.span.size == 0 ? 1 : token.span.size;
+
+  const std::string cursor            = std::string(finalCursorSize, '^');
+  const int         dist              = token.span.col - token.span.size;
+  const size_t      cursor_offset     = dist < 0 ? 0 : dist;
+  const std::string cursor_offset_str = std::string(cursor_offset, ' ');
+
+  return cursor_offset_str + cursor;
+}
+
 std::string Error_Diagnostic::print_line() const
 {
-  size_t finalCursorSize = token.span.size == 0 ? 1 : token.span.size;
-  // Trim
-  // code
-  if (token.span.line - 1 < 0 || token.span.line - 1 > scr_info.get_line_size()) return "NO VALID LINE INDEX";
+  if (token.span.line - 1 < 0 || token.span.line - 1 > get_scr_info()->get_line_size()) return "NO VALID LINE INDEX";
 
-  std::string line_source = scr_info.get_line(token.span.line);
-  std::string trimmedLine = line_source.empty() ? "NO LINE FOUND" : trim(line_source);
-  size_t      trimSize    = abs(int(trimmedLine.size() - line_source.size()));
+  const std::string line_offset_str = std::string(6 - std::to_string(token.span.line).size(), ' ');
 
-  // cursor
-  std::string line_offset_str = std::string(6 - std::to_string(token.span.line).size(), ' ');
-  std::string cursor          = std::string(finalCursorSize, '^');
-  size_t      cursor_offset =
-      token.span.col < token.span.size + trimSize ? 0 : token.span.col - (token.span.size + trimSize);
-  std::string cursor_offset_str = std::string(cursor_offset, ' ');
+  return line_offset_str + std::to_string(token.span.line) + " | " color_RESET
+         + get_scr_info()->get_line(token.span.line) + "\n" color_RESET;
+}
 
-  // final
-  return line_offset_str + std::to_string(token.span.line) + " | " + trimmedLine +
-           "\n"
-           "       | " color_RED
-           + cursor_offset_str + cursor + color_RESET "\n";
+
+std::string Error_Diagnostic::print_line_cursor() const
+{
+  const std::string line   = print_line();
+  const std::string cursor = print_cursor();
+
+  return line + "       | " color_RED + cursor + color_RESET "\n";
 }
 
 std::string Error_Diagnostic::print_source() const
 {
-  return "[file] " + scr_info.file_path + ":" + std::to_string(token.span.line) + ":" + std::to_string(token.span.col)
-         + "\n" color_RESET;
+  return "[file] " color_MAGENTA + get_scr_info()->file_path + ":" + std::to_string(token.span.line) + ":"
+         + std::to_string(token.span.col) + "\n" color_RESET;
+}
+
+Error_Diagnostic_Two::Error_Diagnostic_Two(const ScriptInfo& _pass_scr_info, ErrorCode code, const ast::Node& first,
+                                           const ast::Node& second, compiler::EPhase _phase, const std::string& msg,
+                                           const std::string& hint)
+  : first(Error_Diagnostic(_pass_scr_info, code, first._scr_info, first._token, _phase, msg, hint))
+  , second(Error_Diagnostic(_pass_scr_info, code, second._scr_info, second._token, _phase, msg, hint))
+{
+}
+
+std::string Error_Diagnostic_Two::print_error() const
+{
+  // same file, same line
+  if (first.get_scr_info() == second.get_scr_info() && first.token.span.line == second.token.span.line) {
+    auto line       = first.print_line();
+    auto top_cursor = first.print_cursor();
+    std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
+    auto down_cursor = second.print_cursor();
+
+    std::string out;
+    out += "       | " color_RED + top_cursor + color_RESET "\n";
+    out += line;
+    out += "       | " color_RED + down_cursor + color_RESET "\n";
+
+    out += first.print_messages() + "\n";
+    return out;
+  }
+  // same file
+  else if (first.get_scr_info() == second.get_scr_info()) {
+    auto top_line   = first.print_line();
+    auto top_cursor = first.print_cursor();
+    std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
+    auto down_line   = second.print_line();
+    auto down_cursor = second.print_cursor();
+
+    std::string out;
+    out += first.print_source();
+    out += "       | " color_RED + top_cursor + color_RESET "\n";
+    out += top_line;
+    out += "       | ...\n";
+    out += down_line;
+    out += "       | " color_RED + down_cursor + color_RESET "\n";
+
+    out += first.print_messages() + "\n";
+    return out;
+  }
+
+  // different files
+  auto top_line   = first.print_line();
+  auto top_cursor = first.print_cursor();
+  std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
+  auto down_line   = second.print_line();
+  auto down_cursor = second.print_cursor();
+
+  std::string out;
+  out += first.print_source();
+  out += "       | " color_RED + top_cursor + color_RESET "\n";
+  out += top_line;
+  out += "       | ...\n";
+  out += down_line;
+  out += "       | " color_RED + down_cursor + color_RESET "\n";
+  out += second.print_source();
+
+  out += first.print_messages() + "\n";
+  return out;
 }

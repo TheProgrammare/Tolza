@@ -17,7 +17,7 @@
 #include "misc/script_info.hpp"
 #include "compiler/compiler.hpp"
 
-bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_linker(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   std::string extension = compiler::COMP_CTX.target_os == "windows" ? ".exe" : "";
 

@@ -168,8 +168,8 @@ struct ScriptInfo {
   void add_export(const ModuleExportation& exp);
   void add_import(const ModuleImportation& imp);
 
-  [[nodiscard]] std::shared_ptr<ModuleExportation> get_export_module(const std::string& path);
-  [[nodiscard]] std::shared_ptr<ModuleImportation> get_import_module(std::span<const std::string> path);
+  [[nodiscard]] std::shared_ptr<ModuleExportation> get_export_module(const std::string& p_path);
+  [[nodiscard]] std::shared_ptr<ModuleImportation> get_import_module(std::span<const std::string> p_path);
 
   [[nodiscard]] std::set<ModuleImportation*> get_externs();
 

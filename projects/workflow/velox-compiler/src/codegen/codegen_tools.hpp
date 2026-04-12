@@ -19,8 +19,8 @@
 
 #include <cstdint>
 #include <expected>
-#include <llvm-19/llvm/ADT/APFloat.h>
-#include <llvm-19/llvm/ADT/APInt.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
 #include <string>
 
 #include "ast/ast_data.hpp"
@@ -47,15 +47,15 @@ public:
   }
   Visitor_Codegen& v;
 
-  llvm::Value* engage_move_semantic(ast::AExpression& target);
-  llvm::Value* engage_copy_semantic(ast::AExpression& target);
-  llvm::Value* engage_clone_semantic(ast::AExpression& target);
+  llvm::Value* engage_move_semantic(ast::AExpression& p_target);
+  llvm::Value* engage_copy_semantic(ast::AExpression& p_target);
+  llvm::Value* engage_clone_semantic(ast::AExpression& p_target);
 
-  std::expected<Symbol_Data*, std::string>      find_symbol(const ast::AExpression& expr);
-  std::expected<ast::AExpression*, std::string> get_symbol_expression(const Symbol_Data& symbol);
-  std::expected<llvm::Constant*, std::string>   create_constant(const ast::ALiteral& value);
-  llvm::Type*                                   generate_parameter_type(ast::declaration::local::Parameter& param);
-  llvm::Type*                                   get_primtive_type(EPrimType ty);
+  std::expected<Symbol_Data*, std::string>      find_symbol(const ast::AExpression& p_expr);
+  std::expected<ast::AExpression*, std::string> get_symbol_expression(const Symbol_Data& p_symbol);
+  std::expected<llvm::Constant*, std::string>   create_constant(const ast::ALiteral& p_value);
+  llvm::Type*                                   generate_parameter_type(ast::declaration::local::Parameter& p_param);
+  llvm::Type*                                   get_primtive_type(EPrimType p_ty);
 
 
   llvm::Constant* get_cstr_constant(const std::string& val);
@@ -70,5 +70,5 @@ public:
 
 
   std::u32string utf8_to_utf32(const std::string& s);
-  llvm::Value*   primitive_coerce(llvm::Value* val, llvm::Type* src, llvm::Type* dst);
+  llvm::Value*   primitive_coerce(llvm::Value* p_val, llvm::Type* p_src, llvm::Type* p_dst);
 };

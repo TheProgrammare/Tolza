@@ -19,13 +19,13 @@ struct Parser_Declaration_COP {
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Component> component();
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Role>      role();
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity>    entity();
-  void parse_entity_declaration(std::shared_ptr<ast::declaration::cop::Entity> n_entity);
+  void parse_entity_declaration(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Op>
-  _entity_op(std::shared_ptr<ast::declaration::cop::Entity> inEntity);
+  _entity_op(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Access_Op>
-  _entity_access_op(std::shared_ptr<ast::declaration::cop::Entity> parent_entity);
+  _entity_access_op(std::shared_ptr<ast::declaration::cop::Entity> p_parent_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Cast>
-  _entity_cast(std::shared_ptr<ast::declaration::cop::Entity> inEntity);
+  _entity_cast(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::System>      system();
   [[nodiscard]] std::shared_ptr<ast::declaration::cop::System_Case> _system_case();
 

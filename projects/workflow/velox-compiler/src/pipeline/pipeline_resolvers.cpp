@@ -19,7 +19,7 @@
 #include "visitor/visitor_symbol.hpp"
 #include "visitor/visitor_type.hpp"
 
-bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
+bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_infos)
 {
   static bool log_sym = compiler::COMP_CTX.logs.contains("resolver_symbol");
   static bool log_typ = compiler::COMP_CTX.logs.contains("resolver_type");
@@ -29,7 +29,7 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& sc
     std::vector<std::tuple<std::string, std::vector<std::string>>> resErrors;
 
     size_t count = 0;
-    for (auto scr_info : scr_infos) {
+    for (auto scr_info : p_scr_infos) {
       auto                     start = std::chrono::high_resolution_clock::now();
       std::vector<std::string> errs;
       // symbols

@@ -27,53 +27,54 @@
 
 namespace ast_loc = ast::declaration::local;
 
-std::shared_ptr<ast::AType> Visitor_Type::get_inferred_type(ast::Node& node, bool is_prototype_expected) const
+std::shared_ptr<ast::AType> Visitor_Type::get_inferred_type(ast::Node& n, bool p_is_prototype_expected) const
 {
-  if (auto ptr = dynamic_cast<ast::AType*>(&node))
-    return std::shared_ptr<ast::AType>(ptr, [](ast::AType*) {}); // no-op deleter
-  else if (auto ptr = dynamic_cast<ast::AExpression*>(&node))
-    return ptr->inferred_type;
-  else if (auto ptr = dynamic_cast<ast::declaration::Global*>(&node))
+  if (auto ptr = dynamic_cast<ast::AType*>(&n))
+    return ptr->resolve();
+  else if (auto ptr = dynamic_cast<ast::AExpression*>(&n))
+    return ptr->expression_inferred_type;
+  else if (auto ptr = dynamic_cast<ast::declaration::Global*>(&n))
     return ptr->type;
-  else if (auto ptr = dynamic_cast<ast::declaration::Function*>(&node)) {
-    if (is_prototype_expected) return ptr->prototype;
-    return ptr->prototype->returnType;
-  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&node))
+  else if (auto ptr = dynamic_cast<ast::declaration::Function*>(&n)) {
+    if (p_is_prototype_expected) return ptr->prototype;
+    return ptr->prototype->return_ty;
+  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&n))
     return ptr->type;
-  else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(&node))
+  else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(&n))
     return ptr->type;
-  else if (auto ptr = dynamic_cast<ast::declaration::cop::System*>(&node))
-    return ptr->prototype->returnType;
-  else if (auto ptr = dynamic_cast<ast::type::Function_Proto*>(&node))
-    return ptr->returnType;
-  else if (auto ptr = dynamic_cast<ast::declaration::local::Parameter*>(&node))
+  else if (auto ptr = dynamic_cast<ast::declaration::cop::System*>(&n))
+    return ptr->prototype->return_ty;
+  else if (auto ptr = dynamic_cast<ast::type::Function_Proto*>(&n))
+    return ptr->return_ty;
+  else if (auto ptr = dynamic_cast<ast::declaration::local::Parameter*>(&n))
     return ptr->type;
-  else if (auto ptr = dynamic_cast<ast::declaration::cop::Component_Field*>(&node))
+  else if (auto ptr = dynamic_cast<ast::declaration::cop::Component_Field*>(&n))
     return ptr->type;
-  else if (auto ptr = dynamic_cast<ast::declaration::Type_Alias*>(&node)) {
+  else if (auto ptr = dynamic_cast<ast::declaration::Type_Alias*>(&n)) {
     return ptr->type;
   } else {
-    error_add(168, node, "Type inferrance impossible on [" + node.debug_str() + "](" + typeid(node).name() + ")", "");
+    add_error(168, n, "Type inferrance impossible on [" + n.debug_str() + "](" + typeid(n).name() + ")", "");
     return nullptr;
   }
 }
 
-std::shared_ptr<ast::AType> Visitor_Type::get_symbol_type(const ast::Node& n, const ast::SYM_REF sym_data) const
+std::shared_ptr<ast::AType> Visitor_Type::get_symbol_type(const ast::Node& n, const ast::SYM_REF p_sym_data) const
 {
-  if (!sym_data) {
-    error_add(163, n, "Unresolved symbol.", "");
+  if (!p_sym_data) {
+    add_error(163, n, "Unresolved symbol.", "");
     return nullptr;
   }
-  if (!sym_data->symbol) {
-    error_add(164, n, "Invalid symbol origin", "");
+  if (!p_sym_data->symbol) {
+    add_error(164, n, "Invalid symbol origin", "");
     return nullptr;
   }
 
 
-  if (auto ty = get_inferred_type(*sym_data->symbol)) {
+  if (auto ty = get_inferred_type(*p_sym_data->symbol)) {
     return ty;
   } else {
-    error_add(187, *sym_data->symbol, "Impossible to infer symbol type", "");
+    add_error(187, *p_sym_data->symbol, "Impossible to infer symbol type", "");
+    return nullptr;
   }
 }
 
@@ -82,35 +83,85 @@ bool Visitor_Type::is_same_type(const ast::AType& p_type_1, const ast::AType& p_
   return p_type_1.is_same(p_type_2);
 }
 
+void Visitor_Type::ensure_expression_resolution(ast::AExpression& p_expr, std::shared_ptr<ast::AType> p_type_inferrance)
+{
+  if (!p_expr.expression_inferred_type && p_type_inferrance) {
+    // primitive literal lazy type inferrance
+    EPrimType inferred_ty = EPrimType::NONE;
+    if (auto ty = dynamic_cast<ast::type::Primitive*>(p_type_inferrance->resolve().get())) inferred_ty = ty->type;
+
+    if (auto ptr = dynamic_cast<ast::literal::Integral*>(&p_expr)) {
+      if (EPrimType_is_integral(inferred_ty)) {
+        p_expr.expression_inferred_type = p_type_inferrance;
+        ptr->type                       = inferred_ty;
+      }
+    } else if (auto ptr = dynamic_cast<ast::literal::Floating_Point*>(&p_expr)) {
+      if (EPrimType_is_floating(inferred_ty)) {
+        p_expr.expression_inferred_type = p_type_inferrance;
+        ptr->type                       = inferred_ty;
+      }
+    } else if (auto ptr = dynamic_cast<ast::literal::Fixed_Point*>(&p_expr)) {
+      if (EPrimType_is_fixed(inferred_ty)) {
+        p_expr.expression_inferred_type = p_type_inferrance;
+        ptr->raw_type                   = inferred_ty;
+      }
+    } else if (auto ptr = dynamic_cast<ast::literal::Text_Pure*>(&p_expr)) {
+      if (EPrimType_is_textual(inferred_ty)) {
+        p_expr.expression_inferred_type = p_type_inferrance;
+        ptr->text_type                  = inferred_ty;
+      }
+    }
+  }
+
+  // keep tracking nested nodes type
+  p_expr.accept(*this);
+
+  // no type to infer
+  if (!p_type_inferrance) return;
+
+  if (!p_expr.expression_inferred_type) {
+    add_error(234, p_expr, "Impossible to define the expression type.", "");
+    return;
+  }
+
+  // check if type inferred is compatible to the expected inferrance (or expected type)
+  if (!p_expr.expression_inferred_type->is_same(*p_type_inferrance->resolve().get()))
+    add_error_two_nodes(230, p_expr, *p_type_inferrance,
+                        "Illegal type inferrance,\n  (expression) \"" + p_expr.expression_inferred_type->debug_str()
+                            + "\" != \"" + p_type_inferrance->debug_str() + "\" (inferrance).",
+                        "");
+}
+
+
 void Visitor_Type::visit(ast::Expr_ID& n)
 {
-  Visitor_Default::visit(n);
+  if (n.expression_inferred_type) return;
 
-  if (auto ty = get_symbol_type(n, n.symbol)) {
-    n.inferred_type = ty;
+  if (auto ty = get_symbol_type(n, n.identifier_symbol)) {
+    n.expression_inferred_type = ty;
   } else {
-    error_add(185, n, "Symbol inferred type not found", "");
+    add_error(185, n, "Symbol inferred type not found", "");
   }
 }
 void Visitor_Type::visit(ast::Expr_ID_Qualified& n)
 {
-  Visitor_Default::visit(n);
+  if (n.expression_inferred_type) return;
 
-  if (auto ty = get_symbol_type(n, n.symbol)) {
-    n.inferred_type = ty;
+  if (auto ty = get_symbol_type(n, n.identifier_symbol)) {
+    n.expression_inferred_type = ty;
   } else {
-    error_add(186, n, "Symbol inferred type not found", "");
+    add_error(186, n, "Symbol inferred type not found", "");
   }
 }
 void Visitor_Type::visit(ast::Expr_ID_Type& n)
 {
-  Visitor_Default::visit(n);
+  if (n.expression_inferred_type) return;
 
-  if (auto ty = get_symbol_type(n, n.symbol)) {
-    n.inferred_type       = ty;
-    n.name->inferred_type = ty;
+  if (auto ty = get_symbol_type(n, n.identifier_symbol)) {
+    n.expression_inferred_type       = ty;
+    n.name->expression_inferred_type = ty;
   } else {
-    error_add(187, n, "Symbol inferred type not found", "");
+    add_error(187, n, "Symbol inferred type not found", "");
   }
 }
 
@@ -119,9 +170,10 @@ void Visitor_Type::visit(ast::declaration::local::Pattern_Enum& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::Enum_Element>(n.name->inferred_type)) {
+  if (auto ptr =
+          std::dynamic_pointer_cast<ast::declaration::Enum_Element>(n.name->expression_inferred_type->resolve())) {
     if (n.mapping.size() != ptr->types.size()) {
-      error_two_lines(155, n, *ptr, "Inequal types binded on " + n.name->debug_str(), "");
+      add_error_two_nodes(155, n, *ptr, "Inequal types binded on " + n.name->debug_str(), "");
     } else {
       for (size_t i = 0; i < n.mapping.size(); i++) {
         auto& map = n.mapping[i];
@@ -135,15 +187,15 @@ void Visitor_Type::visit(ast::declaration::local::Pattern_Enum& n)
       }
     }
   }
-  error_add(156, *n.name, "Unexpected reference encounted, expected Enum element", "");
+  add_error(156, *n.name, "Unexpected reference encounted, expected Enum element", "");
 }
 void Visitor_Type::visit(ast::declaration::local::Pattern_Tuple& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::type::Tuple>(n.right->inferred_type)) {
+  if (auto ptr = std::dynamic_pointer_cast<ast::type::Tuple>(n.right->expression_inferred_type->resolve())) {
     if (n.mapping.size() != ptr->types.size()) {
-      error_two_lines(157, n, *ptr, "Inequal types binded on " + ptr->debug_str(), "");
+      add_error_two_nodes(157, n, *ptr, "Inequal types binded on " + ptr->debug_str(), "");
     } else {
       for (size_t i = 0; i < n.mapping.size(); i++) {
         auto& map = n.mapping[i];
@@ -157,39 +209,40 @@ void Visitor_Type::visit(ast::declaration::local::Pattern_Tuple& n)
       }
     }
   } else {
-    error_add(158, *n.right, "Expected tuple type", "");
+    add_error(158, *n.right, "Expected tuple type", "");
   }
 }
 void Visitor_Type::visit(ast::declaration::local::Pattern_Entity& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Entity>(n.name->inferred_type)) {
+  if (auto ptr =
+          std::dynamic_pointer_cast<ast::declaration::cop::Entity>(n.name->expression_inferred_type->resolve())) {
     for (auto& pat_comp : n.mapping) {
       bool found = false;
       for (auto& et_comp : ptr->comps) {
         if (et_comp->name == pat_comp->name) {
-          pat_comp->inferred_type = et_comp->inferred_type;
-          found                   = true;
+          pat_comp->expression_inferred_type = et_comp->expression_inferred_type->resolve();
+          found                              = true;
           break;
         }
       }
 
-      if (!found) error_add(159, *pat_comp, "Component is not in the entity composition", "");
+      if (!found) add_error(159, *pat_comp, "Component is not in the entity composition", "");
     }
   } else {
-    error_add(160, *n.name, "Expected entity type", "");
+    add_error(160, *n.name, "Expected entity type", "");
   }
 }
 void Visitor_Type::visit(ast::declaration::local::Pattern_Component& n)
 {
   Visitor_Default::visit(n);
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Component>(n.name->inferred_type)) {
+  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Component>(n.name->expression_inferred_type)) {
     for (auto& [field_name, pattern] : n.mapping) {
       bool found = false;
       for (auto& comp_field : ptr->fields) {
-        if (field_name == comp_field->name) {
+        if (field_name == comp_field->declaration_name) {
 
           if (pattern->kind != ast_loc::Pattern_Element::Kind::Binding) continue;
 
@@ -202,24 +255,31 @@ void Visitor_Type::visit(ast::declaration::local::Pattern_Component& n)
         }
       }
 
-      if (!found) error_add(161, *n.name, "Field \"" + field_name + "\" not in the component definition", "");
+      if (!found) add_error(161, *n.name, "Field \"" + field_name + "\" not in the component definition", "");
     }
   } else {
-    error_add(162, *n.name, "Expected component type", "");
+    add_error(162, *n.name, "Expected component type", "");
   }
 }
 
 
 void Visitor_Type::visit(ast::declaration::Global& n)
 {
+  if (!n.type) {
+    if (!n.expression->expression_inferred_type) n.expression->accept(*this);
+    n.type = n.expression->expression_inferred_type->resolve();
+  } else {
+    add_error(188, *n.expression, "Impossible to infer symbol type", "");
+  }
+
   Visitor_Default::visit(n);
 
-  if (!n.type) {
-    if (auto ty = get_inferred_type(*n.expression)) {
-      n.type = std::shared_ptr<ast::AType>(ty);
-    } else {
-      error_add(188, *n.expression, "Impossible to infer symbol type", "");
-    }
+  if (!n.type->is_same(*n.expression->expression_inferred_type)) {
+    add_error_two_nodes(231, n, *n.expression,
+                        "Incompatible type association,\n  (expression) \""
+                            + n.expression->expression_inferred_type->debug_str() + "\" != \"" + n.type->debug_str()
+                            + "\" (variable).",
+                        "");
   }
 }
 
@@ -227,65 +287,62 @@ void Visitor_Type::visit(ast::declaration::Function& n)
 {
   n.prototype->accept(*this);
 
-  if (n.name == "main") {
-    if (!n.prototype->returnType || n.prototype->returnType == ast::type::get_void_type()) {
-      n.prototype->returnType = ast::type::get_i32_type();
-    } else if (n.prototype->returnType != ast::type::get_i32_type()) {
-      error_add(218, *n.prototype->returnType,
+  if (n.declaration_name == "main") {
+    if (!n.prototype->return_ty || n.prototype->return_ty == ast::type::get_void_type()) {
+      n.prototype->return_ty = ast::type::get_i32_type();
+    } else if (n.prototype->return_ty != ast::type::get_i32_type()) {
+      add_error(218, *n.prototype->return_ty,
                 "Violation of the main function convention, main must return i32 or u0 type.", "");
     }
   }
+
+  // potential function return type inferrance
+  if (n.prototype->return_ty == ast::type::get_void_type() && !n.prototype->is_explicit_return_type) {
+    std::shared_ptr<ast::AType> return_ty;
+
+    for (auto& elem : n.codeblock->elements) {
+      if (auto ptr = dynamic_cast<ast::statement::Return*>(elem.node())) {
+        if (!return_ty) {
+          return_ty = ptr->value->expression_inferred_type->resolve();
+          continue;
+        }
+
+        ensure_expression_resolution(*ptr->value, return_ty);
+      }
+    }
+
+    n.prototype->return_ty = return_ty;
+  }
+
+
   Visitor_Default::visit(n);
 }
 
-
 void Visitor_Type::visit(ast::declaration::local::Variable& n)
 {
-  Visitor_Default::visit(n);
-
+  // variable type inferrance
   if (!n.type) {
-    if (auto ty = get_inferred_type(*n.expression)) {
-      n.type = ty;
-    } else {
-      error_add(189, *n.expression, "Impossible to infer symbol type", "");
-    }
+    n.expression->accept(*this);
+    n.type = n.expression->expression_inferred_type->resolve();
+  }
+  // variable type explicit : expression type inferrance
+  else {
+    ensure_expression_resolution(*n.expression, n.type);
   }
 }
 void Visitor_Type::visit(ast::declaration::local::Variable_Binding& n)
 {
-  Visitor_Default::visit(n);
-
   if (!n.type) {
-    if (auto ty = get_inferred_type(*n.parent_pattern->right)) {
-      n.type = ty;
-    } else {
-      error_add(190, *n.parent_pattern->right, "Impossible to infer symbol type", "");
-    }
+    n.parent_pattern->accept(*this);
+    n.type = n.parent_pattern->right->expression_inferred_type->resolve();
   }
 }
 
 void Visitor_Type::visit(ast::statement::Return& n)
 {
+  if (n.value) ensure_expression_resolution(*n.value, n.target_function->prototype->return_ty);
+
   Visitor_Default::visit(n);
-
-  // return void
-  if (!n.value) {
-    if (n.target_function->prototype->returnType != ast::type::get_void_type()) {
-      error_two_lines(221, n, *n.target_function,
-                      "Illegal return expression wihout expression.\n  - return type: "
-                          + n.value->inferred_type->mangle_type()
-                          + "\n  - fn type: " + n.target_function->prototype->returnType->mangle_type(),
-                      "");
-    }
-    return;
-  }
-
-  if (n.target_function->prototype->returnType != n.value->inferred_type) {
-    error_two_lines(219, n, *n.target_function,
-                    "Illegal return expression type.\n  - return type: " + n.value->inferred_type->mangle_type()
-                        + "\n  - fn type: " + n.target_function->prototype->returnType->mangle_type(),
-                    "");
-  }
 }
 
 
@@ -293,20 +350,20 @@ void Visitor_Type::visit(ast::expression::If_Ternary& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.true_line->inferred_type;
+  n.expression_inferred_type = n.true_line->expression_inferred_type->resolve();
 }
 
 void Visitor_Type::visit(ast::expression::Member_Access& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.right->inferred_type;
+  n.expression_inferred_type = n.right->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::expression::Self& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.self_definition;
+  n.expression_inferred_type = n.self_definition;
 }
 void Visitor_Type::visit(ast::expression::Other& n)
 {
@@ -316,22 +373,22 @@ void Visitor_Type::visit(ast::expression::Call_Argument& n)
 {
   Visitor_Default::visit(n);
 
-  n.expression->accept(*this);
-  n.inferred_type = n.expression->inferred_type;
+  if (!n.variadic_arg)
+    ensure_expression_resolution(*n.expression, n.fn_param_type->type);
+  else
+    n.expression->accept(*this);
+
+  n.expression_inferred_type = n.expression->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::expression::Call& n)
 {
   n.callee->accept(*this);
 
-  if (auto proto = get_inferred_type(*n.function_symbol->symbol, true)) {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Function_Proto>(proto)) {
-      n.function_proto = ptr;
-      n.inferred_type  = ptr->returnType;
-    } else {
-      error_add(193, *n.callee, "Expected fuction type in inferred type", "");
-    }
+  if (auto fn_ty = dynamic_cast<ast::declaration::Function*>(n.function_symbol->symbol.get())) {
+    n.function_proto           = fn_ty->prototype;
+    n.expression_inferred_type = fn_ty->prototype->return_ty->resolve();
   } else {
-    error_add(191, *n.callee, "Impossible to infer symbol type", "");
+    add_error(193, *n.callee, "Expected fuction type in inferred type", "");
   }
 
   // resolve parameters
@@ -340,11 +397,10 @@ void Visitor_Type::visit(ast::expression::Call& n)
   for (auto& arg : n.param_args) {
     // argument inferred type is equal to his expression inferred type
     // argument type on call is checked in semantic resolver
-    arg->accept(*this);
 
     // unamed argument encounted after a named argument
     if (!arg->name.empty() && name_mode) {
-      error_add(212, *arg, "Unexpected unamed argument after a named argument.",
+      add_error(212, *arg, "Unexpected unamed argument after a named argument.",
                 "Named arguments are always the latest call arguments");
       continue;
     }
@@ -356,55 +412,48 @@ void Visitor_Type::visit(ast::expression::Call& n)
       // find the corresponding parameter
       bool found = false;
       for (auto& param : n.function_proto->parameters) {
-        if (param->name == arg->name) {
-          arg->fn_param_type = param.get();
-          found              = true;
+        if (param->declaration_name == arg->name) {
+          arg->fn_param_type = param;
+          arg->accept(*this);
+
+          found = true;
           break;
         }
       }
 
       if (!found) {
-        error_two_lines(211, *arg, n, "The paramater name invoked \"" + arg->name + "\" dosen't exists.", "");
+        add_error_two_nodes(211, *arg, n, "The paramater name invoked \"" + arg->name + "\" dosen't exists.", "");
         continue;
       }
     }
     // unamed argument encounted : positional parameter
-    else if (n.function_proto->parameters.size() < arg_count) {
-      auto param = n.function_proto->parameters[arg_count++];
-
-      arg->fn_param_type = param.get();
+    else if (n.function_proto->parameters.size() > arg_count) {
+      auto param         = n.function_proto->parameters[arg_count++];
+      arg->fn_param_type = param;
+      arg->accept(*this);
     }
     // unamed argument encounted out of param size but variadic function
-    else if (n.function_proto->isVariadic) {
+    else if (n.function_proto->is_variadic) {
       arg->fn_param_type = nullptr;
       arg->variadic_arg  = true;
+      arg->accept(*this);
     }
     // unamed argument encounted out of param size : not variadic function
     else {
-      error_two_lines(213, *arg, n, "Too many arguments invoked.", "");
+      add_error_two_nodes(213, *arg, *n.function_symbol->symbol, "Too many arguments invoked.", "");
     }
   }
   for (auto& elem : n.gen_args) elem->accept(*this);
+
+  Visitor_Default::visit(n);
 }
 void Visitor_Type::visit(ast::expression::Call_Pipe& n)
 {
   Visitor_Default::visit(n);
-
-  if (auto ty = get_inferred_type(*n.callee)) {
-    n.inferred_type = ty;
-  } else {
-    error_add(192, *n.callee, "Impossible to infer symbol type", "");
-  }
 }
 void Visitor_Type::visit(ast::expression::Call_System& n)
 {
   Visitor_Default::visit(n);
-
-  if (auto ty = get_inferred_type(*n.callee)) {
-    n.inferred_type = ty;
-  } else {
-    error_add(194, *n.callee, "Impossible to infer symbol type", "");
-  }
 }
 void Visitor_Type::visit(ast::expression::Table_Access& n)
 {
@@ -426,13 +475,13 @@ void Visitor_Type::visit(ast::expression::Mut_Of& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.target->inferred_type;
+  n.expression_inferred_type = n.target->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::expression::Ref_Of& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.target->inferred_type;
+  n.expression_inferred_type = n.target->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::expression::Addr_Of& n)
 {
@@ -457,36 +506,54 @@ void Visitor_Type::visit(ast::expression::New_Ptr& n)
 
 void Visitor_Type::visit(ast::literal::Integral& n)
 {
-  Visitor_Default::visit(n);
+  if (n.expression_inferred_type) {
+    if (auto ptr = dynamic_cast<ast::type::Primitive*>(n.expression_inferred_type->resolve().get())) {
+      if (EPrimType_is_integral(ptr->type)) return;
+    }
+
+    add_error(235, n,
+              "Illegal type inferrance (" + n.expression_inferred_type->debug_str() + ") on literal floating point",
+              "make an explicit cast to a floating point or check the desired type inferred");
+    return;
+  }
 
   switch (n.type) {
-  case EPrimType::iSize: n.inferred_type = ast::type::get_isize_type(); break;
-  case EPrimType::i8:    n.inferred_type = ast::type::get_i8_type(); break;
-  case EPrimType::i16:   n.inferred_type = ast::type::get_i16_type(); break;
-  case EPrimType::i32:   n.inferred_type = ast::type::get_i32_type(); break;
-  case EPrimType::i64:   n.inferred_type = ast::type::get_i64_type(); break;
-  case EPrimType::i128:  n.inferred_type = ast::type::get_i128_type(); break;
-  case EPrimType::uSize: n.inferred_type = ast::type::get_usize_type(); break;
-  case EPrimType::u8:    n.inferred_type = ast::type::get_u8_type(); break;
-  case EPrimType::u16:   n.inferred_type = ast::type::get_u16_type(); break;
-  case EPrimType::u32:   n.inferred_type = ast::type::get_u32_type(); break;
-  case EPrimType::u64:   n.inferred_type = ast::type::get_u64_type(); break;
-  case EPrimType::u128:  n.inferred_type = ast::type::get_u128_type(); break;
-  default:               n.inferred_type = ast::type::get_isize_type();
+  case EPrimType::iSize: n.expression_inferred_type = ast::type::get_isize_type(); break;
+  case EPrimType::i8:    n.expression_inferred_type = ast::type::get_i8_type(); break;
+  case EPrimType::i16:   n.expression_inferred_type = ast::type::get_i16_type(); break;
+  case EPrimType::i32:   n.expression_inferred_type = ast::type::get_i32_type(); break;
+  case EPrimType::i64:   n.expression_inferred_type = ast::type::get_i64_type(); break;
+  case EPrimType::i128:  n.expression_inferred_type = ast::type::get_i128_type(); break;
+  case EPrimType::uSize: n.expression_inferred_type = ast::type::get_usize_type(); break;
+  case EPrimType::u8:    n.expression_inferred_type = ast::type::get_u8_type(); break;
+  case EPrimType::u16:   n.expression_inferred_type = ast::type::get_u16_type(); break;
+  case EPrimType::u32:   n.expression_inferred_type = ast::type::get_u32_type(); break;
+  case EPrimType::u64:   n.expression_inferred_type = ast::type::get_u64_type(); break;
+  case EPrimType::u128:  n.expression_inferred_type = ast::type::get_u128_type(); break;
+  default:               n.expression_inferred_type = ast::type::get_isize_type(); n.type = EPrimType::iSize;
   }
 }
-void Visitor_Type::visit(ast::literal::Floating& n)
+void Visitor_Type::visit(ast::literal::Floating_Point& n)
 {
-  Visitor_Default::visit(n);
+  if (n.expression_inferred_type) {
+    if (auto ptr = dynamic_cast<ast::type::Primitive*>(n.expression_inferred_type->resolve().get())) {
+      if (EPrimType_is_floating(ptr->type)) return;
+    }
+
+    add_error(228, n,
+              "Illegal type inferrance (" + n.expression_inferred_type->debug_str() + ") on literal floating point",
+              "make an explicit cast to a floating point or check the desired type inferred");
+    return;
+  }
 
   switch (n.type) {
-  case EPrimType::fSize: n.inferred_type = ast::type::get_fsize_type(); break;
-  case EPrimType::f16:   n.inferred_type = ast::type::get_f16_type(); break;
-  case EPrimType::f32:   n.inferred_type = ast::type::get_f32_type(); break;
-  case EPrimType::f64:   n.inferred_type = ast::type::get_f64_type(); break;
-  case EPrimType::f80:   n.inferred_type = ast::type::get_f80_type(); break;
-  case EPrimType::f128:  n.inferred_type = ast::type::get_f128_type(); break;
-  default:               n.inferred_type = ast::type::get_fsize_type();
+  case EPrimType::fSize: n.expression_inferred_type = ast::type::get_fsize_type(); break;
+  case EPrimType::f16:   n.expression_inferred_type = ast::type::get_f16_type(); break;
+  case EPrimType::f32:   n.expression_inferred_type = ast::type::get_f32_type(); break;
+  case EPrimType::f64:   n.expression_inferred_type = ast::type::get_f64_type(); break;
+  case EPrimType::f80:   n.expression_inferred_type = ast::type::get_f80_type(); break;
+  case EPrimType::f128:  n.expression_inferred_type = ast::type::get_f128_type(); break;
+  default:               n.expression_inferred_type = ast::type::get_fsize_type(); n.type = EPrimType::fSize;
   }
 }
 
@@ -494,7 +561,7 @@ void Visitor_Type::visit(ast::literal::Table& n)
 {
   Visitor_Default::visit(n);
 
-  if (!n.values.empty()) n.element_type = n.values[0]->inferred_type;
+  if (!n.values.empty()) n.element_type = n.values[0]->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::literal::Map& n)
 {
@@ -503,6 +570,23 @@ void Visitor_Type::visit(ast::literal::Map& n)
 void Visitor_Type::visit(ast::literal::Text_Interpolation& n)
 {
   Visitor_Default::visit(n);
+}
+void Visitor_Type::visit(ast::literal::Text_Pure& n)
+{
+  if (!n.expression_inferred_type) {
+    switch (n.text_type) {
+    case EPrimType::c_str: n.expression_inferred_type = ast::type::get_c_str_type(); break;
+    case EPrimType::str:   n.expression_inferred_type = ast::type::get_str_type(); break;
+    case EPrimType::text:  n.expression_inferred_type = ast::type::get_text_type(); break;
+    default:               n.expression_inferred_type = ast::type::get_str_type(); n.text_type = EPrimType::str;
+    }
+  }
+}
+void Visitor_Type::visit(ast::literal::Textual_Format& n)
+{
+  Visitor_Default::visit(n);
+
+  n.expression_inferred_type = n.values[0]->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::literal::Enum& n)
 {
@@ -514,7 +598,10 @@ void Visitor_Type::visit(ast::literal::Tuple& n)
 }
 void Visitor_Type::visit(ast::literal::Range& n)
 {
-  Visitor_Default::visit(n);
+  ensure_expression_resolution(*n.start, n.end->expression_inferred_type);
+  ensure_expression_resolution(*n.end, n.start->expression_inferred_type);
+
+  n.expression_inferred_type = n.start->expression_inferred_type->resolve();
 }
 void Visitor_Type::visit(ast::literal::Structured_Data& n)
 {
@@ -530,11 +617,22 @@ void Visitor_Type::visit(ast::literal::Iterator& n)
 }
 
 
+void Visitor_Type::visit(ast::statement::For& n)
+{
+  n.expression->accept(*this);
+
+  if (n.index) n.index->type = n.expression->expression_inferred_type->resolve();
+  for (auto& elem : n.items) elem->type = n.expression->expression_inferred_type->resolve();
+
+  Visitor_Default::visit(n);
+}
+
+
 void Visitor_Type::visit(ast::operation::Cast_As& n)
 {
   Visitor_Default::visit(n);
 
-  n.inferred_type = n.type;
+  n.expression_inferred_type = n.type->resolve();
 }
 void Visitor_Type::visit(ast::operation::Is& n)
 {
@@ -546,35 +644,72 @@ void Visitor_Type::visit(ast::operation::In& n)
 }
 void Visitor_Type::visit(ast::operation::Assignment& n)
 {
+  if (!n.left->expression_inferred_type) n.left->accept(*this);
+
+  // variable type inferrance
+  ensure_expression_resolution(*n.right, n.left->expression_inferred_type);
+  if (n.expression_inferred_type) n.expression_inferred_type = n.left->expression_inferred_type->resolve();
+
+  if (!n.right->expression_inferred_type->is_same(*n.left->expression_inferred_type)) {
+    add_error_two_nodes(189, *n.left, *n.right,
+                        "Incompatible type association,\n  (left) \"" + n.left->expression_inferred_type->debug_str()
+                            + "\" != \"" + n.right->expression_inferred_type->debug_str() + "\" (right).",
+                        "");
+  }
+
   Visitor_Default::visit(n);
 }
 void Visitor_Type::visit(ast::operation::Binary& n)
 {
-  Visitor_Default::visit(n);
+  if (EBinOpType_is_logical(n.op_ty)) {
+    ensure_expression_resolution(*n.left, ast::type::get_bool_type());
+    ensure_expression_resolution(*n.right, ast::type::get_bool_type());
 
-  if (std::find(k_boolean_op.begin(), k_boolean_op.end(), n.op) != k_boolean_op.end()) {
-    n.inferred_type = ast::type::get_bool_type();
+    n.expression_inferred_type = ast::type::get_bool_type();
+    Visitor_Default::visit(n);
+    return;
+  }
+
+
+  ensure_expression_resolution(*n.left, n.right->expression_inferred_type);
+  ensure_expression_resolution(*n.right, n.left->expression_inferred_type);
+
+
+  if (EBinOpType_is_comparison(n.op_ty)) {
+    n.expression_inferred_type = ast::type::get_bool_type();
+    Visitor_Default::visit(n);
     return;
   }
 
   // div always return a floating point
-  if (n.op == EBinOpType::Div) {
-    n.inferred_type = ast::type::get_fsize_type();
+  if (n.op_ty == EBinOpType::Div) {
+    n.expression_inferred_type = ast::type::get_fsize_type();
+    Visitor_Default::visit(n);
     return;
   }
 
-  n.inferred_type = n.left->inferred_type;
+  if (!n.left->expression_inferred_type->is_same(*n.right->expression_inferred_type)) {
+    add_error_two_nodes(233, *n.left, *n.right,
+                        "Incompatible type association,\n  (left) \"" + n.left->expression_inferred_type->debug_str()
+                            + "\" " + EBinOpType_to_str(n.op_ty) + " \""
+                            + n.right->expression_inferred_type->debug_str() + "\" (right).",
+                        "");
+  }
+
+  n.expression_inferred_type = n.left->expression_inferred_type->resolve();
+
+  Visitor_Default::visit(n);
 }
 void Visitor_Type::visit(ast::operation::Unary& n)
 {
   Visitor_Default::visit(n);
 
   if (n.unary_op == EUnaryOpType::_not) {
-    n.inferred_type = ast::type::get_bool_type();
+    n.expression_inferred_type = ast::type::get_bool_type();
     return;
   }
 
-  n.inferred_type = n.base->inferred_type;
+  ensure_expression_resolution(n, n.base->expression_inferred_type);
 }
 void Visitor_Type::visit(ast::operation::Interval& n)
 {

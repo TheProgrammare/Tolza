@@ -137,7 +137,7 @@ inline bool check_pattern(const MetaWord& word, const std::string& pattern)
   switch (pattern_key) {
   case EPatternKey::Any:         return true;
   case EPatternKey::Identifier:  return word.contains(TokTy::IDENTIFIER);
-  case EPatternKey::Numeric:     return word.contains_one(kNumericTypeTokens);
+  case EPatternKey::Numeric:     return word.contains_one(k_type_numeric);
   case EPatternKey::Alternative: return word.is_alternative();
   case EPatternKey::None:        return word.contains(pattern);
   }
@@ -150,27 +150,27 @@ struct Metablock;
 struct MetaInstruct {
   std::vector<MetaWord> words;
   // parent code block of the instruction
-  Metablock*            code_block = nullptr;
+  Metablock*            codeblock = nullptr;
 
-  MetaInstruct(Metablock* code_block, const std::vector<MetaWord>& words)
-    : code_block(code_block)
-    , words(words)
+  MetaInstruct(Metablock* _codeblock, const std::vector<MetaWord>& _words)
+    : codeblock(_codeblock)
+    , words(_words)
   {
   }
 
   [[nodiscard]]
-  bool match_pattern(const std::vector<std::string>& pattern) const
+  bool match_pattern(const std::vector<std::string>& p_pattern) const
   {
-    if (pattern.empty()) return false;
+    if (p_pattern.empty()) return false;
 
-    bool explicit_end = pattern.back() == "<!>";
+    bool explicit_end = p_pattern.back() == "<!>";
 
-    if (explicit_end && pattern.size() - 1 != words.size()) return false;
-    if (!explicit_end && pattern.size() != words.size()) return false;
+    if (explicit_end && p_pattern.size() - 1 != words.size()) return false;
+    if (!explicit_end && p_pattern.size() != words.size()) return false;
 
-    for (size_t i = 0; i < pattern.size(); i++) {
-      if (explicit_end && i == pattern.size() - 1) return true;
-      if (!check_pattern(words[i], pattern[i])) return false;
+    for (size_t i = 0; i < p_pattern.size(); i++) {
+      if (explicit_end && i == p_pattern.size() - 1) return true;
+      if (!check_pattern(words[i], p_pattern[i])) return false;
     }
     return true;
   }
@@ -352,7 +352,7 @@ struct Metablock_Reuse_Param {
 
   EPassMode                                   pass_mode = EPassMode::Copy;
   std::shared_ptr<ast::AType>                 type;
-  [[maybe_unused]] std::unique_ptr<ast::Node> defaultValue;
+  [[maybe_unused]] std::unique_ptr<ast::Node> default_val;
   bool                                        is_variadic = false;
 
   bool operator==(const Metablock_Reuse_Param& other) const
@@ -388,12 +388,12 @@ struct Cond_Base {
 struct Cond_Eq : Cond_Base {
   std::string placeholder;
   std::string value;
-  bool        isNot = false;
+  bool        is_not = false;
 
   Cond_Eq(const std::string& ph, const std::string& val, bool isN)
     : placeholder(ph)
     , value(val)
-    , isNot(isN)
+    , is_not(isN)
   {
   }
 
@@ -404,21 +404,21 @@ struct Cond_Eq : Cond_Base {
     // recherche de la liste de valeurs associée à placeholder
     auto values = ctx.find(placeholder);
 
-    if (values == ctx.end()) return isNot; // no key -> if negate: "true"
+    if (values == ctx.end()) return is_not; // no key -> if negate: "true"
 
     for (size_t i = 0; i < values->second.size(); ++i) {
       bool eq = values->second[i] == value;
-      if (!isNot && eq) return true; // _T == value
-      if (isNot && eq) return false; // _T != value -> find: "false"
+      if (!is_not && eq) return true; // _T == value
+      if (is_not && eq) return false; // _T != value -> find: "false"
     }
 
     // no corresponding value found :
-    return isNot; // si !=, "not found" = "true"
+    return is_not; // si !=, "not found" = "true"
   }
   [[nodiscard]]
   std::string print_eval() const override
   {
-    if (isNot)
+    if (is_not)
       return placeholder + " != " + value;
     else
       return placeholder + " == " + value;

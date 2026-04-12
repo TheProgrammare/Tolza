@@ -76,17 +76,19 @@ enum class ETokenType {
   USR_LIB,
   EXT_LIB,
   // literal values
+  // Literal binary
   L_BIN,
+  // Literal octal
   L_OCT,
+  // Literal hexadecimal
   L_HEX,
+  // Literal integral
   L_I,
-  L_U,
-  L_F,
-  L_DECIMAL,
-  L_UDECIMAL,
+  // Literal decimal
+  L_D,
   // format
-  S_TEXTUAL_EXPR_START,
-  S_TEXTUAL_EXPR_END,
+  S_INTERPOLATION_START,
+  S_INTERPOLATION_END,
   // text (default) : {i32*, i32} utf32
   // or str ""str : {i8*, i32} encoding agnostic
   L_TEXTUAL,
@@ -282,7 +284,7 @@ enum class ETokenType {
 
 using TokTy = ETokenType;
 
-const std::map<std::string, ETokenType> kKeywords = {
+const std::map<std::string, ETokenType> k_keywords = {
     // mod key
     {"mod",       ETokenType::MOD             },
     {"super::",   ETokenType::SUPER_MOD       },
@@ -533,38 +535,38 @@ const std::map<std::string, ETokenType> kKeywords = {
     {"%",         ETokenType::PERCENTAGE      },
 };
 
-const std::initializer_list<ETokenType> kVariableKind = {
+const std::initializer_list<ETokenType> k_variable = {
     ETokenType::LET,
     ETokenType::VAR,
     ETokenType::CONST,
 };
 
-const std::initializer_list<ETokenType> kStartIdentifier = {ETokenType::STATIC_ACCESS, ETokenType::IDENTIFIER,
-                                                            ETokenType::SUPER_MOD, ETokenType::SELF_MOD};
+const std::initializer_list<ETokenType> k_start_identifier = {ETokenType::STATIC_ACCESS, ETokenType::IDENTIFIER,
+                                                              ETokenType::SUPER_MOD, ETokenType::SELF_MOD};
 
-const std::initializer_list<ETokenType> kAccessTokens = {ETokenType::STATIC_ACCESS, ETokenType::DOT};
+const std::initializer_list<ETokenType> k_access = {ETokenType::STATIC_ACCESS, ETokenType::DOT};
 
-const std::initializer_list<ETokenType> kParameterPassMode = {ETokenType::CAPA_MUT,  ETokenType::CAPA_REF,
-                                                              ETokenType::CAPA_COPY, ETokenType::CAPA_CLONE,
-                                                              ETokenType::ADDR,      ETokenType::CAPA_MOVE};
+const std::initializer_list<ETokenType> k_parameter_passmode = {ETokenType::CAPA_MUT,  ETokenType::CAPA_REF,
+                                                                ETokenType::CAPA_COPY, ETokenType::CAPA_CLONE,
+                                                                ETokenType::ADDR,      ETokenType::CAPA_MOVE};
 
-const std::initializer_list<ETokenType> kCapabilityKind = {
+const std::initializer_list<ETokenType> k_capability = {
     ETokenType::CAPA_MUT,
     ETokenType::CAPA_REF,
 };
 
-const std::initializer_list<ETokenType> kExpressionPassMode = {
+const std::initializer_list<ETokenType> k_expression_passmode = {
     ETokenType::CAPA_MUT_OF,   ETokenType::CAPA_REF_OF,  ETokenType::CAPA_COPY_OF,
     ETokenType::CAPA_CLONE_OF, ETokenType::CAPA_MOVE_OF,
 };
 
-const std::initializer_list<ETokenType> kCastType = {
+const std::initializer_list<ETokenType> k_cast = {
     ETokenType::AS,
     ETokenType::AS_REINTERPRET,
     ETokenType::AS_SAFE,
 };
 
-const std::initializer_list<ETokenType> kOperatorTokens = {
+const std::initializer_list<ETokenType> k_operator = {
     ETokenType::OP_PLUS,
     ETokenType::OP_MINUS,
     ETokenType::OP_ASTERISK,
@@ -606,89 +608,91 @@ const std::initializer_list<ETokenType> kOperatorTokens = {
     ETokenType::ROTATE_RIGHT,
 };
 
-const std::initializer_list<ETokenType> kBitwiseTokens = {
+const std::initializer_list<ETokenType> k_op_bitwise_shift = {
+    ETokenType::SHIFT_LEFT_0, ETokenType::SHIFT_RIGHT_0, ETokenType::SHIFT_LEFT_1, ETokenType::SHIFT_RIGHT_1,
+    ETokenType::SHIFT_LEFT_A, ETokenType::SHIFT_RIGHT_A, ETokenType::ROTATE_LEFT,  ETokenType::ROTATE_RIGHT,
+};
+
+const std::initializer_list<ETokenType> k_op_bitwise = {
     ETokenType::B_AND,         ETokenType::B_NAND,       ETokenType::B_OR,          ETokenType::B_XOR,
     ETokenType::B_NOR,         ETokenType::B_XNOR,       ETokenType::B_NOT,         ETokenType::SHIFT_LEFT_0,
     ETokenType::SHIFT_RIGHT_0, ETokenType::SHIFT_LEFT_1, ETokenType::SHIFT_RIGHT_1, ETokenType::SHIFT_LEFT_A,
     ETokenType::SHIFT_RIGHT_A, ETokenType::ROTATE_LEFT,  ETokenType::ROTATE_RIGHT,
 };
 
-const std::initializer_list<ETokenType> kComparatorTokens = {
-    ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_EQ,  ETokenType::OP_NEQ,
-    ETokenType::OP_EQS,        ETokenType::OP_NEQS,        ETokenType::OP_LEQ, ETokenType::OP_GEQ};
+const std::initializer_list<ETokenType> k_op_comparison = {
+    ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_EQ,  ETokenType::OP_NEQ, ETokenType::OP_EQS,
+    ETokenType::OP_NEQS,       ETokenType::OP_LEQ,         ETokenType::OP_GEQ, ETokenType::IN,     ETokenType::NIN,
+};
 const std::initializer_list<ETokenType> kAssignationTokens = {
     ETokenType::MOVE_ASSIGN,   ETokenType::COPY_ASSIGN,     ETokenType::ASSIGN,        ETokenType::ASSIGN_PLUS,
     ETokenType::ASSIGN_MINUS,  ETokenType::ASSIGN_MULTIPLY, ETokenType::ASSIGN_DIVIDE, ETokenType::ASSIGN_POWER,
     ETokenType::ASSIGN_MODULO, ETokenType::ASSIGN_QUOTIEN,  ETokenType::ASSIGN_REMAIN, ETokenType::ASSIGN_DIVREM,
 };
-const std::initializer_list<ETokenType> kPointerTokens = {
+const std::initializer_list<ETokenType> k_pointer = {
     ETokenType::PTR,
     ETokenType::UPTR,
     ETokenType::SPTR,
     ETokenType::WPTR,
 };
 
-const std::initializer_list<ETokenType> kPrimitiveTypeTokens = {
-    ETokenType::T_U0,    ETokenType::T_BOOL,   ETokenType::T_CUNE,  ETokenType::T_C_STRING, ETokenType::T_STRING,
-    ETokenType::T_RUNE,  ETokenType::T_TEXT,   ETokenType::T_USIZE, ETokenType::L_BIN,      ETokenType::L_HEX,
-    ETokenType::L_OCT,   ETokenType::L_I,      ETokenType::L_U,     ETokenType::L_F,        ETokenType::T_I8,
-    ETokenType::T_I16,   ETokenType::T_I32,    ETokenType::T_I64,   ETokenType::T_I128,     ETokenType::T_ISIZE,
-    ETokenType::T_U8,    ETokenType::T_U16,    ETokenType::T_U32,   ETokenType::T_U64,      ETokenType::T_U128,
-    ETokenType::T_USIZE, ETokenType::T_B8,     ETokenType::T_B16,   ETokenType::T_B32,      ETokenType::T_B64,
-    ETokenType::T_B128,  ETokenType::T_BSIZE,  ETokenType::T_F16,   ETokenType::T_F32,      ETokenType::T_F64,
-    ETokenType::T_F80,   ETokenType::T_F128,   ETokenType::T_FSIZE, ETokenType::T_PTRDIFF,  ETokenType::T_D32,
-    ETokenType::T_D64,   ETokenType::T_D128,   ETokenType::T_DSIZE, ETokenType::T_UD32,     ETokenType::T_UD64,
-    ETokenType::T_UD128, ETokenType::T_UDSIZE,
+const std::initializer_list<ETokenType> k_type_primitive = {
+    ETokenType::T_U0,     ETokenType::T_BOOL,  ETokenType::T_CUNE,    ETokenType::T_C_STRING, ETokenType::T_STRING,
+    ETokenType::T_RUNE,   ETokenType::T_TEXT,  ETokenType::T_USIZE,   ETokenType::L_BIN,      ETokenType::L_HEX,
+    ETokenType::L_OCT,    ETokenType::L_I,     ETokenType::L_D,       ETokenType::T_I8,       ETokenType::T_I16,
+    ETokenType::T_I32,    ETokenType::T_I64,   ETokenType::T_I128,    ETokenType::T_ISIZE,    ETokenType::T_U8,
+    ETokenType::T_U16,    ETokenType::T_U32,   ETokenType::T_U64,     ETokenType::T_U128,     ETokenType::T_USIZE,
+    ETokenType::T_B8,     ETokenType::T_B16,   ETokenType::T_B32,     ETokenType::T_B64,      ETokenType::T_B128,
+    ETokenType::T_BSIZE,  ETokenType::T_F16,   ETokenType::T_F32,     ETokenType::T_F64,      ETokenType::T_F80,
+    ETokenType::T_F128,   ETokenType::T_FSIZE, ETokenType::T_PTRDIFF, ETokenType::T_D32,      ETokenType::T_D64,
+    ETokenType::T_D128,   ETokenType::T_DSIZE, ETokenType::T_UD32,    ETokenType::T_UD64,     ETokenType::T_UD128,
+    ETokenType::T_UDSIZE,
 };
-const std::initializer_list<ETokenType> kIntegerTypeTokens = {
+const std::initializer_list<ETokenType> k_type_integral = {
     ETokenType::T_I8, ETokenType::T_I16, ETokenType::T_I32, ETokenType::T_I64, ETokenType::T_I128, ETokenType::T_ISIZE,
     ETokenType::T_U8, ETokenType::T_U16, ETokenType::T_U32, ETokenType::T_U64, ETokenType::T_U128, ETokenType::T_USIZE,
     ETokenType::T_B8, ETokenType::T_B16, ETokenType::T_B32, ETokenType::T_B64, ETokenType::T_B128, ETokenType::T_BSIZE,
 };
-const std::initializer_list<ETokenType> kSignedIntegerTypTokens = {
+const std::initializer_list<ETokenType> k_type_integral_signed = {
     ETokenType::T_I8, ETokenType::T_I16, ETokenType::T_I32, ETokenType::T_I64, ETokenType::T_I128, ETokenType::T_ISIZE,
 };
-const std::initializer_list<ETokenType> kUnsignedIntegerTypTokens = {
+const std::initializer_list<ETokenType> k_type_integra_unsigned = {
     ETokenType::T_U8, ETokenType::T_U16, ETokenType::T_U32, ETokenType::T_U64, ETokenType::T_U128, ETokenType::T_USIZE,
 };
-const std::initializer_list<ETokenType> kBinTypTokens = {
+const std::initializer_list<ETokenType> k_type_integral_binary = {
     ETokenType::T_B8, ETokenType::T_B16, ETokenType::T_B32, ETokenType::T_B64, ETokenType::T_B128, ETokenType::T_BSIZE,
 };
-const std::initializer_list<ETokenType> kFloatingTypeTokens = {
+const std::initializer_list<ETokenType> k_type_floating_point = {
     ETokenType::T_F16, ETokenType::T_F32, ETokenType::T_F64, ETokenType::T_F80, ETokenType::T_F128, ETokenType::T_FSIZE,
 };
-const std::initializer_list<ETokenType> kNumericTypeTokens = {
-    ETokenType::L_BIN,  ETokenType::L_HEX,   ETokenType::L_OCT,   ETokenType::L_I,       ETokenType::L_U,
-    ETokenType::L_F,    ETokenType::T_I8,    ETokenType::T_I16,   ETokenType::T_I32,     ETokenType::T_I64,
-    ETokenType::T_I128, ETokenType::T_ISIZE, ETokenType::T_U8,    ETokenType::T_U16,     ETokenType::T_U32,
-    ETokenType::T_U64,  ETokenType::T_U128,  ETokenType::T_USIZE, ETokenType::T_B8,      ETokenType::T_B16,
-    ETokenType::T_B32,  ETokenType::T_B64,   ETokenType::T_B128,  ETokenType::T_BSIZE,   ETokenType::T_F32,
-    ETokenType::T_F64,  ETokenType::T_F128,  ETokenType::T_FSIZE, ETokenType::T_PTRDIFF,
+const std::initializer_list<ETokenType> k_type_numeric = {
+    ETokenType::L_BIN,   ETokenType::L_HEX,   ETokenType::L_OCT,     ETokenType::L_I,   ETokenType::L_D,
+    ETokenType::T_I8,    ETokenType::T_I16,   ETokenType::T_I32,     ETokenType::T_I64, ETokenType::T_I128,
+    ETokenType::T_ISIZE, ETokenType::T_U8,    ETokenType::T_U16,     ETokenType::T_U32, ETokenType::T_U64,
+    ETokenType::T_U128,  ETokenType::T_USIZE, ETokenType::T_B8,      ETokenType::T_B16, ETokenType::T_B32,
+    ETokenType::T_B64,   ETokenType::T_B128,  ETokenType::T_BSIZE,   ETokenType::T_F32, ETokenType::T_F64,
+    ETokenType::T_F128,  ETokenType::T_FSIZE, ETokenType::T_PTRDIFF,
 };
-const std::initializer_list<ETokenType> kDecimalTypeTokens = {
-    ETokenType::L_DECIMAL, ETokenType::L_UDECIMAL, ETokenType::T_D32,  ETokenType::T_D64,   ETokenType::T_D128,
-    ETokenType::T_DSIZE,   ETokenType::T_UD32,     ETokenType::T_UD64, ETokenType::T_UD128, ETokenType::T_UDSIZE,
+const std::initializer_list<ETokenType> k_type_fixed_point = {
+    ETokenType::T_D32,  ETokenType::T_D64,  ETokenType::T_D128,  ETokenType::T_DSIZE,
+    ETokenType::T_UD32, ETokenType::T_UD64, ETokenType::T_UD128, ETokenType::T_UDSIZE,
 };
-const std::initializer_list<ETokenType> kBooleanTypeTokens = {ETokenType::TRUE, ETokenType::FALSE, ETokenType::T_BOOL};
+const std::initializer_list<ETokenType> k_type_boolean = {ETokenType::TRUE, ETokenType::FALSE, ETokenType::T_BOOL};
 
-const std::initializer_list<ETokenType> kModificatorOpTokens = {
+const std::initializer_list<ETokenType> k_op_assign = {
     ETokenType::ASSIGN_PLUS,    ETokenType::ASSIGN_MINUS,  ETokenType::ASSIGN_MULTIPLY,
     ETokenType::ASSIGN_DIVIDE,  ETokenType::ASSIGN_POWER,  ETokenType::ASSIGN_MODULO,
     ETokenType::ASSIGN_QUOTIEN, ETokenType::ASSIGN_REMAIN, ETokenType::ASSIGN_DIVREM};
 
-const std::initializer_list<ETokenType> kComparisonOpTokens = {
-    ETokenType::OP_EQ,          ETokenType::OP_NEQ, ETokenType::OP_EQS, ETokenType::OP_NEQS, ETokenType::OPEN_BRACKETS,
-    ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ, ETokenType::OP_LEQ, ETokenType::IN,      ETokenType::NIN,
-};
-const std::initializer_list<ETokenType> kArithmeticOpTokens = {
+const std::initializer_list<ETokenType> k_op_arithmetic = {
     ETokenType::OP_PLUS,   ETokenType::OP_MINUS,   ETokenType::OP_ASTERISK, ETokenType::OP_DIVIDE, ETokenType::OP_POWER,
     ETokenType::OP_MODULO, ETokenType::OP_QUOTIEN, ETokenType::OP_REMAIN,   ETokenType::OP_DIVREM};
 
-const std::initializer_list<ETokenType> kFormatypeTokens = {
-    ETokenType::S_TEXTUAL_EXPR_START,
-    ETokenType::S_TEXTUAL_EXPR_END,
+const std::initializer_list<ETokenType> k_text_interpolation = {
+    ETokenType::S_INTERPOLATION_START,
+    ETokenType::S_INTERPOLATION_END,
 };
-const std::initializer_list<ETokenType> kTypeTokens = {
+const std::initializer_list<ETokenType> k_type = {
     ETokenType::T_I8,       ETokenType::T_I16,     ETokenType::T_I32,   ETokenType::T_I64,    ETokenType::T_I128,
     ETokenType::T_ISIZE,    ETokenType::T_U8,      ETokenType::T_U16,   ETokenType::T_U32,    ETokenType::T_U64,
     ETokenType::T_U128,     ETokenType::T_USIZE,   ETokenType::T_B8,    ETokenType::T_B16,    ETokenType::T_B32,
@@ -699,7 +703,7 @@ const std::initializer_list<ETokenType> kTypeTokens = {
     ETokenType::T_C_STRING, ETokenType::T_STRING,  ETokenType::T_TEXT,  ETokenType::FUNCTION, ETokenType::IDENTIFIER,
     ETokenType::TYPE,       ETokenType::T_PTRDIFF,
 };
-const std::initializer_list<ETokenType> kHybridKeyNamespace = {
+const std::initializer_list<ETokenType> k_hybrid_namespace = {
     ETokenType::T_I8,       ETokenType::T_I16,     ETokenType::T_I32,   ETokenType::T_I64,     ETokenType::T_I128,
     ETokenType::T_ISIZE,    ETokenType::T_U8,      ETokenType::T_U16,   ETokenType::T_U32,     ETokenType::T_U64,
     ETokenType::T_U128,     ETokenType::T_USIZE,   ETokenType::T_B8,    ETokenType::T_B16,     ETokenType::T_B32,
@@ -712,19 +716,19 @@ const std::initializer_list<ETokenType> kHybridKeyNamespace = {
     ETokenType::FLAG,       ETokenType::PTR,       ETokenType::UPTR,    ETokenType::SPTR,      ETokenType::WPTR,
     ETokenType::ENTITY,     ETokenType::COMPONENT, ETokenType::GENERIC, ETokenType::T_PTRDIFF,
 };
-const std::initializer_list<ETokenType> kLogicalTokens = {ETokenType::AND, ETokenType::NAND, ETokenType::OR,
-                                                          ETokenType::XOR, ETokenType::NOR,  ETokenType::XNOR,
-                                                          ETokenType::NOT};
+const std::initializer_list<ETokenType> k_op_logical = {ETokenType::AND, ETokenType::NAND, ETokenType::OR,
+                                                        ETokenType::XOR, ETokenType::NOR,  ETokenType::XNOR,
+                                                        ETokenType::NOT};
 
-const std::initializer_list<ETokenType> kEndArgsListokens = {
+const std::initializer_list<ETokenType> k_args_ending = {
     ETokenType::CLOSE_BRACKETS, ETokenType::CLOSE_BRACE, ETokenType::OPEN_BRACE, ETokenType::CLOSE_PAREN,
     ETokenType::CLOSE_SQUARE,   ETokenType::SEMICOLON,   ETokenType::ASSIGN,     ETokenType::PIPE,
     ETokenType::PIPE_MUT,       ETokenType::SEMICOLON,   ETokenType::METACODE,
 };
-const std::initializer_list<ETokenType> kArgsDelimitationTokens = {
+const std::initializer_list<ETokenType> k_args_delimitation = {
     ETokenType::CLOSE_BRACKETS, ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_PAREN, ETokenType::OPEN_PAREN,
     ETokenType::CLOSE_SQUARE,   ETokenType::OPEN_SQUARE,   ETokenType::SEMICOLON,   ETokenType::PIPE};
-const std::initializer_list<ETokenType> kGenArgsValidTokens = {
+const std::initializer_list<ETokenType> k_args_generic_valid = {
     ETokenType::T_I8,          ETokenType::T_I16,          ETokenType::T_I32,      ETokenType::T_I64,
     ETokenType::T_I128,        ETokenType::T_ISIZE,        ETokenType::T_U8,       ETokenType::T_U16,
     ETokenType::T_U32,         ETokenType::T_U64,          ETokenType::T_U128,     ETokenType::T_USIZE,
@@ -741,23 +745,23 @@ const std::initializer_list<ETokenType> kGenArgsValidTokens = {
     ETokenType::LET,           ETokenType::T_PTRDIFF,
 };
 
-const std::initializer_list<ETokenType> kLiteralTokens = {
-    ETokenType::IDENTIFIER, ETokenType::L_BIN, ETokenType::L_OCT,     ETokenType::L_HEX,      ETokenType::L_I,
-    ETokenType::L_U,        ETokenType::L_F,   ETokenType::L_DECIMAL, ETokenType::L_UDECIMAL, ETokenType::L_TEXTUAL,
-    ETokenType::TRUE,       ETokenType::FALSE, ETokenType::L_CUNE,    ETokenType::L_ARRAY,
+const std::initializer_list<ETokenType> k_lit = {
+    ETokenType::IDENTIFIER, ETokenType::L_BIN,  ETokenType::L_OCT,     ETokenType::L_HEX,
+    ETokenType::L_I,        ETokenType::L_D,    ETokenType::L_TEXTUAL, ETokenType::TRUE,
+    ETokenType::FALSE,      ETokenType::L_CUNE, ETokenType::L_ARRAY,
 };
-const std::initializer_list<ETokenType> kInvalidCodeTokens = {
+const std::initializer_list<ETokenType> k_invalid_tokens = {
     ETokenType::METACODE,
     ETokenType::S_METACODE_END,
     ETokenType::S_END_OF_FILE,
 };
 
-const std::initializer_list<ETokenType> boolOpHandled = {
+const std::initializer_list<ETokenType> k_op_boolean = {
     ETokenType::AND,    ETokenType::OR,    ETokenType::NOR,    ETokenType::XOR,   ETokenType::XNOR,  ETokenType::NAND,
     ETokenType::OP_NEQ, ETokenType::B_AND, ETokenType::B_OR,   ETokenType::B_NOR, ETokenType::B_XOR, ETokenType::B_XNOR,
     ETokenType::B_NAND, ETokenType::OP_EQ, ETokenType::ASSIGN, ETokenType::NOT,   ETokenType::B_NOT,
 };
-const std::initializer_list<ETokenType> integerOpHandled = {
+const std::initializer_list<ETokenType> k_op_integral = {
     ETokenType::OP_PLUS,         ETokenType::OP_MINUS,      ETokenType::OP_ASTERISK,   ETokenType::OP_POWER,
     ETokenType::OP_DIVIDE,       ETokenType::OP_MODULO,     ETokenType::OP_QUOTIEN,    ETokenType::OP_REMAIN,
     ETokenType::OP_DIVREM,       ETokenType::ASSIGN,        ETokenType::ASSIGN_PLUS,   ETokenType::ASSIGN_MINUS,
@@ -766,7 +770,7 @@ const std::initializer_list<ETokenType> integerOpHandled = {
     ETokenType::CLOSE_BRACKETS,  ETokenType::OP_GEQ,        ETokenType::OP_LEQ,        ETokenType::OP_EQ,
     ETokenType::OP_NEQ,
 };
-const std::initializer_list<ETokenType> floatingOpHandled = {
+const std::initializer_list<ETokenType> k_op_numeric = {
     ETokenType::OP_PLUS,         ETokenType::OP_MINUS,      ETokenType::OP_ASTERISK,   ETokenType::OP_POWER,
     ETokenType::OP_DIVIDE,       ETokenType::OP_MODULO,     ETokenType::OP_QUOTIEN,    ETokenType::OP_REMAIN,
     ETokenType::OP_DIVREM,       ETokenType::ASSIGN,        ETokenType::ASSIGN_PLUS,   ETokenType::ASSIGN_MINUS,
@@ -775,33 +779,33 @@ const std::initializer_list<ETokenType> floatingOpHandled = {
     ETokenType::CLOSE_BRACKETS,  ETokenType::OP_GEQ,        ETokenType::OP_LEQ,        ETokenType::OP_EQ,
     ETokenType::OP_NEQ,          ETokenType::OP_EQS,        ETokenType::OP_NEQS,
 };
-const std::initializer_list<ETokenType> charOpHandled = {
+const std::initializer_list<ETokenType> k_op_char = {
     ETokenType::ASSIGN, ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ,  ETokenType::OP_LEQ,
     ETokenType::OP_EQ,  ETokenType::OP_NEQ,        ETokenType::OP_EQS,         ETokenType::OP_NEQS,
 };
-const std::initializer_list<ETokenType> strOpHandled = {
+const std::initializer_list<ETokenType> k_op_text = {
     ETokenType::OP_PLUS,        ETokenType::ASSIGN, ETokenType::ASSIGN_PLUS, ETokenType::OPEN_BRACKETS,
     ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ, ETokenType::OP_LEQ,      ETokenType::OP_EQ,
     ETokenType::OP_NEQ,         ETokenType::OP_EQS, ETokenType::OP_NEQS,
 };
-const std::initializer_list<ETokenType> enumOpHandled = {
+const std::initializer_list<ETokenType> k_op_enum = {
     ETokenType::ASSIGN, ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ,
     ETokenType::OP_LEQ, ETokenType::OP_EQ,         ETokenType::OP_NEQ,
 };
-const std::initializer_list<ETokenType> addressOpHandled = {
+const std::initializer_list<ETokenType> k_op_address = {
     ETokenType::ASSIGN, ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ,
     ETokenType::OP_LEQ, ETokenType::OP_EQ,         ETokenType::OP_NEQ,
 };
-const std::initializer_list<ETokenType> arrayOpHandled = {
+const std::initializer_list<ETokenType> k_op_array = {
     ETokenType::ASSIGN, ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_GEQ,
     ETokenType::OP_LEQ, ETokenType::OP_EQ,         ETokenType::OP_NEQ,
 };
-const std::initializer_list<ETokenType> kFormatSpecAlign = {
+const std::initializer_list<ETokenType> k_op_format = {
     ETokenType::OPEN_BRACKETS, ETokenType::CLOSE_BRACKETS, ETokenType::OP_CIRCUMFLEX,
     ETokenType::TILDE,         ETokenType::ASSIGN,
 };
 
-const std::initializer_list<ETokenType> kIndentifiable = {
+const std::initializer_list<ETokenType> k_identifier_possible = {
     // mod key
     ETokenType::MOD,
     // type keys
@@ -923,6 +927,6 @@ inline bool isKeywordChar(char ch)
 
 inline ETokenType Str_to_ETokenType(const std::string& str)
 {
-  if (auto it = kKeywords.find(str); it != kKeywords.end()) return it->second;
+  if (auto it = k_keywords.find(str); it != k_keywords.end()) return it->second;
   return ETokenType::UNKNOWN;
 }

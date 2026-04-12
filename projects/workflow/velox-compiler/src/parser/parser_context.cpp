@@ -57,9 +57,9 @@ parser::Parser_Context::~Parser_Context()
   p_base = nullptr;
 }
 
-bool parser::is_gen_args(TokenViewer& tok_v)
+bool parser::is_gen_args(TokenViewer& p_tok_v)
 {
-  size_t originPos           = tok_v.position();
+  size_t originPos           = p_tok_v.position();
   bool   isGenArgsValid      = true;
   bool   isAfterGenArgsValid = false;
   size_t count               = 0;
@@ -68,11 +68,11 @@ bool parser::is_gen_args(TokenViewer& tok_v)
   // because generic type args begins with < and must end by >
 
   // check genArgs
-  while (!tok_v.is_end()) {
+  while (!p_tok_v.is_end()) {
     bool tokValid = false;
 
-    auto tok = tok_v.peek(count);
-    for (auto tok_valid : kGenArgsValidTokens) {
+    auto tok = p_tok_v.peek(count);
+    for (auto tok_valid : k_args_generic_valid) {
       if (tok.type == tok_valid) {
         if (tok.type == TokTy::OPEN_BRACKETS) ++nestedBrackets;
         if (tok.type == TokTy::CLOSE_BRACKETS) --nestedBrackets;
@@ -96,21 +96,21 @@ bool parser::is_gen_args(TokenViewer& tok_v)
   // if is not a false positive generic args
   // (case of interval comparaison like a < b > 0)
   if (isGenArgsValid && nestedBrackets == 0) {
-    auto tokAfterGenArgs = tok_v.peek(count + 1);
+    auto tokAfterGenArgs = p_tok_v.peek(count + 1);
 
     if (tokAfterGenArgs.type == TokTy::OPEN_PAREN)
       isAfterGenArgsValid = true;
     else {
       isAfterGenArgsValid =
-          !(tok_v.check_any(kLiteralTokens) || tok_v.check_any(kOperatorTokens) || tok_v.check_any(kComparatorTokens));
+          !(p_tok_v.check_any(k_lit) || p_tok_v.check_any(k_operator) || p_tok_v.check_any(k_op_comparison));
     }
   }
 
   const bool result = isGenArgsValid && isAfterGenArgsValid;
   if (result)
-    tok_v.rewind(originPos);
+    p_tok_v.rewind(originPos);
   else
-    tok_v.rewind(originPos - 1);
+    p_tok_v.rewind(originPos - 1);
 
   // is an effective gen args ?
   return result;
@@ -175,35 +175,35 @@ bool parser::Parser_Context::match_field_separator(TokTy separator, TokTy end)
   return false;
 }
 
-bool parser::Parser_Context::match_field_any_separator(TokTy separator, std::initializer_list<TokTy> end)
+bool parser::Parser_Context::match_field_any_separator(TokTy p_separator, std::initializer_list<TokTy> p_end)
 {
-  if (tok_v.match(separator)) return false;
-  if (tok_v.match_any(end)) return true;
-  std::string endSymbols;
-  size_t      countSym = 0;
-  for (auto& elem : end) {
-    endSymbols += "'" + std::to_string(int(elem)) + "', ";
-    if (++countSym > 10) {
-      endSymbols += "\n";
-      countSym = 0;
+  if (tok_v.match(p_separator)) return false;
+  if (tok_v.match_any(p_end)) return true;
+  std::string sym_end;
+  size_t      sym_count = 0;
+  for (auto& elem : p_end) {
+    sym_end += "'" + std::to_string(int(elem)) + "', ";
+    if (++sym_count > 10) {
+      sym_end += "\n";
+      sym_count = 0;
     }
   }
   tok_v.add_error(13, "Unexpected token '" + tok_v.peek().val + "' in expression.",
-                  "expected a separator '" + std::to_string(int(separator)) + "' or a ending {" + endSymbols + "}");
+                  "expected a separator '" + std::to_string(int(p_separator)) + "' or a ending {" + sym_end + "}");
   return false;
 }
 
-std::string parser::Parser_Context::parse_name(const std::string& custom_msg, const std::string& custom_hint)
+std::string parser::Parser_Context::parse_name(const std::string& p_msg, const std::string& p_hint)
 {
-  static const std::string _msg = "Expected identifier (classic name).";
-  static const std::string _hint =
+  static const std::string msg = "Expected identifier (classic name).";
+  static const std::string hint =
       "define identifier (classic name) like:"
       "\n  - rule `[a-zA-Z_][a-zA-Z0-9_]*`"
       "\n  - first character is alphabetical or `_`"
       "\n  - other character is alphanumeric or `_`";
 
-  const std::string final_msg  = custom_msg.empty() ? _msg : custom_msg;
-  const std::string final_hint = custom_hint.empty() ? _hint : custom_hint;
+  const std::string final_msg  = p_msg.empty() ? msg : p_msg;
+  const std::string final_hint = p_hint.empty() ? hint : p_hint;
 
   return tok_v.expect(777, TokTy::IDENTIFIER, final_msg, final_hint).val;
 }

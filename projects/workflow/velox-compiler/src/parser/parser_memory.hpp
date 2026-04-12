@@ -8,8 +8,8 @@ namespace parser
 {
 struct Parser_Context;
 struct Parser_Memory {
-  Parser_Memory(Parser_Context& ctx)
-    : ctx(ctx)
+  Parser_Memory(Parser_Context& p_ctx)
+    : ctx(p_ctx)
   {
   }
 

@@ -415,7 +415,7 @@ void Visitor_Print::visit(ast::declaration::cop::System_Case& n)
 void Visitor_Print::visit(ast::generic::Is_Type& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
-  for (auto& elem : n.inType) elem->accept(*this);
+  for (auto& elem : n.in_type) elem->accept(*this);
   out_print += "</ul></li>\n";
 }
 void Visitor_Print::visit(ast::generic::Can_Cast& n)
@@ -459,7 +459,7 @@ void Visitor_Print::visit(ast::type::Ptr& n)
 void Visitor_Print::visit(ast::type::Table& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
-  if (n.sizeSymbol) n.sizeSymbol->accept(*this);
+  if (n.size_sym) n.size_sym->accept(*this);
   n.inner->accept(*this);
   out_print += "</ul></li>\n";
 }
@@ -479,7 +479,7 @@ void Visitor_Print::visit(ast::type::Function_Proto& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (auto& elem : n.parameters) elem->accept(*this);
   for (auto& elem : n.gen_parameters) elem->accept(*this);
-  if (n.returnType) n.returnType->accept(*this);
+  if (n.return_ty) n.return_ty->accept(*this);
   out_print += "</ul></li>\n";
 }
 
@@ -501,12 +501,12 @@ void Visitor_Print::visit(ast::literal::Integral& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::literal::Decimal& n)
+void Visitor_Print::visit(ast::literal::Fixed_Point& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::literal::Floating& n)
+void Visitor_Print::visit(ast::literal::Floating_Point& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
@@ -535,17 +535,9 @@ void Visitor_Print::visit(ast::literal::Text_Interpolation& n)
   if (n.spec) n.spec->accept(*this);
   out_print += "</ul></li>\n";
 }
-void Visitor_Print::visit(ast::literal::Textual_Element& n)
-{
-  out_print += "<li class='node'>";
-  out_print += n.kind == ast::literal::Textual_Element::Kind::Text ? "text" : "interpolation";
-  out_print += "<ul class='children'>\n";
-  n.val->accept(*this);
-  out_print += "</ul></li>\n";
-}
 void Visitor_Print::visit(ast::literal::Textual_Format& n)
 {
-  for (auto& elem : n.values) elem.val->accept(*this);
+  for (auto& elem : n.values) elem->accept(*this);
 }
 void Visitor_Print::visit(ast::literal::Format_Specifier& n)
 {

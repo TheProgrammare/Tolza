@@ -30,7 +30,7 @@ struct Boolean final : public ALiteral {
 
 struct Integral final : public ALiteral {
   Int128    val;
-  EPrimType type = EPrimType::iSize;
+  EPrimType type = EPrimType::NONE;
 
   Integral();
   Integral(const Int128& value);
@@ -41,42 +41,42 @@ struct Integral final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(type) + "(" + val.i128_to_string() + ")";
+    return EPrimType_to_str(type) + "(" + val.i128_to_string() + ")";
   }
 
   bool is_signed() const;
 };
 
-struct Decimal final : public ALiteral {
+struct Fixed_Point final : public ALiteral {
   Int128    val;
-  EPrimType raw_type = EPrimType::dSize;
+  EPrimType raw_type = EPrimType::NONE;
   size_t    scale    = 1;
 
-  Decimal();
-  Decimal(const Int128& value, size_t _scale, EPrimType _raw_type);
+  Fixed_Point();
+  Fixed_Point(const Int128& value, size_t _scale, EPrimType _raw_type);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(raw_type) + "(" + val.i128_to_string() + ")";
+    return EPrimType_to_str(raw_type) + "(" + val.i128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override;
 };
 
-struct Floating final : public ALiteral {
+struct Floating_Point final : public ALiteral {
   Float128  val;
   EPrimType type = EPrimType::fSize;
 
-  Floating();
-  Floating(const Float128& value);
+  Floating_Point();
+  Floating_Point(const Float128& value);
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
 
   std::string debug_str() const override
   {
-    return EPrimTy_to_str(type) + "(" + val.float128_to_string() + ")";
+    return EPrimType_to_str(type) + "(" + val.float128_to_string() + ")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -100,7 +100,7 @@ struct CUNE final : public ALiteral {
 };
 
 struct RUNE final : public ALiteral {
-  std::string codePoints;
+  std::string code_points;
 
   RUNE();
   RUNE(std::string codePoints_value);
@@ -109,7 +109,7 @@ struct RUNE final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "rune(\"" + codePoints + "\")";
+    return "rune(\"" + code_points + "\")";
   }
 
   void accept(Visitor_Base& v) override;
@@ -206,33 +206,15 @@ struct Text_Interpolation final : public AExpression {
   void accept(Visitor_Base& v) override;
 };
 
-struct Textual_Element final {
-  enum class Kind { Text, Lerp };
-
-  Kind         kind;
-  AExpression* val;
-
-  Textual_Element(std::unique_ptr<Text_Pure> text)
-    : val(text.release())
-    , kind(Kind::Text)
-  {
-  }
-  Textual_Element(std::unique_ptr<Text_Interpolation> lerp)
-    : val(lerp.release())
-    , kind(Kind::Lerp)
-  {
-  }
-};
-
 // "format node {formatVariable} can be formated"
 struct Textual_Format final : public ALiteral {
-  std::vector<Textual_Element> values;
+  std::vector<std::unique_ptr<AExpression>> values;
+
+  [[nodiscard]] ast::literal::Text_Pure* get_if_pure_text() const;
 
   llvm::Value* codegen(Visitor_Codegen& v) override;
-
-  std::string debug_str() const override;
-
-  void accept(Visitor_Base& v) override;
+  std::string  debug_str() const override;
+  void         accept(Visitor_Base& v) override;
 };
 
 
@@ -319,7 +301,7 @@ struct Enum final : public ALiteral {
 
   std::string debug_str() const override
   {
-    return "literal enum[" + std::to_string(in_type_position) + " - " + name->debug_str() + "]";
+    return "literal enum[" + std::to_string(expression_in_type_position) + " - " + name->debug_str() + "]";
   }
 
   void accept(Visitor_Base& v) override;

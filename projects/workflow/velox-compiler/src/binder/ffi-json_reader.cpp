@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 // Helpers pour convertir string → enum
-ffi::EType ffi::JSON::str_to_etype(const std::string& s)
+ffi::EType ffi::JSON::str_to_EType(const std::string& s)
 {
   static const std::unordered_map<std::string, EType> table = {
       {"",           EType::INVALID    },
@@ -78,7 +78,7 @@ ffi::EType ffi::JSON::str_to_etype(const std::string& s)
   return it != table.end() ? it->second : EType::INVALID;
 }
 
-ffi::EPassMode ffi::JSON::str_to_passmode(const std::string& s)
+ffi::EPassMode ffi::JSON::str_to_EPassMode(const std::string& s)
 {
   if (s == "copy") return EPassMode::copy;
   if (s == "ref") return EPassMode::ref;
@@ -91,7 +91,7 @@ ffi::EPassMode ffi::JSON::str_to_passmode(const std::string& s)
 ffi::Type ffi::JSON::json_to_type(const json& j)
 {
   Type t;
-  t.base_type            = str_to_etype(j.value("base_type", ""));
+  t.base_type            = str_to_EType(j.value("base_type", ""));
   t.complex_type_name    = j.value("complex_type_name", "");
   t.is_pointer           = j.value("is_pointer", false);
   t.is_pointer_double    = j.value("is_pointer_double", false);
@@ -126,7 +126,7 @@ ffi::Prototype ffi::JSON::json_to_prototype(const json& j)
 
   if (j.contains("params")) {
     for (auto& p : j["params"]) {
-      EPassMode pm            = str_to_passmode(p[0].get<std::string>());
+      EPassMode pm            = str_to_EPassMode(p[0].get<std::string>());
       Type      t             = json_to_type(p[1]);
       bool      restrict_flag = p[2].get<bool>();
       proto.params.emplace_back(pm, std::move(t), restrict_flag);
@@ -136,7 +136,7 @@ ffi::Prototype ffi::JSON::json_to_prototype(const json& j)
   return proto;
 }
 
-ffi::ECallConvention ffi::JSON::str_to_callconvention(const std::string& s)
+ffi::ECallConvention ffi::JSON::str_to_ECallConvention(const std::string& s)
 {
   if (s == "C") return ECallConvention::C;
   if (s == "std_call") return ECallConvention::Stdcall;
@@ -153,7 +153,7 @@ ffi::Func ffi::JSON::json_to_func(const json& j)
 
   Func f;
   f.name            = j.value("name", "");
-  f.call_convention = str_to_callconvention(j.value("call_convention", "C"));
+  f.call_convention = str_to_ECallConvention(j.value("call_convention", "C"));
   f.proto           = json_to_prototype(j["prototype"]);
 
   f.param_names.reserve(j["param_names"].size());
@@ -168,7 +168,7 @@ ffi::Flag ffi::JSON::json_to_flag(const json& j)
 
   Flag f;
   f.name = j.value("name", "");
-  if (j.contains("underlying_type")) f.underlying_type = str_to_etype(j["underlying_type"]);
+  if (j.contains("underlying_type")) f.underlying_type = str_to_EType(j["underlying_type"]);
 
   if (j.contains("members")) {
     for (auto& n : j["members"]) f.members.emplace_back(n[0].get<std::string>(), n[1].get<size_t>());
@@ -262,29 +262,29 @@ std::pair<size_t, size_t> ffi::JSON::EType_size_and_align(EType ty)
 }
 
 // size, align
-std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
+std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& p_ty)
 {
-  if (ty.is_pointer || ty.is_pointer_double) {
+  if (p_ty.is_pointer || p_ty.is_pointer_double) {
     return {8, 8}; // 64-bit ptr
   }
 
   size_t table_product = 1;
-  if (ty.is_table) {
-    if (!ty.table_size.empty()) {
+  if (p_ty.is_table) {
+    if (!p_ty.table_size.empty()) {
       // product of all dimensions
       size_t count = 1;
-      for (auto s : ty.table_size) count *= s;
+      for (auto s : p_ty.table_size) count *= s;
     } else {
       return {8, 8}; // static table -> pointer-sized
     }
   }
 
-  auto [size, align] = EType_size_and_align(ty.base_type);
+  auto [size, align] = EType_size_and_align(p_ty.base_type);
 
-  switch (ty.base_type) {
+  switch (p_ty.base_type) {
   case EType::_enum: {
-    if (ty.enum_type) {
-      for (auto& [_, m_tys] : ty.enum_type->members) {
+    if (p_ty.enum_type) {
+      for (auto& [_, m_tys] : p_ty.enum_type->members) {
         for (auto& m_ty : m_tys) {
           auto [m_size, m_align] = type_size_and_align(m_ty);
           size                   = m_size > size ? m_size : size;
@@ -296,8 +296,8 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
     break;
   }
   case EType::_comp: {
-    if (ty.comp_type) {
-      for (auto& [_, m_ty] : ty.comp_type->fields) {
+    if (p_ty.comp_type) {
+      for (auto& [_, m_ty] : p_ty.comp_type->fields) {
         auto [m_size, m_align] = type_size_and_align(m_ty);
         size += m_size;
         align += m_align;
@@ -306,8 +306,8 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
     break;
   }
   case EType::_entity: {
-    if (ty.entity_type) {
-      for (auto& f_ty : ty.entity_type->components) {
+    if (p_ty.entity_type) {
+      for (auto& f_ty : p_ty.entity_type->components) {
         for (auto& [_, l_size, l_align] : f_ty.layouts) {
           size += l_size;
           align = l_align > align ? l_align : align;
@@ -317,8 +317,8 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
     break;
   }
   case EType::_union: {
-    if (ty.union_type) {
-      for (auto& [_, m_ty] : ty.union_type->members) {
+    if (p_ty.union_type) {
+      for (auto& [_, m_ty] : p_ty.union_type->members) {
         auto [m_size, m_align] = type_size_and_align(m_ty);
         size                   = m_size > size ? m_size : size;
         align                  = m_align > align ? m_align : align;
@@ -328,9 +328,9 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
     break;
   }
   case EType::_flag: {
-    if (ty.flag_type) {
-      if (ty.flag_type->underlying_type != EType::INVALID) {
-        auto [m_size, m_align] = EType_size_and_align(ty.flag_type->underlying_type);
+    if (p_ty.flag_type) {
+      if (p_ty.flag_type->underlying_type != EType::INVALID) {
+        auto [m_size, m_align] = EType_size_and_align(p_ty.flag_type->underlying_type);
         size                   = m_size;
         align                  = m_align;
       }
@@ -345,13 +345,13 @@ std::pair<size_t, size_t> ffi::JSON::type_size_and_align(const Type& ty)
   return {size * table_product, align};
 }
 
-std::vector<ffi::FieldLayout> ffi::JSON::generate_layout(const std::vector<Type>& types)
+std::vector<ffi::FieldLayout> ffi::JSON::generate_layout(const std::vector<Type>& p_types)
 {
   std::vector<FieldLayout> layout;
   size_t                   offset       = 0;
   size_t                   struct_align = 1;
 
-  for (const auto& ty : types) {
+  for (const auto& ty : p_types) {
     auto [size, align] = type_size_and_align(ty);
     struct_align       = std::max(struct_align, align);
 

@@ -1,13 +1,16 @@
 
 #include "parser_declaration.hpp"
 
+#include <utility>
+#include <iostream>
+
 #include "ast/ast_data.hpp"
 #include "ast/ast_declaration.hpp"
-#include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_generic.hpp"
-#include "ast/ast_type.hpp"
 
+#include "ast/ast_type.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 #include "parser_type.hpp"
@@ -19,14 +22,12 @@
 
 #include "misc/metacode.hpp"
 #include "visitor/symbol_manager.hpp"
-#include <tuple>
-#include <utility>
 
 std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration()
 {
   auto tok = ctx.tok_v.peek();
   switch (tok.type) {
-  case TokTy::MOD:       return module();
+  case TokTy::MOD:       return _module();
   case TokTy::UNION:     return _union();
   case TokTy::FLAG:      return flag();
   case TokTy::ENUM:      return enumeration();
@@ -54,7 +55,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration
   return nullptr;
 }
 
-std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
+std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::_module()
 {
   static const std::string hint =
       "define module like:"
@@ -67,9 +68,9 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
   auto name = ctx.parse_name("", hint);
 
   if (ctx.tok_v.match(TokTy::ASSIGN)) {
-    auto node    = ctx.Create_Decl<ast::declaration::Mod_Alias>(ctx.tok_v.peek());
-    node->name   = std::move(name);
-    node->module = ctx.p_expr->identifier();
+    auto node              = ctx.Create_Decl<ast::declaration::Mod_Alias>(ctx.tok_v.peek());
+    node->declaration_name = std::move(name);
+    node->module           = ctx.p_expr->identifier();
 
     ctx.m_sym->add_decl(node);
 
@@ -78,7 +79,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::module()
     auto node = ctx.Create_Decl<ast::declaration::Mod>(ctx.tok_v.peek());
 
     ctx.m_sym->enter_scope(name, EScopeType::Mod);
-    node->name = std::move(name);
+    node->declaration_name = std::move(name);
 
     while (!ctx.tok_v.is_end()) {
       if (ctx.tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
@@ -108,10 +109,10 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
       "\n  - typed enum `enum Option { Valid(T), Invalid }";
   ctx.tok_v.match(TokTy::ENUM);
 
-  auto enu  = ctx.Create_Decl<ast::declaration::Enum>(ctx.tok_v.peek());
-  enu->name = ctx.parse_name("", hint);
+  auto enu              = ctx.Create_Decl<ast::declaration::Enum>(ctx.tok_v.peek());
+  enu->declaration_name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(enu);
-  ctx.m_sym->enter_scope(enu->name, EScopeType::Enum);
+  ctx.m_sym->enter_scope(enu->declaration_name, EScopeType::Enum);
 
   ctx.tok_v.expect(63, TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
 
@@ -144,10 +145,10 @@ std::shared_ptr<ast::declaration::Union> parser::Parser_Declaration::_union()
   static const std::string hint = "define union like: `union name { field_name1: T, field_name2: U, ... }";
   ctx.tok_v.match(TokTy::UNION);
 
-  auto _union  = ctx.Create_Decl<ast::declaration::Union>(ctx.tok_v.peek());
-  _union->name = ctx.parse_name("", hint);
+  auto _union              = ctx.Create_Decl<ast::declaration::Union>(ctx.tok_v.peek());
+  _union->declaration_name = ctx.parse_name("", hint);
   ctx.m_sym->add_decl(_union);
-  ctx.m_sym->enter_scope(_union->name, EScopeType::Union);
+  ctx.m_sym->enter_scope(_union->declaration_name, EScopeType::Union);
 
   ctx.tok_v.expect(182, TokTy::OPEN_BRACE, "Expected start union block '{' after union name declaration.", hint);
 
@@ -173,11 +174,11 @@ std::shared_ptr<ast::declaration::Flag> parser::Parser_Declaration::flag()
   static const std::string hint = "define flag like: `flag name { flag1, flag2, ... }";
   ctx.tok_v.match(TokTy::FLAG);
 
-  auto flag  = ctx.Create_Decl<ast::declaration::Flag>(ctx.tok_v.peek());
-  flag->name = ctx.parse_name("", hint);
+  auto flag              = ctx.Create_Decl<ast::declaration::Flag>(ctx.tok_v.peek());
+  flag->declaration_name = ctx.parse_name("", hint);
 
   ctx.m_sym->add_decl(flag);
-  ctx.m_sym->enter_scope(flag->name, EScopeType::Flag);
+  ctx.m_sym->enter_scope(flag->declaration_name, EScopeType::Flag);
 
   ctx.tok_v.expect(184, TokTy::OPEN_BRACE, "Expected start flag block '{' after flag name declaration.", hint);
 
@@ -212,18 +213,18 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
                                                 "Expected global variable declaration token", hint);
   EVariableKind kind     = TokTy_to_EVariableKind(kind_tok.type);
 
-  auto var  = ctx.Create_Decl<ast::declaration::Global>(ctx.tok_v.peek());
-  var->kind = kind;
-  var->name = ctx.parse_name("", hint);
+  auto var              = ctx.Create_Decl<ast::declaration::Global>(ctx.tok_v.peek());
+  var->kind             = kind;
+  var->declaration_name = ctx.parse_name("", hint);
 
   ctx.m_sym->add_decl(var);
 
-  if (var->name.empty()) {
+  if (var->declaration_name.empty()) {
     ctx.tok_v.add_error(66, "Invalid Identifier !", "");
   }
 
   // type definition no expression
-  if (var->is_external) {
+  if (var->declaration_is_external) {
     ctx.tok_v.expect(67, TokTy::COLON, "Expected type definition for an global variable marked external.", hint);
     var->type = ctx.p_type->parse_type();
     ctx.tok_v.match(TokTy::SEMICOLON);
@@ -246,12 +247,8 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
     ctx.tok_v.add_error(68, "Expected assignation '=' in auto inferred variable type.",
                         "define auto inferred variable like `let myName = expression;`");
 
-  auto expr = ctx.p_expr->parse_expression();
-
-  // if (isAutoTy) var->type = resolve_type(expr.get());
-
+  auto expr       = ctx.p_expr->parse_expression();
   var->expression = std::move(expr);
-
   return var;
 }
 
@@ -271,9 +268,9 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
 
   auto fn = ctx.Create_Decl<ast::declaration::Function>(ctx.tok_v.peek());
 
-  fn->name    = ctx.parse_name("", hint);
-  fn->isConst = ctx.metablock_contains(*fn, "const");
-  fn->isPure  = ctx.metablock_contains(*fn, "pure");
+  fn->declaration_name = ctx.parse_name("", hint);
+  fn->is_const         = ctx.metablock_contains(*fn, "const");
+  fn->is_pure          = ctx.metablock_contains(*fn, "pure");
 
   if (auto pattern = ctx.get_instruct(*fn, {"extern", "<*>"})) {
     fn->extern_call_convention = pattern->at_str(1, 0);
@@ -282,16 +279,16 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
   ctx.current_function = fn.get();
 
   ctx.m_sym->add_decl(fn);
-  ctx.m_sym->enter_scope(fn->name, EScopeType::Function);
+  ctx.m_sym->enter_scope(fn->declaration_name, EScopeType::Function);
 
   fn->prototype = ctx.p_type->explicit_function_proto(false);
   for (auto& param : fn->prototype->parameters) param->parent_function = fn;
 
   // if extern : no definition
-  if (fn->is_external && ctx.tok_v.check(TokTy::OPEN_BRACE))
+  if (fn->declaration_is_external && ctx.tok_v.check(TokTy::OPEN_BRACE))
     ctx.tok_v.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
 
-  if (!fn->is_external) fn->codeblock = ctx.p_loc->code_block_instruction();
+  if (!fn->declaration_is_external) fn->codeblock = ctx.p_loc->code_block_instruction();
 
   ctx.m_sym->exit_scope();
   ctx.current_function = nullptr;
@@ -314,13 +311,13 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
   auto gen = ctx.Create_Decl<ast::declaration::Generic>(ctx.tok_v.peek());
   ctx.tok_v.match(TokTy::GENERIC);
 
-  gen->name = ctx.parse_name("", kHint_gen);
+  gen->declaration_name = ctx.parse_name("", kHint_gen);
   ctx.m_sym->add_decl(gen);
-  ctx.m_sym->enter_scope(gen->name, EScopeType::Generic);
+  ctx.m_sym->enter_scope(gen->declaration_name, EScopeType::Generic);
   ctx.tok_v.expect(70, TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {
-    gen->targetGenericSymbols.insert(ctx.parse_name("", kHint_gen));
+    gen->target_gen_sym.insert(ctx.parse_name("", kHint_gen));
 
     if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACKETS)) break;
   }
@@ -333,11 +330,11 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
 
     // case: T op ...
     if (ctx.tok_v.match(TokTy::OP)) {
-      auto gen_op          = ctx.Create_Node<ast::generic::Have_Op>(ctx.tok_v.peek());
-      gen_op->targetGenSym = firstok;
-      auto tok_op          = ctx.tok_v.expect_any(
-          74, kOperatorTokens, "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
-      gen_op->operatorType   = TokTy_to_EBinOpType(tok_op.type);
+      auto gen_op            = ctx.Create_Node<ast::generic::Have_Op>(ctx.tok_v.peek());
+      gen_op->target_gen_sym = firstok;
+      auto tok_op            = ctx.tok_v.expect_any(
+          74, k_operator, "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
+      gen_op->op_ty          = TokTy_to_EBinOpType(tok_op.type);
       gen_op->parent_generic = gen;
 
       gen->conditions.push_back(std::move(gen_op));
@@ -346,7 +343,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     // case: T comp ...
     else if (ctx.tok_v.match(TokTy::COMPONENT)) {
       auto comp            = ctx.Create_Node<ast::generic::Use_Component>(ctx.tok_v.peek());
-      comp->targetGenSym   = firstok;
+      comp->target_gen_sym = firstok;
       comp->component      = ctx.p_expr->parse_expression();
       comp->parent_generic = gen;
 
@@ -355,7 +352,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     // case: T role ...
     else if (ctx.tok_v.match(TokTy::ROLE)) {
       auto role            = ctx.Create_Node<ast::generic::Have_Role>(ctx.tok_v.peek());
-      role->targetGenSym   = firstok;
+      role->target_gen_sym = firstok;
       role->role           = ctx.p_expr->parse_expression();
       role->parent_generic = gen;
 
@@ -364,7 +361,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     // case: T sys ...
     else if (ctx.tok_v.match(TokTy::SYSTEM)) {
       auto sys            = ctx.Create_Node<ast::generic::Compatible_System>(ctx.tok_v.peek());
-      sys->targetGenSym   = firstok;
+      sys->target_gen_sym = firstok;
       sys->system         = ctx.p_expr->parse_expression();
       sys->parent_generic = gen;
 
@@ -372,12 +369,12 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     }
     // case: T is i32 | type::floating | ...
     else if (ctx.tok_v.match(TokTy::IS)) {
-      auto nested            = ctx.Create_Node<ast::generic::Is_Type>(ctx.tok_v.peek());
-      nested->srcTypename    = firstok;
-      nested->parent_generic = gen;
+      auto nested             = ctx.Create_Node<ast::generic::Is_Type>(ctx.tok_v.peek());
+      nested->source_typename = firstok;
+      nested->parent_generic  = gen;
 
       while (!ctx.tok_v.is_end()) {
-        nested->inType.push_back(ctx.p_type->parse_type());
+        nested->in_type.push_back(ctx.p_type->parse_type());
 
         if (ctx.tok_v.match(TokTy::PIPE)) continue;
         break;
@@ -387,9 +384,9 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     }
     // case: T cast to/from ...
     else if (ctx.tok_v.match(TokTy::CAST)) {
-      auto castNode            = ctx.Create_Node<ast::generic::Can_Cast>(ctx.tok_v.peek());
-      castNode->srcTypename    = firstok;
-      castNode->parent_generic = gen;
+      auto castNode             = ctx.Create_Node<ast::generic::Can_Cast>(ctx.tok_v.peek());
+      castNode->source_typename = firstok;
+      castNode->parent_generic  = gen;
 
       if (ctx.tok_v.peek(0).val != "to" && ctx.tok_v.peek(0).val != "from") {
         ctx.tok_v.add_error(75, "Expected cast way 'to' or 'from' in generic filter argument.", kHint_filter);
@@ -414,7 +411,7 @@ std::shared_ptr<ast::declaration::Type_Alias> parser::Parser_Declaration::type_a
 
   ctx.tok_v.match(TokTy::TYPE);
 
-  tyAlias->name = ctx.parse_name();
+  tyAlias->declaration_name = ctx.parse_name();
 
   ctx.tok_v.expect(77, TokTy::ASSIGN, "Expected '=' after type alias.",
                    "define type alias like:"

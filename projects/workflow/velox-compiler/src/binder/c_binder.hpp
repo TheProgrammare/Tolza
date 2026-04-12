@@ -29,20 +29,20 @@ namespace ffi
 namespace c
 {
 
-Comp   c_struct_to_comp(CXCursor cCur);
-Func   c_function_to_func(CXCursor cCur);
-Union  c_union_to_union(CXCursor cCur);
-Flag   c_enum_to_flag(CXCursor cCur);
-Global c_global_to_global(CXCursor cCur);
-EType  c_type_base_to_type_base(CXType cType, CXType& out_base_cType);
-Type   c_type_to_type(CXType cType);
+Comp   c_struct_to_comp(CXCursor p_cCur);
+Func   c_function_to_func(CXCursor p_cCur);
+Union  c_union_to_union(CXCursor p_cCur);
+Flag   c_enum_to_flag(CXCursor p_cCur);
+Global c_global_to_global(CXCursor p_cCur);
+EType  c_type_base_to_type_base(CXType p_cType, CXType& p_out_base_cType);
+Type   c_type_to_type(CXType p_cType);
 
 
-void c_lib_to_velox_lib(const Bind_Package& _bind);
+void c_lib_to_velox_lib(const Bind_Package& p_bind);
 
-CXChildVisitResult universal_visitor(CXCursor cursor, CXCursor parent, CXClientData client_data);
-AST                parse_translation_unit(const Bind_Package& _bind, const std::string& file_path,
-                                          const std::vector<std::string>& args);
+CXChildVisitResult universal_visitor(CXCursor p_cursor, CXCursor p_parent, CXClientData p_client_data);
+AST                parse_translation_unit(const Bind_Package& p_bind, const std::string& p_file_path,
+                                          const std::vector<std::string>& p_args);
 
 } // namespace c
 } // namespace ffi
