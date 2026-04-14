@@ -1013,70 +1013,138 @@ match result {
 ```
 
 # Modules
+
 Modules are namespace and script interface representation.
 
-There are two types of modules : 
-- inline module : `mod <name> {...}`
-- file module : `my_script.vlx`
+There are two types of modules:
+- inline module: `mod <name> {...}`
+- file module: `my_script.vlx`
 
-Access logic :
-- lexical scope -> file scope -> cross-file scope
+# Access logic
 
-Almost all scope members are internal.
+Access resolution order:
+1. lexical scope
+2. file scope
+3. cross-file scope
 
-To enforce a file scope member to become lexical scope member, use the metacode `# private`
+**Lexical scope:**
+- Private to the block where it is defined
+- Accessible only within its own sub-scopes
+- Cannot be accessed from outside its lexical boundary
 
-## Inline module
-Theses modules are classic namespace. 
-There are all file scope by default.
+**File scope:**
+- Accessible anywhere within the same file module
+- Access often requires explicit path resolution (e.g. `a::b::c`)
+- Not visible outside the file unless explicitly exported
 
-Usage:
+**Cross-file scope:**
+- Represents visibility between file modules
+- Only exported members are visible across files
+- Non-exported members are never reachable from other files
+
+# General rule
+
+Almost all members are file scope by default.
+
+To enforce file-scope members to become lexical-scope members, use: `# private`
+
+# Inline module
+
+Inline modules are classic namespaces.
+They are file scope by default.
+
+**Usage:**
 - namespace creation: `mod <name> {...}`
 - namespace access: `My_Namespace::my_function`
 
-Access
-| access type | def | access | mode |
-|-|-|-|-|
-| vertical ascending  | `mod a {`</br>`  fn x() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | `fn z() { a::x() }` | explicit only |
-| vertical descending | `mod a {`</br>`  fn x() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | relative scope `fn x() { b::z() }`</br>absolute scope `fn x() { a::b::z() }` | explicit or relative |
-| horizontal | `mod a {`</br>`  fn x() {...}`</br>`  fn y() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | relative scope `fn x() { y() }`</br>absolute scope `fn x() { a::y() }` | explicit or relative |
+## Access rules
 
-Special access
-| special mode | syntax | info |
-|-|-|-|
-| root | `::my_module::my_fn()` | will access directly by searching on the root scope |
-| relative | `self::my_sub_module::my_fn()` | will access directly by searching on the current scope |
-| parent | `super::my_colateral_module::my_fn()` | will access directly by searching on the parent scope |
+| access type         | definition                                                        | example                         | mode                 |
+|---------------------|------------------------------------------------------------------|--------------------------------|----------------------|
+| vertical ascending  | parent module accessing child elements                          | `fn z() { a::x() }`            | explicit only        |
+| vertical descending | child accessing parent or sibling modules                       | `fn x() { b::z() }`            | explicit or relative |
+| horizontal          | sibling-to-sibling access in same module                        | `fn x() { y() }`               | explicit or relative |
 
-### Module alias
-You can simplify a module access use: `mod fs = core::filesystem` -> `fs::path`
-module alias is file scope.
+## Special access
 
-## File module
-All files are a file module.
-Only exported file memebers are cross-file scope.
+| mode   | syntax                         | info                          |
+|--------|--------------------------------|-------------------------------|
+| root   | `::my_module::my_fn()`         | resolves from root scope      |
+| self   | `self::my_sub_module::my_fn()` | resolves from current scope   |
+| parent | `super::my_module::my_fn()`    | resolves from parent scope    |
 
-### Export file
-To expose the the file module, you must create a unique export scope `export {...}`  in the root scope. 
-It's the file interface.
+## Module alias
 
-Will export all file scope members only. The lexical scope members are not exported (e.g. import file) 
+You can simplify module access:
+```
+mod fs = core::filesystem
+```
+**Usage:**
+```
+fs::path
+```
 
-### Import file
-To use other file code, use the import file instruction `import <path>`.
+Module aliases are file scope.
 
-The import file is lexical scope, even in export scope.
+# File module
 
-You can import also a specific inline module or elements of the file : `import math::scientific` `import math { foo, cos, sin }` 
+All files are file modules.
 
-Note: a pathed import can import a sub file module or a inline module, according to the parent file design. 
+Only exported file members are cross-file scope.
 
+## Export file
 
-### Export imported file
-To export a import file, use the instruction `reexport <path>` inside the export scope.
-The reexport file is file scope. So it can be exported.
+To expose a file module, define a unique export scope at root:
+```
+export { ... }
+```
+This is the file interface.
 
-It's indicate a sub file module.
+**Rules:**
+- Cross-file scope is strictly derived from the export block
+- Only file-scope members can be exported
+- Lexical-scope members are never exported (including import results)
+
+## Import file
+
+To use other file code:
+```
+import <path>
+```
+
+**Rules:**
+- Import is lexical scope only
+- Import remains private even inside export scope
+- Imports can reference:
+  - file modules
+  - inline modules
+  - specific elements
+
+**Examples:**
+```
+import math::scientific
+```
+```
+import math { foo, cos, sin }
+```
+
+**Note:**
+A path import can resolve to:
+- a sub file module
+- an inline module
+depending on parent module structure
+
+## Export imported file
+
+To expose an imported module, use:
+```
+reexport <path>
+```
+
+**Rules:**
+- reexport is file scope
+- it can be included in export { ... }
+- it exposes a sub file module as part of the current file interface
 
 # Tuple
 tuples are implicit they a deduced most of the time in `( ... )`
