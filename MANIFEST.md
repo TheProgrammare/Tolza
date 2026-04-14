@@ -1013,22 +1013,70 @@ match result {
 ```
 
 # Modules
-modules permit to avoid naming collision, it's possible to use native types as modules
-```
-mod name { ... }
-```
+Modules are namespace and script interface representation.
 
-call:
-```
-City::House::new(N: 37.0379f, E: 27.4241f)
-```
+There are two types of modules : 
+- inline module : `mod <name> {...}`
+- file module : `my_script.vlx`
 
-to export module, use the instruction `export <name> { ... }` and use as a module
+Access logic :
+- lexical scope -> file scope -> cross-file scope
 
-## Module Alias
-you can give an alias to an module (hightly not recommended)
-`use fs = core::file_system`
+Almost all scope members are internal.
 
+To enforce a file scope member to become lexical scope member, use the metacode `# private`
+
+## Inline module
+Theses modules are classic namespace. 
+There are all file scope by default.
+
+Usage:
+- namespace creation: `mod <name> {...}`
+- namespace access: `My_Namespace::my_function`
+
+Access
+| access type | def | access | mode |
+|-|-|-|-|
+| vertical ascending  | `mod a {`</br>`  fn x() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | `fn z() { a::x() }` | explicit only |
+| vertical descending | `mod a {`</br>`  fn x() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | relative scope `fn x() { b::z() }`</br>absolute scope `fn x() { a::b::z() }` | explicit or relative |
+| horizontal | `mod a {`</br>`  fn x() {...}`</br>`  fn y() {...}`</br>`  mod b {`</br>`    fn z() {...}`</br>`  }`</br>`}` | relative scope `fn x() { y() }`</br>absolute scope `fn x() { a::y() }` | explicit or relative |
+
+Special access
+| special mode | syntax | info |
+|-|-|-|
+| root | `::my_module::my_fn()` | will access directly by searching on the root scope |
+| relative | `self::my_sub_module::my_fn()` | will access directly by searching on the current scope |
+| parent | `super::my_colateral_module::my_fn()` | will access directly by searching on the parent scope |
+
+### Module alias
+You can simplify a module access use: `mod fs = core::filesystem` -> `fs::path`
+module alias is file scope.
+
+## File module
+All files are a file module.
+Only exported file memebers are cross-file scope.
+
+### Export file
+To expose the the file module, you must create a unique export scope `export {...}`  in the root scope. 
+It's the file interface.
+
+Will export all file scope members only. The lexical scope members are not exported (e.g. import file) 
+
+### Import file
+To use other file code, use the import file instruction `import <path>`.
+
+The import file is lexical scope, even in export scope.
+
+You can import also a specific inline module or elements of the file : `import math::scientific` `import math { foo, cos, sin }` 
+
+Note: a pathed import can import a sub file module or a inline module, according to the parent file design. 
+
+
+### Export imported file
+To export a import file, use the instruction `reexport <path>` inside the export scope.
+The reexport file is file scope. So it can be exported.
+
+It's indicate a sub file module.
 
 # Tuple
 tuples are implicit they a deduced most of the time in `( ... )`
