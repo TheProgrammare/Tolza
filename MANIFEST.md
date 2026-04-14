@@ -1094,7 +1094,7 @@ Only exported file members are cross-file scope.
 
 ## Export file
 
-To expose a file module, define a unique export scope at root:
+To expose a file module, define a unique export scope:
 ```
 export { ... }
 ```
@@ -1112,6 +1112,13 @@ To use other file code:
 import <path>
 ```
 
+special path prefix:
+- `std::` search on standard library
+- `src::` search on the root of the project source
+- `pkg::` search on packages installed
+- `bind::` search on bindings
+
+
 **Rules:**
 - Import is lexical scope only
 - Import remains private even inside export scope
@@ -1122,7 +1129,7 @@ import <path>
 
 **Examples:**
 ```
-import math::scientific
+import std::math::scientific
 ```
 ```
 import math { foo, cos, sin }
