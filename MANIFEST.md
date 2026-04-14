@@ -1128,11 +1128,24 @@ special path prefix:
   - specific elements
 
 **Examples:**
+Import module
 ```
 import std::math::scientific
+
+fn sin() {
+  return scientific::sin(10)
+}
 ```
+
+Import items
 ```
-import math { foo, cos, sin }
+import std::math::{ foo, cos, sin }
+import std::random::linear_rand
+
+fn main() {
+  let result = cos(10)
+  let w = linear_rand(1)
+}
 ```
 
 **Note:**
