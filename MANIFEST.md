@@ -1052,6 +1052,7 @@ To enforce file-scope members to become lexical-scope members, use: `# private`
 
 Inline modules are classic namespaces.
 They are file scope by default.
+Modules names are in a different namespace of values and types.
 
 **Usage:**
 - namespace creation: `mod <name> {...}`
@@ -1059,11 +1060,18 @@ They are file scope by default.
 
 ## Access rules
 
-| access type         | definition                                                        | example                         | mode                 |
-|---------------------|------------------------------------------------------------------|--------------------------------|----------------------|
+| access type         | definition                                                      | example                        | mode                 |
+|---------------------|-----------------------------------------------------------------|--------------------------------|----------------------|
 | vertical ascending  | parent module accessing child elements                          | `fn z() { a::x() }`            | explicit only        |
-| vertical descending | child accessing parent or sibling modules                       | `fn x() { b::z() }`            | explicit or relative |
-| horizontal          | sibling-to-sibling access in same module                        | `fn x() { y() }`               | explicit or relative |
+| vertical descending | child accessing parent or sibling modules                       | `fn x() { b::z() }`            | explicit only |
+| horizontal          | sibling-to-sibling access (are in same module)                  | `fn x() { y() }`               | explicit or relative |
+
+Unqualified identifiers are resolved only within:
+1. lexical scope
+2. current module scope
+
+They MUST NOT resolve to parent, sibling, or cross-file modules implicitly.
+
 
 ## Special access
 
@@ -1107,16 +1115,19 @@ This is the file interface.
 
 ## Import file
 
-To use other file code:
+To use other file code you must indicate explicitly a importation:
 ```
-import <path>
+import <path> [as <alias>]
 ```
+It will make a shortcut to the last identifier(s) (or alias) in the current scope 
 
 special path prefix:
 - `std::` search on standard library
-- `src::` search on the root of the project source
+- `src::` search on the root of the project source (filesystem structure)
 - `pkg::` search on packages installed
 - `bind::` search on bindings
+- none search first on relative file (filesystem structure)
+  - then try other path -> src -> std -> pkg -> bind
 
 
 **Rules:**
@@ -1140,11 +1151,13 @@ fn sin() {
 Import items
 ```
 import std::math::{ foo, cos, sin }
-import std::random::linear_rand
+import std::math::scientific::{ foo, cos, sin } as { sfoo, scos, ssin }
+import std::random::linear_rand as lrand
 
 fn main() {
   let result = cos(10)
-  let w = linear_rand(1)
+  let w = lrand(1)
+  let a = sfoo(10)
 }
 ```
 
@@ -1158,13 +1171,16 @@ depending on parent module structure
 
 To expose an imported module, use:
 ```
-reexport <path>
+reexport <path> [as <alias>]
 ```
+
+> Trick: it's like a export import of module
 
 **Rules:**
 - reexport is file scope
 - it can be included in export { ... }
 - it exposes a sub file module as part of the current file interface
+
 
 # Tuple
 tuples are implicit they a deduced most of the time in `( ... )`
