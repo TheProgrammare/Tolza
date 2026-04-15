@@ -21,7 +21,7 @@
 #include "lexer/token.hpp"
 
 #include "misc/metacode.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::parse_declaration()
 {
@@ -72,13 +72,13 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::_module()
     node->declaration_name = std::move(name);
     node->module           = ctx.p_expr->identifier();
 
-    ctx.m_sym->add_decl(node);
+    ctx.current_module->add_item(node);
 
     return node;
   } else if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
     auto node = ctx.Create_Decl<ast::declaration::Mod>(ctx.tok_v.peek());
 
-    ctx.m_sym->enter_scope(name, EScopeType::Mod);
+    ctx.enter_scope(node, name);
     node->declaration_name = std::move(name);
 
     while (!ctx.tok_v.is_end()) {
@@ -91,7 +91,7 @@ std::shared_ptr<ast::ADeclaration> parser::Parser_Declaration::_module()
       if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
     }
 
-    ctx.m_sym->exit_scope();
+    ctx.exit_scope();
 
     return node;
   }
@@ -111,8 +111,8 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
 
   auto enu              = ctx.Create_Decl<ast::declaration::Enum>(ctx.tok_v.peek());
   enu->declaration_name = ctx.parse_name("", hint);
-  ctx.m_sym->add_decl(enu);
-  ctx.m_sym->enter_scope(enu->declaration_name, EScopeType::Enum);
+  ctx.current_module->add_item(enu);
+  ctx.enter_scope(enu, enu->declaration_name);
 
   ctx.tok_v.expect(63, TokTy::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
 
@@ -135,7 +135,7 @@ std::shared_ptr<ast::declaration::Enum> parser::Parser_Declaration::enumeration(
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return enu;
 }
@@ -147,8 +147,8 @@ std::shared_ptr<ast::declaration::Union> parser::Parser_Declaration::_union()
 
   auto _union              = ctx.Create_Decl<ast::declaration::Union>(ctx.tok_v.peek());
   _union->declaration_name = ctx.parse_name("", hint);
-  ctx.m_sym->add_decl(_union);
-  ctx.m_sym->enter_scope(_union->declaration_name, EScopeType::Union);
+  ctx.current_module->add_item(_union);
+  ctx.enter_scope(_union, _union->declaration_name);
 
   ctx.tok_v.expect(182, TokTy::OPEN_BRACE, "Expected start union block '{' after union name declaration.", hint);
 
@@ -164,7 +164,7 @@ std::shared_ptr<ast::declaration::Union> parser::Parser_Declaration::_union()
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return _union;
 }
@@ -177,8 +177,8 @@ std::shared_ptr<ast::declaration::Flag> parser::Parser_Declaration::flag()
   auto flag              = ctx.Create_Decl<ast::declaration::Flag>(ctx.tok_v.peek());
   flag->declaration_name = ctx.parse_name("", hint);
 
-  ctx.m_sym->add_decl(flag);
-  ctx.m_sym->enter_scope(flag->declaration_name, EScopeType::Flag);
+  ctx.current_module->add_item(flag);
+  ctx.enter_scope(flag, flag->declaration_name);
 
   ctx.tok_v.expect(184, TokTy::OPEN_BRACE, "Expected start flag block '{' after flag name declaration.", hint);
 
@@ -190,7 +190,7 @@ std::shared_ptr<ast::declaration::Flag> parser::Parser_Declaration::flag()
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return flag;
 }
@@ -217,7 +217,7 @@ std::shared_ptr<ast::declaration::Global> parser::Parser_Declaration::global_var
   var->kind             = kind;
   var->declaration_name = ctx.parse_name("", hint);
 
-  ctx.m_sym->add_decl(var);
+  ctx.current_module->add_item(var);
 
   if (var->declaration_name.empty()) {
     ctx.tok_v.add_error(66, "Invalid Identifier !", "");
@@ -278,11 +278,14 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
 
   ctx.current_function = fn.get();
 
-  ctx.m_sym->add_decl(fn);
-  ctx.m_sym->enter_scope(fn->declaration_name, EScopeType::Function);
+  ctx.current_module->add_item(fn);
+  ctx.enter_scope(fn, fn->declaration_name);
 
   fn->prototype = ctx.p_type->explicit_function_proto(false);
-  for (auto& param : fn->prototype->parameters) param->parent_function = fn;
+  for (auto& param : fn->prototype->parameters) {
+    param->parent_function = fn;
+    ctx.current_module->add_item(param);
+  }
 
   // if extern : no definition
   if (fn->declaration_is_external && ctx.tok_v.check(TokTy::OPEN_BRACE))
@@ -290,7 +293,7 @@ std::shared_ptr<ast::declaration::Function> parser::Parser_Declaration::function
 
   if (!fn->declaration_is_external) fn->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
   ctx.current_function = nullptr;
 
   return fn;
@@ -312,8 +315,8 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
   ctx.tok_v.match(TokTy::GENERIC);
 
   gen->declaration_name = ctx.parse_name("", kHint_gen);
-  ctx.m_sym->add_decl(gen);
-  ctx.m_sym->enter_scope(gen->declaration_name, EScopeType::Generic);
+  ctx.current_module->add_item(gen);
+  ctx.enter_scope(gen, gen->declaration_name);
   ctx.tok_v.expect(70, TokTy::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!ctx.tok_v.is_end()) {
@@ -401,7 +404,7 @@ std::shared_ptr<ast::declaration::Generic> parser::Parser_Declaration::generic()
     ctx.tok_v.match(TokTy::SEMICOLON);
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
   return gen;
 }
 
@@ -421,6 +424,6 @@ std::shared_ptr<ast::declaration::Type_Alias> parser::Parser_Declaration::type_a
 
   tyAlias->type = ctx.p_type->parse_type();
 
-  ctx.m_sym->add_decl(tyAlias);
+  ctx.current_module->add_item(tyAlias);
   return tyAlias;
 }

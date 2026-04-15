@@ -22,9 +22,11 @@ namespace declaration
 struct Global;   // var a: T = ... / let a: T = ... / const a: T = ...
 struct Function; // fn add(a: i32, b: i32) -> i32 {...}
 
-struct Mod;    // mod Declaration { entity Global {...} } }
-struct Export; // export AST { mod Declaration {...} }
-struct Extern; // extern "C" {...}
+struct Mod;      // mod Declaration { entity Global {...} } }
+struct Import;   // import my_module
+struct Export;   // export { mod Declaration {...} }
+struct ReExport; // reexport my_module
+struct Extern;   // extern "C" {...}
 
 struct Enum;         // enum EItem { House(str, i32), City(str), None() }
 struct Enum_Element; // EItem::House(str, i32)

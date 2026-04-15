@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "ast/ast_declaration.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "compiler/compiler.hpp"
 #include "visitor_base.hpp"

@@ -4,8 +4,6 @@
 
 #include "ast/ast_forward.hpp"
 
-struct Symbol_Data;
-
 namespace parser
 {
 struct Parser_Context;

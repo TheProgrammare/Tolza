@@ -16,7 +16,7 @@
 #include "parser_literal.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 std::shared_ptr<ast::ALocal> parser::Parser_Declaration_Local::parse_local(bool silent_error)
 {
@@ -100,7 +100,7 @@ std::shared_ptr<ast::declaration::local::Variable> parser::Parser_Declaration_Lo
   var->declaration_name = ctx.parse_name();
   var->isStatic         = ctx.metablock_contains(*var, "static");
 
-  ctx.m_sym->add_decl(var);
+  ctx.current_module->add_item(var);
 
   bool isAutoTy = false;
 
@@ -152,7 +152,7 @@ std::unique_ptr<ast::declaration::local::Tuple_Destructuring> parser::Parser_Dec
       loc->declaration_name = ctx.parse_name("", hint);
       loc->parent_pattern   = unpack.get();
       unpack->elements.push_back(loc);
-      ctx.m_sym->add_decl(loc);
+      ctx.current_module->add_item(loc);
     } else {
       unpack->elements.push_back(nullptr);
     }
@@ -211,10 +211,10 @@ std::shared_ptr<ast::declaration::local::Lambda> parser::Parser_Declaration_Loca
 
   if (ctx.tok_v.check(TokTy::IDENTIFIER)) {
     lam->declaration_name = ctx.parse_name();
-    ctx.m_sym->add_decl(lam);
-    ctx.m_sym->enter_scope(lam->declaration_name, EScopeType::Lambda);
+    ctx.current_module->add_item(lam);
+    ctx.enter_scope(lam, lam->declaration_name);
   } else {
-    ctx.m_sym->enter_scope("lam", EScopeType::Lambda);
+    ctx.enter_scope(lam, "lambda");
   }
 
   lam->is_const = ctx.metablock_contains(*lam, "const");
@@ -225,11 +225,14 @@ std::shared_ptr<ast::declaration::local::Lambda> parser::Parser_Declaration_Loca
 
   lam->prototype = ctx.p_type->explicit_function_proto(true);
 
-  for (auto& param : lam->prototype->parameters) param->parent_function = lam;
+  for (auto& param : lam->prototype->parameters) {
+    param->parent_function = lam;
+    ctx.current_module->add_item(param);
+  }
 
   lam->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return lam;
 }

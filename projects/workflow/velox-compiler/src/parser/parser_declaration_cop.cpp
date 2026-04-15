@@ -17,7 +17,7 @@
 #include "parser_declaration_local.hpp"
 #include "parser_type.hpp"
 
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 std::shared_ptr<ast::declaration::cop::Component> parser::Parser_Declaration_COP::component()
 {
@@ -52,7 +52,7 @@ std::shared_ptr<ast::declaration::cop::Component> parser::Parser_Declaration_COP
 
     field->type = ctx.p_type->parse_type();
 
-    ctx.m_sym->add_decl(field);
+    ctx.current_module->add_item(field);
 
     if (!field->is_no_default) {
       ctx.tok_v.expect(16, TokTy::ASSIGN, "Expected default value assignation '=' after field declaration", hint);
@@ -80,8 +80,9 @@ std::shared_ptr<ast::declaration::cop::Role> parser::Parser_Declaration_COP::rol
 
   auto role              = ctx.Create_Decl<ast::declaration::cop::Role>(tok);
   role->declaration_name = ctx.parse_name("", hint);
-  ctx.m_sym->add_decl(role);
-  ctx.m_sym->enter_scope(role->declaration_name, EScopeType::Role);
+
+  ctx.current_module->add_item(role);
+  ctx.enter_module(role, role->declaration_name);
 
   ctx.tok_v.expect(17, TokTy::OPEN_BRACE, "Expected start definition '{' after role declaration.", hint);
 
@@ -91,7 +92,7 @@ std::shared_ptr<ast::declaration::cop::Role> parser::Parser_Declaration_COP::rol
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_module();
 
   return role;
 }
@@ -113,8 +114,9 @@ std::shared_ptr<ast::declaration::cop::Entity> parser::Parser_Declaration_COP::e
   def_entity->isMoveable       = !ctx.metablock_contains(*def_entity, "no_move");
   def_entity->isDestructible   = !ctx.metablock_contains(*def_entity, "no_destruct");
   def_entity->declaration_name = ctx.parse_name("", hint);
-  auto entity_sym              = ctx.m_sym->add_decl(def_entity);
-  ctx.m_sym->enter_scope(def_entity->declaration_name, EScopeType::Entity);
+
+  ctx.current_module->add_item(def_entity);
+  ctx.enter_module(def_entity, def_entity->declaration_name);
 
   ctx.tok_v.expect(18, TokTy::OPEN_BRACE, "Expected start code block '{' after entity declaration.", hint);
 
@@ -124,7 +126,7 @@ std::shared_ptr<ast::declaration::cop::Entity> parser::Parser_Declaration_COP::e
     if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_module();
 
   return def_entity;
 }
@@ -162,26 +164,26 @@ void parser::Parser_Declaration_COP::parse_entity_declaration(
 
     return;
   } else if (ctx.tok_v.match(TokTy::NEW)) {
-    ctx.m_sym->enter_scope("new", EScopeType::Entity_New);
 
     auto e_new = ctx.Create_Decl<ast::declaration::cop::Entity_New>(ctx.tok_v.peek(-1));
+    ctx.enter_module(e_new, "new");
 
     e_new->prototype = ctx.p_type->explicit_function_proto();
     ctx.tok_v.expect(20, TokTy::OPEN_BRACE, "Expected start code '{'.", new_hint);
 
     e_new->codeblock = ctx.p_loc->code_block_instruction();
 
-    ctx.m_sym->exit_scope();
+    ctx.exit_module();
     e_new->parent_entity = parent_entity;
     parent_entity->news.push_back(std::move(e_new));
     return;
   } else if (ctx.tok_v.match(TokTy::DEL)) {
-    ctx.m_sym->enter_scope("del", EScopeType::Entity_Del);
 
     auto e_del = ctx.Create_Decl<ast::declaration::cop::Entity_Del>(ctx.tok_v.peek(-1));
+    ctx.enter_module(e_del, "del");
     ctx.tok_v.expect(20, TokTy::OPEN_BRACE, "Expected start code '{'.", del_hint);
 
-    ctx.m_sym->exit_scope();
+    ctx.exit_module();
     e_del->parent_entity = parent_entity;
     parent_entity->del   = e_del;
     return;
@@ -213,12 +215,12 @@ parser::Parser_Declaration_COP::_entity_op(std::shared_ptr<ast::declaration::cop
 
   auto tok = ctx.tok_v.peek();
 
-  ctx.m_sym->enter_scope("op", EScopeType::Entity_Op);
 
   std::shared_ptr<ast::declaration::cop::Entity_Op> entity_op;
 
   // other operator case op + - / * ...
-  auto _op    = ctx.Create_Decl<ast::declaration::cop::Entity_Op>(tok);
+  auto _op = ctx.Create_Decl<ast::declaration::cop::Entity_Op>(tok);
+  ctx.enter_module(_op, "op");
   auto op_tok = ctx.tok_v.expect_any(27, k_operator, "Expected operator in entity operator overloading.", hint);
   _op->op_ty  = TokTy_to_EBinOpType(op_tok.type);
 
@@ -234,7 +236,7 @@ parser::Parser_Declaration_COP::_entity_op(std::shared_ptr<ast::declaration::cop
 
   entity_op->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_module();
 
   return entity_op;
 }
@@ -250,13 +252,13 @@ parser::Parser_Declaration_COP::_entity_access_op(std::shared_ptr<ast::declarati
 
   auto tok = ctx.tok_v.peek();
 
-  ctx.m_sym->enter_scope("op", EScopeType::Entity_Op);
 
   std::shared_ptr<ast::declaration::cop::Entity_Access_Op> entity_access;
 
 
   // if index operator case op [] -> T { ... }
   auto _access_op = ctx.Create_Decl<ast::declaration::cop::Entity_Access_Op>(tok);
+  ctx.enter_module(_access_op, "access_op");
   _access_op->op_ty =
       ctx.tok_v.peek(-1).type == TokTy::INTERROGATIVE ? EAccessOpType::IndexBound : EAccessOpType::Index;
   ctx.tok_v.match(TokTy::OPEN_SQUARE); // if on bounded index
@@ -283,7 +285,7 @@ parser::Parser_Declaration_COP::_entity_access_op(std::shared_ptr<ast::declarati
 
   entity_access->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_module();
 
   return entity_access;
 }
@@ -299,7 +301,7 @@ parser::Parser_Declaration_COP::_entity_cast(std::shared_ptr<ast::declaration::c
   auto cast           = ctx.Create_Decl<ast::declaration::cop::Entity_Cast>(ctx.tok_v.peek());
   cast->parent_entity = parent_entity;
 
-  ctx.m_sym->enter_scope("cast", EScopeType::Entity_Cast);
+  ctx.enter_module(cast, "cast");
 
   auto key_self_case = [&]() {
     auto self             = ctx.Create_Node<ast::expression::Self>(ctx.tok_v.peek());
@@ -352,7 +354,7 @@ parser::Parser_Declaration_COP::_entity_cast(std::shared_ptr<ast::declaration::c
 
   cast->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_module();
   return cast;
 }
 
@@ -381,9 +383,15 @@ std::shared_ptr<ast::declaration::cop::System> parser::Parser_Declaration_COP::s
 
   system->declaration_name = ctx.parse_name("", hint);
   system->prototype        = ctx.p_type->explicit_function_proto();
-  for (auto& param : system->prototype->parameters) param->parent_function = system;
 
-  auto sys_sym      = ctx.m_sym->add_decl(system);
+  ctx.current_module->add_item(system);
+  ctx.enter_module(system, system->debug_str());
+
+  for (auto& param : system->prototype->parameters) {
+    param->parent_function = system;
+    ctx.current_module->add_item(param);
+  }
+
   bool isNoCompUsed = true;
 
   ctx.tok_v.expect(34, TokTy::OPEN_BRACE, "Expected start code block '{' after system declaration.", hint);
@@ -403,11 +411,13 @@ std::shared_ptr<ast::declaration::cop::System> parser::Parser_Declaration_COP::s
 
   // pre semantic checking system form is useful or a function is prefered ? (case of no components specifed)
   if (isNoCompUsed) {
-    ctx.tok_v.add_error_tok(37, system->_token,
+    ctx.tok_v.add_error_tok(37, system->node_token,
                             "Expected function instead of system given the behaviour of the code "
                             "block: no component specified in any where statement.",
                             hint);
   }
+
+  ctx.exit_module();
 
   return system;
 }
@@ -433,7 +443,7 @@ std::shared_ptr<ast::declaration::cop::System_Case> parser::Parser_Declaration_C
 
       auto bind              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
       bind->declaration_name = ctx.parse_name("", hint);
-      ctx.m_sym->add_decl(bind);
+      ctx.current_module->add_item(bind);
       sys_case->bindings.push_back(bind);
 
       ctx.tok_v.expect(39, TokTy::OPEN_PAREN, "Expected end binding ')' after component name pattern.", hint);

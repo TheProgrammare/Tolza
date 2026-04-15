@@ -59,13 +59,13 @@
 #include "ast/ast_expression.hpp"
 #include "ast/ast_type.hpp"
 #include "static_evaluation.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 
 Visitor_Codegen::Visitor_Codegen(ScriptInfo& _scr_info)
   : scr_info(_scr_info)
   , ctx(compiler::LLVM_CTX)
-  , __module(std::make_unique<llvm::Module>(std::filesystem::path(_scr_info.file_path).filename().stem().c_str(), ctx))
+  , __module(std::make_unique<llvm::Module>(_scr_info.file_info.get_module_name(), ctx))
   , mod(__module.get())
   , builder(*new llvm::IRBuilder<>(ctx))
   , tools(*new LLVM_Tools(*this))
@@ -110,7 +110,7 @@ void Visitor_Codegen::build_init_func()
 void Visitor_Codegen::error_add(ErrorCode code, const ast::Node& n, const std::string& msg,
                                 const std::string& hint) const
 {
-  auto error = Error_Diagnostic(scr_info, code, &scr_info, n._token, compiler::EPhase::llvmir, msg, hint);
+  auto error = Error_Diagnostic(scr_info, code, &scr_info, n.node_token, compiler::EPhase::llvmir, msg, hint);
 
   errors.push_back(error.print_error());
 }
@@ -187,12 +187,12 @@ void Visitor_Codegen::visit(ast::AIdentifier& n)
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID& n)
 {
   if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.identifier_symbol->symbol->codegen_pass(*this);
+  return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
 }
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID_Qualified& n)
 {
   if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.identifier_symbol->symbol->codegen_pass(*this);
+  return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
 }
 llvm::Value* Visitor_Codegen::visit(ast::Expr_ID_Type& n)
 {
@@ -206,7 +206,7 @@ llvm::Type* Visitor_Codegen::visit_ty(ast::Expr_ID_Type& n)
     return n.llvm_type = n.expression_inferred_type->codegen_ty(*this);
   } else if (n.name->expression_inferred_type) {
     return n.llvm_type = n.name->expression_inferred_type->codegen_ty(*this);
-  } else if (auto ptr = dynamic_cast<ast::AType*>(n.identifier_symbol->symbol.get())) {
+  } else if (auto ptr = dynamic_cast<ast::AType*>(n.identifier_symbol.get())) {
     return n.llvm_type = ptr->codegen_ty(*this);
   } else {
     std::cout << "type lost in addr " << &n << std::endl;
@@ -283,8 +283,8 @@ llvm::Function* Visitor_Codegen::visit(ast::declaration::Function& n)
 
   llvm::Function* fn = nullptr;
 
-  if (n.declaration_symbol->llvm_symbol) {
-    fn = llvm::cast<llvm::Function>(n.declaration_symbol->llvm_symbol);
+  if (n.declaration_symbol->codegen_pass(*this)) {
+    fn = llvm::cast<llvm::Function>(n.declaration_symbol->codegen_pass(*this));
   } else {
     llvm::Function::LinkageTypes linkage = n.declaration_is_exported || n.declaration_is_external
                                                ? llvm::Function::ExternalLinkage
@@ -1047,19 +1047,21 @@ llvm::Value* Visitor_Codegen::visit(ast::expression::Call& n)
   llvm::Function* fn_callee;
 
   // if already generated
-  if (n.function_symbol->llvm_symbol) {
-    fn_callee = llvm::cast<llvm::Function>(n.function_symbol->llvm_symbol);
+  if (n.function_symbol->codegen_pass(*this)) {
+    fn_callee = llvm::cast<llvm::Function>(n.function_symbol->codegen_pass(*this));
   }
   // else, generate a stub
   else {
-    llvm::Function::LinkageTypes linkage = n.function_symbol->is_external || n.function_symbol->is_exported
-                                               ? llvm::Function::ExternalLinkage
-                                               : llvm::Function::InternalLinkage;
+    llvm::Function::LinkageTypes linkage =
+        n.function_symbol->declaration_is_external || n.function_symbol->declaration_is_exported
+            ? llvm::Function::ExternalLinkage
+            : llvm::Function::InternalLinkage;
 
     auto ptr  = dynamic_cast<ast::AIdentifier*>(n.callee.get());
-    fn_callee = generate_stub(*n.function_proto, ptr->get_base_name(), linkage);
+    fn_callee = generate_stub(*n.function_proto, ptr->mangle_id_node(), linkage);
 
-    n.function_symbol->llvm_symbol = fn_callee;
+    auto fn_sym     = dynamic_cast<ast::ACallable*>(n.function_symbol.get());
+    fn_sym->llvm_fn = fn_callee;
   }
 
   size_t                    count = 0;

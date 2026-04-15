@@ -21,7 +21,14 @@
 #include <string>
 #include <vector>
 
+#include "ast/ast_base.hpp"
+#include "misc/module_manager.hpp"
 #include "misc/script_info.hpp"
+
+namespace module
+{
+struct Extern_Item;
+}
 
 namespace ffi
 {
@@ -30,24 +37,15 @@ struct Bind_Package {
   std::shared_ptr<ScriptInfo> scr_info;
 
   // mangle name, data
-  std::vector<Extern_Item> extern_fn;
-  std::vector<Extern_Item> extern_ty;
-  std::vector<Extern_Item> extern_glo;
-  std::vector<Extern_Item> extern_enum;
-  std::vector<Extern_Item> extern_union;
-  std::vector<Extern_Item> extern_flag;
-  std::vector<Extern_Item> extern_comp;
-  std::vector<Extern_Item> extern_sys;
-  std::vector<Extern_Item> extern_entity;
-  std::vector<Extern_Item> extern_gen;
-  std::vector<Extern_Item> extern_metacode;
+  std::map<std::string, ast::AIdentifier*> extern_items;
 
   std::string lang;
   std::string lib;
   std::string abi;
-  std::string path;
 
   size_t bind_count = 0;
+
+  std::string get_file_path() const;
 };
 
 enum class EPassMode {

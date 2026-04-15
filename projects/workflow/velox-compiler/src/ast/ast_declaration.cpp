@@ -27,7 +27,15 @@ void ast::declaration::Mod::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+void ast::declaration::Import::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
 void ast::declaration::Export::accept(Visitor_Base& v)
+{
+  v.visit(*this);
+}
+void ast::declaration::ReExport::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
@@ -99,7 +107,17 @@ llvm::Value* ast::declaration::Mod::codegen_pass(Visitor_Codegen& v)
   v.visit(*this);
   return nullptr;
 }
+llvm::Value* ast::declaration::Import::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 llvm::Value* ast::declaration::Export::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
+llvm::Value* ast::declaration::ReExport::codegen_pass(Visitor_Codegen& v)
 {
   v.visit(*this);
   return nullptr;
@@ -154,7 +172,7 @@ std::string ast::declaration::Enum_Element::debug_str() const
 
 std::string ast::declaration::Enum_Element::mangle_type() const
 {
-  return parent_enum->mangle_type() + mangle_id(name);
+  return parent_enum->mangle_type() + "." + name;
 }
 
 llvm::Function* ast::declaration::Function::codegen(Visitor_Codegen& v)

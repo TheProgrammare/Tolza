@@ -80,9 +80,9 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 
 
     llvm::outs() << "[linker] verify module " << scr_info->llvm_module->getName() << "\n"
-                 << "  file: \"" << scr_info->file_path << "\"\n";
+                 << "  file: \"" << scr_info->file_info.path << "\"\n";
     if (llvm::verifyModule(*scr_info->llvm_module, &llvm::errs())) {
-      llvm::errs() << "[linker:ERROR] Module verification \"" << scr_info->file_path << "\" failed !\n ";
+      llvm::errs() << "[linker:ERROR] Module verification \"" << scr_info->file_info.path << "\" failed !\n ";
       return false;
     }
 
@@ -91,7 +91,7 @@ bool llvm_link(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
 
     auto module_to_link = std::move(scr_info->llvm_module);
     if (linker.linkModules(*main_mod, std::move(module_to_link))) {
-      std::cerr << "[linker:ERROR] Link failed on script " << scr_info->file_path << std::endl;
+      std::cerr << "[linker:ERROR] Link failed on script " << scr_info->file_info.path << std::endl;
       failed = true;
     }
   }
@@ -128,12 +128,12 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
   size_t count = 0;
   for (auto& scr_info : scr_infos) {
     if (log)
-      std::cout << "[codegen:" << ++count << "/" << scr_infos.size() << "] \"" << scr_info->file_path << "\""
+      std::cout << "[codegen:" << ++count << "/" << scr_infos.size() << "] \"" << scr_info->file_info.path << "\""
                 << std::endl;
 
     auto            start = std::chrono::high_resolution_clock::now();
     Visitor_Codegen codegen_visit(*scr_info);
-    codegen_visit.visit(*scr_info->rootNode);
+    codegen_visit.visit(*scr_info->root_node);
     scr_info->llvm_module = std::move(codegen_visit.__module);
 
     if (compiler::COMP_CTX.target_emits.contains(common::CompCtx::EEmit::LLVM)) emit_llvm_to_file(codegen_visit);
@@ -142,8 +142,8 @@ bool pipeline_start_codegen(const std::vector<std::shared_ptr<ScriptInfo>>& scr_
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
     if (!codegen_visit.errors.empty()) {
-      llvmIRErrors.push_back({scr_info->file_path, codegen_visit.errors});
-      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+      llvmIRErrors.push_back({scr_info->file_info.path, codegen_visit.errors});
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_info.path << "\" " color_YELLOW << milli << " ms"
                 << color_RESET << std::endl;
     }
   }

@@ -8,12 +8,11 @@
 #include "ast/ast_literal.hpp"
 #include "visitor_default.hpp"
 
-struct Symbol_Data;
-
 namespace ast
 {
-using SYM_REF = Symbol_Data*;
-}
+struct ADeclaration;
+using SYM_REF = std::shared_ptr<ast::ADeclaration>;
+} // namespace ast
 
 struct Visitor_Type : public Visitor_Default {
   // keep

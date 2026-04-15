@@ -77,17 +77,16 @@ bool ast::type::Ptr::compare_with(const AType& other) const
 
 std::string ast::type::Function_Proto::mangle_type() const
 {
-  std::string out   = "fn" + std::to_string(parameters.size());
+  std::string out   = "fn." + std::to_string(parameters.size());
   size_t      count = 0;
   for (auto& param : parameters) {
-    out += param->type->mangle_type();
-    if (count++ != parameters.size() - 1) out += "_";
+    out += "." + param->type->mangle_type();
   }
 
   if (return_ty)
-    out += "_" + return_ty->mangle_type();
+    out += "." + return_ty->mangle_type();
   else
-    out += "_u0";
+    out += ".u0";
 
   return out;
 }

@@ -4,22 +4,23 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <compiler_context.hpp>
 
 #include "compiler/compiler.hpp"
 
 #include "ast/ast_data.hpp"
-#include <compiler_context.hpp>
 #include "lexer/token.hpp"
 #include "lexer/token_viewer.hpp"
 #include "misc/script_info.hpp"
 #include "misc/metacode.hpp"
 
 
-Preprocessor::Preprocessor(ScriptInfo& _scr_info)
-  : scr_info(_scr_info)
-  , tok_v(new TokenViewer(_scr_info))
+Preprocessor::Preprocessor(ScriptInfo& p_scr_info)
+  : scr_info(p_scr_info)
+  , meta_m(std::make_shared<meta::Manager>(p_scr_info))
+  , tok_v(std::make_unique<TokenViewer>(p_scr_info))
 {
-  m_meta       = new meta::MetablockManager;
   tok_v->phase = compiler::EPhase::preprosessor;
 }
 
@@ -37,7 +38,7 @@ std::unique_ptr<MetaNode> Preprocessor::Create_Meta(const Token& tok, size_t sta
     ptr->_scope.start_scope_position = start_scope_pos;
   }
 
-  m_meta->metablocks.insert({tok.span.anteprocess_pos, node.get()});
+  meta_m->metablocks.insert({tok.span.anteprocess_pos, node.get()});
   return node;
 };
 
@@ -47,16 +48,16 @@ std::vector<Token> Preprocessor::preprocess()
   while (!tok_v->is_end()) {
     tok_v->match(TokTy::S_METACODE_END);
 
-    if (process_any_meta(m_meta->root_metabock)) {
+    if (process_any_meta(meta_m->root_metabock)) {
       continue;
     }
 
-    m_meta->root_metabock.tokens_to_generate.push_back(tok_v->next().span.anteprocess_pos);
+    meta_m->root_metabock.tokens_to_generate.push_back(tok_v->next().span.anteprocess_pos);
   }
   // keep the EOF token
-  m_meta->root_metabock.tokens_to_generate.push_back(scr_info.tokens.back().span.anteprocess_pos);
+  meta_m->root_metabock.tokens_to_generate.push_back(scr_info.file_info.tokens.back().span.anteprocess_pos);
 
-  std::vector<Token> final_tokens = m_meta->root_metabock.generate_tokens(scr_info);
+  std::vector<Token> final_tokens = meta_m->root_metabock.generate_tokens(scr_info);
 
   size_t final_pos_count = 0;
   for (auto& tok : final_tokens) {
@@ -74,8 +75,7 @@ void Preprocessor::debug_write_postprocess_code_files(const std::vector<Token>& 
 {
   std::filesystem::create_directories(compiler::COMP_CTX.get_preprocess_dir());
 
-  auto path = std::filesystem::path(compiler::COMP_CTX.get_preprocess_dir())
-              / std::filesystem::path(scr_info.file_path).filename();
+  auto path = std::filesystem::path(compiler::COMP_CTX.get_preprocess_dir()) / scr_info.file_info.get_file_name();
   path.replace_extension(".txt");
 
   std::ofstream o_gen(path);
@@ -551,15 +551,16 @@ bool Preprocessor::is_tok_in_pattern(const Token& tok, const std::string& patter
 
 std::vector<Token> Preprocessor::get_scope_tokens(size_t start_pos, size_t end_pos)
 {
-  if (start_pos >= scr_info.tokens.size() || start_pos < scr_info.tokens.size() || end_pos >= scr_info.tokens.size()
-      || end_pos < scr_info.tokens.size()) {
+  if (start_pos >= scr_info.file_info.tokens.size() || start_pos < scr_info.file_info.tokens.size()
+      || end_pos >= scr_info.file_info.tokens.size() || end_pos < scr_info.file_info.tokens.size()) {
     std::runtime_error(
         "Impossible to get tokens for metacode, start or end slicer are out of "
         "bound of the script tokens list.");
   }
 
   std::vector<Token> tokens;
-  tokens.insert(tokens.begin(), scr_info.tokens.begin() + start_pos, scr_info.tokens.begin() + end_pos);
+  tokens.insert(tokens.begin(), scr_info.file_info.tokens.begin() + start_pos,
+                scr_info.file_info.tokens.begin() + end_pos);
   return tokens;
 }
 

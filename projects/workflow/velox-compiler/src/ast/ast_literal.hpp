@@ -19,8 +19,8 @@ struct Boolean final : public ALiteral {
   Boolean();
   Boolean(bool value);
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -36,8 +36,8 @@ struct Integral final : public ALiteral {
   Integral(const Int128& value);
 
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -55,14 +55,14 @@ struct Fixed_Point final : public ALiteral {
   Fixed_Point();
   Fixed_Point(const Int128& value, size_t _scale, EPrimType _raw_type);
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return EPrimType_to_str(raw_type) + "(" + val.i128_to_string() + ")";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Floating_Point final : public ALiteral {
@@ -72,14 +72,14 @@ struct Floating_Point final : public ALiteral {
   Floating_Point();
   Floating_Point(const Float128& value);
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return EPrimType_to_str(type) + "(" + val.float128_to_string() + ")";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // Latin-1 encoding
@@ -89,14 +89,14 @@ struct CUNE final : public ALiteral {
   CUNE();
   CUNE(char value);
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "cunei(\"" + std::to_string(val) + "\")";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct RUNE final : public ALiteral {
@@ -105,14 +105,14 @@ struct RUNE final : public ALiteral {
   RUNE();
   RUNE(std::string codePoints_value);
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "rune(\"" + code_points + "\")";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 
@@ -120,14 +120,14 @@ struct Text_Pure final : public ALiteral {
   std::string val;
   EPrimType   text_type = EPrimType::text;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "\"" + std::string(val.begin(), val.end()) + "\"";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -185,7 +185,7 @@ struct Format_Specifier final : public Node {
     return "format specifier \":" + src_Str + "\"";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // "{expression}"
@@ -196,14 +196,14 @@ struct Text_Interpolation final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "text interpolation";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // "format node {formatVariable} can be formated"
@@ -212,9 +212,9 @@ struct Textual_Format final : public ALiteral {
 
   [[nodiscard]] ast::literal::Text_Pure* get_if_pure_text() const;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  std::string debug_str() const override;
+  VISTOR_ACCEPT
 };
 
 
@@ -226,14 +226,14 @@ struct Table_Population final : public ALiteral {
   // can be a ex nihilo node (for primitive types)
   INFERRED_TYPE element_definition;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "table population";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Table final : public ALiteral {
@@ -249,7 +249,7 @@ struct Table final : public ALiteral {
 
   std::vector<size_t> resolved_size;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   bool is_matrix() const
   {
@@ -263,7 +263,7 @@ struct Table final : public ALiteral {
 
   std::string debug_str() const override;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Map final : public ALiteral {
@@ -281,9 +281,9 @@ struct Map final : public ALiteral {
   // key + value (no alignment need because it's translated to 2 arrays)
   size_t ty_sizeByte = 0;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -297,21 +297,21 @@ struct Enum final : public ALiteral {
   std::unique_ptr<ast::AIdentifier>         name;
   std::vector<std::unique_ptr<AExpression>> member_values;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "literal enum[" + std::to_string(expression_in_type_position) + " - " + name->debug_str() + "]";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Tuple final : public ALiteral {
   std::vector<std::unique_ptr<AExpression>> values;
   std::vector<std::string>                  name_fields;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
@@ -319,7 +319,7 @@ struct Tuple final : public ALiteral {
     return "literal named tuple(" + std::to_string(values.size()) + ")";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // first..end or first..=end
@@ -329,14 +329,14 @@ struct Range final : public ALiteral {
   std::unique_ptr<AExpression> step;
   bool                         endInclude = false;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "literal range";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
@@ -345,14 +345,14 @@ struct Structured_Data final : public ALiteral {
   std::unique_ptr<ast::AIdentifier>                       name;
   std::vector<std::unique_ptr<expression::Call_Argument>> field_args;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "literal structured data[" + name->debug_str() + "]";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
@@ -361,27 +361,27 @@ struct Entity final : public ALiteral {
   std::unique_ptr<ast::AIdentifier>             name;
   std::vector<std::unique_ptr<Structured_Data>> comp_args;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "literal entity[" + name->debug_str() + "]";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Iterator final : public ALiteral {
   std::unique_ptr<AExpression> collection;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_VALUE
 
   std::string debug_str() const override
   {
     return "literal iterator";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 } // namespace literal

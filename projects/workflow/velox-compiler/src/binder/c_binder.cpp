@@ -5,11 +5,13 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <ostream>
 
 #include <compiler_context.hpp>
 #include <common.hpp>
 
+#include "ast/ast_base.hpp"
 #include "binder/binder_ffi.hpp"
 #include "misc/script_info.hpp"
 
@@ -34,7 +36,7 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& p_bind)
 
   ast.imports["C"] = imp;
 
-  ffi::write_ast(ast, p_bind.path);
+  ffi::write_ast(ast, p_bind.get_file_path());
 
   std::filesystem::remove(tmp_path);
 }
@@ -48,19 +50,13 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
   CXLinkageKind linkage = clang_getCursorLinkage(p_cursor);
   if (linkage == CXLinkage_Internal) return CXChildVisit_Recurse;
 
-  auto find_item = [&](const std::vector<Extern_Item>& items, const std::string& name) -> bool {
-    for (auto item : items) {
-      // no mangling in C
-      if (item.name == name) return true;
-    }
-    return false;
-  };
+  auto contains_extern = [&](const std::string& name) -> bool { return ast->bind.extern_items.contains(name); };
 
 
   switch (kind) {
   case CXCursor_StructDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
-    if (!find_item(ast->bind.extern_comp, name)) break;
+    if (!contains_extern(name)) break;
 
     if (!clang_isCursorDefinition(p_cursor)) break;
     ffi::Comp comp        = c_struct_to_comp(p_cursor);
@@ -70,7 +66,7 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
 
   case CXCursor_UnionDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
-    if (!find_item(ast->bind.extern_union, name)) break;
+    if (!contains_extern(name)) break;
 
     if (!clang_isCursorDefinition(p_cursor)) break;
     ffi::Union u        = c_union_to_union(p_cursor);
@@ -80,7 +76,7 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
 
   case CXCursor_EnumDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
-    if (!find_item(ast->bind.extern_flag, name)) break;
+    if (!contains_extern(name)) break;
 
     if (!clang_isCursorDefinition(p_cursor)) break;
     ffi::Flag e        = c_enum_to_flag(p_cursor);
@@ -90,7 +86,7 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
 
   case CXCursor_FunctionDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
-    if (!find_item(ast->bind.extern_fn, name)) break;
+    if (!contains_extern(name)) break;
 
     ffi::Func f        = c_function_to_func(p_cursor);
     ast->funcs[f.name] = std::move(f);
@@ -99,7 +95,7 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
 
   case CXCursor_VarDecl: {
     std::string name = clang_getCString(clang_getCursorSpelling(p_cursor));
-    if (!find_item(ast->bind.extern_glo, name)) break;
+    if (!contains_extern(name)) break;
 
     ffi::Global g        = c_global_to_global(p_cursor);
     ast->globals[g.name] = std::move(g);

@@ -12,7 +12,7 @@
 
 Lexer::Lexer(ScriptInfo& _scr_info)
   : scr_info(_scr_info)
-  , stream(scr_info.file_str)
+  , stream(scr_info.file_info.data)
 {
 }
 
@@ -459,7 +459,8 @@ void Lexer::tokenize_numeric()
     else if (stream.check('.')) {
       // member access : a.b
 
-      if (!scr_info.tokens.empty() && scr_info.tokens.back().type == TokTy::IDENTIFIER && is_alpha(stream.peek(1))) {
+      if (!scr_info.file_info.tokens.empty() && scr_info.file_info.tokens.back().type == TokTy::IDENTIFIER
+          && is_alpha(stream.peek(1))) {
         buffer = ".";
         add_token(TokTy::DOT);
         return;
@@ -673,8 +674,8 @@ void Lexer::tokenize_identifier()
 void Lexer::add_token(TokTy type, bool do_not_move)
 {
   Span span(0, stream.get_line(), stream.get_column(), buffer.size());
-  span.anteprocess_pos = scr_info.tokens.size();
-  scr_info.tokens.emplace_back(Token(buffer, type, span));
+  span.anteprocess_pos = scr_info.file_info.tokens.size();
+  scr_info.file_info.tokens.emplace_back(Token(buffer, type, span));
   buffer.clear();
   if (!do_not_move) stream.next();
 }
@@ -682,7 +683,7 @@ void Lexer::add_token(TokTy type, bool do_not_move)
 void Lexer::add_error(ErrorCode code, const std::string& msg, const std::string& hint)
 {
   Span span(0, stream.get_line(), stream.get_column(), buffer.size());
-  span.anteprocess_pos = scr_info.tokens.size();
+  span.anteprocess_pos = scr_info.file_info.tokens.size();
   auto tok             = Token(buffer, ETokenType::NONE, span);
 
   std::string out = Error_Diagnostic(scr_info, code, &scr_info, tok, compiler::EPhase::lexer, msg, hint).print_error();

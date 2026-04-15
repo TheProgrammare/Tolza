@@ -2,19 +2,21 @@
 
 #include <cstddef>
 
-
 #include "misc/error_output.hpp"
 
 #include "ast_type.hpp"
+
+#include "misc/module_manager.hpp"
 
 #include "visitor/visitor_base.hpp"
 #include "codegen/visitor_codegen.hpp"
 
 
-std::string mangle_id(const std::string& inId)
+std::string ast::mangle_path(const std::vector<std::string>& p_in_path)
 {
-  if (inId.empty()) return ""; // no name, must return empty string and no 0
-  return std::to_string(inId.size()) + inId;
+  std::string out;
+  for (auto elem : p_in_path) out += elem + ".";
+  return out.substr(0, out.size() - 1);
 }
 
 EPassMode ast::get_defaultParamPassmode(ast::AType& node)
@@ -22,6 +24,14 @@ EPassMode ast::get_defaultParamPassmode(ast::AType& node)
   if (dynamic_cast<ast::type::Primitive*>(&node)) return EPassMode::Copy;
   // pass by ref
   return EPassMode::Ref;
+}
+
+ast::ADeclaration::ADeclaration(SYM_REF p_sym, const std::string p_name, bool p_external)
+  : declaration_name(p_name)
+  , declaration_is_external(p_external)
+  , declaration_symbol(p_sym)
+{
+  visibility = node_module->visibility;
 }
 
 
@@ -59,6 +69,11 @@ void ast::Root::accept(Visitor_Base& v)
 {
   v.visit(*this);
 }
+llvm::Value* ast::Root::codegen_pass(Visitor_Codegen& v)
+{
+  v.visit(*this);
+  return nullptr;
+}
 std::string ast::Expr_ID_Qualified::debug_str() const
 {
   std::string outStr;
@@ -70,89 +85,18 @@ std::string ast::Expr_ID_Qualified::debug_str() const
   return outStr;
 }
 
-std::string ast::Expr_ID_Qualified::mangle_path() const
-{
-  std::string outStr;
-  for (auto& seg : path) {
-    outStr += mangle_id(seg);
-  }
-  return outStr;
-}
-
-std::string ast::Expr_ID_Qualified::mangle_local_name() const
-{
-  if (qualification_at_root_scope) {
-    return mangle_path() + mangle_id(get_base_name());
-  } else if (qualification_at_current_scope) {
-    return mangle_scope() + mangle_path() + mangle_id(get_base_name());
-  } else if (qualification_at_parent_scope) {
-    // remove parent in loop
-    std::string out;
-    for (int i = 0; i < _scope.size() - 1; i++) {
-      out += mangle_id(_scope[i]);
-    }
-    return out + mangle_path() + mangle_id(get_base_name());
-  }
-  // local level by default
-  else if (is_qualified_id()) {
-    return mangle_path() + mangle_id(get_base_name());
-  }
-  // local level by default
-  else {
-    return mangle_scope() + mangle_id(get_base_name());
-  }
-}
-
-std::string ast::Expr_ID_Qualified::mangle_qualified_name() const
-{
-  if (is_qualified_id()) {
-    return mangle_path() + mangle_id(get_base_name());
-  }
-  // local level by default
-  else {
-    return mangle_id(get_base_name());
-  }
-}
-
-
 std::string ast::Node::mangle_scope() const
 {
-  std::string out;
-  for (auto& seg : _scope) {
-    out += mangle_id(seg);
-  }
-  return out;
-}
-
-bool ast::Node::is_visible_in(const std::span<const std::string>& other_scope) const
-{
-  if (_scope.empty() && other_scope.empty()) return true;
-  if (other_scope.empty()) return true;
-
-  if (_scope.size() > other_scope.size()) return false;
-
-  for (size_t i = 1; i < _scope.size(); i++) {
-    if (_scope[i] != other_scope[i]) return false;
-  }
-
-  return true;
-}
-
-std::string ast::Expr_ID_Type::mangle_types() const
-{
-  std::string out;
-  for (auto& elem : gen_args) out += elem->mangle_scope();
-  return out;
+  return node_module->get_mangling_name();
 }
 
 std::string ast::Expr_ID_Type::mangle_type() const
 {
-  std::string out;
+  std::string out = name->mangle_id_node();
 
   size_t count = 0;
   for (auto& ty : gen_args) {
-    out += ty->mangle_type();
-    if (count++ != gen_args.size() - 1) out += "_";
+    out += "." + ty->mangle_type();
   }
 
   return out;
@@ -174,8 +118,7 @@ std::string ast::Expr_ID_Type::debug_str() const
 bool ast::Expr_ID_Type::compare_with(const AType& other) const
 {
   if (auto ptr = dynamic_cast<const Expr_ID_Type*>(&other)) {
-    bool same_name = name->mangle_qualified_name() == ptr->name->mangle_qualified_name();
-    return same_name;
+    return name == ptr->name && gen_args == ptr->gen_args;
   }
   return false;
 }

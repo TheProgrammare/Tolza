@@ -21,18 +21,18 @@ struct Ptr final : public AType {
   EPtrType               pointer_type = EPtrType::raw_ptr;
   std::shared_ptr<AType> inner;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
-    return EPtrType_to_mangle(pointer_type) + inner->mangle_type();
+    return EPtrType_to_mangle(pointer_type) + "." + inner->mangle_type();
   }
   bool        compare_with(const AType& other) const override;
   std::string debug_str() const override
   {
     return "type " + EPtrType_to_str(pointer_type);
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Table final : public AType {
@@ -42,7 +42,7 @@ struct Table final : public AType {
 
   std::shared_ptr<AType> inner;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
@@ -63,7 +63,7 @@ struct Table final : public AType {
     if (table_size) return "type table[" + size_sym->debug_str() + " -&gt; " + std::to_string(table_size) + "]";
     return "type table[" + size_sym->debug_str() + "]";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Matrix final : public AType {
@@ -71,9 +71,9 @@ struct Matrix final : public AType {
   size_t dimension_size;
   [[maybe_unused]]
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
-  std::string mangle_type() const override
+      std::string mangle_type() const override
   {
     if (tbl.table_size > 0) return "sMtx" + tbl.inner->mangle_type() + "_" + std::to_string(dimension_size);
     return "dMtx" + std::to_string(tbl.table_size) + "_" + tbl.inner->mangle_type() + "_"
@@ -94,14 +94,14 @@ struct Matrix final : public AType {
              + std::to_string(dimension_size);
     return "type matrix[" + tbl.size_sym->debug_str() + "]*" + std::to_string(dimension_size);
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Hyper final : public AType {
   Table                        tbl;
   std::unique_ptr<AExpression> dimensionSymbol;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
@@ -121,7 +121,7 @@ struct Hyper final : public AType {
       return "type hyper[" + tbl.size_sym->debug_str() + " -&gt; " + std::to_string(tbl.table_size) + "]";
     return "type hyper[" + tbl.size_sym->debug_str() + "]";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Primitive final : public AType {
@@ -133,7 +133,7 @@ struct Primitive final : public AType {
   {
   }
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
@@ -150,19 +150,19 @@ struct Primitive final : public AType {
   {
     return "type " + EPrimType_to_str(type);
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Tuple final : public AType {
   std::vector<std::shared_ptr<AType>> types;
   std::vector<std::string>            name_fields;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
-    std::string out = "tuple" + std::to_string(types.size());
-    for (auto& ty : types) out += ty->mangle_type();
+    std::string out = "tu." + std::to_string(types.size());
+    for (auto& ty : types) out += "." + ty->mangle_type();
     return out;
   }
   std::string debug_str() const override
@@ -181,7 +181,7 @@ struct Tuple final : public AType {
     }
     return false;
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Function_Proto final : public AType {
@@ -194,20 +194,20 @@ struct Function_Proto final : public AType {
   bool is_variadic             = false;
   bool is_explicit_return_type = false;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override;
   bool        compare_with(const AType& other) const override;
 
   std::string debug_str() const override;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Get_Expr_Type final : public AType {
   std::unique_ptr<AExpression> target;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string mangle_type() const override
   {
@@ -222,7 +222,7 @@ struct Get_Expr_Type final : public AType {
     return "type get expression type";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 } // namespace type

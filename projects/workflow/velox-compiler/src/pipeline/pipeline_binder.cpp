@@ -17,7 +17,9 @@
 
 #include "binder/c_binder.hpp"
 #include "binder/ffi-json_reader.hpp"
+#include "misc/module_manager.hpp"
 #include "misc/script_info.hpp"
+#include "misc/symbol_manager.hpp"
 #include "pipeline/pipeline_filesystem.hpp"
 
 namespace fs = std::filesystem;
@@ -31,18 +33,18 @@ bool generate_script(const ffi::Bind_Package& p_bind)
     ffi::Bind_Package _bind_w_abi = p_bind;
     _bind_w_abi.abi               = "C";
     ffi::c::c_lib_to_velox_lib(_bind_w_abi);
-  } else if (fs::exists(p_bind.path)) {
-    auto ast = ffi::JSON::read_ffi_json_file(p_bind.path);
-    ffi::write_ast(ast, p_bind.path);
+  } else if (fs::exists(p_bind.get_file_path())) {
+    auto ast = ffi::JSON::read_ffi_json_file(p_bind.get_file_path());
+    ffi::write_ast(ast, p_bind.get_file_path());
   } else {
-    std::cerr << color_RED "\n[binder] FFI JSON file doesn't exists at " << p_bind.path << std::endl;
+    std::cerr << color_RED "\n[binder] FFI JSON file doesn't exists at " << p_bind.get_file_path() << std::endl;
     return false;
   }
 
   return true;
 }
 
-bool generate_binds(const std::vector<ffi::Bind_Package>& p_binds)
+bool generate_binds(std::vector<ffi::Bind_Package>& p_binds)
 {
   static bool log = compiler::COMP_CTX.logs.contains("binder");
 
@@ -53,21 +55,27 @@ bool generate_binds(const std::vector<ffi::Bind_Package>& p_binds)
 
     bool success = generate_script(bind);
 
-    scripts.insert(bind.path);
+    scripts.insert(bind.get_file_path());
 
     auto end = std::chrono::high_resolution_clock::now();
 
     auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
     size_t count = 1;
-    if (log) std::cout << "[binder:generation:" << count++ << "] \"" << bind.scr_info->file_path << "\"" << std::endl;
+    if (log)
+      std::cout << "[binder:generation:" << count++ << "] \"" << bind.scr_info->file_info.path << "\"" << std::endl;
 
     if (!success)
-      std::cout << color_RED "ERR " color_RESET "\"" << bind.scr_info->file_path << "\"" color_YELLOW << milli << " ms"
-                << color_RESET << std::endl;
+      std::cout << color_RED "ERR " color_RESET "\"" << bind.scr_info->file_info.path << "\"" color_YELLOW << milli
+                << " ms" << color_RESET << std::endl;
   }
 
   auto scrs = pipeline_start_filesystem_on_files(scripts);
+
+  for (size_t i = 0; i < p_binds.size(); i++) {
+    p_binds[i].scr_info = scrs[i];
+  }
+
   compiler::COMP.prepare_scripts(scrs);
 
   return true;
@@ -98,7 +106,7 @@ void binder_generate_FFI_JSON()
   for (auto& json_f : json_files) {
     auto     ast  = ffi::JSON::read_ffi_json_file(json_f);
     fs::path path = fs::path(compiler::COMP_CTX.get_dir_ffi_json()) / ast.bind.lang / ast.bind.lib;
-    path.replace_filename(".vlxbind");
+    path.replace_extension(".vlxbind");
     ffi::write_ast(ast, path);
   }
 }
@@ -120,31 +128,22 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr
     fs::create_directories(compiler::COMP_CTX.get_dir_binding());
     size_t bind_count = 0;
 
-    for (const auto& extern_imp : scr_info->get_externs()) {
+    ffi::Bind_Package bind;
+    auto              path = fs::path(compiler::COMP_CTX.get_dir_binding());
+
+    for (auto [ext_mod, sym_map] : scr_info->sym_m->unresolved_extern_symbols) {
       ffi::Bind_Package bind;
-      fs::path path = fs::path(compiler::COMP_CTX.get_dir_binding()) / extern_imp->name / extern_imp->extern_lib;
-      path.replace_extension(".vlxbind"); // same as .vlx but for wrapper/headers
-      std::ofstream f(path);
-      f.clear();
-      f.close();
+      bind.lang         = ext_mod->path[0];
+      bind.lib          = ext_mod->path[1];
+      bind.extern_items = sym_map;
 
-      bind.scr_info        = scr_info;
-      bind.lang            = extern_imp->name;
-      bind.lib             = extern_imp->extern_lib;
-      bind.extern_fn       = extern_imp->extern_fn;
-      bind.extern_ty       = extern_imp->extern_ty;
-      bind.extern_glo      = extern_imp->extern_glo;
-      bind.extern_enum     = extern_imp->extern_enum;
-      bind.extern_union    = extern_imp->extern_union;
-      bind.extern_flag     = extern_imp->extern_flag;
-      bind.extern_comp     = extern_imp->extern_comp;
-      bind.extern_sys      = extern_imp->extern_sys;
-      bind.extern_entity   = extern_imp->extern_entity;
-      bind.extern_gen      = extern_imp->extern_gen;
-      bind.extern_metacode = extern_imp->extern_metacode;
-      bind.path            = path;
+      auto bind_path = ext_mod->get_script_path();
 
-      bind_count += bind.bind_count;
+      // clean binding
+      std::ofstream bind_file(bind_path);
+      bind_file.clear();
+      bind_file.close();
+
 
       binds.push_back(bind);
     }
@@ -154,7 +153,7 @@ bool pipeline_start_binder(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr
 
     if (log) {
       static size_t count = 1;
-      std::cout << "[binder:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | " << bind_count
+      std::cout << "[binder:" << count++ << "] \"" << scr_info->file_info.get_file_name() << "\" | " << bind_count
                 << " binds | " << milli << " ms" << std::flush;
     }
   }

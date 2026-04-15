@@ -565,12 +565,12 @@ std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std
     if (ctx.tok_v.check(TokTy::OPEN_BRACE)) {
       lit_entity->comp_args.push_back(literal_component(std::move(comp_name)));
     } else if (ctx.tok_v.match(TokTy::DOT)) {
-      auto lit_comp = ctx.Create_Node<ast::literal::Structured_Data>(comp_name->_token);
+      auto lit_comp = ctx.Create_Node<ast::literal::Structured_Data>(comp_name->node_token);
       lit_comp->field_args.push_back(literal_field());
 
       lit_entity->comp_args.push_back(std::move(lit_comp));
     } else {
-      ctx.tok_v.add_error_tok(91, comp_name->_token, "Unexpected literal reference",
+      ctx.tok_v.add_error_tok(91, comp_name->node_token, "Unexpected literal reference",
                               "define literal components only in literal entity");
     }
 

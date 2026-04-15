@@ -24,8 +24,8 @@ struct Component_Field final : public ADeclaration, AType {
 
   EBorrow borrow = EBorrow::None;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string mangle_type() const override;
   bool        compare_with(const AType& other) const override;
@@ -42,12 +42,8 @@ struct Component_Field final : public ADeclaration, AType {
     if (default_value) out += " = " + default_value->debug_str();
     return out;
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Component;
-  }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Component final : public ADeclaration, AType {
@@ -55,18 +51,14 @@ struct Component final : public ADeclaration, AType {
   std::shared_ptr<local::Generic_Parameter_Element> gen_where;
   std::vector<std::shared_ptr<Component_Field>>     fields;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Component;
-  }
 
   std::string mangle_type() const override
   {
-    return "cp_" + mangle_id(declaration_name);
+    return "cp." + declaration_name;
   }
   bool compare_with(const AType& other) const override
   {
@@ -76,22 +68,18 @@ struct Component final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Role final : public ADeclaration, AType {
   std::vector<std::unique_ptr<AExpression>> components;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "declaration role \"" + declaration_name + "\"";
-  }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Role;
   }
   bool compare_with(const AType& other) const override
   {
@@ -103,10 +91,10 @@ struct Role final : public ADeclaration, AType {
 
   std::string mangle_type() const override
   {
-    return "rl_" + mangle_id(declaration_name);
+    return "rl." + declaration_name;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_New;
@@ -138,56 +126,44 @@ struct Entity final : public ADeclaration, AType {
   [[nodiscard]] bool contains_cast(const AType& target_type, bool isCastFrom) const;
   [[nodiscard]] bool contains_comp(const Component& target_comp) const;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "declaration entity \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity;
-  }
 
   std::string mangle_type() const override
   {
-    return "et_" + mangle_id(declaration_name);
+    return "et." + declaration_name;
   }
   bool compare_with(const AType& other) const override;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_New final : public ACallable, ADeclaration {
   std::shared_ptr<Entity> parent_entity;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override;
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_New;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_Del final : public ACallable, ADeclaration {
   std::shared_ptr<Entity> parent_entity;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
     return "del fn()";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_Del;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_Cast final : public ACallable, ADeclaration {
@@ -198,18 +174,14 @@ struct Entity_Cast final : public ACallable, ADeclaration {
 
   bool isSourceSelf = false;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
     return "entity cast";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_Cast;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_Op final : public ACallable, ADeclaration {
@@ -217,18 +189,14 @@ struct Entity_Op final : public ACallable, ADeclaration {
 
   EBinOpType op_ty = EBinOpType::Add;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
     return "entity op " + EBinOpType_to_str(op_ty);
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_Op;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // the only non boolean operator and Iter operator who can return other type than the entity
@@ -243,18 +211,14 @@ struct Entity_Access_Op final : ACallable, ADeclaration {
 
   std::shared_ptr<AType> return_type;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
     return "entity op[index]";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_OpIndex;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Entity_Transfert : public ACallable, ADeclaration {
@@ -262,25 +226,21 @@ struct Entity_Transfert : public ACallable, ADeclaration {
 
   ETransfertType transfet;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
     return "entity transfert " + ETransfertType_to_str(transfet);
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Entity_Transfert;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct System final : public ACallable, ADeclaration {
   std::vector<std::shared_ptr<System_Case>> cases;
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override
   {
@@ -290,12 +250,7 @@ struct System final : public ACallable, ADeclaration {
   bool manage_entity(const Entity& entity) const;
   bool manage_component(const Component& comp) const;
 
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::System;
-  }
-
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct System_Case final : public Node, Trait_LLVM_Passage {
@@ -308,8 +263,8 @@ struct System_Case final : public Node, Trait_LLVM_Passage {
   bool is_return  = false;
   bool is_default = false;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "system case";
   }
@@ -318,7 +273,7 @@ struct System_Case final : public Node, Trait_LLVM_Passage {
 
   bool manage_component(const Component& comp) const;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 } // namespace cop

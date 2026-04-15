@@ -25,8 +25,8 @@
 
 std::string Visitor_Print::get_file_path() const
 {
-  std::filesystem::path path = std::filesystem::path(compiler::COMP_CTX.get_debug_graph_dir())
-                               / std::filesystem::path(scr_info.file_path).filename();
+  std::filesystem::path path =
+      std::filesystem::path(compiler::COMP_CTX.get_debug_graph_dir()) / scr_info.file_info.get_file_name();
   path.replace_extension(".html");
   return path.string();
 }
@@ -110,8 +110,7 @@ void Visitor_Print::visit(ast::Root& n)
   for (auto& elem : n.global_nodes) elem->accept(*this);
   out_print += "</ul></li>\n";
 
-  common::fmt_template(f_template,
-                       {common::SOFTWARE_VERSION, std::filesystem::path(scr_info.file_path).filename(), out_print});
+  common::fmt_template(f_template, {common::SOFTWARE_VERSION, scr_info.file_info.get_file_name(), out_print});
 
   out_file.clear();
   out_file << f_template;

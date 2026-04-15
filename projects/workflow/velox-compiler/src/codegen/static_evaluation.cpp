@@ -69,7 +69,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression
     }
   }
 
-  Error_Diagnostic err(v.scr_info, 169, value._scr_info, value._token, compiler::EPhase::llvmir,
+  Error_Diagnostic err(v.scr_info, 169, value.node_scr_info.get(), value.node_token, compiler::EPhase::llvmir,
                        "The expression can't be evaluated at compilation time", "");
   return std::unexpected(err.print_error());
 }
@@ -144,7 +144,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       }
     }
     case EBinOpType::Divrem: {
-      Error_Diagnostic err(v.scr_info, 170, L._scr_info, L._token, compiler::EPhase::llvmir,
+      Error_Diagnostic err(v.scr_info, 170, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                            "Unexpected operation for compilation time evaluation.", "");
       return std::unexpected(err.print_error());
     }
@@ -197,7 +197,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       return to_bool(L_val.ne(R_val));
     }
     default: {
-      Error_Diagnostic err(v.scr_info, 171, L._scr_info, L._token, compiler::EPhase::llvmir,
+      Error_Diagnostic err(v.scr_info, 171, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                            "Unexpected operation on integral.", "");
       return std::unexpected(err.print_error());
     }
@@ -265,13 +265,14 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
       return to_lit(Int128(L_val.rotr(R_val.getLimitedValue())));
     }
     default: {
-      Error_Diagnostic err(v.scr_info, 172, L._scr_info, L._token, compiler::EPhase::llvmir,
+      Error_Diagnostic err(v.scr_info, 172, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                            "Unexpected operation on byte.", "");
       return std::unexpected(err.print_error());
     }
     }
   } else {
-    Error_Diagnostic err(v.scr_info, 173, L._scr_info, L._token, compiler::EPhase::llvmir, "Unexpected type.", "");
+    Error_Diagnostic err(v.scr_info, 173, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
+                         "Unexpected type.", "");
     return std::unexpected(err.print_error());
   }
 }
@@ -319,7 +320,7 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
     return to_lit(Float128(r));
   }
   case EBinOpType::Quo: {
-    Error_Diagnostic err(v.scr_info, 174, L._scr_info, L._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 174, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                          "Unexpected opration for floating type, use floor(fsize)", "");
   }
   case EBinOpType::Rem: {
@@ -337,7 +338,7 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
   }
   case EBinOpType::Divrem: {
 
-    Error_Diagnostic err(v.scr_info, 175, L._scr_info, L._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 175, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation for compilation time evaluation.", "");
     return std::unexpected(err.print_error());
   }
@@ -383,7 +384,7 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
     return to_bool(L_val != R_val);
   }
   default: {
-    Error_Diagnostic err(v.scr_info, 176, L._scr_info, L._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 176, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation on byte.", "");
     return std::unexpected(err.print_error());
   }
@@ -485,7 +486,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::
   }
   case EBinOpType::Divrem: {
 
-    Error_Diagnostic err(v.scr_info, 177, L._scr_info, L._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 177, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation for compilation time evaluation.", "");
     return std::unexpected(err.print_error());
   }
@@ -528,7 +529,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean(const ast::
   case EBinOpType::_b_nor:
   case EBinOpType::_nor:    return to_bool(!(L_val || R_val));
   default:                  {
-    Error_Diagnostic err(v.scr_info, 178, L._scr_info, L._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 178, L.node_scr_info.get(), L.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation on boolean.", "");
     return std::unexpected(err.print_error());
   }
@@ -542,7 +543,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean_not(const a
   if (auto ptr = dynamic_cast<const ast::literal::Boolean*>(&term)) {
     return to_bool(!ptr->val);
   } else {
-    Error_Diagnostic err(v.scr_info, 179, term._scr_info, term._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 179, term.node_scr_info.get(), term.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation 'not' on term.", "");
     return std::unexpected(err.print_error());
   }
@@ -562,7 +563,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_minus(const 
     if (!val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
   } else {
-    Error_Diagnostic err(v.scr_info, 180, term._scr_info, term._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 180, term.node_scr_info.get(), term.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation 'minus' on term.", "");
     return std::unexpected(err.print_error());
   }
@@ -582,7 +583,7 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_plus(const a
     if (val.isNegative()) val.negate();
     return new ast::literal::Integral(Int128(val));
   } else {
-    Error_Diagnostic err(v.scr_info, 181, term._scr_info, term._token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(v.scr_info, 181, term.node_scr_info.get(), term.node_token, compiler::EPhase::llvmir,
                          "Unexpected operation 'minus' on term.", "");
     return std::unexpected(err.print_error());
   }

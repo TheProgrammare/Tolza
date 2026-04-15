@@ -4,15 +4,12 @@
 #include <string>
 
 #include "ast/ast_declaration.hpp"
-#include "visitor/symbol_manager.hpp"
-
-#include "lexer/token.hpp"
 #include "lexer/token_viewer.hpp"
+#include "misc/module_manager.hpp"
 
 #include "ast/ast_base.hpp"
 
 struct ScriptInfo;
-struct Symbol_Manager;
 
 template <typename NodeType>
 concept DerivedFromNode = std::is_base_of_v<ast::Node, NodeType> && !std::is_base_of_v<ast::ADeclaration, NodeType>;
@@ -23,14 +20,20 @@ concept DerivedFromDecl = std::is_base_of_v<ast::ADeclaration, NodeType> || std:
 template <typename NodeType>
 concept DerivedFromType = std::is_base_of_v<ast::AType, NodeType>;
 
+
+struct TokenViewer;
+
 namespace meta
 {
-struct MetablockManager;
+struct Manager;
 struct MetaInstruct;
 struct Metablock;
 } // namespace meta
 
-struct Symbols_Manager;
+namespace symbol
+{
+struct Manager;
+}
 
 namespace parser
 {
@@ -47,14 +50,15 @@ struct Parser_Declaration_COP;
 struct Parser_Statement;
 
 struct Parser_Context {
-  explicit Parser_Context(ScriptInfo& _scr_info);
+  explicit Parser_Context(std::shared_ptr<ScriptInfo> p_scr_info);
   ~Parser_Context();
 
-  ScriptInfo&             scr_info;
-  Symbols_Manager*        m_sym  = nullptr;
-  meta::MetablockManager* m_meta = nullptr;
-  TokenViewer             tok_v;
-  size_t                  node_count = 0;
+  std::shared_ptr<ScriptInfo>     scr_info_sptr;
+  ScriptInfo&                     scr_info;
+  std::shared_ptr<meta::Manager>  meta_m;
+  std::shared_ptr<module::Module> current_module;
+  TokenViewer                     tok_v;
+  size_t                          node_count = 0;
 
   std::shared_ptr<ast::declaration::cop::Entity> current_entity;
   std::shared_ptr<ast::Node>                     current_other;
@@ -62,6 +66,9 @@ struct Parser_Context {
 
   bool in_extern = false;
   bool in_export = false;
+
+  [[nodiscard]] std::vector<std::string> start_parsing();
+
 
   // debug purpose on error
   void                      attempt_recovery();
@@ -81,17 +88,20 @@ struct Parser_Context {
   [[nodiscard]] const meta::Metablock*    get_metablock(const ast::Node&                          n,
                                                         const std::initializer_list<std::string>& pattern);
 
+  void enter_module(std::shared_ptr<ast::ADeclaration> p_decl, std::string debug_name);
+  void exit_module();
+
   // sub parsers accessible to all
-  Parser_Expression*        p_expr;
-  Parser_Type*              p_type;
-  Parser_Literal*           p_lit;
-  Parser_Declaration_Local* p_loc;
-  Parser_Operator*          p_op;
-  Parser_Memory*            p_mem;
-  Parser_Declaration*       p_decl;
-  Parser_Declaration_COP*   p_cop;
-  Parser_Statement*         p_state;
-  Parser_Base*              p_base;
+  std::unique_ptr<Parser_Expression>        p_expr;
+  std::unique_ptr<Parser_Type>              p_type;
+  std::unique_ptr<Parser_Literal>           p_lit;
+  std::unique_ptr<Parser_Declaration_Local> p_loc;
+  std::unique_ptr<Parser_Operator>          p_op;
+  std::unique_ptr<Parser_Memory>            p_mem;
+  std::unique_ptr<Parser_Declaration>       p_decl;
+  std::unique_ptr<Parser_Declaration_COP>   p_cop;
+  std::unique_ptr<Parser_Statement>         p_state;
+  std::unique_ptr<Parser_Base>              p_base;
 
 
   // to create node, set some data, store in resolvers
@@ -100,11 +110,11 @@ struct Parser_Context {
   {
     static_assert(!std::is_abstract_v<NodeType>, "Create_Node cannot instantiate abstract AST nodes");
 
-    auto node    = std::make_unique<NodeType>(std::forward<Args>(args)...);
-    node->_token = token;
-    node->_scope = m_sym->get_current_scope();
+    auto node        = std::make_unique<NodeType>(std::forward<Args>(args)...);
+    node->node_token = token;
     node_count++;
-    node->_scr_info = &scr_info;
+    node->node_scr_info = scr_info_sptr;
+    current_module->add_item(node);
     return node;
   }
   template <DerivedFromType NodeType, typename... Args>
@@ -112,23 +122,23 @@ struct Parser_Context {
   {
     static_assert(!std::is_abstract_v<NodeType>, "Create_Rype cannot instantiate abstract AST nodes");
 
-    auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
-    node->_token = token;
-    node->_scope = m_sym->get_current_scope();
+    auto node        = std::make_shared<NodeType>(std::forward<Args>(args)...);
+    node->node_token = token;
     node_count++;
-    node->_scr_info = &scr_info;
+    node->node_scr_info = scr_info_sptr;
+    current_module->add_item(node);
     return node;
   }
   template <DerivedFromDecl NodeType, typename... Args>
   inline std::shared_ptr<NodeType> Create_Decl(Token token, Args&&... args)
   {
-    auto node    = std::make_shared<NodeType>(std::forward<Args>(args)...);
-    node->_token = token;
-    node->_scope = m_sym->get_current_scope();
+    auto node        = std::make_shared<NodeType>(std::forward<Args>(args)...);
+    node->node_token = token;
     node_count++;
-    node->_scr_info               = &scr_info;
+    node->node_scr_info           = scr_info_sptr;
     node->declaration_is_exported = in_export;
     node->declaration_is_external = in_extern;
+    current_module->add_item(node);
     return node;
   };
 };

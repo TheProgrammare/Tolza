@@ -9,6 +9,11 @@
 const size_t meta::Metablock_Expand::k_placeholder_flag = k_metacode_flag - 1;
 const size_t meta::Metablock_Expand::k_expand_if_flag   = k_metacode_flag - 2;
 
+meta::Manager::Manager(ScriptInfo& p_scr_info)
+  : scr_info(p_scr_info)
+{
+}
+
 bool meta::is_equivalent_ReusableBlock_Param(const Metablock_Reuse_Param& a, const Metablock_Reuse_Param& b)
 {
   const bool same_pass_mode = a.pass_mode == b.pass_mode;
@@ -24,7 +29,7 @@ std::vector<Token> meta::Metablock::generate_tokens(ScriptInfo& scr_info) const
   if (tokens_to_generate.empty()) return {};
 
   // arbitrary optimization
-  result.reserve(scr_info.tokens.size() / 4);
+  result.reserve(scr_info.file_info.tokens.size() / 4);
 
   size_t children_generated_count = 0;
   for (auto pos : tokens_to_generate) {
@@ -38,10 +43,10 @@ std::vector<Token> meta::Metablock::generate_tokens(ScriptInfo& scr_info) const
       }
 
       continue;
-    } else if (pos >= scr_info.tokens.size()) {
+    } else if (pos >= scr_info.file_info.tokens.size()) {
       throw std::runtime_error("Current token source index to generate is out of source tokens bounds !");
     } else {
-      Token tok = scr_info.tokens[pos];
+      Token tok = scr_info.file_info.tokens[pos];
       result.push_back(tok);
     }
   }
@@ -94,17 +99,17 @@ std::vector<Token> meta::Metablock_Expand::generate_tokens(ScriptInfo& scr_info)
       // convention: next token is the placeholder identifier !
       // jump + 1 in the loop
       size_t next_pos = tokens_to_generate[++i];
-      Token  next_tok = scr_info.tokens[next_pos];
+      Token  next_tok = scr_info.file_info.tokens[next_pos];
 
       // temporary special token for placeholder
       // value = placeholder name
       // type = special metacode placeholder
       // position = placeholder_flag
       model.push_back(next_tok);
-    } else if (pos >= scr_info.tokens.size()) {
+    } else if (pos >= scr_info.file_info.tokens.size()) {
       throw std::runtime_error("Current token source index to generate is out of source tokens bounds !");
     } else {
-      Token tok = scr_info.tokens[pos];
+      Token tok = scr_info.file_info.tokens[pos];
       model.push_back(tok);
     }
   }

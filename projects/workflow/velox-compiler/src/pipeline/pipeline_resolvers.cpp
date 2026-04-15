@@ -14,7 +14,7 @@
 #include "misc/script_info.hpp"
 
 #include "ast/ast_base.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 #include "visitor/visitor_semantic.hpp"
 #include "visitor/visitor_symbol.hpp"
 #include "visitor/visitor_type.hpp"
@@ -35,31 +35,33 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& p_
       // symbols
       if (k == 0) {
         Visitor_Symbol sym(*scr_info);
-        scr_info->rootNode->accept(sym);
-        errs = scr_info->m_sym->decl_errors;
+        scr_info->root_node->accept(sym);
+        errs = scr_info->sym_m->decl_errors;
         errs.insert(errs.begin(), sym.errors.begin(), sym.errors.end());
 
         static size_t count = 1;
-        if (log_sym) std::cout << "[resolver:symbol:" << count++ << "] \"" << scr_info->file_path << "\"" << std::endl;
+        if (log_sym)
+          std::cout << "[resolver:symbol:" << count++ << "] \"" << scr_info->file_info.path << "\"" << std::endl;
       }
       // types
       if (k == 1) {
         Visitor_Type type(*scr_info);
-        scr_info->rootNode->accept(type);
+        scr_info->root_node->accept(type);
         errs = type.errors;
 
         static size_t count = 1;
-        if (log_sym) std::cout << "[resolver:type:" << count++ << "] \"" << scr_info->file_path << "\"" << std::endl;
+        if (log_sym)
+          std::cout << "[resolver:type:" << count++ << "] \"" << scr_info->file_info.path << "\"" << std::endl;
       }
       // semantics
       if (k == 2) {
         Visitor_Semantic sem(*scr_info);
-        scr_info->rootNode->accept(sem);
+        scr_info->root_node->accept(sem);
         errs = sem.errors;
 
         static size_t count = 1;
         if (log_sym)
-          std::cout << "[resolver:semantic:" << count++ << "] \"" << scr_info->file_path << "\"" << std::endl;
+          std::cout << "[resolver:semantic:" << count++ << "] \"" << scr_info->file_info.path << "\"" << std::endl;
       }
 
       // begin resolution
@@ -67,9 +69,9 @@ bool pipeline_start_resolvers(const std::vector<std::shared_ptr<ScriptInfo>>& p_
       double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
       if (!errs.empty()) {
-        resErrors.push_back({scr_info->file_path, errs});
-        std::cerr << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\"" color_YELLOW << milli << " ms"
-                  << color_RESET << std::endl;
+        resErrors.push_back({scr_info->file_info.path, errs});
+        std::cerr << color_RED "ERR " color_RESET "\"" << scr_info->file_info.path << "\"" color_YELLOW << milli
+                  << " ms" << color_RESET << std::endl;
       }
     }
 

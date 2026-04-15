@@ -22,8 +22,8 @@ struct If_Ternary final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
 
   std::string debug_str() const override
@@ -39,12 +39,12 @@ struct Member_Access final : public AExpression {
 
   SET_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_VALUE
+  std::string debug_str() const override
   {
     return "access " + left->debug_str() + "." + right->debug_str();
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Self final : public AExpression {
@@ -52,8 +52,8 @@ struct Self final : public AExpression {
 
   SET_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -64,8 +64,8 @@ struct Self final : public AExpression {
 struct Other final : public AExpression {
   SET_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
 
   std::string debug_str() const override
@@ -88,8 +88,8 @@ struct Call_Argument final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -110,17 +110,17 @@ struct Call : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override;
+  CODEGEN_VALUE
+  std::string debug_str() const override;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Call_System final : public Call {
   std::unique_ptr<AExpression> target_entity;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -139,12 +139,12 @@ struct Call_Pipe final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_VALUE
+  std::string debug_str() const override
   {
     return "pipecall[" + callee->debug_str() + "]";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // a[i]
@@ -158,12 +158,12 @@ struct Table_Access final : public AExpression {
 
   bool bounded = false;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_VALUE
+  std::string debug_str() const override
   {
     return "table access";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // my_ptr'at(i)
@@ -174,8 +174,8 @@ struct Ptr_At final : public AExpression {
   SET_L_VAL
 
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -191,8 +191,8 @@ struct Ptr_Offset final : public AExpression {
   SET_L_VAL
 
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -206,8 +206,8 @@ struct Ptr_Val final : public AExpression {
 
   SET_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -222,8 +222,8 @@ struct Mut_Of final : public AExpression {
   SET_L_VAL
   SET_FORCED_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -238,8 +238,8 @@ struct Ref_Of final : public AExpression {
   SET_L_VAL
   SET_FORCED_L_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -251,8 +251,8 @@ struct Ref_Of final : public AExpression {
 struct Addr_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   SET_R_VAL
 
@@ -266,8 +266,8 @@ struct Size_Of final : public AExpression {
   std::unique_ptr<AExpression> target;
   size_t                       size = 0;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   SET_R_VAL
 
@@ -288,8 +288,8 @@ struct GetBits final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -301,8 +301,8 @@ struct GetBits final : public AExpression {
 struct Move final : public AExpression {
   std::unique_ptr<Node> target;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   SET_L_VAL
 
@@ -319,8 +319,8 @@ struct New_Ptr final : public AExpression {
 
   EPtrType pointer = EPtrType::raw_ptr;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   SET_L_VAL
 

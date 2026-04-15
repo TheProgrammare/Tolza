@@ -9,13 +9,15 @@
 #include "ast/ast_expression.hpp"
 #include "ast/ast_type.hpp"
 
+#include "misc/script_info.hpp"
+#include "misc/symbol_manager.hpp"
 #include "rules/rule_type.hpp"
 
 
 void Visitor_Semantic::visit(ast::declaration::Function& n)
 {
   if (n.declaration_name == "main") {
-    if (!n._scope.empty())
+    if (n.node_module->owner.get() != scr_info.root_node.get())
       add_error(215, n, "Illegal function reserved name 'main'. Or your main function musn't be scoped.", "");
     if (n.declaration_is_exported)
       add_error(216, n, "Illegal function reserved name 'main'. Or your main function musn't be exported.", "");

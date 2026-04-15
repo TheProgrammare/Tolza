@@ -8,7 +8,20 @@
 #include "ast/ast_base.hpp"
 #include "common.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler_context.hpp"
 #include "misc/error_output.hpp"
+
+namespace fs = std::filesystem;
+
+std::string ffi::Bind_Package::get_file_path() const
+{
+  fs::path path = compiler::COMP_CTX.get_dir_binding();
+  if (!lang.empty()) path /= lang;
+  if (!lib.empty()) path /= lib;
+  path.replace_extension(".vlxbind");
+  return path.string();
+}
+
 
 ffi::EPassMode ffi::type_to_passMode(const Type& ty)
 {
@@ -313,10 +326,10 @@ void ffi::write_ast(const ffi::AST& p_ast, const std::string& p_dest_file)
 {
   // if (!check_ast_generation(ast)) return;
 
-  std::filesystem::create_directories(std::filesystem::path(p_dest_file).parent_path());
+  fs::create_directories(fs::path(p_dest_file).parent_path());
   std::ofstream os(p_dest_file);
 
-  if (!os) throw std::runtime_error("Cannot open file: \"" + std::filesystem::path(p_dest_file).string() + "\"");
+  if (!os) throw std::runtime_error("Cannot open file: \"" + fs::path(p_dest_file).string() + "\"");
 
   os.clear();
 
@@ -386,21 +399,26 @@ bool ffi::check_ast_generation(const AST& p_ast)
 {
   std::vector<std::string> errs;
 
-  auto add_err = [&](const Extern_Item& item) {
-    Error_Diagnostic err(*p_ast.bind.scr_info, 203, p_ast.bind.scr_info.get(), item.id_node->_token,
-                         compiler::EPhase::binder, "External reference never generated.",
-                         "Check your workspace ressources, your packages, or the reference name.");
-    errs.push_back(err.print_error());
+  auto add_err = [&](const module::Extern_Item& item) {
+
   };
 
-  for (auto& item : p_ast.bind.extern_fn) {
+  // need change
+  /*
+  for (auto& item : p_ast.bind.extern_items) {
     bool find = false;
     for (auto& [name, fn] : p_ast.funcs) {
-      if (name == item.name) find = true;
+      if (name == item->declaration_name) find = true;
     }
-    if (!find) add_err(item);
+    if (!find) {
+      Error_Diagnostic err(*p_ast.bind.scr_info, 203, p_ast.bind.scr_info.get(), item->node_token,
+                           compiler::EPhase::binder, "External reference never generated.",
+                           "Check your workspace ressources, your packages, or the reference name.");
+      errs.push_back(err.print_error());
+    }
     break;
   }
+    */
 
   for (auto& err : errs) {
     std::cerr << err;

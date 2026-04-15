@@ -23,7 +23,7 @@
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
 
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 
 std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool p_is_silent_error)
@@ -66,16 +66,16 @@ std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool p_is_s
 
 std::unique_ptr<ast::statement::If> parser::Parser_Statement::if_statement()
 {
-  auto ifState = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek());
+  auto if_state = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek());
 
   ctx.tok_v.match(TokTy::IF);
   ctx.tok_v.match(TokTy::ELIF);
 
-  ctx.m_sym->enter_scope("if", EScopeType::If);
+  ctx.enter_scope(nullptr, "if");
 
-  ifState->evaluator = ctx.p_loc->parse_evaluator(nullptr);
+  if_state->evaluator = ctx.p_loc->parse_evaluator(nullptr);
 
-  ifState->codeblock = ctx.p_loc->code_block_instruction();
+  if_state->codeblock = ctx.p_loc->code_block_instruction();
 
   // else or else if case
   if (ctx.tok_v.match(TokTy::ELIF)) {
@@ -83,19 +83,19 @@ std::unique_ptr<ast::statement::If> parser::Parser_Statement::if_statement()
     elifState          = if_statement(); // recursive call
     elifState->is_elif = true;
 
-    ifState->alternative_statement = std::move(elifState);
+    if_state->alternative_statement = std::move(elifState);
   } else if (ctx.tok_v.match(TokTy::ELSE)) {
     std::unique_ptr<ast::statement::If> elseState;
     elseState            = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek(-2)); // peek to else token
     elseState->codeblock = ctx.p_loc->code_block_instruction();
     elseState->is_else   = true;
 
-    ifState->alternative_statement = std::move(elseState);
+    if_state->alternative_statement = std::move(elseState);
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
-  return ifState;
+  return if_state;
 }
 
 std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
@@ -114,7 +114,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
 
   ctx.tok_v.match(TokTy::FOR);
 
-  ctx.m_sym->enter_scope("for", EScopeType::For);
+  ctx.enter_scope(nullptr, "for");
 
   // index
   if (ctx.tok_v.check(TokTy::IDENTIFIER)) {
@@ -122,11 +122,11 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
     index->declaration_name = ctx.parse_name("", hint);
     index->capability       = ECapability::Mut;
 
-    auto type   = ctx.Create_Node<ast::type::Primitive>(index.get()->_token);
+    auto type   = ctx.Create_Node<ast::type::Primitive>(index.get()->node_token);
     type->type  = EPrimType::iSize;
     index->type = ast::type::get_isize_type();
 
-    ctx.m_sym->add_decl(index);
+    ctx.current_module->add_item(index);
     forState->index = std::move(index);
   }
   // items
@@ -139,7 +139,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
         item->capability       = capa;
         item->declaration_name = ctx.parse_name("", hint);
 
-        ctx.m_sym->add_decl(item);
+        ctx.current_module->add_item(item);
         forState->items.push_back(std::move(item));
 
         if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_PAREN)) break;
@@ -149,7 +149,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
       item->capability       = capa;
       item->declaration_name = ctx.parse_name("", hint);
 
-      ctx.m_sym->add_decl(item);
+      ctx.current_module->add_item(item);
       forState->items.push_back(std::move(item));
     }
   }
@@ -160,7 +160,7 @@ std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
 
   forState->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return forState;
 }
@@ -172,11 +172,11 @@ std::unique_ptr<ast::statement::Loop> parser::Parser_Statement::loop_statement()
   auto flow = ctx.Create_Node<ast::statement::Loop>(ctx.tok_v.peek());
 
   ctx.tok_v.match(TokTy::LOOP);
-  ctx.m_sym->enter_scope("loop", EScopeType::Loop);
+  ctx.enter_scope(nullptr, "loop");
 
   flow->codeblock = ctx.p_loc->code_block_instruction();
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return flow;
 }
@@ -193,7 +193,7 @@ std::unique_ptr<ast::statement::While> parser::Parser_Statement::while_statement
       "\n  - `do => ... while confition;`";
 
   auto flow = ctx.Create_Node<ast::statement::While>(ctx.tok_v.peek());
-  ctx.m_sym->enter_scope("while", EScopeType::While);
+  ctx.enter_scope(nullptr, "while");
 
   if (ctx.tok_v.match(TokTy::WHILE)) {
     flow->is_do = false;
@@ -214,7 +214,7 @@ std::unique_ptr<ast::statement::While> parser::Parser_Statement::while_statement
   } else
     ctx.tok_v.add_error(119, "Expected do or while keyword!", do_while_hint);
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return flow;
 }
@@ -233,7 +233,7 @@ std::unique_ptr<ast::statement::Match> parser::Parser_Statement::match_statement
   auto match = ctx.Create_Node<ast::statement::Match>(ctx.tok_v.peek());
 
   ctx.tok_v.match(TokTy::MATCH);
-  ctx.m_sym->enter_scope("match", EScopeType::Match);
+  ctx.enter_scope(nullptr, "match");
 
   match->base = std::shared_ptr<ast::AExpression>(ctx.p_expr->parse_expression().release());
 
@@ -271,7 +271,7 @@ std::unique_ptr<ast::statement::Match> parser::Parser_Statement::match_statement
     if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx.m_sym->exit_scope();
+  ctx.exit_scope();
 
   return match;
 }
@@ -309,7 +309,7 @@ std::unique_ptr<ast::statement::GoTo_Label> parser::Parser_Statement::goto_label
   auto goto_label              = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
   goto_label->declaration_name = ctx.parse_name("", hint);
 
-  ctx.m_sym->add_decl(goto_label);
+  ctx.current_module->add_item(goto_label);
 
   goto_label->codeblock = ctx.p_loc->code_block_instruction();
 

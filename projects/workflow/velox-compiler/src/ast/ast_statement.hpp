@@ -23,8 +23,8 @@ struct If final : public Node, Trait_LLVM_Passage {
   bool                is_else = false;
   bool                is_elif = false;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_PASS
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -46,8 +46,8 @@ struct For final : public Node, Trait_LLVM_Passage {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
   bool                                           is_reverse = false;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_PASS
+  VISTOR_ACCEPT
 
   std::string debug_str() const override;
 };
@@ -58,8 +58,8 @@ struct Loop final : public Node, Trait_LLVM_Passage {
 
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_PASS
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -75,8 +75,8 @@ struct While final : public Node, Trait_LLVM_Passage {
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_PASS
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -99,26 +99,22 @@ struct GoTo final : public AExpression {
 
   GoTo_Label* label_sym = nullptr;
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 };
 
 // label azerty {...}
 struct GoTo_Label final : public ADeclaration {
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_PASS
+  VISTOR_ACCEPT
 
   llvm::BasicBlock* llvm_bb = nullptr;
 
   std::string debug_str() const override
   {
     return "LABEL[" + declaration_name + "]";
-  }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Goto_Label;
   }
 };
 
@@ -129,33 +125,33 @@ struct Return final : public Node, Trait_LLVM_Passage {
 
   ACallable* target_function = nullptr;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "return";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Break final : public Node, Trait_LLVM_Passage {
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "break";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Continue final : public Node, Trait_LLVM_Passage {
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "continue";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // constant/comparison => {}
@@ -165,13 +161,13 @@ struct Match_Case final : public Node, Trait_LLVM_Passage {
   Evaluator                                      evaluator;
   std::unique_ptr<declaration::local::CodeBlock> codeblock;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "CASE";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
@@ -181,13 +177,13 @@ struct Match final : public Node, Trait_LLVM_Passage {
   [[maybe_unused]]
   std::unique_ptr<Match_Case> other_case;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "MATCH";
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 } // namespace statement

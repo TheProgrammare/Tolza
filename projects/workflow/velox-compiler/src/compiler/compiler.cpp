@@ -16,6 +16,7 @@
 #include <compiler_context.hpp>
 
 #include "misc/script_info.hpp"
+#include "misc/module_manager.hpp"
 
 #include "pipeline/pipeline_exporter.hpp"
 #include "pipeline/pipeline_binder.hpp"
@@ -120,8 +121,8 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
 
 
   for (auto& scr_info : scr_infos) {
-    if (scr_info->tokens.empty()) continue;
-    prepared_scripts[scr_info->file_path] = scr_info;
+    if (scr_info->file_info.tokens.empty()) continue;
+    prepared_scripts[scr_info->file_info.path] = scr_info;
   }
 
 
@@ -131,12 +132,12 @@ bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   imported_modules.clear();
 
   for (auto& scr_info : scr_infos) {
-    if (scr_info->tokens.empty()) continue;
+    if (scr_info->file_info.tokens.empty()) continue;
 
-    prepared_scripts[scr_info->file_path] = scr_info;
+    prepared_scripts[scr_info->file_info.path] = scr_info;
 
-    for (auto& imp : scr_info->imported_mod) {
-      auto path = imp->get_path();
+    for (auto& [name, imp] : scr_info->module_root->imported_modules) {
+      auto path = imp->get_script_path();
       if (!prepared_scripts.contains(path)) {
         imported_modules.insert(path);
       }
@@ -171,7 +172,7 @@ bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& s
   // printer
   static bool log_ast = compiler::COMP_CTX.debugs.contains("ast");
   if (log_ast) {
-    for (auto& info : scr_infos) Visitor_Print(*info).visit(*info->rootNode);
+    for (auto& info : scr_infos) Visitor_Print(*info.get()).visit(*info->root_node.get());
   }
 
   // LLVM IR

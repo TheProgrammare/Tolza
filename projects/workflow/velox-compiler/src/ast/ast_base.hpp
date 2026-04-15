@@ -17,10 +17,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
-#include <span>
 
 #include "ast_data.hpp"
 #include "ast_forward.hpp"
@@ -51,15 +51,35 @@
     return true;                                                                                                       \
   };
 
-struct ScriptInfo;
-struct Symbol_Data;
+#define VISTOR_ACCEPT void accept(Visitor_Base& v) override;
+#define CODEGEN_PASS  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+#define CODEGEN_TY    llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+#define CODEGEN_CALL  llvm::Function* codegen(Visitor_Codegen& v) override;
+#define CODEGEN_VALUE llvm::Value* codegen(Visitor_Codegen& v) override;
+
 struct Visitor_Base;
 struct Visitor_Codegen;
+
+namespace script
+{
+using _Script_Id = size_t;
+}
+
+namespace module
+{
+using _Mod_Id = size_t;
+struct Module;
+enum class EVisibility;
+} // namespace module
 
 std::string mangle_id(const std::string& inId);
 
 namespace ast
 {
+
+using _Node_Id = size_t;
+
+std::string mangle_path(const std::vector<std::string>& p_in_path);
 
 struct Trait_LLVM_Passage {
   [[nodiscard]] virtual llvm::Value* codegen_pass(Visitor_Codegen& v) = 0;
@@ -88,35 +108,35 @@ struct Trait_LLVM_Value {
 // node in
 // AST
 struct Node {
-  ScriptInfo*              _scr_info = nullptr;
-  Token                    _token;
-  std::vector<std::string> _scope;
+  script::_Script_Id node_scr_info;
+  _Node_Id           node_id;
+  Token              node_token;
+  module::_Mod_Id    node_module;
 
   Node()          = default;
   virtual ~Node() = default;
 
   [[nodiscard]] size_t get_tok_line() const
   {
-    return _token.span.line;
+    return node_token.span.line;
   }
   [[nodiscard]] size_t get_tok_column() const
   {
-    return _token.span.col;
+    return node_token.span.col;
   }
   [[nodiscard]] size_t get_tok_size() const
   {
-    return _token.span.size;
+    return node_token.span.size;
   }
   [[nodiscard]] size_t get_tok_antepos() const
   {
-    return _token.span.anteprocess_pos;
+    return node_token.span.anteprocess_pos;
   }
   [[nodiscard]] size_t get_tok_pos() const
   {
-    return _token.span.pos;
+    return node_token.span.pos;
   }
   [[nodiscard]] std::string         mangle_scope() const;
-  [[nodiscard]] bool                is_visible_in(const std::span<const std::string>& other_scope) const;
   [[nodiscard]] virtual std::string debug_str() const       = 0;
   virtual void                      accept(Visitor_Base& v) = 0;
 };
@@ -151,14 +171,17 @@ struct AType : virtual Node, Trait_LLVM_Typed, std::enable_shared_from_this<ATyp
 inline EPassMode get_defaultParamPassmode(ast::AType& node);
 
 using INFERRED_TYPE = std::shared_ptr<AType>;
-using SYM_REF       = Symbol_Data*;
+using SYM_REF       = std::shared_ptr<ADeclaration>;
 
 struct ADeclaration : virtual Node, Trait_LLVM_Passage {
+  module::EVisibility visibility;
+
+  ADeclaration(SYM_REF p_sym, const std::string p_name, bool p_external = false);
+
   std::string declaration_name;
-  bool        declaration_is_exported = false;
   bool        declaration_is_external = false;
 
-  SYM_REF declaration_symbol = nullptr;
+  SYM_REF declaration_symbol;
 
   ADeclaration() = default;
 
@@ -166,8 +189,6 @@ struct ADeclaration : virtual Node, Trait_LLVM_Passage {
   ADeclaration& operator=(const ADeclaration&) = delete;
   ADeclaration(ADeclaration&&)                 = delete;
   ADeclaration& operator=(ADeclaration&&)      = delete;
-
-  [[nodiscard]] virtual ESymbolType get_symbol_type() const = 0;
 
   virtual ~ADeclaration() = default;
 };
@@ -190,7 +211,7 @@ struct ALocal : ADeclaration {
 };
 
 struct AExpression : virtual Node, Trait_LLVM_Value {
-  INFERRED_TYPE expression_inferred_type    = nullptr;
+  INFERRED_TYPE expression_inferred_type;
   // for struct, enum, union
   size_t        expression_in_type_position = 0;
 
@@ -230,19 +251,11 @@ struct ALiteral : virtual AExpression {
 struct AIdentifier : virtual AExpression {
   SYM_REF identifier_symbol = nullptr;
 
-  // A::B::C -> C mod A { B } -> B
-  [[nodiscard]] virtual const std::string&           get_base_name() const            = 0;
-  // mod E { A::B::C } -> 1E1C
-  [[nodiscard]] virtual std::string                  mangle_local_name() const        = 0;
-  // mod E { A::B::C } -> 1A1B1C
-  [[nodiscard]] virtual std::string                  mangle_qualified_name() const    = 0;
-  [[nodiscard]] virtual bool                         is_qualified_id() const          = 0;
-  [[nodiscard]] virtual std::string                  get_supposed_import_name() const = 0;
-  [[nodiscard]] virtual std::span<const std::string> get_qualification_path() const   = 0;
+  virtual std::string mangle_id_node() const = 0;
 
-  bool operator==(const AIdentifier& other) const
+  virtual bool operator==(const std::string& other) const
   {
-    return get_base_name() == other.get_base_name() && mangle_qualified_name() == other.mangle_qualified_name();
+    return false;
   }
 
   SET_L_VAL
@@ -259,40 +272,28 @@ struct Expr_ID final : virtual AIdentifier {
   {
   }
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-
-  std::string get_supposed_import_name() const override
-  {
-    return "";
-  }
-  bool is_qualified_id() const override
-  {
-    return false;
-  }
-  const std::string& get_base_name() const override
+  std::string mangle_id_node() const override
   {
     return name;
   }
-  std::string mangle_local_name() const override
+
+  bool operator==(const Expr_ID& other) const
   {
-    return mangle_scope() + mangle_id(name);
+    return name == other.name;
   }
-  std::string mangle_qualified_name() const override
+
+  bool operator==(const std::string& other) const override
   {
-    return mangle_id(name);
+    return name == other;
   }
+
   std::string debug_str() const override
   {
     return name;
   }
-  void accept(Visitor_Base& v) override;
 
-
-  std::span<const std::string> get_qualification_path() const override
-  {
-    static const std::span<const std::string> out;
-    return out;
-  };
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 };
 
 struct Expr_ID_Qualified final : virtual AIdentifier {
@@ -302,46 +303,34 @@ struct Expr_ID_Qualified final : virtual AIdentifier {
   Expr_ID_Qualified() = default;
   Expr_ID_Qualified(const std::vector<std::string>& p_path, const std::string& _name)
     : name(_name)
+    , path(p_path)
   {
-    path = p_path;
   }
 
-  bool qualification_at_root_scope    = false; // e.g. ::math::add()
-  bool qualification_at_parent_scope  = false; // e.g. super::math::add()
-  bool qualification_at_current_scope = false; // e.g. self::math::add()
-
-
-  bool operator==(const Expr_ID_Qualified& other) const noexcept
+  std::string mangle_path() const
   {
-    return mangle_local_name() == other.mangle_local_name();
+    return ast::mangle_path(path);
   }
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  std::string mangle_id_node() const override
+  {
+    return mangle_path() + "." + name;
+  }
 
-  [[nodiscard]] std::string mangle_path() const;
+  bool operator==(const Expr_ID_Qualified& other)
+  {
+    return name == other.name && path == other.path;
+  }
 
-  std::string get_supposed_import_name() const override
-  {
-    return path.empty() ? "" : path[0];
-  }
-  bool is_qualified_id() const override
-  {
-    return true;
-  }
-  const std::string& get_base_name() const override
-  {
-    return name;
-  }
-  std::string mangle_local_name() const override;
-  std::string mangle_qualified_name() const override;
+  bool at_root   = false; // e.g. ::math::add()
+  bool at_parent = false; // e.g. super::math::add()
+  bool at_self   = false; // e.g. self::math::add()
+
 
   std::string debug_str() const override;
-  void        accept(Visitor_Base& v) override;
 
-  std::span<const std::string> get_qualification_path() const override
-  {
-    return path;
-  }
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 };
 
 // for every node who need a type resolution
@@ -355,59 +344,33 @@ struct Expr_ID_Type final : public AIdentifier, AType {
     return expression_inferred_type;
   }
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
-
-  [[nodiscard]] std::string mangle_types() const;
-
-  std::string get_supposed_import_name() const override
+  std::string mangle_id_node() const override
   {
-    return name->get_supposed_import_name();
+    return mangle_type();
   }
-  bool is_qualified_id() const override
-  {
-    return name->is_qualified_id();
-  }
-  const std::string& get_base_name() const override
-  {
-    return name->get_base_name();
-  }
-  std::string mangle_local_name() const override
-  {
-    return name->mangle_local_name();
-  }
-  std::string mangle_qualified_name() const override
-  {
-    if (gen_args.empty())
-      return name->mangle_qualified_name();
-    else
-      return name->mangle_qualified_name() + "_" + mangle_type();
-  }
-
   std::string mangle_type() const override;
   bool        compare_with(const AType& other) const override;
 
-  std::span<const std::string> get_qualification_path() const override
-  {
-    return name->get_qualification_path();
-  }
+  std ::string debug_str() const override;
 
   SET_R_VAL
 
-  std ::string debug_str() const override;
-
-  void accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  CODEGEN_TY
+  VISTOR_ACCEPT
 };
 
-struct Root final : public Node {
+struct Root final : public ADeclaration {
   std::vector<std::shared_ptr<Node>> global_nodes;
 
   std::string debug_str() const override
   {
     return "root";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
+  CODEGEN_PASS
 };
+
 
 } // namespace ast
   // AST

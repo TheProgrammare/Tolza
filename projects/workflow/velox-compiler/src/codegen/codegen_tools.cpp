@@ -13,6 +13,7 @@
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Type.h>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,6 @@
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
 #include "misc/metacode.hpp"
-#include "visitor/symbol_manager.hpp"
 #include "visitor_codegen.hpp"
 
 llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& p_target)
@@ -51,7 +51,7 @@ llvm::Value* LLVM_Tools::engage_clone_semantic(ast::AExpression& target)
 {
 }
 
-std::expected<Symbol_Data*, std::string> LLVM_Tools::find_symbol(const ast::AExpression& p_expr)
+std::expected<std::shared_ptr<ast::ADeclaration>, std::string> LLVM_Tools::find_symbol(const ast::AExpression& p_expr)
 {
   if (auto ptr = dynamic_cast<const ast::AIdentifier*>(&p_expr)) {
     return ptr->identifier_symbol;
@@ -64,17 +64,16 @@ std::expected<Symbol_Data*, std::string> LLVM_Tools::find_symbol(const ast::AExp
   }
 }
 
-std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(const Symbol_Data& p_symbol)
+std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(ast::ADeclaration& p_symbol)
 {
-  auto decl = p_symbol.symbol.get();
-  if (auto ptr = dynamic_cast<ast::declaration::Global*>(decl)) {
+  if (auto ptr = dynamic_cast<ast::declaration::Global*>(&p_symbol)) {
     if (ptr->expression) return ptr->expression.get();
-  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(decl)) {
+  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&p_symbol)) {
     if (ptr->expression) return ptr->expression.get();
-  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(decl)) {
+  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(&p_symbol)) {
     return ptr->parent_pattern->right.get();
   }
-  Error_Diagnostic error(v.scr_info, 166, decl->_scr_info, decl->_token, compiler::EPhase::llvmir,
+  Error_Diagnostic error(v.scr_info, 166, p_symbol.node_scr_info.get(), p_symbol.node_token, compiler::EPhase::llvmir,
                          "The symbol don't have an expression.", "");
   return std::unexpected(error.print_error());
 }

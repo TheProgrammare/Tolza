@@ -6,9 +6,11 @@
 #include <memory>
 
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration.hpp"
 #include "common.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler_context.hpp"
+#include "misc/module_manager.hpp"
 #include "misc/script_info.hpp"
 
 namespace fs = std::filesystem;
@@ -28,19 +30,16 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& p_s
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  std::map<fs::path, std::shared_ptr<ScriptInfo>> exportations;
-  std::vector<std::pair<fs::path, std::pair<std::shared_ptr<ModuleImportation>, std::shared_ptr<ScriptInfo>>>>
-      importations;
+  std::map<fs::path, std::shared_ptr<ast::declaration::Export>>       exportations;
+  std::vector<std::pair<fs::path, std::shared_ptr<module::Imported>>> importations;
 
   for (auto& scr_info : p_scr_infos) {
-    for (auto& exp : scr_info->exported_mod) {
-      exportations[scr_info->get_normalized_path()] = scr_info;
+    if (scr_info->mod_m->script_export) {
+      exportations[scr_info->file_info.get_module_path()] = scr_info->mod_m->script_export;
     }
 
-    for (auto& imp : scr_info->imported_mod) {
-      importations.push_back({
-          imp->get_normalized_path(), {imp, scr_info}
-      });
+    for (auto& [path, imp] : scr_info->mod_m->imported_modules) {
+      importations.push_back({imp->get_module_path(), imp});
     }
   }
 
@@ -53,22 +52,22 @@ bool pipeline_start_exporter(const std::vector<std::shared_ptr<ScriptInfo>>& p_s
   bool   success = true;
   size_t count   = 0;
 
-  for (auto& [path, pair] : importations) {
-    auto& [imp, imp_scr] = pair;
+  for (auto& [path, imp] : importations) {
 
     if (auto it = exportations.find(path); it != exportations.end()) {
-      imp->target_modules.push_back(it->second);
+      auto exp           = it->second;
+      imp->target_script = exp->node_scr_info;
 
       if (log) {
         std::string log_txt = log_str;
         common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), "",
-                                       imp->debug_name(), fs::path(imp_scr->file_path).filename()});
+                                       imp->debug_name(), imp->target_script->file_info.get_file_name()});
         std::cout << log_txt << std::endl;
       }
     } else {
       std::string log_txt = log_str;
       common::fmt_template(log_txt, {std::to_string(++count), std::to_string(importations.size()), ":ERROR",
-                                     imp->debug_name(), fs::path(imp_scr->file_path).filename()});
+                                     imp->debug_name(), imp->get_name()});
       std::cerr << log_txt << std::endl;
       success = false;
     }

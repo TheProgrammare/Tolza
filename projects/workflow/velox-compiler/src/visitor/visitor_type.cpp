@@ -10,7 +10,7 @@
 #include "ast/ast_inferred_type_singleton.hpp"
 #include "rules/rule_type.hpp"
 #include "visitor_default.hpp"
-#include "symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration.hpp"
@@ -64,16 +64,11 @@ std::shared_ptr<ast::AType> Visitor_Type::get_symbol_type(const ast::Node& n, co
     add_error(163, n, "Unresolved symbol.", "");
     return nullptr;
   }
-  if (!p_sym_data->symbol) {
-    add_error(164, n, "Invalid symbol origin", "");
-    return nullptr;
-  }
 
-
-  if (auto ty = get_inferred_type(*p_sym_data->symbol)) {
+  if (auto ty = get_inferred_type(*p_sym_data)) {
     return ty;
   } else {
-    add_error(187, *p_sym_data->symbol, "Impossible to infer symbol type", "");
+    add_error(187, *p_sym_data, "Impossible to infer symbol type", "");
     return nullptr;
   }
 }
@@ -384,7 +379,7 @@ void Visitor_Type::visit(ast::expression::Call& n)
 {
   n.callee->accept(*this);
 
-  if (auto fn_ty = dynamic_cast<ast::declaration::Function*>(n.function_symbol->symbol.get())) {
+  if (auto fn_ty = dynamic_cast<ast::declaration::Function*>(n.function_symbol.get())) {
     n.function_proto           = fn_ty->prototype;
     n.expression_inferred_type = fn_ty->prototype->return_ty->resolve();
   } else {
@@ -440,7 +435,7 @@ void Visitor_Type::visit(ast::expression::Call& n)
     }
     // unamed argument encounted out of param size : not variadic function
     else {
-      add_error_two_nodes(213, *arg, *n.function_symbol->symbol, "Too many arguments invoked.", "");
+      add_error_two_nodes(213, *arg, *n.function_symbol, "Too many arguments invoked.", "");
     }
   }
   for (auto& elem : n.gen_args) elem->accept(*this);

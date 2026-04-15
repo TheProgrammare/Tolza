@@ -291,7 +291,7 @@ std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parser::Parser_
     ctx.tok_v.expect(133, TokTy::COLON, "Expected type definition ':' after parameter name.", hint);
     param->type = ctx.p_type->parse_type();
 
-    ctx.m_sym->add_decl(param);
+    ctx.current_module->add_item(param);
 
     // check parameter default value
     if (ctx.tok_v.match(TokTy::ASSIGN)) {

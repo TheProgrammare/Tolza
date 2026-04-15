@@ -214,7 +214,7 @@ std::unique_ptr<ast::operation::Binary> parser::Parser_Operator::Create_BinOp(st
                                                                               EBinOpType                        p_op,
                                                                               std::unique_ptr<ast::AExpression> p_right)
 {
-  auto node   = ctx.Create_Node<ast::operation::Binary>(p_left->_token);
+  auto node   = ctx.Create_Node<ast::operation::Binary>(p_left->node_token);
   node->left  = std::move(p_left);
   node->op_ty = p_op;
   node->right = std::move(p_right);
@@ -224,7 +224,7 @@ std::unique_ptr<ast::operation::Binary> parser::Parser_Operator::Create_BinOp(st
 std::unique_ptr<ast::operation::Unary> parser::Parser_Operator::Create_UnOp(EUnaryOpType                      p_op,
                                                                             std::unique_ptr<ast::AExpression> p_base)
 {
-  auto node      = ctx.Create_Node<ast::operation::Unary>(p_base->_token);
+  auto node      = ctx.Create_Node<ast::operation::Unary>(p_base->node_token);
   node->unary_op = p_op;
   node->base     = std::move(p_base);
   return node;

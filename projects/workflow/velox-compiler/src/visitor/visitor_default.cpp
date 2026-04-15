@@ -24,7 +24,7 @@
 void Visitor_Default::add_error(ErrorCode code, const ast::Node& n, const std::string& msg,
                                 const std::string& hint) const
 {
-  auto error = Error_Diagnostic(scr_info, code, n._scr_info, n._token, current_EPhase(), msg, hint);
+  auto error = Error_Diagnostic(scr_info, code, n.node_scr_info.get(), n.node_token, current_EPhase(), msg, hint);
 
   errors.push_back(error.print_error());
 }

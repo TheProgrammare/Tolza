@@ -10,7 +10,7 @@
 #include "ast/ast_forward.hpp"
 #include "ast_base.hpp"
 
-struct ModuleExportation;
+enum class EFileSource;
 
 namespace ast
 {
@@ -25,7 +25,7 @@ struct Enum_Element final : public AType {
 
   std::shared_ptr<Enum> parent_enum;
 
-  llvm::Type* codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_TY
 
   std::string debug_str() const override;
 
@@ -38,7 +38,7 @@ struct Enum_Element final : public AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Enum final : public ADeclaration, AType {
@@ -48,21 +48,17 @@ struct Enum final : public ADeclaration, AType {
   size_t                     discriminant_max      = 0;
   [[maybe_unused]] EPrimType discriminant_int_type = EPrimType::u8;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "declaration enum \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Enum;
-  }
 
   std::string mangle_type() const override
   {
-    return "en_" + mangle_id(declaration_name);
+    return "en." + declaration_name;
   }
   bool compare_with(const AType& other) const override
   {
@@ -72,27 +68,23 @@ struct Enum final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Flag final : public ADeclaration, AType {
   std::vector<std::string> fields;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "declaration flag \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Flag;
-  }
 
   std::string mangle_type() const override
   {
-    return "fg_" + mangle_id(declaration_name);
+    return "fg." + declaration_name;
   }
   bool compare_with(const AType& other) const override
   {
@@ -102,28 +94,24 @@ struct Flag final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Union final : public ADeclaration, AType {
   // field name, field type
   std::vector<std::pair<std::string, std::shared_ptr<ast::AType>>> fields;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "declaration union \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Union;
-  }
 
   std::string mangle_type() const override
   {
-    return "uo_" + mangle_id(declaration_name);
+    return "uo." + declaration_name;
   }
   bool compare_with(const AType& other) const override
   {
@@ -133,103 +121,95 @@ struct Union final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // e.g. mod name {}
 struct Mod : public ADeclaration {
   std::vector<std::shared_ptr<ADeclaration>> declarations;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "declaration mod \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Module;
-  }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
+};
+
+struct Import final : public ADeclaration {
+  std::vector<std::string> path;
+  EFileSource              file_source;
+
+  CODEGEN_PASS
+  std::string debug_str() const override
+  {
+    return "import";
+  }
+  VISTOR_ACCEPT
 };
 
 struct Export final : public Mod {
-  std::shared_ptr<ModuleExportation> mod_exp_sym;
-
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "export";
   }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
+};
 
-  ESymbolType get_symbol_type() const override
+struct ReExport final : public ADeclaration {
+  std::vector<std::string> path;
+  EFileSource              file_source;
+
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
-    return ESymbolType::Export;
+    return "re export";
   }
+  VISTOR_ACCEPT
 };
 
 struct Extern final : public Mod {
-
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "extern \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Extern;
-  }
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Function final : public ACallable, ADeclaration {
   ~Function();
 
-  llvm::Value*    codegen_pass(Visitor_Codegen& v) override;
-  llvm::Function* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_CALL
 
   std::string debug_str() const override;
-
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Function;
-  }
-
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Mod_Alias final : public ADeclaration {
   std::unique_ptr<AIdentifier> module;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  std::string  debug_str() const override
+  CODEGEN_PASS
+  std::string debug_str() const override
   {
     return "mod " + declaration_name + " = " + module->debug_str();
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Mod_Alias;
-  }
-
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 struct Type_Alias final : public ADeclaration {
   std::shared_ptr<AType> type;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
+  CODEGEN_PASS
 
   std::string debug_str() const override
   {
     return "type " + declaration_name + " = " + type->debug_str();
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Type_Alias;
-  }
-
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // gen name<T, U,...> { condition }
@@ -238,21 +218,16 @@ struct Generic final : public ADeclaration, AType {
   std::set<std::string>                                target_gen_sym; // generic typenames
   std::vector<std::shared_ptr<ast::generic::IGenCond>> conditions;     // generic conditions
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Type*  codegen_ty(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_TY
 
   std::string debug_str() const override
   {
     return "generic \"" + declaration_name + "\"";
   }
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Generic;
-  }
-
   std::string mangle_type() const override
   {
-    return "gn_" + mangle_id(declaration_name);
+    return "gn." + declaration_name;
   }
   bool compare_with(const AType& other) const override
   {
@@ -262,7 +237,7 @@ struct Generic final : public ADeclaration, AType {
     return false;
   }
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 };
 
 // let/var a: ptr'type#tableSize = expression;
@@ -272,18 +247,11 @@ struct Global final : public ADeclaration, Trait_LLVM_Value {
   std::unique_ptr<AExpression> expression;                                // affectation
   EVariableKind                kind = EVariableKind::Const;
 
-  llvm::Value* codegen_pass(Visitor_Codegen& v) override;
-  llvm::Value* codegen(Visitor_Codegen& v) override;
+  CODEGEN_PASS
+  CODEGEN_VALUE
 
   std::string debug_str() const override;
-
-  ESymbolType get_symbol_type() const override
-  {
-    return ESymbolType::Global;
-  }
-
-  void accept(Visitor_Base& v) override;
-
+  VISTOR_ACCEPT
 
 private:
   bool type_already_checked = false;

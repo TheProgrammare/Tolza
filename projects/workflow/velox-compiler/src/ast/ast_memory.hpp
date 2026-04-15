@@ -13,7 +13,7 @@ namespace memory
 struct Del final : public Node {
   std::unique_ptr<AExpression> target;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -25,7 +25,7 @@ struct Align final : public Node {
   std::unique_ptr<AExpression> target;
   size_t                       align = 0;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -36,7 +36,7 @@ struct Align final : public Node {
 struct Drop final : public Node {
   std::unique_ptr<AExpression> target;
 
-  void accept(Visitor_Base& v) override;
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {

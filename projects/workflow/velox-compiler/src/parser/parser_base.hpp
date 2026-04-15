@@ -23,26 +23,27 @@
 
 #include "ast/ast_forward.hpp"
 #include "ast/ast_codeblock_instruction.hpp"
+#include "misc/module_manager.hpp"
 
 struct ScriptInfo;
-struct ModuleImportation;
 
 namespace parser
 {
 struct Parser_Context;
 
 struct Parser_Base {
-  Parser_Base(ScriptInfo& scr_info);
+  Parser_Base() = delete;
+  Parser_Base(Parser_Context& p_ctx);
   ~Parser_Base();
 
-  [[nodiscard]] std::vector<std::string> start_parsing();
 
-  [[nodiscard]] ModuleImportation*                        parse_import();
-  [[nodiscard]] std::shared_ptr<ast::declaration::Export> parse_export();
-  [[nodiscard]] std::shared_ptr<ast::declaration::Extern> parse_extern();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Import>   parse_import();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Export>   parse_export();
+  [[nodiscard]] std::shared_ptr<ast::declaration::ReExport> parse_reexport();
+  [[nodiscard]] std::shared_ptr<ast::declaration::Extern>   parse_extern();
 
   [[nodiscard]] ast::CodeBlock_instruction parse_instruction();
 
-  Parser_Context* ctx;
+  Parser_Context& ctx;
 };
 } // namespace parser

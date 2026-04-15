@@ -22,7 +22,7 @@
 
 namespace meta
 {
-struct MetablockManager;
+struct Manager;
 struct Metablock;
 struct Metablock_If;
 struct Metablock_Expand;
@@ -37,9 +37,9 @@ struct Preprocessor {
 public:
   Preprocessor(ScriptInfo& scr_info);
 
-  ScriptInfo&             scr_info;
-  meta::MetablockManager* m_meta = nullptr;
-  TokenViewer*            tok_v  = nullptr;
+  ScriptInfo&                    scr_info;
+  std::shared_ptr<meta::Manager> meta_m;
+  std::unique_ptr<TokenViewer>   tok_v;
 
   [[nodiscard]] std::vector<Token> preprocess();
 

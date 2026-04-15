@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/ast_declaration.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "visitor_base.hpp"
 

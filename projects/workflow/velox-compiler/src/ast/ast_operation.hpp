@@ -20,8 +20,8 @@ struct Cast_As final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -41,8 +41,8 @@ struct Is final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -58,8 +58,8 @@ struct In final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -75,8 +75,8 @@ struct Assignment final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -97,8 +97,8 @@ struct Binary final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -119,8 +119,8 @@ struct Unary final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -142,8 +142,8 @@ struct Interval final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {
@@ -162,8 +162,8 @@ struct Ptr_Dist final : public AExpression {
 
   SET_R_VAL
 
-  llvm::Value* codegen(Visitor_Codegen& v) override;
-  void         accept(Visitor_Base& v) override;
+  CODEGEN_VALUE
+  VISTOR_ACCEPT
 
   std::string debug_str() const override
   {

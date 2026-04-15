@@ -131,7 +131,7 @@ bool ast::declaration::cop::Entity::contains_comp(const ast::declaration::cop::C
 {
   for (auto& comp : comps) {
     if (!comp) return false;
-    if (comp->name->get_base_name() == target_comp.declaration_name) return true;
+    if (*comp->name.get() == target_comp.declaration_name) return true;
   }
   return false;
 }

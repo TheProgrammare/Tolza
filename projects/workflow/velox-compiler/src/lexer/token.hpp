@@ -74,7 +74,7 @@ enum class ETokenType {
   STD_LIB,
   PKG_LIB,
   USR_LIB,
-  EXT_LIB,
+  BIND_LIB,
   // literal values
   // Literal binary
   L_BIN,
@@ -140,6 +140,7 @@ enum class ETokenType {
   GENERIC,
   IMPORT,
   EXPORT,
+  REEXPORT,
   EXTERN,
   USE,
   PIPE,
@@ -338,7 +339,7 @@ const std::map<std::string, ETokenType> k_keywords = {
     {"std:",      ETokenType::STD_LIB         },
     {"pkg:",      ETokenType::PKG_LIB         },
     {"usr:",      ETokenType::USR_LIB         },
-    {"ext:",      ETokenType::EXT_LIB         },
+    {"bind:",     ETokenType::BIND_LIB        },
     // boolean litteral key
     {"true",      ETokenType::TRUE            },
     {"false",     ETokenType::FALSE           },
@@ -371,6 +372,7 @@ const std::map<std::string, ETokenType> k_keywords = {
     {"gen",       ETokenType::GENERIC         },
     {"import",    ETokenType::IMPORT          },
     {"export",    ETokenType::EXPORT          },
+    {"reexport",  ETokenType::REEXPORT        },
     {"extern",    ETokenType::EXTERN          },
     {"use",       ETokenType::USE             },
     // function keys

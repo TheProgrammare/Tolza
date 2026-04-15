@@ -10,6 +10,7 @@
 #include "ast/ast_operation.hpp"
 #include "ast/ast_memory.hpp"
 
+#include "misc/module_manager.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration.hpp"
 #include "parser_declaration_cop.hpp"
@@ -23,63 +24,23 @@
 #include "parser_type.hpp"
 
 #include "misc/script_info.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 
 #include "misc/metacode.hpp"
 #include <iostream>
 #include <memory>
+#include <vector>
 
-parser::Parser_Base::Parser_Base(ScriptInfo& scr_info)
+parser::Parser_Base::Parser_Base(Parser_Context& p_ctx)
+  : ctx(p_ctx)
 {
-  ctx = new Parser_Context(scr_info);
-
-  Parser_Declaration_COP*   p_cop   = new Parser_Declaration_COP(*ctx);
-  Parser_Declaration*       p_decl  = new Parser_Declaration(*ctx);
-  Parser_Expression*        p_expr  = new Parser_Expression(*ctx);
-  Parser_Literal*           p_lit   = new Parser_Literal(*ctx);
-  Parser_Declaration_Local* p_loc   = new Parser_Declaration_Local(*ctx);
-  Parser_Memory*            p_mem   = new Parser_Memory(*ctx);
-  Parser_Operator*          p_op    = new Parser_Operator(*ctx);
-  Parser_Statement*         p_state = new Parser_Statement(*ctx);
-  Parser_Type*              p_type  = new Parser_Type(*ctx);
-
-  ctx->p_cop   = p_cop;
-  ctx->p_decl  = p_decl;
-  ctx->p_expr  = p_expr;
-  ctx->p_lit   = p_lit;
-  ctx->p_loc   = p_loc;
-  ctx->p_mem   = p_mem;
-  ctx->p_op    = p_op;
-  ctx->p_state = p_state;
-  ctx->p_type  = p_type;
-
-  ctx->p_base = this;
 }
 
 parser::Parser_Base::~Parser_Base()
 {
 }
 
-std::vector<std::string> parser::Parser_Base::start_parsing()
-{
-  // generate and enter in global scope
-  if (!ctx->m_sym) ctx->m_sym = new Symbols_Manager(ctx->scr_info);
-  ctx->scr_info.rootNode = new ast::Root;
-
-  try {
-    while (!ctx->tok_v.is_end()) {
-      auto line = ctx->p_decl->parse_declaration();
-      if (line) ctx->scr_info.rootNode->global_nodes.push_back(line);
-      if (ctx->tok_v.match(TokTy::S_END_OF_FILE)) break;
-    }
-  } catch (const std::runtime_error& e) {
-    // std::cerr << e.what() << std::endl; context.tokView.synchronize(); attempt_recovery();
-  }
-
-  return ctx->tok_v.errors;
-}
-
-ModuleImportation* parser::Parser_Base::parse_import()
+std::shared_ptr<ast::declaration::Import> parser::Parser_Base::parse_import()
 {
   static const std::string hint =
       R"(define import module like:
@@ -89,150 +50,215 @@ ModuleImportation* parser::Parser_Base::parse_import()
   - import external `import extern <lang>::<lib>`
   - export/import module only declared in the root scope)";
 
-  auto extract_id = [](const ast::AIdentifier& id, std::string& input_name, std::vector<std::string>& input_path) {
-    input_name = id.get_base_name();
-    if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) input_path = ptr->path;
+  auto full_path = [](const ast::AIdentifier& id) -> std::vector<std::string> {
+    if (auto ptr = dynamic_cast<const ast::Expr_ID*>(&id)) {
+      std::vector<std::string> path;
+      path.push_back(ptr->name);
+      return path;
+    } else if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) {
+      std::vector<std::string> path = ptr->path;
+      path.push_back(ptr->name);
+      return path;
+    }
   };
 
-  ctx->tok_v.match(TokTy::IMPORT);
+  ctx.tok_v.match(TokTy::IMPORT);
 
-  ModuleImportation mod_imp;
+  auto base_tok = ctx.tok_v.peek(-1);
+
+  auto imp = ctx.Create_Decl<ast::declaration::Import>(base_tok);
+
+  EFileSource f_src;
 
   // import std: @
-  if (ctx->tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
-    mod_imp.import_source = ModuleImportation::EImportSource::StandardLib;
-    auto id               = ctx->p_expr->identifier();
-    extract_id(*id, mod_imp.name, mod_imp.path);
+  if (ctx.tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
+    f_src = EFileSource::stdlib;
   }
   // import usr: $
-  else if (ctx->tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
-    mod_imp.import_source = ModuleImportation::EImportSource::User;
-    auto id               = ctx->p_expr->identifier();
-    extract_id(*id, mod_imp.name, mod_imp.path);
+  else if (ctx.tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
+    f_src = EFileSource::src;
   }
   // import pkg: #
-  else if (ctx->tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
-    mod_imp.import_source = ModuleImportation::EImportSource::Package;
-    auto id               = ctx->p_expr->identifier();
-    extract_id(*id, mod_imp.name, mod_imp.path);
+  else if (ctx.tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
+    f_src = EFileSource::pkg_lib;
   }
-  // import ext: ?
-  else if (ctx->tok_v.match_any({TokTy::INTERROGATIVE, TokTy::EXT_LIB})) {
-    // import from external code e.g. import ext: C::stdio
-    mod_imp.import_source = ModuleImportation::EImportSource::Extern;
-    mod_imp.name          = ctx->parse_name();
-    ctx->tok_v.expect(8, TokTy::STATIC_ACCESS, "Expected static access '::' after extern import source name!", hint);
-    mod_imp.extern_lib = ctx->tok_v.next().val;
+  // import bind: ?
+  else if (ctx.tok_v.match_any({TokTy::INTERROGATIVE, TokTy::BIND_LIB})) {
+    f_src = EFileSource::binding;
   } else {
-    mod_imp.import_source = ModuleImportation::EImportSource::Unknown;
-    auto id               = ctx->p_expr->identifier();
-    extract_id(*id, mod_imp.name, mod_imp.path);
+    f_src = EFileSource::relative;
   }
 
-  auto uptr_imp = std::make_unique<ModuleImportation>(mod_imp);
-  auto ptr_imp  = uptr_imp.get();
-  ctx->scr_info.imported_mod.push_back(std::move(uptr_imp));
+  // name path
+  {
+    auto next_path = full_path(*ctx.p_expr->identifier().get());
+    imp->path.insert(imp->path.end(), next_path.begin(), next_path.end());
+  }
 
-  return ptr_imp;
+  auto mod = module::build_module_from_path(ctx.current_module, imp->path, f_src);
+
+
+  if (!mod) {
+    ctx.tok_v.add_error_tok(238, base_tok, mod.error(), "");
+    return imp;
+  }
+
+  bool success = ctx.current_module->import_module(mod.value());
+
+  if (!success) {
+    ctx.tok_v.add_error_tok(
+        239, base_tok, "Impossible to add the module \"" + mod.value()->debug_name + "\" in the current module", "");
+  }
+
+  return imp;
 }
 
 std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
 {
-  static const std::string hint =
-      R"(define export module like:
-  - export module `export {...}`
-  - export imported module (mirror) `export import <name>`
-  - export to other language `export extern <language> {...}`
-  - export/import module only declared in the root scope)";
+  static const std::string hint = "define export module like: `export {...}`";
 
-  ctx->tok_v.match(TokTy::EXPORT);
+  ctx.tok_v.match(TokTy::EXPORT);
 
-  Token exp_tok = ctx->tok_v.peek(-1);
+  if (ctx.current_module->find_item("export"))
+    ctx.tok_v.add_error(237, "Illegal double export declaration in same scope",
+                        "Specify only one `export {...}` declaration for each scope.");
 
-  ModuleExportation mod_exp;
+  auto exp_node = ctx.Create_Decl<ast::declaration::Export>(ctx.tok_v.peek(-1));
 
-  // is mirror e.g. export import math
-  if (ctx->tok_v.match(TokTy::IMPORT)) {
-    mod_exp.is_mirror = true;
-    mod_exp.mirror    = parse_import();
+  ctx.tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+  ctx.enter_module(exp_node, "export");
 
-    auto uptr_exp = std::make_unique<ModuleExportation>(mod_exp);
-    ctx->scr_info.exported_mod.push_back(std::move(uptr_exp));
-    return nullptr;
-  }
+  ctx.in_export = true;
 
-  // is external exportation e.g. export math extern C
-  if (ctx->tok_v.match(TokTy::EXT_LIB)) {
-    mod_exp.extern_lib = ctx->parse_name("Expected external language name to export", hint);
-  }
 
-  auto uptr_exp = std::make_shared<ModuleExportation>(mod_exp);
-
-  auto exp_node         = ctx->Create_Decl<ast::declaration::Export>(exp_tok);
-  exp_node->mod_exp_sym = uptr_exp;
-
-  ctx->scr_info.exported_mod.push_back(uptr_exp);
-
-  ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
-
-  ctx->in_export = true;
-
-  if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
-    ctx->in_export = false;
+  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
+    ctx.in_export = false;
     return exp_node;
   }
 
-  while (!ctx->tok_v.is_end()) {
-    if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-      ctx->tok_v.add_error_tok(10, ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+  while (!ctx.tok_v.is_end()) {
+    if (ctx.tok_v.check_any({TokTy::EXPORT})) {
+      ctx.tok_v.add_error_tok(10, ctx.tok_v.peek(), "Illegal nested export module instruction.", hint);
     }
 
-    exp_node->declarations.push_back(ctx->p_decl->parse_declaration());
+    exp_node->declarations.push_back(ctx.p_decl->parse_declaration());
 
-    ctx->tok_v.match(TokTy::SEMICOLON);
-    if (ctx->match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+    ctx.tok_v.match(TokTy::SEMICOLON);
+    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
+  ctx.in_export = false;
 
-  ctx->in_export = false;
 
   return exp_node;
 }
+
+std::shared_ptr<ast::declaration::ReExport> parser::Parser_Base::parse_reexport()
+{
+  static const std::string hint = "define re-export module like: `reexport <path>`";
+
+  auto full_path = [](const ast::AIdentifier& id) -> std::vector<std::string> {
+    if (auto ptr = dynamic_cast<const ast::Expr_ID*>(&id)) {
+      std::vector<std::string> path;
+      path.push_back(ptr->name);
+      return path;
+    } else if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) {
+      std::vector<std::string> path = ptr->path;
+      path.push_back(ptr->name);
+      return path;
+    }
+  };
+
+
+  ctx.tok_v.match(TokTy::REEXPORT);
+
+  auto base_tok = ctx.tok_v.peek(-1);
+
+  auto reexp_node = ctx.Create_Decl<ast::declaration::ReExport>(base_tok);
+
+
+  EFileSource f_src;
+
+  // import std: @
+  if (ctx.tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
+    f_src = EFileSource::stdlib;
+  }
+  // import usr: $
+  else if (ctx.tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
+    f_src = EFileSource::src;
+  }
+  // import pkg: #
+  else if (ctx.tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
+    f_src = EFileSource::pkg_lib;
+  }
+  // import bind: ?
+  else if (ctx.tok_v.match_any({TokTy::INTERROGATIVE, TokTy::BIND_LIB})) {
+    f_src = EFileSource::binding;
+  } else {
+    f_src = EFileSource::relative;
+  }
+
+  // name path
+  {
+    auto next_path = full_path(*ctx.p_expr->identifier().get());
+    reexp_node->path.insert(reexp_node->path.end(), next_path.begin(), next_path.end());
+  }
+
+  auto mod = module::build_module_from_path(ctx.current_module, reexp_node->path, f_src);
+
+
+  if (!mod) {
+    ctx.tok_v.add_error_tok(240, base_tok, mod.error(), "");
+    return reexp_node;
+  }
+
+  bool success = ctx.current_module->reexport_module(mod.value());
+
+  if (!success) {
+    ctx.tok_v.add_error_tok(
+        238, base_tok, "Impossible to add the module \"" + mod.value()->debug_name + "\" in the current module", "");
+  }
+
+  return reexp_node;
+}
+
 
 std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
 {
   static const std::string hint = R"(define extern like: `extern "ABI" {...}`)";
 
-  ctx->tok_v.match(TokTy::EXTERN);
+  ctx.tok_v.match(TokTy::EXTERN);
 
-  auto ext_tok = ctx->tok_v.peek(-1);
+  auto ext_tok = ctx.tok_v.peek(-1);
 
-  auto ext_node = ctx->Create_Decl<ast::declaration::Extern>(ext_tok);
+  auto ext_node = ctx.Create_Decl<ast::declaration::Extern>(ext_tok);
   ext_node->declaration_name =
-      ctx->tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
+      ctx.tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
 
 
-  ctx->tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+  ctx.tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
 
-  ctx->in_extern = true;
+  ctx.in_extern = true;
+  ctx.enter_module(ext_node, "extern");
 
-  if (ctx->tok_v.match(TokTy::CLOSE_BRACE)) {
-    ctx->in_extern = false;
+  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
+    ctx.in_extern = false;
     return ext_node;
   }
 
-  while (!ctx->tok_v.is_end()) {
-    if (ctx->tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-      ctx->tok_v.add_error_tok(10, ctx->tok_v.peek(), "Illegal nested module export/import instruction.", hint);
+  while (!ctx.tok_v.is_end()) {
+    if (ctx.tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
+      ctx.tok_v.add_error_tok(10, ctx.tok_v.peek(), "Illegal nested module export/import instruction.", hint);
     }
 
-    ext_node->declarations.push_back(ctx->p_decl->parse_declaration());
+    ext_node->declarations.push_back(ctx.p_decl->parse_declaration());
 
-    ctx->tok_v.match(TokTy::SEMICOLON);
-    if (ctx->match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+    ctx.tok_v.match(TokTy::SEMICOLON);
+    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
   }
 
-  ctx->in_extern = false;
+  ctx.in_extern = false;
+  ctx.exit_module();
 
   return ext_node;
 }
@@ -251,25 +277,25 @@ ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
   - memory deletion `del pointer_name`)";
 
   // if elif else for ...
-  if (auto statement = ctx->p_state->parse_statement(true)) {
+  if (auto statement = ctx.p_state->parse_statement(true)) {
     return ast::CodeBlock_instruction(std::move(statement));
-  } else if (ctx->tok_v.check_any({TokTy::VAR, TokTy::LET, TokTy::CONST})
-             && ctx->tok_v.peek(1).type == TokTy::OPEN_PAREN) {
-    auto tuple = ctx->p_loc->tuple_destructuring();
+  } else if (ctx.tok_v.check_any({TokTy::VAR, TokTy::LET, TokTy::CONST})
+             && ctx.tok_v.peek(1).type == TokTy::OPEN_PAREN) {
+    auto tuple = ctx.p_loc->tuple_destructuring();
     return ast::CodeBlock_instruction(std::move(tuple));
   }
   // local variable + lambda
-  else if (auto local = ctx->p_loc->parse_local(true)) {
+  else if (auto local = ctx.p_loc->parse_local(true)) {
     return ast::CodeBlock_instruction(local);
   }
   // del
-  else if (ctx->tok_v.check(TokTy::DEL)) {
-    auto del = ctx->p_mem->del();
+  else if (ctx.tok_v.check(TokTy::DEL)) {
+    auto del = ctx.p_mem->del();
     return ast::CodeBlock_instruction(std::move(del));
-  } else if (auto expr = ctx->p_expr->parse_expression()) {
+  } else if (auto expr = ctx.p_expr->parse_expression()) {
     // assignation and operator assignment
-    if (ctx->tok_v.check_any(kAssignationTokens)) {
-      auto assign = ctx->p_op->assignment(std::move(expr));
+    if (ctx.tok_v.check_any(kAssignationTokens)) {
+      auto assign = ctx.p_op->assignment(std::move(expr));
 
       return ast::CodeBlock_instruction(std::move(assign));
     }
@@ -279,6 +305,6 @@ ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
     }
   }
 
-  ctx->tok_v.add_error_tok(11, ctx->tok_v.peek(), "Unexpected instruction", hint);
+  ctx.tok_v.add_error_tok(11, ctx.tok_v.peek(), "Unexpected instruction", hint);
   return ast::CodeBlock_instruction{};
 }

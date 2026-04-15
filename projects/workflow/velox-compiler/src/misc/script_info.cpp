@@ -18,173 +18,64 @@
 namespace fs = std::filesystem;
 
 
-Extern_Item::Extern_Item(const std::string& _name, const std::vector<std::string>& _scope, EExtern_Kind _kind,
-                         const ast::AIdentifier& _id_node)
-  : name(_name)
-  , scope(_scope)
-  , kind(_kind)
-  , id_node(&_id_node)
+ScriptInfo::ScriptInfo(const std::string& _file_path, const std::string& _file_str,
+                       const std::vector<std::string>& _file_lines)
+  : file_info(FileInfo{.path = _file_path, .data = _file_str, .lines = _file_lines})
 {
 }
 
-ScriptInfo::ScriptInfo(const std::string& _file_path, const std::string& _file_str,
-                       const std::vector<std::string>& _file_lines)
-  : file_path(_file_path)
-  , file_str(_file_str)
-  , file_lines(_file_lines)
+std::string FileInfo::get_module_name() const
 {
+  return fs::path(path).stem();
+}
+std::string FileInfo::get_file_name() const
+{
+  return fs::path(path).filename();
+}
+std::string FileInfo::get_file_extension() const
+{
+  return fs::path(path).extension();
+}
+std::string FileInfo::get_line(size_t p_line) const
+{
+  if (p_line - 1 > lines.size() - 1) return lines.back();
+  if (p_line - 1 < 0) return lines[0];
+  return lines[p_line - 1];
+}
+size_t FileInfo::get_line_size() const
+{
+  return lines.size();
+}
+std::string FileInfo::get_module_path() const
+{
+  fs::path p = path;
+  return p.parent_path() / p.stem();
 }
 
 ScriptInfo::~ScriptInfo()
 {
 }
 
-
-std::string ScriptInfo::get_normalized_path() const
+EFileSource file_path_to_EFileSource(const std::string& p_file)
 {
-  fs::path path = file_path;
-  return fs::path(path).parent_path() / path.stem();
-}
-
-void ScriptInfo::add_export(const ModuleExportation& exp)
-{
-  exported_mod.push_back(std::make_unique<ModuleExportation>(exp));
-}
-
-void ScriptInfo::add_import(const ModuleImportation& imp)
-{
-  imported_mod.push_back(std::make_unique<ModuleImportation>(imp));
-}
-
-std::shared_ptr<ModuleExportation> ScriptInfo::get_export_module(const std::string& p_path)
-{
-  for (const auto& exp : exported_mod) {
-    if (exp->script_exported->file_path == p_path) return exp;
-  }
-
-  return nullptr;
-}
-
-std::shared_ptr<ModuleImportation> ScriptInfo::get_import_module(std::span<const std::string> p_path)
-{
-  size_t                             bigger_seg_compatible = -1;
-  std::shared_ptr<ModuleImportation> last_imp_found;
-  for (const auto& imp : imported_mod) {
-    if (imp->path.size() > p_path.size()) continue;
-
-    if (imp->path.empty()) {
-      if (imp->name == p_path[0]) {
-        bigger_seg_compatible = 0;
-        last_imp_found        = imp;
-        continue;
-      }
-    }
-
-    for (size_t i = 0; i < imp->path.size(); i++) {
-      if (i == 0) {
-        if (imp->path[0] == p_path[0]) {
-          if (bigger_seg_compatible == -1 || bigger_seg_compatible < i) {
-            bigger_seg_compatible = i;
-            last_imp_found        = imp;
-          }
-        } else {
-          break;
-        }
-      }
-      if (imp->path[i] != p_path[i]) {
-        if (bigger_seg_compatible == -1 || bigger_seg_compatible < i) {
-          bigger_seg_compatible = i;
-          last_imp_found        = imp;
-        }
-      }
-    }
-  }
-
-  if (bigger_seg_compatible == -1) return nullptr;
-
-  return last_imp_found;
-}
-
-std::string ModuleImportation::get_normalized_path() const
-{
-
-  fs::path path = get_path();
-  return path.parent_path() / path.stem();
-}
-
-std::string ModuleImportation::get_path() const
-{
-  fs::path p_out;
-  switch (import_source) {
-  case EImportSource::User:        p_out = compiler::COMP_CTX.get_dir_source(); break;
-  case EImportSource::StandardLib: p_out = common::resolve_path(common::get_stdlib_dir()); break;
-  case EImportSource::Package:     p_out = common::resolve_path(common::get_packages_dir()); break;
-  case EImportSource::Extern:      p_out = compiler::COMP_CTX.get_dir_binding(); break;
-  default:                         p_out = compiler::COMP_CTX.get_dir_source(); break;
-  }
-
-  for (auto& elem : path) {
-    p_out /= elem;
-  }
-
-  p_out /= name;
-  if (!extern_lib.empty()) p_out /= extern_lib;
-  switch (import_source) {
-  case EImportSource::User:        p_out.replace_extension(".vlx"); break;
-  case EImportSource::StandardLib: p_out.replace_extension(".vlxlib"); break;
-  case EImportSource::Package:     p_out.replace_extension(".vlxlib"); break;
-  case EImportSource::Extern:      p_out.replace_extension(".vlxbind"); break;
-  default:                         p_out.replace_extension(".vlx"); break;
-  }
-
-  return p_out.string();
-}
-
-std::set<ModuleImportation*> ScriptInfo::get_externs()
-{
-  std::set<ModuleImportation*> result;
-  for (auto& imp : imported_mod) {
-    if (imp->is_external()) {
-      result.insert(imp.get());
-    }
-  }
-  return result;
-}
-
-std::set<std::string> ScriptInfo::get_extern_languages()
-{
-  std::set<std::string> result;
-  for (auto& imp : get_externs()) {
-    if (imp->is_external()) {
-      result.insert(imp->get_path());
-    }
-  }
-  return result;
-}
-
-EExtern_Kind AST_AExpression_to_Extern_Item_Kind(const ast::AExpression& n)
-{
-  if (dynamic_cast<const ast::literal::Enum*>(&n)) return EExtern_Kind::Enum;
-  if (dynamic_cast<const ast::expression::Call*>(&n)) return EExtern_Kind::Function;
-  if (dynamic_cast<const ast::expression::Call_Pipe*>(&n)) return EExtern_Kind::Function;
-  if (dynamic_cast<const ast::literal::Structured_Data*>(&n)) return EExtern_Kind::Component;
-  if (dynamic_cast<const ast::literal::Entity*>(&n)) return EExtern_Kind::Entity;
-  if (dynamic_cast<const ast::Expr_ID*>(&n)) return EExtern_Kind::Global;
-  if (dynamic_cast<const ast::Expr_ID_Qualified*>(&n)) return EExtern_Kind::Global;
-  if (dynamic_cast<const ast::Expr_ID_Type*>(&n)) return EExtern_Kind::Type;
-
-  return EExtern_Kind::Global;
-}
-
-ScriptInfo::Origin ScriptInfo::Origin_from_file(const std::string& p_file)
-{
-  if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_source()).filename())
-    return ScriptInfo::Origin::src;
+  if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_source()).filename()) return EFileSource::src;
   if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_binding()).filename())
-    return ScriptInfo::Origin::binding;
+    return EFileSource::binding;
   if (fs::path(p_file).filename() == fs::path(compiler::COMP_CTX.get_dir_vendor()).filename())
-    return ScriptInfo::Origin::vendor_lib;
-  if (p_file == common::get_stdlib_dir()) return ScriptInfo::Origin::stdlib;
-  if (p_file == common::get_packages_dir()) return ScriptInfo::Origin::pkg_lib;
-  return ScriptInfo::Origin::src;
+    return EFileSource::vendor_lib;
+  if (p_file == common::get_stdlib_dir()) return EFileSource::stdlib;
+  if (p_file == common::get_packages_dir()) return EFileSource::pkg_lib;
+  return EFileSource::relative;
+}
+
+std::string EFileSource_to_dir(EFileSource p_file_source)
+{
+  switch (p_file_source) {
+  case EFileSource::src:        return compiler::COMP_CTX.get_dir_source();
+  case EFileSource::vendor_lib: return compiler::COMP_CTX.get_dir_vendor();
+  case EFileSource::stdlib:     return compiler::COMP_CTX.get_dir_stdlib();
+  case EFileSource::pkg_lib:    return compiler::COMP_CTX.get_dir_packages();
+  case EFileSource::binding:    return compiler::COMP_CTX.get_dir_binding();
+  case EFileSource::relative:   return "";
+  }
 }

@@ -10,7 +10,7 @@
 #include "compiler_context.hpp"
 #include "parser/parser_base.hpp"
 #include "parser/parser_context.hpp"
-#include "visitor/symbol_manager.hpp"
+#include "misc/symbol_manager.hpp"
 #include "misc/script_info.hpp"
 
 namespace fs = std::filesystem;
@@ -24,26 +24,26 @@ bool pipeline_start_parser(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr
 
   size_t count = 0;
   for (auto scr_info : p_scr_infos) {
-    if (scr_info->tokens.empty()) continue;
+    if (scr_info->file_info.tokens.empty()) continue;
 
-    parser::Parser_Base parser(*scr_info);
+    parser::Parser_Context parser(scr_info);
 
     auto                      start       = std::chrono::high_resolution_clock::now();
     std::vector<std::string>  out_par_err = parser.start_parsing();
-    std::vector<std::string>& out_sym_err = parser.ctx->m_sym->decl_errors;
+    std::vector<std::string>& out_sym_err = parser.sym_m->decl_errors;
     auto                      end         = std::chrono::high_resolution_clock::now();
     double                    milli       = std::chrono::duration<double, std::milli>(end - start).count();
 
     if (log) {
       static size_t count = 1;
-      std::cout << "[parser:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
-                << parser.ctx->node_count << " nodes | " << milli << " ms" << std::flush;
+      std::cout << "[parser:" << count++ << "] \"" << scr_info->file_info.get_file_name() << "\" | "
+                << parser.node_count << " nodes | " << milli << " ms" << std::flush;
     }
 
     if (!out_par_err.empty() || !out_sym_err.empty()) {
-      parErrors.push_back({scr_info->file_path, out_par_err});
-      declErrors.push_back({scr_info->file_path, out_sym_err});
-      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+      parErrors.push_back({scr_info->file_info.path, out_par_err});
+      declErrors.push_back({scr_info->file_info.path, out_sym_err});
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_info.path << "\" " color_YELLOW << milli << " ms"
                 << color_RESET << std::endl;
     }
   }

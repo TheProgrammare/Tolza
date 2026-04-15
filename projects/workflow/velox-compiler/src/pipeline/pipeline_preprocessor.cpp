@@ -22,12 +22,11 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
   size_t count = 0;
   for (auto scr_info : p_scr_infos) {
-    if (scr_info->tokens.empty()) continue;
+    if (scr_info->file_info.tokens.empty()) continue;
     Preprocessor pre(*scr_info);
 
     auto                      start      = std::chrono::high_resolution_clock::now();
     std::vector<Token>        final_toks = pre.preprocess();
-    meta::MetablockManager*&  meta       = pre.m_meta;
     std::vector<std::string>& err        = pre.tok_v->errors;
 
     auto   end   = std::chrono::high_resolution_clock::now();
@@ -35,17 +34,17 @@ bool pipeline_start_preprocessor(const std::vector<std::shared_ptr<ScriptInfo>>&
 
     if (log) {
       static size_t count = 1;
-      std::cout << "[preprocessor:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
+      std::cout << "[preprocessor:" << count++ << "] \"" << scr_info->file_info.get_file_name() << "\" | "
                 << final_toks.size() << " tokens | " << milli << " ms" << std::flush;
     }
 
     if (!err.empty()) {
-      errs.push_back({scr_info->file_path, err});
-      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_path << "\" " color_YELLOW << milli << " ms"
+      errs.push_back({scr_info->file_info.path, err});
+      std::cout << color_RED "ERR " color_RESET "\"" << scr_info->file_info.path << "\" " color_YELLOW << milli << " ms"
                 << color_RESET << std::endl;
     } else {
-      scr_info->tokens = final_toks;
-      scr_info->m_meta = meta;
+      scr_info->file_info.tokens = final_toks;
+      scr_info->meta_m           = pre.meta_m;
     }
   }
 

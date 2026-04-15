@@ -21,14 +21,13 @@
 #include <expected>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
+#include <memory>
 #include <string>
 
 #include "ast/ast_data.hpp"
 #include "ast/ast_forward.hpp"
-#include "ast/ast_numeric_128_bits.hpp"
 
 struct Visitor_Codegen;
-struct Symbol_Data;
 
 namespace llvm
 {
@@ -51,11 +50,11 @@ public:
   llvm::Value* engage_copy_semantic(ast::AExpression& p_target);
   llvm::Value* engage_clone_semantic(ast::AExpression& p_target);
 
-  std::expected<Symbol_Data*, std::string>      find_symbol(const ast::AExpression& p_expr);
-  std::expected<ast::AExpression*, std::string> get_symbol_expression(const Symbol_Data& p_symbol);
-  std::expected<llvm::Constant*, std::string>   create_constant(const ast::ALiteral& p_value);
-  llvm::Type*                                   generate_parameter_type(ast::declaration::local::Parameter& p_param);
-  llvm::Type*                                   get_primtive_type(EPrimType p_ty);
+  std::expected<std::shared_ptr<ast::ADeclaration>, std::string> find_symbol(const ast::AExpression& p_expr);
+  std::expected<ast::AExpression*, std::string>                  get_symbol_expression(ast::ADeclaration& p_symbol);
+  std::expected<llvm::Constant*, std::string>                    create_constant(const ast::ALiteral& p_value);
+  llvm::Type* generate_parameter_type(ast::declaration::local::Parameter& p_param);
+  llvm::Type* get_primtive_type(EPrimType p_ty);
 
 
   llvm::Constant* get_cstr_constant(const std::string& val);

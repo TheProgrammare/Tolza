@@ -90,12 +90,13 @@ std::string Error_Diagnostic::print_cursor() const
 
 std::string Error_Diagnostic::print_line() const
 {
-  if (token.span.line - 1 < 0 || token.span.line - 1 > get_scr_info()->get_line_size()) return "NO VALID LINE INDEX";
+  if (token.span.line - 1 < 0 || token.span.line - 1 > get_scr_info()->file_info.get_line_size())
+    return "NO VALID LINE INDEX";
 
   const std::string line_offset_str = std::string(6 - std::to_string(token.span.line).size(), ' ');
 
   return line_offset_str + std::to_string(token.span.line) + " | " color_RESET
-         + get_scr_info()->get_line(token.span.line) + "\n" color_RESET;
+         + get_scr_info()->file_info.get_line(token.span.line) + "\n" color_RESET;
 }
 
 
@@ -109,15 +110,15 @@ std::string Error_Diagnostic::print_line_cursor() const
 
 std::string Error_Diagnostic::print_source() const
 {
-  return "[file] " color_MAGENTA + get_scr_info()->file_path + ":" + std::to_string(token.span.line) + ":"
+  return "[file] " color_MAGENTA + get_scr_info()->file_info.path + ":" + std::to_string(token.span.line) + ":"
          + std::to_string(token.span.col) + "\n" color_RESET;
 }
 
 Error_Diagnostic_Two::Error_Diagnostic_Two(const ScriptInfo& _pass_scr_info, ErrorCode code, const ast::Node& first,
                                            const ast::Node& second, compiler::EPhase _phase, const std::string& msg,
                                            const std::string& hint)
-  : first(Error_Diagnostic(_pass_scr_info, code, first._scr_info, first._token, _phase, msg, hint))
-  , second(Error_Diagnostic(_pass_scr_info, code, second._scr_info, second._token, _phase, msg, hint))
+  : first(Error_Diagnostic(_pass_scr_info, code, first.node_scr_info.get(), first.node_token, _phase, msg, hint))
+  , second(Error_Diagnostic(_pass_scr_info, code, second.node_scr_info.get(), second.node_token, _phase, msg, hint))
 {
 }
 

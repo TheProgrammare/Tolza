@@ -632,7 +632,13 @@ struct Metablock_Expand : public Metablock {
 };
 
 // manage all metablocks
-struct MetablockManager {
+struct Manager {
+  Manager() = delete;
+
+  Manager(ScriptInfo& p_scr_info);
+
+  ScriptInfo& scr_info;
+
   // key: position, val: Metablock
   std::map<size_t, Metablock*> metablocks;
 

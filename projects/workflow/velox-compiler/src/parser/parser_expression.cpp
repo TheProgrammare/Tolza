@@ -11,6 +11,7 @@
 #include "ast/ast_literal.hpp"
 
 #include "lexer/token.hpp"
+#include "misc/symbol_manager.hpp"
 #include "parser_context.hpp"
 #include "parser_literal.hpp"
 #include "parser_declaration_local.hpp"
@@ -51,8 +52,7 @@ std::unique_ptr<ast::AExpression> parser::Parser_Expression::parse_expression_te
   auto term = base_expression();
   term      = suffix_expression(std::move(term));
 
-  if (auto ptr = dynamic_cast<ast::AIdentifier*>(term.get()))
-    ctx.m_sym->try_add_extern_sym_to_generate(*ptr, EExtern_Kind::Global);
+  if (auto ptr = dynamic_cast<ast::AIdentifier*>(term.get())) ctx.sym_m->check_if_unresolved_extern_sym(*ptr);
 
   return term;
 }
@@ -239,8 +239,7 @@ parser::Parser_Expression::function_call(std::unique_ptr<ast::AExpression> p_cal
   call->callee     = std::move(p_callee);
   call->param_args = call_arguments();
 
-  if (auto ptr = dynamic_cast<ast::AIdentifier*>(call->callee.get()))
-    ctx.m_sym->try_add_extern_sym_to_generate(*ptr, EExtern_Kind::Function);
+  if (auto ptr = dynamic_cast<ast::AIdentifier*>(call->callee.get())) ctx.sym_m->check_if_unresolved_extern_sym(*ptr);
 
   return call;
 }
@@ -349,7 +348,7 @@ std::unique_ptr<ast::Expr_ID_Type> parser::Parser_Expression::identifier_typed()
     if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACKETS)) break;
   }
 
-  ctx.m_sym->try_add_extern_sym_to_generate(*id_type, EExtern_Kind::Type);
+  ctx.sym_m->check_if_unresolved_extern_sym(*id_type.get());
 
   return id_type;
 }

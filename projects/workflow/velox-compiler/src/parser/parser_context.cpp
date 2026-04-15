@@ -2,8 +2,10 @@
 #include "parser_context.hpp"
 
 #include <iostream>
+#include <memory>
 
 #include "ast/ast_data.hpp"
+#include "misc/module_manager.hpp"
 #include "misc/script_info.hpp"
 
 #include "parser_base.hpp"
@@ -16,45 +18,52 @@
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
-#include "visitor/symbol_manager.hpp"
 
 #include "lexer/token_viewer.hpp"
 
 #include "misc/metacode.hpp"
 
-parser::Parser_Context::Parser_Context(ScriptInfo& _scr_info)
-  : scr_info(_scr_info)
-  , m_sym(new Symbols_Manager(_scr_info))
-  , m_meta(_scr_info.m_meta)
-  , tok_v(TokenViewer(_scr_info))
+parser::Parser_Context::Parser_Context(std::shared_ptr<ScriptInfo> p_scr_info)
+  : scr_info_sptr(p_scr_info)
+  , scr_info(*p_scr_info.get())
+  , meta_m(p_scr_info->meta_m)
+  , tok_v(TokenViewer(*p_scr_info.get()))
+  , p_cop(std::make_unique<Parser_Declaration_COP>(*this))
+  , p_decl(std::make_unique<Parser_Declaration>(*this))
+  , p_expr(std::make_unique<Parser_Expression>(*this))
+  , p_lit(std::make_unique<Parser_Literal>(*this))
+  , p_loc(std::make_unique<Parser_Declaration_Local>(*this))
+  , p_mem(std::make_unique<Parser_Memory>(*this))
+  , p_op(std::make_unique<Parser_Operator>(*this))
+  , p_state(std::make_unique<Parser_Statement>(*this))
+  , p_type(std::make_unique<Parser_Type>(*this))
+  , p_base(std::make_unique<Parser_Base>(*this))
 {
-  scr_info.m_sym = m_sym;
+  scr_info.root_node                = std::make_shared<ast::Root>();
+  scr_info.root_node->node_scr_info = p_scr_info;
+  scr_info.module_root              = std::make_shared<module::Module>(scr_info_sptr);
+  scr_info.root_node->node_module   = scr_info.module_root;
+
+  current_module = scr_info.module_root;
 }
 
 parser::Parser_Context::~Parser_Context()
 {
+}
 
-  delete p_cop;
-  p_cop = nullptr;
-  delete p_decl;
-  p_decl = nullptr;
-  delete p_expr;
-  p_expr = nullptr;
-  delete p_lit;
-  p_lit = nullptr;
-  delete p_loc;
-  p_loc = nullptr;
-  delete p_mem;
-  p_mem = nullptr;
-  delete p_op;
-  p_op = nullptr;
-  delete p_state;
-  p_state = nullptr;
-  delete p_type;
-  p_type = nullptr;
+std::vector<std::string> parser::Parser_Context::start_parsing()
+{
+  try {
+    while (!tok_v.is_end()) {
+      auto line = p_decl->parse_declaration();
+      if (line) scr_info.root_node->global_nodes.push_back(line);
+      if (tok_v.match(TokTy::S_END_OF_FILE)) break;
+    }
+  } catch (const std::runtime_error& e) {
+    // std::cerr << e.what() << std::endl; context.tokView.synchronize(); attempt_recovery();
+  }
 
-  delete p_base;
-  p_base = nullptr;
+  return tok_v.errors;
 }
 
 bool parser::is_gen_args(TokenViewer& p_tok_v)
@@ -118,29 +127,51 @@ bool parser::is_gen_args(TokenViewer& p_tok_v)
 
 bool parser::Parser_Context::metablock_contains(const ast::Node& n, const std::string& s) const
 {
-  return m_meta->contains(n.get_tok_antepos(), s);
+  return meta_m->contains(n.get_tok_antepos(), s);
 }
 
 bool parser::Parser_Context::metablock_contains(const ast::Node& n, TokTy t) const
 {
-  return m_meta->contains(n.get_tok_antepos(), t);
+  return meta_m->contains(n.get_tok_antepos(), t);
 }
 
 std::string parser::Parser_Context::get_export_name(const ast::Node& n) const
 {
-  return m_meta->get_export_name(n.get_tok_antepos());
+  return meta_m->get_export_name(n.get_tok_antepos());
 }
 
 const meta::MetaInstruct* parser::Parser_Context::get_instruct(const ast::Node&                          n,
                                                                const std::initializer_list<std::string>& pattern) const
 {
-  return m_meta->get_instruct(n.get_tok_antepos(), pattern);
+  return meta_m->get_instruct(n.get_tok_antepos(), pattern);
 }
 
 const meta::Metablock* parser::Parser_Context::get_metablock(const ast::Node&                          n,
                                                              const std::initializer_list<std::string>& pattern)
 {
-  return m_meta->get_metablock(n.get_tok_antepos(), pattern);
+  return meta_m->get_metablock(n.get_tok_antepos(), pattern);
+}
+
+
+void parser::Parser_Context::enter_module(std::shared_ptr<ast::ADeclaration> p_decl, std::string debug_name)
+{
+  auto mod = std::make_shared<module::Module>(p_decl, debug_name);
+
+  if (!current_module->add_sub_module(mod)) {
+    tok_v.add_error_tok(239, p_decl->node_token, "Impossible to enter in the module " + debug_name, "");
+    return;
+  }
+
+  current_module = mod;
+}
+void parser::Parser_Context::exit_module()
+{
+  if (!current_module->parent_module) {
+    tok_v.add_error_tok(239, current_module->owner.lock()->node_token,
+                        "Impossible to exit the current scope, the module \"" + current_module->debug_name
+                            + "\" dosen't have parent module.",
+                        "");
+  }
 }
 
 void parser::Parser_Context::attempt_recovery()

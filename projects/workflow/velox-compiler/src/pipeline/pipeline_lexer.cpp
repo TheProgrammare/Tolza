@@ -27,12 +27,12 @@ bool pipeline_start_lexer(const std::vector<std::shared_ptr<ScriptInfo>>& p_scr_
     auto   end   = std::chrono::high_resolution_clock::now();
     double milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-    if (!lexer.errors.empty()) lexErrors.push_back({scr_info->file_path, lexer.errors});
+    if (!lexer.errors.empty()) lexErrors.push_back({scr_info->file_info.path, lexer.errors});
 
     if (log) {
       static size_t count = 1;
-      std::cout << "[lexer:" << count++ << "] \"" << fs::path(scr_info->file_path).filename() << "\" | "
-                << lexer.scr_info.tokens.size() << " tokens | " << milli << " ms" << std::flush;
+      std::cout << "[lexer:" << count++ << "] \"" << scr_info->file_info.get_file_name() << "\" | "
+                << lexer.scr_info.file_info.tokens.size() << " tokens | " << milli << " ms" << std::flush;
     }
   }
 
