@@ -229,27 +229,26 @@ Placement e.g. (place possible: `@`)
 
 | logical | bitwise | syntax | syntax bitwise |
 |-|-|-|-|
-| and   | and.b   |`and`  | `and.b`  |
-| nand  | nand.b  |`nand` `!and` | `nand.b` `!and.b` |
-| or    | or.b    |`or`   | `or.b`   |
-| xor   | xor.b   |`xor`  | `xor.b`  |
-| nor   | nor.b   |`nor` `!or`  | `nor.b` `!or.b` |
-| xnor  | xnor.b  |`xnor` `!xor` | `xnor.b` `!xor.b` |
+| and   | and.b   |`and`  | `b.and`  |
+| nand  | nand.b  |`nand` `!and` | `b.nand` `!b.and` |
+| or    | or.b    |`or`   | `b.or`   |
+| xor   | xor.b   |`xor`  | `b.xor`  |
+| nor   | nor.b   |`nor` `!or`  | `b.nor` `!b.or` |
+| xnor  | xnor.b  |`xnor` `!xor` | `b.xnor` `!b.xor` |
 
 ## Binary
 > Only on `flag` and `b8`-`b128`
 
-| binary | syntax | alt | info |
-|-|-|-|-|
-| left shift 0   | `<<[0]` `<<` | `ls0.b` `ls.b` | fill right with 0       |
-| left shift 1   | `<<[1]`   | `ls1.b` | fill right with 1       |
-| right shift 0  | `[0]>>` `>>` | `rs0.b` `rs.b` | fill left with 0        |
-| right shift 1  | `[1]>>`   | `rs1.b` | fill left with 1        |
-| left shift a   | `<<[a]`   | `lsa.b` | fill right with MSB (arithmetic) |
-| right shift a  | `[a]>>`   | `rsa.b` | fill left with MSB (arithmetic) |
-| left rotate    | `<<[r]`   | `lr.b` | rotate bits to the left |
-| right rotate   | `[r]>>`   | `rr.b` | rotate bits to the right |
-| slice bits     | `~[0..8]` | - | get bits from range     |
+| binary | syntax | info |
+|-|-|-|
+| left shift 0   | `b.shl.0` | fill right with 0       |
+| left shift 1   | `b.shl.1` | fill right with 1       |
+| right shift 0  | `b.shr.0` | fill left with 0        |
+| right shift 1  | `b.shr.1` | fill left with 1        |
+| left shift a   | `b.shl.a` | fill right with MSB (arithmetic) |
+| right shift a  | `b.shr.a` | fill left with MSB (arithmetic) |
+| left rotate    | `b.rol` | rotate bits to the left |
+| right rotate   | `b.ror` | rotate bits to the right |
 
 # I/O (experimental)
 The standard input and output are managed by a native syntax:
