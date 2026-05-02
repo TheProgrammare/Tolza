@@ -10,7 +10,7 @@
 ![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
 ![Version](https://img.shields.io/badge/Version-2026.2.0b-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
-![Platform](https://img.shields.io/badge/Current_Platform-UNIX_/_Windows-darkblue)
+![Platform](https://img.shields.docs/FFI_JSON.mdio/badge/Current_Platform-UNIX_/_Windows-darkblue)
 
 *Memory explicit, behavior predictable.*
 
@@ -32,7 +32,7 @@ Velox deliberately avoids implicit behavior in favor of clarity, predictability,
 
 Modern systems languages each make different trade-offs:
 
-- **C / C++** are expressive but unsafe by default  
+- **C / C++** are expressive but unsafe by default and have a heavy legacy
 - **Rust** is safe but relies on a global borrow checker and complex lifetime reasoning  
 - **Zig** is simple and explicit, but largely permissive
 
@@ -79,10 +79,47 @@ This avoids hidden polymorphism and runtime dispatch.
 
 > COP: Compositional Oriented Paradigm
 
+```
+// speculative standard lib
+comp CBufferData<T> { data: ptr'T = nullptr, size: usize = 0, capacity: usize = 0 }
+entity Buffer<T> { use CBufferData<T> }
+sys populate<T>(items: [T]) {
+  CBufferData<T>(buf) {
+    buf::>resize(items.size)
+    for item in items {
+      buf::>add_item(item)
+    }
+  }
+  return self // universal constructor if entity have CBufferData
+}
+sys add_item<T>(item: T) {
+  CBufferData<T>(buf) {
+    if buf.size >= buf.capacity && !this::>resize() => return false
+    buf.data[buf.size] = item
+    buf.size += 1
+    return true
+  }
+}
+
+// user code
+entity Item { ID: usize, name: !str, amount: usize }
+entity Inventory { use CBufferData<Item> }
+
+fn main() {
+  let apple = Item{0, "Apple", 10}
+  let sword = Item{1, Sword", 1}
+  let player_inv = Inventory::>populate({apple, sword})
+  for i in 2..5 {
+    let rand_item = Item{i, std::rand(0) as str, i * 2}
+    player_inv::>add_item(rand_item)
+  }
+}
+
+```
+
 ### 4. Strong typing with explicit costs
 Velox makes value semantics explicit by distinguishing between:
 - `copy`
-- `clone`
 - `ref` (immutable reference)
 - `mut` (mutable reference)
 - `move`
@@ -100,6 +137,8 @@ comp Vec2 {
 }
 
 fn length(mut v: Vec2) -> f32 {
+    v.x **= 2
+    v.y **= 3
     return math::sqrt(v.x * v.x + v.y * v.y)
 }
 ```
@@ -132,27 +171,28 @@ Velox is designed to scale from small scripts to large projects:
 
 Velox allows the use of external code with minimal boilerplate and no name collisions:
 
-- External functions, globals, and types from an imported library are automatically declared in a binding script  
+- External functions, globals, and types from an imported library are automatically declared in a binding .json (see [FFI_JSON](docs/FFI_JSON.md)) 
 - All operations on external elements are considered inherently unsafe  
-- Compiler plug-ins can generate binders for other languages, allowing other language communities to provide recommended bindings for Velox  
-- Currently, only C libraries are supported natively  
+- Anyone can write a .json binder, allowing other language communities to provide recommended bindings for Velox  
+- Currently, only C libraries are supported natively (use the ffi .json interface without any .json file)
 
 > Only the C binder is compiler-native. A copy of the C binder script is included to illustrate the binding logic.
 
 ### Example: Using a C Library
 ```Velox
-import ext: C::stdio
+import bind::C::stdio as C
 
 fn main() {
   C::printf("Hello World !"c_str)
 }
 ```
 Explanation:
-- `import ext: C::stdio` declares the external library to import
-- `C::printf` references the function in the library using the language namespace
+- `import bind::C::stdio` declares a binding to import
+- `C::printf` references the language, then the script
+- `as C` isolate the importation into the `C` namespace to use like `C::scanf(...)`
 - The compiler generates a binding script linking the external function automatically
 
-> The compiler requires access to the library code to generate the bindings.
+> The compiler requires access to the library code to generate the bindings (for C).
 
 # What Velox Is Not
 - ❌ An object-oriented language
