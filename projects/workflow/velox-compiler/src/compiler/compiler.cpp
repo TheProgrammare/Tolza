@@ -9,61 +9,80 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/IR/LLVMContext.h>
 
-#include <compiler_context.hpp>
+#include <compiler_options.hpp>
 #include <common.hpp>
 #include <filesystem>
 
-#include <compiler_context.hpp>
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/module.hpp"
+#include "nexus/scope.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/script.hpp"
+#include "nexus/type.hpp"
+#include "nexus/symbol.hpp"
+#include "nexus/inference.hpp"
+#include "nexus/unresolved.hpp"
+#include "nexus/resolved.hpp"
 
-#include "misc/script_info.hpp"
-#include "misc/module_manager.hpp"
+#include "nexus/pipeline.hpp"
 
-#include "pipeline/pipeline_exporter.hpp"
-#include "pipeline/pipeline_binder.hpp"
-#include "pipeline/pipeline_filesystem.hpp"
-#include "pipeline/pipeline_codegen.hpp"
-#include "pipeline/pipeline_lexer.hpp"
-#include "pipeline/pipeline_linker.hpp"
-#include "pipeline/pipeline_parser.hpp"
-#include "pipeline/pipeline_preprocessor.hpp"
-#include "pipeline/pipeline_resolvers.hpp"
-#include "pipeline/pipeline_llvm_opti.hpp"
-#include "pipeline/pipeline_emit.hpp"
-
-#include "visitor/visitor_print.hpp"
+#include "misc/error_output.hpp"
 
 
-Compiler          compiler::COMP;
-common::CompCtx   compiler::COMP_CTX;
-llvm::LLVMContext compiler::LLVM_CTX;
+module::Graph     compiler::modules    = module::Graph();
+ast::Arena        compiler::nodes      = ast::Arena();
+type::Arena       compiler::types      = type::Arena();
+symbol::Arena     compiler::symbols    = symbol::Arena();
+scope::Graph      compiler::scopes     = scope::Graph();
+unresolved::Arena compiler::unresolved = unresolved::Arena();
+resolved::Arena   compiler::resolved   = resolved::Arena();
+inference::Arena  compiler::inference  = inference::Arena();
+
+
+pipeline::Pipeline compiler::pipeline = pipeline::Pipeline();
+
+compiler::Compiler       compiler::COMPILER(compiler::modules, compiler::nodes, compiler::types, compiler::symbols,
+                                            compiler::pipeline, compiler::scopes, compiler::unresolved, compiler::resolved,
+                                            compiler::inference);
+common::Compiler_Options compiler::COMPILER_OPTIONS;
+llvm::LLVMContext        compiler::LLVM_CTX;
 
 const std::string common::SOFTWARE_NAME = "velox-compiler";
 
-namespace fs = std::filesystem;
 
-
-static const std::string pipeline_info =
+constexpr std::string_view pipeline_info =
     R"(
 ===============================================================================
- [Toolchain]->configuration->[Preparator]
+ [Toolchain]->configuration->[Preparer]
 ===============================================================================
- [Preparator]->filesystem->lexer->preprocessor->parser->[Analyser] 
+ [Preparer]->lexer->preprocessor->parser->wait all->[Shipowner] 
 ===============================================================================
- [Analyzer]->exporter->check_symbols->check_types->check_sematics->[Generator] 
+ [Shipowner]->binding generation->preparer->wait all->[Analyzer] 
 ===============================================================================
- [Generator]->codegen->optimisation->emitter->[Linker]-> executable
+ [Analyzer]->symbol->inference->semantic->[Generator] 
+===============================================================================
+ [Generator]->codegen->optimisation->emitter->module linker->[Linker]
 ===============================================================================
 )";
 
-static const std::string binder_info = "%0 files + %1 binding files = %2 total files in the main pipeline";
+constexpr std::string_view binder_info = "%0 files + %1 binding files = %2 total files in the main pipeline";
 
-bool Compiler::start_compilation()
+
+void compiler::Compiler::add_error(Error_Diagnostic&& error)
 {
-  static const bool mute = compiler::COMP_CTX.mute;
+  auto& vec = errors[error.elem_first.scr_id];
+  vec.push_back(std::move(error));
+}
+
+
+bool compiler::Compiler::start_compilation()
+{
+  static const bool mute = compiler::COMPILER_OPTIONS.mute;
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (!compiler::COMP_CTX.current_config_file.empty() && !mute) {
+  if (!compiler::COMPILER_OPTIONS.current_config_file.empty() && !mute) {
     std::cout << "\n[build:warning] Raw compilation command detected, "
                  "please use 'velox-toolchain' to develop proprely with the Velox programming language.\n"
               << std::endl;
@@ -71,21 +90,20 @@ bool Compiler::start_compilation()
 
   if (!mute) {
     std::cout << "[velox-compiler] Compilation Started" << pipeline_info << std::endl;
-    std::cout << "  Config file used: \"" << compiler::COMP_CTX.current_config_file << "\"" << std::endl;
+    std::cout << "  Config file used: \"" << compiler::COMPILER_OPTIONS.current_config_file << "\"" << std::endl;
   }
 
 
   // filesystem
-  std::filesystem::path target_dir = compiler::COMP_CTX.get_dir_source();
-  auto                  scr_infos  = pipeline_start_filesystem(target_dir.string());
+  std::filesystem::path target_dir = compiler::COMPILER_OPTIONS.get_dir_source();
+  auto                  scr_infos  = pipeline.query_scripts_at_dir(target_dir.string());
 
   if (scr_infos.empty()) {
     if (!mute) {
-      std::cout << "[build] No files found at the source folder path: " << target_dir << "\n";
-      std::cout << "[build] Check if the source folder path is correct." << target_dir << "\n";
-      std::cout << "Or start your project by creating your first script in the source "
-                   "folder path."
-                << target_dir << std::endl;
+      std::cout << "[build] No files found at the source folder path:\n  " << target_dir << "\n";
+      std::cout << "  Check if the source folder path is correct.\n";
+      std::cout << "  Or start your project by creating your first script in the source folder path.";
+      std::cout << std::endl;
     }
     return false;
   }
@@ -94,116 +112,39 @@ bool Compiler::start_compilation()
   auto end = std::chrono::high_resolution_clock::now();
   actual_duration += std::chrono::duration<double, std::milli>(end - start).count();
 
-  if (!prepare_scripts(scr_infos)) return false;
 
-  std::vector<std::shared_ptr<ScriptInfo>> _prepared_scripts;
-  _prepared_scripts.reserve(prepared_scripts.size());
+  while (!pipeline.unprepared_scripts.empty()) {
+    for (auto scr_id : pipeline.unprepared_scripts) pipeline.engage_preparer(script::_id(scr_id));
 
-  for (auto& [_, script] : prepared_scripts) _prepared_scripts.push_back(script);
-
-  return analyze_scripts(_prepared_scripts);
-}
-
-bool Compiler::prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
-{
-  auto start = std::chrono::high_resolution_clock::now();
-
-  // lexer
-  if (!pipeline_start_lexer(scr_infos)) return false;
-
-
-  // preprocessor
-  if (!pipeline_start_preprocessor(scr_infos)) return false;
-
-
-  // parser
-  if (!pipeline_start_parser(scr_infos)) return false;
-
-
-  for (auto& scr_info : scr_infos) {
-    if (scr_info->file_info.tokens.empty()) continue;
-    prepared_scripts[scr_info->file_info.path] = scr_info;
+    for (auto scr_id : pipeline.prepared_scripts) pipeline.unprepared_scripts.erase(scr_id);
+    for (auto& [scr_id, err] : errors) pipeline.unprepared_scripts.erase(scr_id);
   }
 
+  pipeline.engage_shipowner();
 
-  // generate bindings
-  if (!pipeline_start_binder(scr_infos)) return false;
-
-  imported_modules.clear();
-
-  for (auto& scr_info : scr_infos) {
-    if (scr_info->file_info.tokens.empty()) continue;
-
-    prepared_scripts[scr_info->file_info.path] = scr_info;
-
-    for (auto& [name, imp] : scr_info->module_root->imported_modules) {
-      auto path = imp->get_script_path();
-      if (!prepared_scripts.contains(path)) {
-        imported_modules.insert(path);
+  if (!errors.empty()) {
+    for (auto& [scr_id, errs] : errors) {
+      for (auto err = errs.rbegin(); err != errs.rend(); ++err) {
+        std::cerr << err->print_error() << std::endl;
       }
     }
+    return false;
   }
 
-  if (!imported_modules.empty()) {
-    auto scrs = pipeline_start_filesystem_on_files(imported_modules);
-    return prepare_scripts(scrs);
+  for (auto scr_id : pipeline.prepared_scripts) pipeline.engage_analyzer(scr_id);
+
+  for (auto scr_id : pipeline.analyzed_scripts) pipeline.engage_generator(scr_id);
+
+  // if all scripts are analyzed without any errors
+  if (pipeline.analyzed_scripts.size() == pipeline.compilation_scripts.size()) {
+    pipeline.engage_module_linker(pipeline.get_script(script::_id(0)).id);
   }
 
+  pipeline.engage_linker();
 
-  auto end = std::chrono::high_resolution_clock::now();
-  actual_duration += std::chrono::duration<double, std::milli>(end - start).count();
   return true;
 }
 
-bool Compiler::analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos)
-{
-  static const bool mute = compiler::COMP_CTX.mute;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  // exporter
-  // import and export modules (to have all symbols for the resolution)
-  if (!pipeline_start_exporter(scr_infos)) return false;
-
-  // resolvers
-  // resolve symbols - resolve types - semantic analyzer
-  if (!pipeline_start_resolvers(scr_infos)) return false;
-
-  // printer
-  static bool log_ast = compiler::COMP_CTX.debugs.contains("ast");
-  if (log_ast) {
-    for (auto& info : scr_infos) Visitor_Print(*info.get()).visit(*info->root_node.get());
-  }
-
-  // LLVM IR
-  // generate LLVM IR code
-  if (!pipeline_start_codegen(scr_infos)) return false;
-
-  // optimisation
-  if (!pipeline_start_llvm_opti(scr_infos)) return false;
-
-  // emit
-  if (!pipeline_start_emit(scr_infos)) return false;
-
-  // linker
-  // link data
-  if (!pipeline_start_linker(scr_infos)) return false;
-
-
-  auto end = std::chrono::high_resolution_clock::now();
-  actual_duration += std::chrono::duration<double, std::milli>(end - start).count();
-
-  constexpr char end_log[] =
-      "[velox-compiler] Compilation finish successfully !\n"
-      "Duration: " color_YELLOW "%0 ms\n" color_RESET "  Find the executable at " color_MAGENTA "\"%1\"" color_RESET;
-
-  std::string fmt_end = end_log;
-  common::fmt_template(fmt_end, {std::to_string(actual_duration), compiler::COMP_CTX.dir_build});
-
-  if (!mute) std::cout << fmt_end << std::endl;
-
-  return true;
-}
 
 std::string compiler::Phase_to_code(EPhase phase)
 {

@@ -1,145 +1,116 @@
 #pragma once
 
-#include <memory>
-#include <string>
+#include <initializer_list>
+#include <string_view>
 
-#include "ast/ast_declaration.hpp"
-#include "lexer/token_viewer.hpp"
-#include "misc/module_manager.hpp"
-
-#include "ast/ast_base.hpp"
-
-struct ScriptInfo;
-
-template <typename NodeType>
-concept DerivedFromNode = std::is_base_of_v<ast::Node, NodeType> && !std::is_base_of_v<ast::ADeclaration, NodeType>;
-
-template <typename NodeType>
-concept DerivedFromDecl = std::is_base_of_v<ast::ADeclaration, NodeType> || std::is_base_of_v<ast::ALocal, NodeType>;
-
-template <typename NodeType>
-concept DerivedFromType = std::is_base_of_v<ast::AType, NodeType>;
-
-
-struct TokenViewer;
-
-namespace meta
-{
-struct Manager;
-struct MetaInstruct;
-struct Metablock;
-} // namespace meta
-
-namespace symbol
-{
-struct Manager;
-}
+#include "nexus/ast/ast.hpp"
+#include "nexus/forward.hpp"
 
 namespace parser
 {
-bool is_gen_args(TokenViewer& tokView);
-struct Parser_Base;
-struct Parser_Expression;
-struct Parser_Type;
-struct Parser_Literal;
-struct Parser_Declaration_Local;
-struct Parser_Operator;
-struct Parser_Memory;
-struct Parser_Declaration;
-struct Parser_Declaration_COP;
-struct Parser_Statement;
 
-struct Parser_Context {
-  explicit Parser_Context(std::shared_ptr<ScriptInfo> p_scr_info);
+// necessary macro to avoid any header dependence and have a minimal of boilerplate inside the parsing code
+
+// add node to the current script linked to the parser context
+#define parser_add_node(name, type, token_id)                                                                          \
+  static_assert(std::is_base_of_v<ast::Node, ast::type>, "The node type must inherit from ast::Node");                 \
+  auto __id_##name    = p.scr_info.nodes->add<ast::type>();                                                            \
+  auto name           = p.scr_info.nodes->get_as<ast::type>(__id_##name);                                              \
+  name->node_token_id = token_id;
+
+#define BAD_NODE_ID ast::GNID_Factory::make_gnid(p.scr_info.id, ast::_id(0));
+
+
+// necessary macro to avoid any header dependence and have a minimal of boilerplate inside the parsing code
+// factory can't be forwarded (nested structure)
+
+#define parser_type_factory compiler::COMPILER.types.factory
+
+bool is_gen_args(token::Viewer& tokView);
+
+
+struct Parser_Context final {
+  explicit Parser_Context(script::_id p_scr_info);
   ~Parser_Context();
 
-  std::shared_ptr<ScriptInfo>     scr_info_sptr;
-  ScriptInfo&                     scr_info;
-  std::shared_ptr<meta::Manager>  meta_m;
-  std::shared_ptr<module::Module> current_module;
-  TokenViewer                     tok_v;
-  size_t                          node_count = 0;
-
-  std::shared_ptr<ast::declaration::cop::Entity> current_entity;
-  std::shared_ptr<ast::Node>                     current_other;
-  ast::ACallable*                                current_function = nullptr;
+  script::_id            scr_id;
+  script::ScriptInfo&    scr_info;
+  ast::Arena* const      compilation_nodes;
+  metacode::ScriptGraph& meta;
+  module::_id            current_module_id;
+  scope::_id             current_scope_id;
+  token::Viewer* const   tok_v;
+  size_t                 node_count = 0;
 
   bool in_extern = false;
   bool in_export = false;
 
-  [[nodiscard]] std::vector<std::string> start_parsing();
+  [[nodiscard]] bool start_parsing();
 
 
   // debug purpose on error
-  void                      attempt_recovery();
+  void                           attempt_recovery();
   // match separator, or end instruction or and error return true if end is encounter
-  [[nodiscard]] bool        match_field_separator(TokTy separator = TokTy::COMMA, TokTy end = TokTy::CLOSE_BRACE);
+  [[nodiscard]] bool             match_field_separator(token::ETokenKind separator, token::ETokenKind end);
   // return true if end is encounter
-  [[nodiscard]] bool        match_field_any_separator(TokTy                        p_separator = TokTy::COMMA,
-                                                      std::initializer_list<TokTy> p_end       = {TokTy::CLOSE_BRACE});
-  [[nodiscard]] std::string parse_name(const std::string& msg = "", const std::string& hint = "");
+  [[nodiscard]] bool             match_field_any_separator(token::ETokenKind                        p_separator,
+                                                           std::initializer_list<token::ETokenKind> p_end);
+  [[nodiscard]] std::string_view parse_name(std::string_view msg = "", std::string_view hint = "");
   // MetablockManager shortcut for ASTNode
-  [[nodiscard]] bool        metablock_contains(const ast::Node& n, const std::string& s) const;
-  [[nodiscard]] bool        metablock_contains(const ast::Node& n, TokTy t) const;
-  [[nodiscard]] std::string get_export_name(const ast::Node& n) const;
+  [[nodiscard]] bool             metablock_contains(size_t file_pos, std::string_view s) const;
+  [[nodiscard]] bool             metablock_contains(size_t file_pos, token::ETokenKind t) const;
 
-  [[nodiscard]] const meta::MetaInstruct* get_instruct(const ast::Node&                          n,
-                                                       const std::initializer_list<std::string>& pattern) const;
-  [[nodiscard]] const meta::Metablock*    get_metablock(const ast::Node&                          n,
-                                                        const std::initializer_list<std::string>& pattern);
+  [[nodiscard]] const metacode::Instruction* get_instruction(size_t                                  file_pos,
+                                                             std::initializer_list<std::string_view> pattern) const;
+  [[nodiscard]] const metacode::Metacode*    get_metacode(size_t                                  file_pos,
+                                                          std::initializer_list<std::string_view> pattern) const;
 
-  void enter_module(std::shared_ptr<ast::ADeclaration> p_decl, std::string debug_name);
+  void enter_scope(ast::Node& node, std::string_view debug_name);
+  void exit_scope();
+
+  void enter_module(ast::Node& node, std::string_view debug_name);
   void exit_module();
 
+  std::string_view tok_to_str(token::_id id) const;
+  size_t           tok_to_pos(token::_id id) const;
+
+  // token viewer navigation
+
+  token::Token& expect(ErrorCode code, token::ETokenKind tok, std::string_view msg, std::string_view hint);
+  token::Token& expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& types, std::string_view msg,
+                           std::string_view hint);
+  token::Token& next();
+  [[nodiscard]] bool          is_end();
+  bool                        match(token::ETokenKind tok);
+  bool                        match_val(std::string_view val) const;
+  bool                        match_any(std::initializer_list<token::ETokenKind> toks);
+  [[nodiscard]] bool          check(token::ETokenKind tok) const;
+  [[nodiscard]] bool          check_at(size_t offset, token::ETokenKind tok) const;
+  [[nodiscard]] bool          check_val(std::string_view val) const;
+  [[nodiscard]] bool          check_any(std::initializer_list<token::ETokenKind> toks) const;
+  [[nodiscard]] token::Token& peek(size_t offset = 0) const;
+  void                        rewind(size_t pos);
+
+  symbol::_id add_symbol(ast::_id n_id);
+
+  void add_error(ErrorCode code, std::string_view msg, std::string_view hint) const;
+  void add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg, std::string_view hint) const;
+
+  [[nodiscard]] module::Module& get_current_module() const;
+  [[nodiscard]] scope::Scope&   get_current_scope() const;
+
   // sub parsers accessible to all
-  std::unique_ptr<Parser_Expression>        p_expr;
-  std::unique_ptr<Parser_Type>              p_type;
-  std::unique_ptr<Parser_Literal>           p_lit;
-  std::unique_ptr<Parser_Declaration_Local> p_loc;
-  std::unique_ptr<Parser_Operator>          p_op;
-  std::unique_ptr<Parser_Memory>            p_mem;
-  std::unique_ptr<Parser_Declaration>       p_decl;
-  std::unique_ptr<Parser_Declaration_COP>   p_cop;
-  std::unique_ptr<Parser_Statement>         p_state;
-  std::unique_ptr<Parser_Base>              p_base;
 
-
-  // to create node, set some data, store in resolvers
-  template <DerivedFromNode NodeType, typename... Args>
-  inline std::unique_ptr<NodeType> Create_Node(Token token, Args&&... args)
-  {
-    static_assert(!std::is_abstract_v<NodeType>, "Create_Node cannot instantiate abstract AST nodes");
-
-    auto node        = std::make_unique<NodeType>(std::forward<Args>(args)...);
-    node->node_token = token;
-    node_count++;
-    node->node_scr_info = scr_info_sptr;
-    current_module->add_item(node);
-    return node;
-  }
-  template <DerivedFromType NodeType, typename... Args>
-  inline std::shared_ptr<NodeType> Create_Type(Token token, Args&&... args)
-  {
-    static_assert(!std::is_abstract_v<NodeType>, "Create_Rype cannot instantiate abstract AST nodes");
-
-    auto node        = std::make_shared<NodeType>(std::forward<Args>(args)...);
-    node->node_token = token;
-    node_count++;
-    node->node_scr_info = scr_info_sptr;
-    current_module->add_item(node);
-    return node;
-  }
-  template <DerivedFromDecl NodeType, typename... Args>
-  inline std::shared_ptr<NodeType> Create_Decl(Token token, Args&&... args)
-  {
-    auto node        = std::make_shared<NodeType>(std::forward<Args>(args)...);
-    node->node_token = token;
-    node_count++;
-    node->node_scr_info           = scr_info_sptr;
-    node->declaration_is_exported = in_export;
-    node->declaration_is_external = in_extern;
-    current_module->add_item(node);
-    return node;
-  };
+  Parser_Expression* const        p_expr;
+  Parser_Type* const              p_type;
+  Parser_Literal* const           p_lit;
+  Parser_Declaration_Local* const p_loc;
+  Parser_Operator* const          p_op;
+  Parser_Memory* const            p_mem;
+  Parser_Declaration* const       p_decl;
+  Parser_Declaration_COP* const   p_cop;
+  Parser_Statement* const         p_state;
+  Parser_Base* const              p_base;
 };
+
 } // namespace parser

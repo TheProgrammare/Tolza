@@ -5,17 +5,17 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "ast/ast_base.hpp"
+#include "nexus/ast/ast.hpp"
 #include "common.hpp"
 #include "compiler/compiler.hpp"
-#include "compiler_context.hpp"
+#include "compiler_options.hpp"
 #include "misc/error_output.hpp"
 
 namespace fs = std::filesystem;
 
 std::string ffi::Bind_Package::get_file_path() const
 {
-  fs::path path = compiler::COMP_CTX.get_dir_binding();
+  fs::path path = compiler::COMPILER_OPTIONS.get_dir_binding();
   if (!lang.empty()) path /= lang;
   if (!lib.empty()) path /= lib;
   path.replace_extension(".vlxbind");
@@ -162,7 +162,7 @@ std::string ffi::type_to_str(const Type& ty)
 
       std::string str_return = ffi::type_to_str(ty.proto_type->return_type);
 
-      std::string fn = BINDER_PROTOTYPE_TEMPLATE;
+      std::string fn(BINDER_PROTOTYPE_TEMPLATE);
       common::fmt_template(fn, {str_params, str_return});
       type = fn;
     } else {
@@ -188,14 +188,14 @@ std::string ffi::import_to_str(const Import& _imp)
   case Import::EImportType::pkg:     type = "pkg:"; break;
   case Import::EImportType::user:    type = "usr:"; break;
   case Import::EImportType::stdlib:  type = "std:"; break;
-  case Import::EImportType::ext:     type = "ext:"; break;
+  case Import::EImportType::binding: type = "ext:"; break;
   case Import::EImportType::unknown: break;
   }
 
   for (auto& elem : _imp.path) path += elem + "::";
   path += _imp.name;
 
-  std::string out = BINDER_IMPORT_TEMPLATE;
+  std::string out(BINDER_IMPORT_TEMPLATE);
   common::fmt_template(out, {type, path});
   return out;
 }
@@ -207,13 +207,13 @@ std::string ffi::comp_to_str(const Comp& p_comp)
 
   for (size_t i = 0; i < p_comp.fields.size(); i++) {
     auto& [name, type] = p_comp.fields[i];
-    std::string field  = BINDER_EXTERN_FIELD;
+    std::string field(BINDER_EXTERN_FIELD);
     common::fmt_template(field, {name, type_to_str(type)});
 
     members += field;
   }
 
-  std::string out = BINDER_EXTERN_COMP_TEMPLATE;
+  std::string out(BINDER_EXTERN_COMP_TEMPLATE);
   common::fmt_template(out, {p_comp.name, members});
   return out;
 }
@@ -227,7 +227,7 @@ std::string ffi::entity_to_str(const Entity& p_entity)
     members += "use " + comp.name + ", \n";
   }
 
-  std::string out = BINDER_EXTERN_ENTITY_TEMPLATE;
+  std::string out(BINDER_EXTERN_ENTITY_TEMPLATE);
   common::fmt_template(out, {p_entity.name, members});
   return out;
 }
@@ -242,7 +242,7 @@ std::string ffi::union_to_str(const Union& p_union)
 
   bool test = members.empty() ? true : false;
 
-  std::string out = BINDER_EXTERN_UNION_TEMPLATE;
+  std::string out(BINDER_EXTERN_UNION_TEMPLATE);
   common::fmt_template(out, {p_union.name, members});
   return out;
 }
@@ -255,7 +255,7 @@ std::string ffi::flag_to_str(const Flag& p_flag)
     members += name + ": " + std::to_string(bits) + ",\n";
   }
 
-  std::string out = BINDER_EXTERN_FLAG_TEMPLATE;
+  std::string out(BINDER_EXTERN_FLAG_TEMPLATE);
   common::fmt_template(out, {p_flag.name, ffi::EType_to_str(p_flag.underlying_type), members});
   return out;
 }
@@ -276,7 +276,7 @@ std::string ffi::enum_to_str(const Enum& p_enum)
     members += "),\n";
   }
 
-  std::string out = BINDER_EXTERN_ENUM_TEMPLATE;
+  std::string out(BINDER_EXTERN_ENUM_TEMPLATE);
   common::fmt_template(out, {p_enum.name, members});
   return out;
 }
@@ -300,7 +300,7 @@ std::string ffi::func_to_str(const Func& p_func)
     params += "...";
   }
 
-  std::string out = BINDER_EXTERN_FN_TEMPALTE;
+  std::string out(BINDER_EXTERN_FN_TEMPALTE);
   common::fmt_template(out, {p_func.name, params, type_to_str(p_func.proto.return_type)});
   return out;
 }
@@ -309,25 +309,25 @@ std::string ffi::global_to_str(const Global& p_glo)
 {
   std::string kind = p_glo.is_const ? "let" : "var";
 
-  std::string out = BINDER_EXTERN_GLOBAL_TEMPLATE;
+  std::string out(BINDER_EXTERN_GLOBAL_TEMPLATE);
   common::fmt_template(out, {kind, p_glo.name, type_to_str(p_glo.type)});
   return out;
 }
 
 std::string ffi::typealias_to_str(const TypeAlias& p_ty_alias)
 {
-  std::string out = BINDER_EXTERN_TYPEALIAS_TEMPLATE;
+  std::string out(BINDER_EXTERN_TYPEALIAS_TEMPLATE);
   common::fmt_template(out, {p_ty_alias.name, type_to_str(p_ty_alias.type)});
   return out;
 }
 
 
-void ffi::write_ast(const ffi::AST& p_ast, const std::string& p_dest_file)
+void ffi::write_ast(const ffi::AST& p_ast, std::string_view p_dest_file)
 {
   // if (!check_ast_generation(ast)) return;
 
   fs::create_directories(fs::path(p_dest_file).parent_path());
-  std::ofstream os(p_dest_file);
+  std::ofstream os(p_dest_file.data());
 
   if (!os) throw std::runtime_error("Cannot open file: \"" + fs::path(p_dest_file).string() + "\"");
 
@@ -344,7 +344,7 @@ void ffi::write_ast(const ffi::AST& p_ast, const std::string& p_dest_file)
       for (auto& [name, import] : p_ast.imports) _imp += ffi::import_to_str(import);
     }
 
-    std::string header = ffi::BINDER_FILE_HEADER;
+    std::string header(ffi::BINDER_FILE_HEADER);
     common::fmt_template(header, {_lang, _lib, _imp, p_ast.bind.abi});
     os << header << std::flush;
   }
@@ -352,42 +352,58 @@ void ffi::write_ast(const ffi::AST& p_ast, const std::string& p_dest_file)
   if (!p_ast.enums.empty()) {
     os << ffi::BINDER_ENUM_HEADER;
 
-    for (auto& [_, elem] : p_ast.enums) os << ffi::enum_to_str(elem);
+    for (auto& [name, elem] : p_ast.enums) {
+      if (p_ast.bind.extern_items.contains(name)) os << ffi::enum_to_str(elem);
+    }
   }
   if (!p_ast.comps.empty()) {
     os << ffi::BINDER_COMP_HEADER;
 
-    for (auto& [_, elem] : p_ast.comps) os << ffi::comp_to_str(elem);
+    for (auto& [name, elem] : p_ast.comps) {
+      if (p_ast.bind.extern_items.contains(name)) os << ffi::comp_to_str(elem);
+    }
   }
   if (!p_ast.unions.empty()) {
     os << ffi::BINDER_UNION_HEADER;
 
-    for (auto& [_, elem] : p_ast.unions) os << union_to_str(elem);
+    for (auto& [name, elem] : p_ast.unions) {
+      if (p_ast.bind.extern_items.contains(name)) os << union_to_str(elem);
+    }
   }
   if (!p_ast.globals.empty()) {
     os << ffi::BINDER_GLOBAL_HEADER;
 
-    for (auto& [_, elem] : p_ast.globals) os << global_to_str(elem);
+    for (auto& [name, elem] : p_ast.globals) {
+      if (p_ast.bind.extern_items.contains(name)) os << global_to_str(elem);
+    }
   }
   if (!p_ast.funcs.empty()) {
     os << ffi::BINDER_FUNCTION_HEADER;
 
-    for (auto& [_, elem] : p_ast.funcs) os << func_to_str(elem);
+    for (auto& [name, elem] : p_ast.funcs) {
+      if (p_ast.bind.extern_items.contains(name)) os << func_to_str(elem);
+    }
   }
   if (!p_ast.typealias.empty()) {
     os << ffi::BINDER_TYPEALIAS_HEADER;
 
-    for (auto& [_, elem] : p_ast.typealias) os << typealias_to_str(elem);
+    for (auto& [name, elem] : p_ast.typealias) {
+      if (p_ast.bind.extern_items.contains(name)) os << typealias_to_str(elem);
+    }
   }
   if (!p_ast.flags.empty()) {
     os << ffi::BINDER_FLAG_HEADER;
 
-    for (auto& [_, elem] : p_ast.flags) os << flag_to_str(elem);
+    for (auto& [name, elem] : p_ast.flags) {
+      if (p_ast.bind.extern_items.contains(name)) os << flag_to_str(elem);
+    }
   }
   if (!p_ast.entities.empty()) {
     os << ffi::BINDER_ENTITY_HEADER;
 
-    for (auto& [_, elem] : p_ast.entities) os << entity_to_str(elem);
+    for (auto& [name, elem] : p_ast.entities) {
+      if (p_ast.bind.extern_items.contains(name)) os << entity_to_str(elem);
+    }
   }
 
   os << "\n} // " << p_ast.bind.abi << "\n\n} // export" << std::flush;

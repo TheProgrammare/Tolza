@@ -1,11 +1,15 @@
 #pragma once
 
 #include "version.hpp.in"
+
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 #include <set>
 
+#include <cstdint>
+#include <cstddef>
 
 namespace common
 {
@@ -23,20 +27,20 @@ SOFTWARE_NAME + "\n"
 "  Author: Foz Florian";
 
 
-std::string get_local_data_dir();
-std::string get_cache_dir();
-std::string get_templates_dir();
+std::string_view get_local_data_dir();
+std::string_view get_cache_dir();
+std::string_view get_templates_dir();
 
-std::string get_compilers_dir();
-std::string get_stdlib_dir();
-std::string get_packages_dir();
-std::string get_config_dir();
+std::string_view get_compilers_dir();
+std::string_view get_stdlib_dir();
+std::string_view get_packages_dir();
+std::string_view get_config_dir();
 
-std::string get_exe_dir();
+std::string_view get_exe_dir();
 
-std::string resolve_path(const std::string& s, const std::string& relative = "");
+std::string resolve_path(std::string_view s, std::string_view relative = "");
 
-inline constexpr char DETECTED_OS[] =
+inline constexpr std::string_view DETECTED_OS =
 #if _WIN32
     "windows-msvc";
 #elif __APPLE__ && __MACH__
@@ -47,7 +51,7 @@ inline constexpr char DETECTED_OS[] =
     "unknown";
 #endif
 
-inline constexpr char DETECTED_ARCH[] =
+inline constexpr std::string_view DETECTED_ARCH =
 #if __x86_64__ || _M_X64
     "x86_64";
 #elif __i386 || _M_IX86
@@ -60,7 +64,7 @@ inline constexpr char DETECTED_ARCH[] =
         "unknown";
 #endif
 
-inline constexpr char DETECTED_VENDOR[] =
+inline constexpr std::string_view DETECTED_VENDOR =
 #if __APPLE__
     "apple";
 #elif __unix__
@@ -71,7 +75,7 @@ inline constexpr char DETECTED_VENDOR[] =
     "unknown";
 #endif
 
-inline constexpr char DETECTED_ABI[] =
+inline constexpr std::string_view DETECTED_ABI =
 #if __linux__ || __gnu_linux__
     "gnu";
 #elif __APPLE__ && __MACH__
@@ -87,17 +91,44 @@ inline constexpr size_t DETECTED_ARCH_SIZE = sizeof(void*) * 8;
 namespace filesystem
 {
 
-inline const std::set<std::string> velox_extensions = {"vlx", "vlxbind", "vlxlib"};
+inline const std::set<std::string_view> velox_extensions = {"vlx", "vlxbind", "vlxlib"};
 
-bool                  is_velox_extension(const std::string& extension);
-bool                  is_velox_file(const std::string& file_path);
-std::set<std::string> find_velox_files(const std::string& target_dir, bool is_recursive);
+bool                  is_velox_extension(std::string_view extension);
+bool                  is_velox_file(std::string_view file_path);
+std::set<std::string> find_velox_files(std::string_view target_dir, bool is_recursive);
 
 } // namespace filesystem
 
 std::vector<std::string> get_compiler_dirs();
 
-void fmt_template(std::string& template_str, const std::initializer_list<std::string>& args);
-void fmt_template(std::string& template_str, const std::map<std::string, std::string>& args);
+void fmt_template(std::string& template_str, const std::initializer_list<std::string_view>& args);
+void fmt_template(std::string& template_str, const std::map<std::string_view, std::string_view>& args);
+
+
+struct FastRNG {
+  uint64_t state;
+
+  explicit FastRNG(uint64_t seed = 0x123456789abcdef0ULL)
+    : state(seed)
+  {
+  }
+
+  inline uint64_t next()
+  {
+    uint64_t x = state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    state = x;
+    return x * 2685821657736338717ULL;
+  }
+
+  inline size_t next_size_t(size_t min, size_t max)
+  {
+    return min + (next() % (max - min + 1));
+  }
+};
+
+extern common::FastRNG RAND;
 
 } // namespace common

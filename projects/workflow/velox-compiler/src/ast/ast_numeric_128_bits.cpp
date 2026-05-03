@@ -25,13 +25,13 @@ Float128::Float128(double value)
 {
 }
 
-Float128::Float128(const std::string& s)
+Float128::Float128(std::string_view s)
   : val(new llvm::APFloat(llvm::APFloatBase::IEEEquad(), llvm::StringRef(s)))
 {
 }
 
 
-void Float128::string_to_f128(const std::string& s)
+void Float128::string_to_f128(std::string_view s)
 {
   llvm::StringRef sr(s);
   llvm::APFloat   tmp(llvm::APFloatBase::IEEEquad(), sr);
@@ -67,12 +67,12 @@ Int128::Int128(long long value)
 {
 }
 
-Int128::Int128(const std::string& s, uint8_t radix)
+Int128::Int128(std::string_view s, uint8_t radix)
   : val(new llvm::APInt(128, llvm::StringRef(s), radix))
 {
 }
 
-void Int128::string_to_i128(const std::string& s, int base)
+void Int128::string_to_i128(std::string_view s, int base)
 {
   llvm::APInt tmp(128, 0,
                   true); // 128 bits signed

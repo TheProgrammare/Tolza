@@ -1,98 +1,98 @@
 #include "parser_literal.hpp"
 
-#include <iostream>
 #include <llvm/ADT/APInt.h>
-#include <memory>
-#include <stdio.h>
 
 #include <llvm/ADT/APFloat.h>
 #include <string>
 #include <vector>
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_data.hpp"
-#include "ast/ast_inferred_type_singleton.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/lexer/token_viewer.hpp"
+#include "nexus/script.hpp"
+
 #include "ast/ast_literal.hpp"
 #include "ast/ast_expression.hpp"
 
 #include "ast/ast_numeric_128_bits.hpp"
-#include "ast/ast_type.hpp"
 #include "compiler/compiler.hpp"
-#include "lexer/token.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/lexer/token.hpp"
 #include "misc/error_output.hpp"
+#include "nexus/type.hpp"
+#include "parser/parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::try_literal(bool p_is_silent_error)
+ast::_gnid parser::Parser_Literal::try_literal(bool p_is_silent_error)
 {
-  switch (ctx.tok_v.peek().type) {
-  case TokTy::TRUE:
-  case TokTy::FALSE:
+  switch (p.peek().kind) {
+  case token::ETokenKind::TRUE:
+  case token::ETokenKind::FALSE:
     return literal_boolean();
     // literal
     // float/decimal
-  case TokTy::L_D:
+  case token::ETokenKind::L_D:
     return literal_decimal();
     // literal
     // integer
-  case TokTy::L_BIN:
-  case TokTy::L_OCT:
-  case TokTy::L_HEX:
-  case TokTy::L_I:
+  case token::ETokenKind::L_BIN:
+  case token::ETokenKind::L_OCT:
+  case token::ETokenKind::L_HEX:
+  case token::ETokenKind::L_I:
     return literal_numeric();
     // literal
     // character
-  case TokTy::L_CUNE:
+  case token::ETokenKind::L_CUNE:
     return literal_cune();
     // literal
     // string
-  case TokTy::L_TEXTUAL:
+  case token::ETokenKind::L_TEXTUAL:
     return literal_textual();
     // literal
     // range
-  case TokTy::RANGE:
-  case TokTy::RANGE_INCLUSIVE:
-    return literal_range(nullptr);
+  case token::ETokenKind::RANGE:
+  case token::ETokenKind::RANGE_INCLUSIVE:
+    return literal_range();
     // literal
     // collection
-  case TokTy::OPEN_BRACE: return literal_table();
-  case TokTy::OPEN_PAREN:
-    if (ctx.tok_v.peek(2).type == TokTy::COMMA || ctx.tok_v.peek(2).type == TokTy::COLON) {
+  case token::ETokenKind::OPEN_BRACE: return literal_table();
+  case token::ETokenKind::OPEN_PAREN:
+    if (p.check_at(2, token::ETokenKind::COMMA) || p.check_at(2, token::ETokenKind::COLON)) {
       return literal_tuple();
     }
   default: break;
   }
 
   if (!p_is_silent_error) {
-    ctx.tok_v.add_error(80, "Expected literal value", "");
+    p.add_error(80, "Expected literal value", "");
   }
 
-  return nullptr;
+  return BAD_NODE_ID;
 }
 
-std::unique_ptr<ast::literal::Boolean> parser::Parser_Literal::literal_boolean()
+ast::_gnid parser::Parser_Literal::literal_boolean()
 {
-  auto literal = ctx.Create_Node<ast::literal::Boolean>(ctx.tok_v.peek());
-  literal->val = ctx.tok_v.match(TokTy::TRUE);
-  return literal;
+  parser_add_node(literal, Literal_Boolean, p.peek().id);
+  literal->val = p.match(token::ETokenKind::TRUE);
+  return literal->node_id;
 }
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_numeric()
+ast::_gnid parser::Parser_Literal::literal_numeric()
 {
-  auto tok = ctx.tok_v.next();
-  auto val = tok.val;
+  auto tok = p.next();
+  auto val = p.tok_to_str(tok.id);
 
-  if (ctx.tok_v.check_any(k_type_integral)) {
+  if (p.check_any(token::k_type_integral)) {
     return literal_integral(tok);
-  } else if (ctx.tok_v.check_any(k_type_fixed_point)) {
+  } else if (p.check_any(token::k_type_fixed_point)) {
     return literal_fixed_point(val);
-  } else if (ctx.tok_v.check_any(k_type_floating_point)) {
+  } else if (p.check_any(token::k_type_floating_point)) {
     return literal_floating_point(val);
-  } else if (ctx.tok_v.check_val("f")) {
+  } else if (p.check_val("f")) {
     return literal_floating_point(val);
-  } else if (ctx.tok_v.check_val("d")) {
+  } else if (p.check_val("d")) {
     return literal_fixed_point(val);
-  } else if (ctx.tok_v.check_val("ud")) {
+  } else if (p.check_val("ud")) {
     return literal_fixed_point(val);
   }
 
@@ -100,183 +100,179 @@ std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_numeric()
 }
 
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_decimal()
+ast::_gnid parser::Parser_Literal::literal_decimal()
 {
-  std::string val = ctx.tok_v.next().val;
+  auto val = p.tok_to_str(p.next().id);
 
-  if (ctx.tok_v.check_any(k_type_fixed_point)) {
+  if (p.check_any(token::k_type_fixed_point)) {
     return literal_fixed_point(val);
-  } else if (ctx.tok_v.check_any(k_type_floating_point)) {
+  } else if (p.check_any(token::k_type_floating_point)) {
     return literal_floating_point(val);
-  } else if (ctx.tok_v.check_val("f")) {
+  } else if (p.check_val("f")) {
     return literal_floating_point(val);
-  } else if (ctx.tok_v.check_val("d")) {
+  } else if (p.check_val("d")) {
     return literal_fixed_point(val);
-  } else if (ctx.tok_v.check_val("ud")) {
+  } else if (p.check_val("ud")) {
     return literal_fixed_point(val);
   }
 
   return literal_floating_point(val);
 }
 
-std::unique_ptr<ast::literal::Fixed_Point> parser::Parser_Literal::literal_fixed_point(const std::string& p_val)
+ast::_gnid parser::Parser_Literal::literal_fixed_point(std::string_view p_val)
 {
-  auto literal = ctx.Create_Node<ast::literal::Fixed_Point>(ctx.tok_v.peek(-1));
+  parser_add_node(literal, Literal_Fixed_Point, p.peek().id);
 
   size_t scale_pos    = p_val.find('.');
   literal->scale      = scale_pos == 0 ? 0 : p_val.size() - scale_pos;
-  std::string raw_val = p_val;
+  std::string raw_val = std::string(p_val);
   std::erase(raw_val, '.');
 
-  ctx.tok_v.next(); // consume literal
+  p.next(); // consume literal
 
   // post literal type like 99.999ud or 99.999d32
-  if (ctx.tok_v.match_any(k_type_fixed_point))
-    literal->raw_type = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
-  else if (ctx.tok_v.match_val("ud"))
-    literal->raw_type = EPrimType::udSize;
-  else if (ctx.tok_v.match_val("d"))
-    literal->raw_type = EPrimType::dSize;
+  if (p.match_any(token::k_type_fixed_point))
+    literal->raw_type = type::ETokenKind_to_EPrimitiveTypeKind(p.peek(-1).kind);
+  else if (p.match_val("ud"))
+    literal->raw_type = type::EPrimitiveTypeKind::udSize;
+  else if (p.match_val("d"))
+    literal->raw_type = type::EPrimitiveTypeKind::dSize;
 
   // post decimal explicit scale
-  if (ctx.tok_v.match(TokTy::COLON) && ctx.tok_v.check(TokTy::L_I)) {
-    literal->scale = std::stoi(ctx.tok_v.next().val);
+  if (p.match(token::ETokenKind::COLON) && p.check(token::ETokenKind::L_I)) {
+    literal->scale = std::stoi(std::string(p.tok_to_str(p.next().id)));
   }
 
   auto api = llvm::APInt(128, raw_val, 10);
 
   literal->val = Int128(api);
 
-  return literal;
+  return literal->node_id;
 }
 
-std::unique_ptr<ast::literal::Floating_Point> parser::Parser_Literal::literal_floating_point(const std::string& p_val)
+ast::_gnid parser::Parser_Literal::literal_floating_point(std::string_view p_val)
 {
-  auto literal = ctx.Create_Node<ast::literal::Floating_Point>(ctx.tok_v.peek(-1));
+  parser_add_node(literal, Literal_Floating_Point, p.peek().id);
   literal->val.string_to_f128(p_val);
 
   // post literal type like 9.99f32 9.99f64
-  if (ctx.tok_v.match_any(k_type_floating_point)) {
-    literal->type                     = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
-    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
+  if (p.match_any(token::k_type_floating_point)) {
+    literal->type = type::ETokenKind_to_EPrimitiveTypeKind(p.peek(-1).kind);
   }
-  ctx.tok_v.match_val("f");
+  p.match_val("f");
 
-  return literal;
+  return literal->node_id;
 }
 
-std::unique_ptr<ast::literal::Integral> parser::Parser_Literal::literal_integral(const Token& p_tok)
+ast::_gnid parser::Parser_Literal::literal_integral(const token::Token& p_tok)
 {
   static const char* hint =
       "define literal integral like:\n  - decimal: 1234\n  - bin: 0b10011010010\n  - oct: 0o2322\n  - hex: 0x4d2";
 
-  auto  literal = ctx.Create_Node<ast::literal::Integral>(p_tok);
-  auto& api     = *literal->val.val;
+  parser_add_node(literal, Literal_Integral, p_tok.id);
+  auto& api = *literal->val.val;
+
+  auto tok_val = p.tok_to_str(p_tok.id);
 
   unsigned bitWidth = 64;
 
   try {
-    switch (p_tok.type) {
-    case TokTy::L_BIN: {
-      api = llvm::APInt(bitWidth, p_tok.val.substr(2), 2);
+    switch (p_tok.kind) {
+    case token::ETokenKind::L_BIN: {
+      api = llvm::APInt(bitWidth, tok_val.substr(2), 2);
       break;
     }
-    case TokTy::L_OCT: {
-      api = llvm::APInt(bitWidth, p_tok.val.substr(2), 8);
+    case token::ETokenKind::L_OCT: {
+      api = llvm::APInt(bitWidth, tok_val.substr(2), 8);
       break;
     }
-    case TokTy::L_HEX: {
-      api = llvm::APInt(bitWidth, p_tok.val, 16);
+    case token::ETokenKind::L_HEX: {
+      api = llvm::APInt(bitWidth, tok_val, 16);
       break;
     }
-    case TokTy::L_I: {
-      api = llvm::APInt(bitWidth, p_tok.val, 10);
+    case token::ETokenKind::L_I: {
+      api = llvm::APInt(bitWidth, tok_val, 10);
       break;
     }
-    default: throw std::runtime_error("Token literal non supporté");
+    default: throw std::runtime_error("Litearal token not supported");
     }
 
     if (api.getBitWidth() > 64) {
-      api           = llvm::APInt(128, p_tok.val,
-                                  (p_tok.type == TokTy::L_BIN   ? 2
-                                   : p_tok.type == TokTy::L_OCT ? 8
-                                   : p_tok.type == TokTy::L_HEX ? 16
-                                                                : 10));
-      literal->type = EPrimType::i128;
+      api           = llvm::APInt(128, tok_val,
+                                  (p_tok.kind == token::ETokenKind::L_BIN   ? 2
+                                   : p_tok.kind == token::ETokenKind::L_OCT ? 8
+                                   : p_tok.kind == token::ETokenKind::L_HEX ? 16
+                                                                            : 10));
+      literal->type = type::EPrimitiveTypeKind::i128;
     }
   } catch (const std::invalid_argument&) {
-    ctx.tok_v.add_error(82, "Impossible to parse literal integral", hint);
-    throw std::runtime_error("Impossible to parse APInt literal");
+    p.add_error(82, "Impossible to parse literal integral", hint);
   } catch (const std::out_of_range&) {
-    ctx.tok_v.add_error(83, "Integral literal too big for 128 bits", hint);
+    p.add_error(83, "Integral literal too big for 128 bits", hint);
   }
 
   // post literal type like 10i8 0u32
-  if (ctx.tok_v.match_any(k_type_integral)) {
-    literal->type                     = TokTy_to_EPrimType(ctx.tok_v.peek(-1).type);
-    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
-  } else if (ctx.tok_v.match_val("i")) {
-    literal->type                     = EPrimType::iSize;
-    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
-  } else if (ctx.tok_v.match_val("u")) {
-    literal->type                     = EPrimType::uSize;
-    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
-  } else if (ctx.tok_v.match_val("b")) {
-    literal->type                     = EPrimType::bSize;
-    literal->expression_inferred_type = ast::type::get_primitive_type(literal->type);
+  if (p.match_any(token::k_type_integral)) {
+    literal->type = type::ETokenKind_to_EPrimitiveTypeKind(p.peek(-1).kind);
+  } else if (p.match_val("i")) {
+    literal->type = type::EPrimitiveTypeKind::iSize;
+  } else if (p.match_val("u")) {
+    literal->type = type::EPrimitiveTypeKind::uSize;
+  } else if (p.match_val("b")) {
+    literal->type = type::EPrimitiveTypeKind::bSize;
   }
 
-  return literal;
+  return literal->node_id;
 }
 
-std::unique_ptr<ast::literal::CUNE> parser::Parser_Literal::literal_cune()
+ast::_gnid parser::Parser_Literal::literal_cune()
 {
-  auto literal = ctx.Create_Node<ast::literal::CUNE>(ctx.tok_v.peek());
-  literal->val = ctx.tok_v.next().val[0];
-  return literal;
+  parser_add_node(literal, Literal_Cune, p.peek().id);
+  literal->val = p.tok_to_str(p.next().id)[0];
+  return literal->node_id;
 }
 
-std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_textual()
+ast::_gnid parser::Parser_Literal::literal_textual()
 {
-  auto ftext = ctx.Create_Node<ast::literal::Textual_Format>(ctx.tok_v.peek());
 
-  while (!ctx.tok_v.is_end()) {
+  std::vector<ast::_gnid> values;
 
-    if (ctx.tok_v.check(TokTy::L_TEXTUAL)) {
-      auto text = ctx.Create_Node<ast::literal::Text_Pure>(ctx.tok_v.peek());
-      text->val = ctx.tok_v.next().val;
+  while (!p.is_end()) {
+
+    if (p.check(token::ETokenKind::L_TEXTUAL)) {
+      parser_add_node(text, Literal_Text_Pure, p.peek().id);
+      text->val = p.tok_to_str(p.next().id);
 
       // type inference
-      if (ctx.tok_v.match(TokTy::T_STRING) || ctx.tok_v.match_val("s")) {
-        text->expression_inferred_type = ast::type::get_str_type();
-        text->text_type                = EPrimType::str;
-      } else if (ctx.tok_v.match(TokTy::T_C_STRING) || ctx.tok_v.match_val("c")) {
-        text->expression_inferred_type = ast::type::get_c_str_type();
-        text->text_type                = EPrimType::c_str;
-      } else if (ctx.tok_v.match(TokTy::T_CUNE) || ctx.tok_v.match_val("cu")) {
-        text->expression_inferred_type = ast::type::get_cune_type();
-        text->text_type                = EPrimType::cune;
-      } else if (ctx.tok_v.match(TokTy::T_RUNE) || ctx.tok_v.match_val("r")) {
-        text->expression_inferred_type = ast::type::get_rune_type();
-        text->text_type                = EPrimType::rune;
+      if (p.match(token::ETokenKind::T_TEXT) || p.match_val("t")) {
+        text->text_type = type::ETextType::text;
+        if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+          text->text_type = type::ETextType::str;
+        }
+      } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
+        text->text_type = type::ETextType::c_str;
+      } else if (p.match(token::ETokenKind::T_CUNE) || p.match_val("cu")) {
+        text->text_type = type::ETextType::cune;
+      } else if (p.match(token::ETokenKind::T_RUNE) || p.match_val("r")) {
+        text->text_type = type::ETextType::rune;
       }
 
-      ftext->values.push_back(std::move(text));
+      values.push_back(text->node_id);
       continue;
     }
     // interpolation
-    else if (ctx.tok_v.match(TokTy::S_INTERPOLATION_START)) {
-      auto lerp        = ctx.Create_Node<ast::literal::Text_Interpolation>(ctx.tok_v.peek(-1));
-      lerp->expression = ctx.p_expr->parse_expression();
+    else if (p.match(token::ETokenKind::S_INTERPOLATION_START)) {
+      parser_add_node(lerp, Literal_Text_Interpolation, p.peek().id);
+      lerp->expression = p.p_expr->parse_expression();
 
-      if (ctx.tok_v.match(TokTy::COLON)) {
-        lerp->spec = format_specifier();
+      if (p.match(token::ETokenKind::COLON)) {
+        lerp->specifier = format_specifier();
       }
 
-      ftext->values.push_back(std::move(lerp));
+      values.push_back(lerp->node_id);
 
-      ctx.tok_v.expect(84, TokTy::S_INTERPOLATION_END, "Expected end interpolation '}' in string formatted.",
-                       "define format string like: `f\"you age is {now - birthday} years\"`.");
+      p.expect(84, token::ETokenKind::S_INTERPOLATION_END, "Expected end interpolation '}' in string formatted.",
+               "define format string like: `f\"you age is {now - birthday} years\"`.");
 
       continue;
     }
@@ -284,12 +280,20 @@ std::unique_ptr<ast::literal::Textual_Format> parser::Parser_Literal::literal_te
     break;
   }
 
-  return ftext;
+  if (values.size() == 1) {
+    if (auto node = p.scr_info.nodes->get_as<ast::Literal_Text_Pure>(values[0].get_node_id())) {
+      return node->node_id;
+    }
+  }
+
+  parser_add_node(f_text, Literal_Textual_Format, p.peek().id);
+  f_text->values = values;
+  return f_text->node_id;
 }
 
-std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_specifier()
+ast::_gnid parser::Parser_Literal::format_specifier()
 {
-  static const std::string hint =
+  constexpr std::string_view hint =
       "define format specifier like:"
       "\n  - 1 [fill][align]   : fill character and alignment('<', '>', '=', '^', '~')"
       "\n  - 2 [sign]          : '+', '-', or 's' for space"
@@ -300,51 +304,51 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
       "\n  - 7 [type]          : 'b', 'c', 'd', 'e', 'E', 'f', 'F', 'g', 'G', 'n', 'o', 's', 'x', 'X', '%'"
       "\n  - e.g. `{:*^10.2f}`, `{:+08d}`, `{:,_10d}`, `{:.5s}`";
 
-  auto format = ctx.Create_Node<ast::literal::Format_Specifier>(ctx.tok_v.peek());
+  parser_add_node(format, Literal_Format_Specifier, p.peek().id);
 
   // fill + align
-  if (std::find(k_op_format.begin(), k_op_format.end(), ctx.tok_v.peek(1).type) != k_op_format.end()) {
-    auto tok1 = ctx.tok_v.peek(0);
-    auto tok2 = ctx.tok_v.peek(1);
+  if (std::find(token::k_op_format.begin(), token::k_op_format.end(), p.peek(1).kind) != token::k_op_format.end()) {
+    auto  tok1 = p.tok_to_str(p.peek(0).id);
+    auto& tok2 = p.peek(1);
 
-    format->fill = tok1.val[0];
-    switch (tok2.type) {
-    case TokTy::OPEN_BRACKETS: {
-      format->align = ast::literal::Format_Specifier::EAlign::Left;
+    format->fill = tok1[0];
+    switch (tok2.kind) {
+    case token::ETokenKind::OPEN_BRACKETS: {
+      format->align = ast::Literal_Format_Specifier::EAlign::Left;
       break;
     }
-    case TokTy::CLOSE_BRACKETS: {
-      format->align = ast::literal::Format_Specifier::EAlign::Right;
+    case token::ETokenKind::CLOSE_BRACKETS: {
+      format->align = ast::Literal_Format_Specifier::EAlign::Right;
       break;
     }
-    case TokTy::OP_CIRCUMFLEX: {
-      format->align = ast::literal::Format_Specifier::EAlign::Center;
+    case token::ETokenKind::OP_CIRCUMFLEX: {
+      format->align = ast::Literal_Format_Specifier::EAlign::Center;
       break;
     }
-    case TokTy::TILDE: {
-      format->align = ast::literal::Format_Specifier::EAlign::Justify;
+    case token::ETokenKind::TILDE: {
+      format->align = ast::Literal_Format_Specifier::EAlign::Justify;
       break;
     }
     default: break;
     }
 
-    ctx.tok_v.next();
-    ctx.tok_v.next();
+    p.next();
+    p.next();
   }
 
   // sign
-  if (ctx.tok_v.match_any({TokTy::OP_PLUS, TokTy::OP_MINUS, TokTy::SPACE})) {
-    switch (ctx.tok_v.peek(-1).type) {
-    case TokTy::OP_PLUS: {
-      format->sign = ast::literal::Format_Specifier::ESign::Pos;
+  if (p.match_any({token::ETokenKind::OP_PLUS, token::ETokenKind::OP_MINUS, token::ETokenKind::SPACE})) {
+    switch (p.peek(-1).kind) {
+    case token::ETokenKind::OP_PLUS: {
+      format->sign = ast::Literal_Format_Specifier::ESign::Pos;
       break;
     }
-    case TokTy::OP_MINUS: {
-      format->sign = ast::literal::Format_Specifier::ESign::Neg;
+    case token::ETokenKind::OP_MINUS: {
+      format->sign = ast::Literal_Format_Specifier::ESign::Neg;
       break;
     }
-    case TokTy::SPACE: {
-      format->sign = ast::literal::Format_Specifier::ESign::Space;
+    case token::ETokenKind::SPACE: {
+      format->sign = ast::Literal_Format_Specifier::ESign::Space;
       break;
     }
     default: break;
@@ -352,89 +356,89 @@ std::unique_ptr<ast::literal::Format_Specifier> parser::Parser_Literal::format_s
   }
 
   // prefix numeric
-  if (ctx.tok_v.match(TokTy::HASHTAG)) {
-    ctx.tok_v.expect(85, TokTy::L_CUNE, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
-    char prefix = ctx.tok_v.peek(-1).val[0];
+  if (p.match(token::ETokenKind::HASHTAG)) {
+    p.expect(85, token::ETokenKind::L_CUNE, "Expected integral prefix 'x', 'X', 'o' or 'b'.", hint);
+    char prefix = p.tok_to_str(p.peek(-1).id)[0];
 
     switch (prefix) {
-    case 'x': format->prefix = ast::literal::Format_Specifier::EPrefix::Hex; break;
-    case 'X': format->prefix = ast::literal::Format_Specifier::EPrefix::HEX; break;
-    case 'b': format->prefix = ast::literal::Format_Specifier::EPrefix::Bin; break;
-    case 'o': format->prefix = ast::literal::Format_Specifier::EPrefix::Oct; break;
+    case 'x': format->prefix = ast::Literal_Format_Specifier::EPrefix::Hex; break;
+    case 'X': format->prefix = ast::Literal_Format_Specifier::EPrefix::HEX; break;
+    case 'b': format->prefix = ast::Literal_Format_Specifier::EPrefix::Bin; break;
+    case 'o': format->prefix = ast::Literal_Format_Specifier::EPrefix::Oct; break;
     }
   }
 
   // fill with 0 + sign before fill
-  if (ctx.tok_v.peek().val == "0") {
+  if (p.tok_to_str(p.peek().id) == "0") {
     format->zero_pad = true;
-    ctx.tok_v.next();
+    p.next();
 
-    if (ctx.tok_v.match(TokTy::ASSIGN)) {
+    if (p.match(token::ETokenKind::ASSIGN)) {
       format->signBeforeFill = true;
     }
   }
 
   // width from variable
-  if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
-    format->width = ctx.p_expr->parse_expression_term();
-    ctx.tok_v.expect(86, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
+  if (p.match(token::ETokenKind::OPEN_BRACE)) {
+    format->width = p.p_expr->parse_expression_term();
+    p.expect(86, token::ETokenKind::OPEN_BRACE, "Expected close variable width '}'.", hint);
   }
   // width from literal
-  else if (ctx.tok_v.check(TokTy::L_I)) {
-    auto width    = ctx.p_expr->parse_expression_term();
+  else if (p.check(token::ETokenKind::L_I)) {
+    auto width    = p.p_expr->parse_expression_term();
     format->width = std::move(width);
   }
 
   // grouping char
-  if (ctx.tok_v.check_any({TokTy::COMMA, TokTy::UNDERSCORE, TokTy::TICK})) {
-    format->grouping_char = ctx.tok_v.next().val[0];
+  if (p.check_any({token::ETokenKind::COMMA, token::ETokenKind::UNDERSCORE, token::ETokenKind::TICK})) {
+    format->grouping_char = p.tok_to_str(p.next().id)[0];
   }
 
   // precision
-  if (ctx.tok_v.match(TokTy::DOT)) {
+  if (p.match(token::ETokenKind::DOT)) {
     // precision from variable
-    if (ctx.tok_v.match(TokTy::OPEN_BRACE)) {
-      format->precision = ctx.p_expr->parse_expression_term();
-      ctx.tok_v.expect(87, TokTy::OPEN_BRACE, "Expected close variable width '}'.", hint);
+    if (p.match(token::ETokenKind::OPEN_BRACE)) {
+      format->precision = p.p_expr->parse_expression_term();
+      p.expect(87, token::ETokenKind::OPEN_BRACE, "Expected close variable width '}'.", hint);
     }
     // precision from literal
-    else if (ctx.tok_v.check(TokTy::L_I)) {
-      auto width        = ctx.p_expr->parse_expression_term();
+    else if (p.check(token::ETokenKind::L_I)) {
+      auto width        = p.p_expr->parse_expression_term();
       format->precision = std::move(width);
     }
   }
 
   // display format
-  if (ctx.tok_v.match_any({TokTy::L_CUNE, TokTy::PERCENTAGE})) {
-    switch (ctx.tok_v.peek(-1).val[0]) {
-    case 's': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::String; break;
-    case 'b': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Binary; break;
-    case 'c': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Character; break;
-    case 'd': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Decimal; break;
-    case 'o': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Octal; break;
-    case 'x': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Hex; break;
-    case 'X': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::HEX; break;
-    case 'n': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Number; break;
-    case 'e': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::e; break;
-    case 'E': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::E; break;
-    case 'f': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Fixed; break;
-    case 'F': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::FIXED; break;
-    case 'g': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::g; break;
-    case 'G': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::G; break;
-    case '%': format->display_format = ast::literal::Format_Specifier::EDisplayFormat::Percentage; break;
+  if (p.match_any({token::ETokenKind::L_CUNE, token::ETokenKind::PERCENTAGE})) {
+    switch (p.tok_to_str(p.peek(-1).id)[0]) {
+    case 's': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::String; break;
+    case 'b': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Binary; break;
+    case 'c': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Character; break;
+    case 'd': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Decimal; break;
+    case 'o': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Octal; break;
+    case 'x': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Hex; break;
+    case 'X': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::HEX; break;
+    case 'n': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Number; break;
+    case 'e': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::e; break;
+    case 'E': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::E; break;
+    case 'f': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Fixed; break;
+    case 'F': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::FIXED; break;
+    case 'g': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::g; break;
+    case 'G': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::G; break;
+    case '%': format->display_format = ast::Literal_Format_Specifier::EDisplayFormat::Percentage; break;
     }
   }
 
-  if (!ctx.tok_v.check(TokTy::S_INTERPOLATION_END)) {
-    ctx.tok_v.add_error(88, "Unexpected token '" + ctx.tok_v.peek().val + "' in format specifier.", hint);
+  if (!p.check(token::ETokenKind::S_INTERPOLATION_END)) {
+    p.add_error(88, "Unexpected token '" + std::string(p.tok_to_str(p.peek().id)) + "' in format specifier.", hint);
   }
 
-  return format;
+  return format->node_id;
 }
 
-std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::unique_ptr<ast::AExpression> p_start)
+ast::_gnid parser::Parser_Literal::literal_range(ast::_gnid p_start)
 {
-  static const std::string hint =
+  constexpr std::string_view hint =
       "define range like:"
       "\n  - absolute range: `0..10` `0..=9`"
       "\n  - relative range: `a..b` `a..=b - 1`"
@@ -442,212 +446,218 @@ std::unique_ptr<ast::literal::Range> parser::Parser_Literal::literal_range(std::
       "\n  - slice from 0: `..end` `..=end`"
       "\n  - slice to max: `start..` `start..=`";
 
-  auto range = ctx.Create_Node<ast::literal::Range>(ctx.tok_v.peek());
+  parser_add_node(range, Literal_Range, p.peek().id);
 
   if (!p_start) {
-    auto zero    = ctx.Create_Node<ast::literal::Integral>(ctx.tok_v.peek());
+    parser_add_node(zero, Literal_Integral, p.peek().id);
     zero->val    = Int128(0);
-    range->start = std::move(zero);
+    range->start = zero->node_id;
   } else
-    range->start = std::move(p_start);
+    range->start = p_start;
 
-  auto range_tok =
-      ctx.tok_v.expect_any(89, {TokTy::RANGE, TokTy::RANGE_INCLUSIVE}, "Expected range kind '..' or '..='", hint);
+  auto range_tok = p.expect_any(89, {token::ETokenKind::RANGE, token::ETokenKind::RANGE_INCLUSIVE},
+                                "Expected range kind '..' or '..='", hint);
 
-  range->endInclude = range_tok.type == TokTy::RANGE_INCLUSIVE;
+  range->endInclude = range_tok.kind == token::ETokenKind::RANGE_INCLUSIVE;
 
-  if (!ctx.tok_v.check_any(k_args_ending)) {
-    range->end = ctx.p_expr->parse_expression();
+  if (!p.check_any(token::k_args_ending)) {
+    range->end = p.p_expr->parse_expression();
   } else {
-    auto zero  = ctx.Create_Node<ast::literal::Integral>(ctx.tok_v.peek());
+    parser_add_node(zero, Literal_Integral, p.peek().id);
     zero->val  = Int128(0);
-    range->end = std::move(zero);
+    range->end = zero->node_id;
   }
 
-  return range;
+  return range->node_id;
 }
 
-std::unique_ptr<ast::ALiteral> parser::Parser_Literal::literal_table()
+ast::_gnid parser::Parser_Literal::literal_table()
 {
-  static const std::string hint =
-      "define literal table like:"
-      "\n  - table { 1, 2, 3, 4 }"
-      "\n  - table population { 0..4 => @i + 1 }"
-      "\n  - matrix { 1, 2, 3, 4 }*3"
-      "\n  - matrix {{ 1, 2 },{ 3, 4 }}"
-      "\n  - matrix population { [0..4] => @i + 1 }*3"
-      "\n  - matrix population { [0..4, 0..4] => @i + 1 + @j }"
-      "\n  - map table { a: 1, b: 2, c: 3 }"
-      "\n  - map table population { [0..4] => text_number[@i] : @i }";
+  constexpr std::string_view hint =
+      R"(define literal table like:
+  - table { 1, 2, 3, 4 }
+  - table population { 0..4 => @i + 1 }
+  - matrix { 1, 2, 3, 4 }*3
+  - matrix {{ 1, 2 },{ 3, 4 }}
+  - matrix population { [0..4] => @i + 1 }*3
+  - matrix population { [0..4, 0..4] => @i + 1 + @j }
+  - map table { a: 1, b: 2, c: 3 }
+  - map table population { [0..4] => text_number[@i] : @i })";
 
-  ctx.tok_v.match(TokTy::OPEN_BRACE);
+  p.match(token::ETokenKind::OPEN_BRACE);
 
-  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return ctx.Create_Node<ast::literal::Table>(ctx.tok_v.peek(-1));
+  if (p.match(token::ETokenKind::CLOSE_BRACE)) {
+    parser_add_node(node, Literal_Table, p.peek(-1).id);
+    return node->node_id;
+  }
 
+  std::vector<ast::Literal_Map::Association> associations;
+  std::vector<ast::_gnid>                    values;
+  std::vector<ast::_gnid>                    map_values;
 
-  std::vector<std::unique_ptr<ast::AExpression>> values;
-  std::vector<std::unique_ptr<ast::AExpression>> map_values;
+  while (!p.is_end()) {
 
-  while (!ctx.tok_v.is_end()) {
-    values.push_back(ctx.p_expr->parse_expression());
+    auto       val = p.p_expr->parse_expression();
+    ast::_gnid map_val;
 
-    if (ctx.tok_v.match(TokTy::COLON)) {
-      map_values.push_back(ctx.p_expr->parse_expression());
-    }
+    if (p.match(token::ETokenKind::COLON)) map_val = p.p_expr->parse_expression();
 
-    if (ctx.match_field_separator(TokTy::CLOSE_BRACE)) break;
+    associations.emplace_back(ast::Literal_Map::Association{.key = val, .value = map_val});
+
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
   // is a literal table population
-  if (values.size() == 1) {
-    if (dynamic_cast<ast::literal::Table_Population*>(values[0].get())) {
-      auto pop_ptr = dynamic_cast<ast::literal::Table_Population*>(values[0].release());
-
+  if (associations.size() == 1) {
+    if (auto tbl_pop = p.scr_info.nodes->get_as<ast::Literal_Table_Population>(associations[0].key.get_node_id())) {
       // is a map population
-      if (pop_ptr->map_expression_value) {
-        auto map = ctx.Create_Node<ast::literal::Map>(ctx.tok_v.peek());
-        map->population.reset(pop_ptr);
-        return map;
+      if (tbl_pop->map_expression_value) {
+        parser_add_node(map, Literal_Map, tbl_pop->node_token_id);
+        map->population = tbl_pop->node_id;
+        return map->node_id;
       } else {
-        auto tbl = ctx.Create_Node<ast::literal::Table>(ctx.tok_v.peek());
-        tbl->population.reset(pop_ptr);
-        return tbl;
+        parser_add_node(tbl, Literal_Table, tbl_pop->node_token_id);
+        tbl->population = tbl_pop->node_id;
+        return tbl->node_id;
       }
     }
   }
 
-  if (map_values.size() > 0) {
-    auto map    = ctx.Create_Node<ast::literal::Map>(ctx.tok_v.peek());
-    map->keys   = std::move(values);
-    map->values = std::move(map_values);
-    return map;
+  if (!associations.empty() && associations[0].value) {
+    parser_add_node(map, Literal_Map, p.peek().id);
+
+    map->associations = associations;
+    return map->node_id;
   }
 
-  auto tbl    = ctx.Create_Node<ast::literal::Table>(ctx.tok_v.peek());
-  tbl->values = std::move(values);
+  parser_add_node(tbl, Literal_Table, p.peek().id);
+  tbl->values.reserve(associations.size());
+  for (auto [key, val] : associations) tbl->values.push_back(key);
 
-  return tbl;
+
+  return tbl->node_id;
 }
 
-std::unique_ptr<ast::literal::Table_Population> parser::Parser_Literal::literal_table_population()
+ast::_gnid parser::Parser_Literal::literal_table_population()
 {
-  ctx.tok_v.match(TokTy::OPEN_SQUARE);
+  p.match(token::ETokenKind::OPEN_SQUARE);
 
-  auto pop = ctx.Create_Node<ast::literal::Table_Population>(ctx.tok_v.peek(-1));
+  parser_add_node(pop, Literal_Table_Population, p.peek().id);
 
-  while (!ctx.tok_v.is_end()) {
-    pop->ranges.push_back(ctx.p_expr->parse_expression());
+  while (!p.is_end()) {
+    pop->ranges.push_back(p.p_expr->parse_expression());
 
-    if (ctx.match_field_any_separator(TokTy::INJECT)) break;
+    if (p.match_field_any_separator(token::ETokenKind::INJECT, {token::ETokenKind::CLOSE_BRACE})) break;
   }
 
-  pop->expression = ctx.p_expr->parse_expression();
+  pop->expression = p.p_expr->parse_expression();
 
   // mapping population
-  if (ctx.tok_v.match(TokTy::COLON)) {
-    pop->map_expression_value = ctx.p_expr->parse_expression_term();
+  if (p.match(token::ETokenKind::COLON)) {
+    pop->map_expression_value = p.p_expr->parse_expression_term();
   }
 
-  return pop;
+  return pop->node_id;
 }
 
-std::unique_ptr<ast::literal::Entity> parser::Parser_Literal::literal_entity(std::unique_ptr<ast::AIdentifier> p_id)
+ast::_gnid parser::Parser_Literal::literal_entity(ast::_gnid p_id)
 {
-  auto lit_entity  = ctx.Create_Node<ast::literal::Entity>(ctx.tok_v.peek());
-  lit_entity->name = std::move(p_id);
+  parser_add_node(lit_entity, Literal_Entity, p.peek().id);
+  lit_entity->name = p_id;
 
-  ctx.tok_v.match(TokTy::OPEN_BRACE);
-  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) return lit_entity;
+  p.match(token::ETokenKind::OPEN_BRACE);
+  if (p.match(token::ETokenKind::CLOSE_BRACE)) return lit_entity->node_id;
 
-  while (!ctx.tok_v.is_end()) {
-    auto comp_name = ctx.p_expr->identifier(true);
+  while (!p.is_end()) {
+    auto comp_name = p.p_base->identifier(true);
 
-    if (ctx.tok_v.check(TokTy::OPEN_BRACE)) {
-      lit_entity->comp_args.push_back(literal_component(std::move(comp_name)));
-    } else if (ctx.tok_v.match(TokTy::DOT)) {
-      auto lit_comp = ctx.Create_Node<ast::literal::Structured_Data>(comp_name->node_token);
-      lit_comp->field_args.push_back(literal_field());
-
-      lit_entity->comp_args.push_back(std::move(lit_comp));
+    if (p.check(token::ETokenKind::OPEN_BRACE)) {
+      lit_entity->component_args.push_back(literal_component(comp_name));
+    } else if (p.match(token::ETokenKind::DOT)) {
+      parser_add_node(lit_comp, Literal_Structured_Data, p.peek(-2).id);
+      lit_comp->fields_args.push_back(literal_field());
+      lit_entity->component_args.push_back(lit_comp->node_id);
     } else {
-      ctx.tok_v.add_error_tok(91, comp_name->node_token, "Unexpected literal reference",
-                              "define literal components only in literal entity");
+      p.add_error_tok(91, p.peek(-1), "Unexpected literal reference",
+                      "define literal components only in literal entity");
     }
 
-    if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
-  return lit_entity;
+  return lit_entity->node_id;
 }
 
-std::unique_ptr<ast::literal::Structured_Data>
-parser::Parser_Literal::literal_component(std::unique_ptr<ast::AIdentifier> id)
+ast::_gnid parser::Parser_Literal::literal_component(ast::_gnid id)
 {
-  static const std::string hint =
-      "define literal component like:"
-      "\n  - no fields `name{.}`"
-      "\n  - normal `name{ .field1= val1, .field2= val2 }`"
-      "\n  - generic `name<gen_args>{ .field1= val1, .field2= val2 }`";
+  constexpr std::string_view hint =
+      R"(define literal component like:
+  - no fields `name{.}`
+  - normal `name{ .field1= val1, .field2= val2 }`
+  - generic `name<gen_args>{ .field1= val1, .field2= val2 }`)";
 
-  auto comp  = ctx.Create_Node<ast::literal::Structured_Data>(ctx.tok_v.peek());
-  comp->name = std::move(id);
+  parser_add_node(comp, Literal_Structured_Data, p.peek().id);
+  comp->name = id;
 
-  ctx.tok_v.match(TokTy::OPEN_BRACE);
-  if (!ctx.tok_v.match(TokTy::CLOSE_BRACE)) return comp;
+  p.match(token::ETokenKind::OPEN_BRACE);
+  if (!p.match(token::ETokenKind::CLOSE_BRACE)) return comp->node_id;
 
-  while (!ctx.tok_v.is_end()) {
-    if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) break;
+  while (!p.is_end()) {
+    if (p.match(token::ETokenKind::CLOSE_BRACE)) break;
 
-    comp->field_args.push_back(literal_field());
+    comp->fields_args.push_back(literal_field());
 
-    if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
-  return comp;
+  return comp->node_id;
 }
 
-std::unique_ptr<ast::expression::Call_Argument> parser::Parser_Literal::literal_field()
+ast::_gnid parser::Parser_Literal::literal_field()
 {
-  static const std::string hint =
+  constexpr std::string_view hint =
       "define literal filed like:"
       "\n  - scoped field `name{ .field1= val1, .field2= val2 }`"
       "\n  - direct field `name.field1= val1`";
 
-  ctx.tok_v.match(TokTy::DOT);
+  p.match(token::ETokenKind::DOT);
 
-  auto field_arg  = ctx.Create_Node<ast::expression::Call_Argument>(ctx.tok_v.peek());
-  field_arg->name = ctx.parse_name("", hint);
+  parser_add_node(field_arg, Expression_Call_Argument, p.peek().id);
+  field_arg->explicit_name = p.parse_name("", hint);
 
-  ctx.tok_v.expect(94, TokTy::ASSIGN, "Expected field assignation '=' after field name", hint);
+  p.expect(94, token::ETokenKind::ASSIGN, "Expected field assignation '=' after field name", hint);
 
-  field_arg->expression = ctx.p_expr->parse_expression();
+  field_arg->expression = p.p_expr->parse_expression();
 
-  return field_arg;
+  return field_arg->node_id;
 }
 
-std::unique_ptr<ast::literal::Tuple> parser::Parser_Literal::literal_tuple()
+ast::_gnid parser::Parser_Literal::literal_tuple()
 {
-  static const std::string hint = "define named tuple instance like `(filed1: value, ...)`.";
+  constexpr std::string_view hint = "define named tuple instance like `(filed1: value, ...)`.";
 
-  auto tuple        = ctx.Create_Node<ast::literal::Tuple>(ctx.tok_v.peek());
-  bool isNamedTuple = ctx.tok_v.check(TokTy::COLON); // (name: type, ...) or (type, ...)
+  parser_add_node(tuple, Literal_Tuple, p.peek().id);
+  bool is_named_tuple = p.check(token::ETokenKind::COLON); // (name: type, ...) or (type, ...)
 
-  while (!ctx.tok_v.is_end()) {
-    if (isNamedTuple) {
-      tuple->name_fields.push_back(ctx.parse_name("", hint));
+  while (!p.is_end()) {
+    ast::Literal_Tuple::Field field;
+    if (is_named_tuple) {
+      field.name = p.parse_name("", hint);
 
-      ctx.tok_v.expect(96, TokTy::ASSIGN,
-                       "Expected field value assignation ':' after filed name in named tuple instance.", hint);
+      p.expect(96, token::ETokenKind::ASSIGN,
+               "Expected field value assignation ':' after filed name in named tuple instance.", hint);
 
-      tuple->values.push_back(ctx.p_expr->parse_expression());
+      field.value = p.p_expr->parse_expression();
     } else {
-      tuple->values.push_back(ctx.p_expr->parse_expression());
+      field.value = p.p_expr->parse_expression();
     }
 
-    if (ctx.tok_v.match(TokTy::COMMA)) continue;
+    tuple->fields.push_back(std::move(field));
+
+    if (p.match(token::ETokenKind::COMMA)) continue;
 
     break;
   }
 
-  return tuple;
+  return tuple->node_id;
 }

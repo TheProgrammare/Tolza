@@ -38,7 +38,7 @@ namespace ffi
 namespace JSON
 {
 
-AST read_ffi_json_file(const std::string& path);
+AST read_ffi_json_file(std::string_view path);
 
 Type      json_to_type(const json& j);
 Prototype json_to_prototype(const json& j);
@@ -52,9 +52,9 @@ Global    json_to_global(const json& j);
 TypeAlias json_to_typealias(const json& j);
 
 // Helpers pour convertir string → enum
-EType                     str_to_EType(const std::string& s);
-EPassMode                 str_to_EPassMode(const std::string& s);
-ECallConvention           str_to_ECallConvention(const std::string& s);
+EType                     str_to_EType(std::string_view s);
+EPassMode                 str_to_EPassMode(std::string_view s);
+ECallConvention           str_to_ECallConvention(std::string_view s);
 // size, align
 std::pair<size_t, size_t> EType_size_and_align(EType ty);
 // size, align

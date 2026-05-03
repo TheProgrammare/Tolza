@@ -17,13 +17,12 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "ast/ast_base.hpp"
-#include "misc/module_manager.hpp"
-#include "misc/script_info.hpp"
+#include "nexus/forward.hpp"
 
 namespace module
 {
@@ -34,10 +33,10 @@ namespace ffi
 {
 
 struct Bind_Package {
-  std::shared_ptr<ScriptInfo> scr_info;
+  script::_id scr_info;
 
   // mangle name, data
-  std::map<std::string, ast::AIdentifier*> extern_items;
+  std::map<std::string, ast::_gnid> extern_items;
 
   std::string lang;
   std::string lib;
@@ -237,7 +236,7 @@ struct TypeAlias {
 };
 
 struct Import {
-  enum class EImportType { pkg, user, stdlib, ext, unknown };
+  enum class EImportType { pkg, user, stdlib, binding, unknown };
 
   std::string              name;
   std::vector<std::string> path;
@@ -273,7 +272,7 @@ struct AST {
 [[nodiscard]] std::string typealias_to_str(const TypeAlias& p_ty_alias);
 
 
-void write_ast(const AST& p_ast, const std::string& p_dest_file);
+void write_ast(const AST& p_ast, std::string_view p_dest_file);
 
 bool check_ast_generation(const AST& p_ast);
 
@@ -281,7 +280,7 @@ bool check_ast_generation(const AST& p_ast);
 // %0 language
 // %1 library
 // %2 imports
-const char BINDER_FILE_HEADER[] =
+constexpr std::string_view BINDER_FILE_HEADER =
     R"(
 // +-------------------------------------+
 // |    Velox auto generated wrappers    |
@@ -298,63 +297,63 @@ export {
 extern "%3" {
 )";
 
-const char BINDER_IMPORT_HEADER[] =
+constexpr std::string_view BINDER_IMPORT_HEADER =
     R"(
 // +-----------------------+
 // |   import definition   |
 // +-----------------------+
 )";
 
-const char BINDER_ENUM_HEADER[] =
+constexpr std::string_view BINDER_ENUM_HEADER =
     R"(
 // +-----------------------+
 // |    enum definition    |
 // +-----------------------+
 )";
 
-const char BINDER_COMP_HEADER[] =
+constexpr std::string_view BINDER_COMP_HEADER =
     R"(
 // +-----------------------+
 // |    comp definition    |
 // +-----------------------+
 )";
 
-const char BINDER_UNION_HEADER[] =
+constexpr std::string_view BINDER_UNION_HEADER =
     R"(
 // +-----------------------+
 // |    union definition   |
 // +-----------------------+
 )";
 
-const char BINDER_FLAG_HEADER[] =
+constexpr std::string_view BINDER_FLAG_HEADER =
     R"(
 // +-----------------------+
 // |    flag definition    |
 // +-----------------------+
 )";
 
-const char BINDER_GLOBAL_HEADER[] =
+constexpr std::string_view BINDER_GLOBAL_HEADER =
     R"(
 // +-----------------------+
 // |   global definition   |
 // +-----------------------+
 )";
 
-const char BINDER_FUNCTION_HEADER[] =
+constexpr std::string_view BINDER_FUNCTION_HEADER =
     R"(
 // +-----------------------+
 // |  function definition  |
 // +-----------------------+
 )";
 
-const char BINDER_ENTITY_HEADER[] =
+constexpr std::string_view BINDER_ENTITY_HEADER =
     R"(
 // +-----------------------+
 // |   entity definition   |
 // +-----------------------+
 )";
 
-const char BINDER_TYPEALIAS_HEADER[] =
+constexpr std::string_view BINDER_TYPEALIAS_HEADER =
     R"(
 // +-----------------------+
 // |    type definition    |
@@ -362,22 +361,22 @@ const char BINDER_TYPEALIAS_HEADER[] =
 )";
 
 // %0 extern name
-const char BINDER_EXTERN_TEMPALTE[] = "extern \"%0\" {\n";
+constexpr std::string_view BINDER_EXTERN_TEMPALTE = "extern \"%0\" {\n";
 
 // %0 name
 // %1 params
 // %2 return
-const char BINDER_EXTERN_FN_TEMPALTE[] = "fn %0(%1) -> %2;\n";
+constexpr std::string_view BINDER_EXTERN_FN_TEMPALTE = "fn %0(%1) -> %2;\n";
 
 // %0 pass mode
 // %1 name
 // %2 type
-const char BINDER_EXTERN_PARAM_TEMPALTE[] = "%0 %1: %2";
+constexpr std::string_view BINDER_EXTERN_PARAM_TEMPALTE = "%0 %1: %2";
 
 // %0 name
 // %1 underlying_type
 // %2 members
-const char BINDER_EXTERN_FLAG_TEMPLATE[] =
+constexpr std::string_view BINDER_EXTERN_FLAG_TEMPLATE =
     R"(
 flag %0 : %1 {
   %2
@@ -386,7 +385,7 @@ flag %0 : %1 {
 
 // %0 name
 // %1 members
-const char BINDER_EXTERN_ENUM_TEMPLATE[] =
+constexpr std::string_view BINDER_EXTERN_ENUM_TEMPLATE =
     R"(
 enum %0 {
   %1
@@ -395,7 +394,7 @@ enum %0 {
 
 // %0 name
 // %1 members
-const char BINDER_EXTERN_UNION_TEMPLATE[] =
+constexpr std::string_view BINDER_EXTERN_UNION_TEMPLATE =
     R"(
 union %0 {
   %1
@@ -404,17 +403,17 @@ union %0 {
 
 // %0 name
 // %1 type
-const char BINDER_EXTERN_FIELD[] =
+constexpr std::string_view BINDER_EXTERN_FIELD =
     R"(# no default
 %1: %2,)";
 
 // %0 type
 // %1 path
-const char BINDER_IMPORT_TEMPLATE[] = "import %0 %1";
+constexpr std::string_view BINDER_IMPORT_TEMPLATE = "import %0 %1";
 
 // %0 name
 // %1 members
-const char BINDER_EXTERN_COMP_TEMPLATE[] =
+constexpr std::string_view BINDER_EXTERN_COMP_TEMPLATE =
     R"(
 comp %0 {
   %1
@@ -423,7 +422,7 @@ comp %0 {
 
 // %0 name
 // %1 members
-const char BINDER_EXTERN_ENTITY_TEMPLATE[] =
+constexpr std::string_view BINDER_EXTERN_ENTITY_TEMPLATE =
     R"(
 entity %0 {
   %1
@@ -433,14 +432,14 @@ entity %0 {
 // %0 kind
 // %1 name
 // %2 type
-const char BINDER_EXTERN_GLOBAL_TEMPLATE[] = "%0 %1: %2\n";
+constexpr std::string_view BINDER_EXTERN_GLOBAL_TEMPLATE = "%0 %1: %2\n";
 
 // %0 name
 // %1 type
-const char BINDER_EXTERN_TYPEALIAS_TEMPLATE[] = "type %0 = %1\n";
+constexpr std::string_view BINDER_EXTERN_TYPEALIAS_TEMPLATE = "type %0 = %1\n";
 
 // %0 parameters
 // %1 retuns
-const char BINDER_PROTOTYPE_TEMPLATE[] = "fn(%0) -> (%1)";
+constexpr std::string_view BINDER_PROTOTYPE_TEMPLATE = "fn(%0) -> (%1)";
 
 } // namespace ffi

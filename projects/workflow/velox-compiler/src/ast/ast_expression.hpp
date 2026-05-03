@@ -1,336 +1,140 @@
 #pragma once
 
-
-#include <memory>
-
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_forward.hpp"
-#include "ast/ast_type.hpp"
-#include "ast_base.hpp"
-#include "ast_evaluator.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/type.hpp"
 
 namespace ast
 {
-namespace expression
+
+AST_NODE(Expression_If_Ternary)
 {
-
-struct If_Ternary final : public AExpression {
-  Evaluator                    evaluator;
-  std::unique_ptr<AExpression> true_line;
-  [[maybe_unused]]
-  std::unique_ptr<AExpression> false_line;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-
-  std::string debug_str() const override
-  {
-    return "ternary if";
-  }
+  SET_NODE(left);
+  SET_NODE(evaluator);
+  SET_NODE(statement_true);
+  SET_NODE(statement_false);
 };
 
 
-struct Member_Access final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AIdentifier> right;
-
-  SET_L_VAL
-
-  CODEGEN_VALUE
-  std::string debug_str() const override
-  {
-    return "access " + left->debug_str() + "." + right->debug_str();
-  }
-  VISTOR_ACCEPT
+AST_NODE(Expression_Member_Access)
+{
+  SET_NODE(left_expression);
+  SET_NODE(right_identifier);
 };
 
-struct Self final : public AExpression {
-  std::shared_ptr<declaration::cop::Entity> self_definition;
+AST_NODE(Expression_Self){};
 
-  SET_L_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "self";
-  }
-};
-
-struct Other final : public AExpression {
-  SET_L_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-
-  std::string debug_str() const override
-  {
-    return "other";
-  }
-};
+AST_NODE(Expression_Other){};
 
 // (10, a, param3 = b, param5 = c)
-struct Call_Argument final : public AExpression {
-  [[maybe_unused]] std::string               name;
-  std::unique_ptr<AExpression>               expression;
-  // resolved by superior node
-  std::shared_ptr<ast::type::Function_Proto> fn_type;
-  // if variadic_arg == true -> fn_param_type == nullptr
-  [[maybe_unused]]
-  std::shared_ptr<ast::declaration::local::Parameter> fn_param_type;
-
-  bool variadic_arg = false;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    std::string out;
-    if (!name.empty()) out += name + " = ";
-
-    return out + expression->debug_str();
-  }
+AST_NODE(Expression_Call_Argument)
+{
+  [[maybe_unused]] std::string_view explicit_name;
+  SET_NODE(expression);
 };
 
-struct Call : public AExpression {
-  std::unique_ptr<AExpression>                callee;
-  std::vector<std::shared_ptr<AType>>         gen_args;
-  std::vector<std::unique_ptr<Call_Argument>> param_args;
-
-  SYM_REF                                    function_symbol;
-  std::shared_ptr<ast::type::Function_Proto> function_proto;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  std::string debug_str() const override;
-
-  VISTOR_ACCEPT
+AST_NODE(Expression_Call)
+{
+  SET_NODE(callee);
+  SET_VECTOR_NODE(arguments);
 };
 
-struct Call_System final : public Call {
-  std::unique_ptr<AExpression> target_entity;
+AST_NODE(Expression_Call_System)
+{
+  SET_NODE(target_entity);
 
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "run[" + target_entity->debug_str() + "::&gt;" + callee->debug_str() + "]";
-  }
+  SET_NODE(callee);
+  SET_VECTOR_NODE(arguments);
+  SET_VECTOR_TYPE(arguments_types)
 };
 
-struct Call_Pipe final : public AExpression {
-  std::unique_ptr<AIdentifier>                             callee;
-  std::vector<std::shared_ptr<AType>>                      base_gen_args;
-  std::vector<std::vector<std::shared_ptr<AType>>>         gen_args;
-  std::vector<std::vector<std::unique_ptr<Call_Argument>>> arguments;
-  std::vector<EBinOpType>                                  mutable_ops;
+AST_NODE(Expression_Call_Pipe)
+{
+  SET_NODE(callee);
+  SET_VECTOR_NODE(arguments);
+  SET_VECTOR_TYPE(arguments_types)
+
+  std::vector<std::vector<_id>>         next_arguments;
+  std::vector<std::vector<::type::_id>> next_arguments_types;
+
+  std::vector<EBinOpType> mutable_ops;
 
   bool is_mutable = false;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  std::string debug_str() const override
-  {
-    return "pipecall[" + callee->debug_str() + "]";
-  }
-  VISTOR_ACCEPT
 };
 
-// a[i]
-struct Table_Access final : public AExpression {
-  // most of time only one arg
-  std::unique_ptr<AExpression> target;
-  std::unique_ptr<AExpression> selector;
-
-  SET_L_VAL
-
+// a[i] a?[i]
+AST_NODE(Expression_Table_Access)
+{ // most of time only one arg
+  SET_NODE(target);
+  SET_NODE(selector);
 
   bool bounded = false;
-
-  CODEGEN_VALUE
-  std::string debug_str() const override
-  {
-    return "table access";
-  }
-  VISTOR_ACCEPT
-};
-
-// my_ptr'at(i)
-struct Ptr_At final : public AExpression {
-  std::unique_ptr<AExpression> target;
-  std::unique_ptr<AExpression> index;
-
-  SET_L_VAL
-
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "ptr at";
-  }
-};
-
-// my_ptr'offset(i)
-struct Ptr_Offset final : public AExpression {
-  std::unique_ptr<AExpression> target;
-  std::unique_ptr<AExpression> offset;
-
-  SET_L_VAL
-
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "ptr offset";
-  }
 };
 
 // val'my_ptr
-struct Ptr_Val final : public AExpression {
-  std::unique_ptr<AExpression> target;
-
-  SET_L_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "val of";
-  }
+AST_NODE(Expression_Ptr_Val)
+{
+  SET_NODE(target);
 };
 
 // mut'my_val
-struct Mut_Of final : public AExpression {
-  std::unique_ptr<AExpression> target;
-
-  SET_L_VAL
-  SET_FORCED_L_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "mut of";
-  }
+AST_NODE(Expression_Mut_Of)
+{
+  SET_NODE(target);
 };
 
 // ref'my_val
-struct Ref_Of final : public AExpression {
-  std::unique_ptr<AExpression> target;
-
-  SET_L_VAL
-  SET_FORCED_L_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "ref of";
-  }
-};
-
-// addr'my_val
-struct Addr_Of final : public AExpression {
-  std::unique_ptr<AExpression> target;
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  SET_R_VAL
-
-  std::string debug_str() const override
-  {
-    return "addr of";
-  }
-};
-
-struct Size_Of final : public AExpression {
-  std::unique_ptr<AExpression> target;
-  size_t                       size = 0;
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  SET_R_VAL
-
-  std::string debug_str() const override
-  {
-    return "size of (" + std::to_string(size) + ")";
-  }
-};
-
-// target~[0..8] | target~[16..24]
-struct GetBits final : public AExpression {
-  std::unique_ptr<AExpression> target;
-  std::unique_ptr<AExpression> range;
-
-  // 8, 16, 32, 64, 128
-  enum EBitSize { _8, _16, _32, _64, _128 };
-  EBitSize bit_size = _8;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "bits get";
-  }
+AST_NODE(Expression_Ref_Of)
+{
+  SET_NODE(target);
 };
 
 // move'p
-struct Move final : public AExpression {
-  std::unique_ptr<Node> target;
+AST_NODE(Expression_Move_Of)
+{
+  SET_NODE(target);
+};
 
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
+// copy'my_val
+AST_NODE(Expression_Copy_Of)
+{
+  SET_NODE(target);
+};
 
-  SET_L_VAL
+// addr'my_val
+AST_NODE(Expression_Addr_Of)
+{
+  SET_NODE(target);
+};
 
-  std::string debug_str() const override
-  {
-    return "move";
-  }
+AST_NODE(Expression_Size_Of)
+{
+  SET_NODE(target);
+  size_t size = 0;
+};
+
+// target~[0..8] | target~[16..24]
+AST_NODE(Expression_GetBits)
+{
+  SET_NODE(target);
+  SET_NODE(range);
+  // 8, 16, 32, 64, 128
+  enum EBitSize { _8, _16, _32, _64, _128 };
+  EBitSize bit_size = _8;
 };
 
 // new ptr'T(val)
-struct New_Ptr final : public AExpression {
-  std::shared_ptr<AType> type;
-  std::unique_ptr<Node>  expression;
-
-  EPtrType pointer = EPtrType::raw_ptr;
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  SET_L_VAL
-
-  std::string debug_str() const override
-  {
-    return "new";
-  }
+AST_NODE(Expression_New_Ptr)
+{
+  SET_TYPE(type);
+  SET_NODE(expression);
+  //::type::EPtrType pointer = ::type::EPtrType::raw_ptr;
 };
 
-} // namespace expression
-  // Expression
+AST_NODE(Expression_Get_Type)
+{
+  SET_NODE(target);
+};
+
 } // namespace ast
   // AST

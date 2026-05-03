@@ -1,51 +1,41 @@
 #pragma once
 
-#include <memory>
 #include <vector>
 
-#include "ast/ast_data.hpp"
-#include "ast/ast_forward.hpp"
-#include "ast/ast_evaluator.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 
 namespace parser
 {
 struct Parser_Context;
 
-struct Parser_Declaration_Local {
+struct Parser_Declaration_Local final {
   Parser_Declaration_Local(Parser_Context& p_ctx)
-    : ctx(p_ctx)
+    : p(p_ctx)
   {
   }
 
-  [[nodiscard]] std::shared_ptr<ast::ALocal> parse_local(bool silent_error = false);
+  [[nodiscard]] ast::_gnid parse_local(bool silent_error = false);
 
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Element>
-  pattern_mapping(ast::declaration::local::Pattern& p_parent_pattern);
 
-  [[nodiscard]] ast::Evaluator parse_evaluator(std::shared_ptr<ast::AExpression> p_comparison_ref);
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern>
-  parse_pattern(std::shared_ptr<ast::AExpression> p_comparison_ref);
+  [[nodiscard]] ast::_gnid parse_evaluator(ast::_gnid p_comparison_ref = ast::_gnid());
 
-  [[nodiscard]] std::shared_ptr<ast::declaration::local::Variable>               variable();
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Tuple_Destructuring>    tuple_destructuring();
-  [[nodiscard]] std::shared_ptr<ast::declaration::local::Lambda>                 lambda();
-  [[nodiscard]] std::shared_ptr<ast::declaration::local::Capability>             capability();
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::CodeBlock>              code_block_instruction();
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Lambda_Capture>         lambda_capture();
-  [[nodiscard]] std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parameters();
+  [[nodiscard]] ast::_gnid              variable();
+  [[nodiscard]] ast::_gnid              tuple_destructuring();
+  [[nodiscard]] ast::_gnid              lambda();
+  [[nodiscard]] ast::_gnid              capability();
+  [[nodiscard]] ast::_gnid              parse_codeblock();
+  [[nodiscard]] ast::_gnid              lambda_capture();
+  [[nodiscard]] std::vector<ast::_gnid> parameters();
 
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Component>
-  component_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_comp_id,
-                    std::shared_ptr<ast::AExpression> p_comparison_ref);
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Entity>
-  entity_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_entity_id,
-                 std::shared_ptr<ast::AExpression> p_comparison_ref);
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Tuple>
-  tuple_pattern(ECapability p_capa, std::shared_ptr<ast::AExpression> p_comparison_ref);
-  [[nodiscard]] std::unique_ptr<ast::declaration::local::Pattern_Enum>
-  enum_pattern(ECapability p_capa, std::unique_ptr<ast::AIdentifier> p_enum_id,
-               std::shared_ptr<ast::AExpression> p_comparison_ref);
+  [[nodiscard]] ast::_gnid parse_pattern(ast::_gnid p_comparison_ref);
+  [[nodiscard]] ast::_gnid pattern_mapping(ast::ECapability p_parent_capa);
+  [[nodiscard]] ast::_gnid component_pattern(ast::ECapability p_capa, ast::_gnid p_comp_id,
+                                             ast::_gnid p_comparison_ref);
+  [[nodiscard]] ast::_gnid entity_pattern(ast::ECapability p_capa, ast::_gnid p_entity_id, ast::_gnid p_comparison_ref);
+  [[nodiscard]] ast::_gnid tuple_pattern(ast::ECapability p_capa, ast::_gnid p_comparison_ref);
+  [[nodiscard]] ast::_gnid enum_pattern(ast::ECapability p_capa, ast::_gnid p_enum_id, ast::_gnid p_comparison_ref);
 
-  parser::Parser_Context& ctx;
+  parser::Parser_Context& p;
 };
 } // namespace parser

@@ -1,136 +1,47 @@
 #pragma once
 
-#include <memory>
-
-#include "ast_base.hpp"
+#include "nexus/ast/ast.hpp"
 
 namespace ast
 {
 
-namespace generic
+AST_NODE(Generic_Is_Type)
 {
-
-struct IGenCond : public Node {
-  virtual ~IGenCond()                                              = default;
-  // for semantic viewer
-  [[nodiscard]] virtual bool type_isValid(const AType& type) const = 0;
+  std::string_view source_typename;
+  SET_VECTOR_TYPE(in_type)
 };
 
-struct Is_Type final : IGenCond {
-  std::string                         source_typename;
-  std::vector<std::shared_ptr<AType>> in_type;
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  bool type_isValid(const AType& type) const override
-  {
-    for (auto& _type : in_type) {
-      // if (*ptr == type) return true;
-    }
-    return false;
-  }
-  std::string debug_str() const override
-  {
-    return "gen is";
-  }
+AST_NODE(Generic_Can_Cast)
+{
+  std::string_view source_typename; // typename
+  SET_TYPE(target);
+  bool is_cast_from = false; // false = cast to | true = cast from
 };
 
-struct Can_Cast final : IGenCond {
-  std::string            source_typename;      // typename
-  std::shared_ptr<AType> target;               // cast target
-  bool                   is_cast_from = false; // false = cast to | true = cast from
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  bool type_isValid(const AType& type) const override
-  {
-    // return *target == type;
-    return false;
-  }
-  std::string debug_str() const override
-  {
-    return std::string("gen cast ") + (is_cast_from ? "from" : "to");
-  }
+AST_NODE(Generic_Have_Op)
+{
+  std::string_view target_gen_sym;          // typename
+  EBinOpType       op_ty = EBinOpType::Add; // operator
+  SET_TYPE(ret);
 };
 
-struct Have_Op final : IGenCond {
-  std::string            target_gen_sym;          // typename
-  EBinOpType             op_ty = EBinOpType::Add; // operator
-  std::shared_ptr<AType> explicit_return_type;    // for indexation/iterator
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  bool        type_isValid(const AType& type) const override;
-  std::string debug_str() const override
-  {
-    return "gen op";
-  }
+AST_NODE(Generic_Have_Role)
+{
+  std::string_view target_gen_sym;
+  SET_NODE(role);
 };
 
-struct Have_Role final : IGenCond {
-  std::string                  target_gen_sym;
-  std::unique_ptr<AExpression> role;
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  std::shared_ptr<declaration::cop::Role> resolved_role_sym;
-
-  bool        type_isValid(const AType& type) const override;
-  std::string debug_str() const override
-  {
-    return "gen role";
-  }
+AST_NODE(Generic_Use_Component)
+{
+  std::string_view target_gen_sym;
+  SET_NODE(component);
 };
 
-struct Use_Component final : IGenCond {
-  std::string                  target_gen_sym;
-  std::unique_ptr<AExpression> component;
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  std::shared_ptr<declaration::cop::Component> resolved_comp_sym;
-
-  bool        type_isValid(const AType& type) const override;
-  std::string debug_str() const override
-  {
-    return "gen component";
-  }
+AST_NODE(Generic_Compatible_System)
+{
+  std::string_view target_gen_sym;
+  SET_NODE(system);
 };
 
-struct Compatible_System final : IGenCond {
-  std::string                  target_gen_sym;
-  std::unique_ptr<AExpression> system;
-
-  std::shared_ptr<ast::declaration::Generic> parent_generic;
-
-  VISTOR_ACCEPT
-
-
-  std::shared_ptr<declaration::cop::System> resolved_system_sym;
-
-  bool        type_isValid(const AType& type) const override;
-  std::string debug_str() const override
-  {
-    return "gen system";
-  }
-};
-
-} // namespace generic
-  // Generic
 } // namespace ast
   // AST

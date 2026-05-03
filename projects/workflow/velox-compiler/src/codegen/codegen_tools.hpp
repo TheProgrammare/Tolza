@@ -21,13 +21,15 @@
 #include <expected>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
-#include <memory>
 #include <string>
 
-#include "ast/ast_data.hpp"
-#include "ast/ast_forward.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ast/forward.hpp"
 
-struct Visitor_Codegen;
+namespace resolver
+{
+struct Codegen;
+}
 
 namespace llvm
 {
@@ -40,34 +42,35 @@ struct StructType;
 class LLVM_Tools
 {
 public:
-  LLVM_Tools(Visitor_Codegen& _v)
+  LLVM_Tools(resolver::Codegen& _v)
     : v(_v)
   {
   }
-  Visitor_Codegen& v;
+  resolver::Codegen& v;
 
-  llvm::Value* engage_move_semantic(ast::AExpression& p_target);
-  llvm::Value* engage_copy_semantic(ast::AExpression& p_target);
-  llvm::Value* engage_clone_semantic(ast::AExpression& p_target);
+  /*
+  llvm::Value* engage_move_semantic(ast::Node& p_target);
+  llvm::Value* engage_copy_semantic(ast::Node& p_target);
 
-  std::expected<std::shared_ptr<ast::ADeclaration>, std::string> find_symbol(const ast::AExpression& p_expr);
-  std::expected<ast::AExpression*, std::string>                  get_symbol_expression(ast::ADeclaration& p_symbol);
-  std::expected<llvm::Constant*, std::string>                    create_constant(const ast::ALiteral& p_value);
-  llvm::Type* generate_parameter_type(ast::declaration::local::Parameter& p_param);
-  llvm::Type* get_primtive_type(EPrimType p_ty);
+  std::expected<symbol::_id, std::string> find_symbol(ast::Node& p_expr);
+  std::expected<ast::_gnid, std::string>      get_symbol_expression(symbol::_id p_symbol);
+  std::expected<llvm::Constant*, std::string>    create_constant(ast::Node& p_value);
+  llvm::Type*                                    generate_parameter_type(ast::Local_Parameter& p_param);
+  llvm::Type*                                    get_primtive_type(type::EPrimitiveTypeKind p_ty);
 
 
-  llvm::Constant* get_cstr_constant(const std::string& val);
-  llvm::Constant* get_str_constant(const std::string& val);
+  llvm::Constant* get_cstr_constant(std::string_view val);
+  llvm::Constant* get_str_constant(std::string_view val);
   llvm::Constant* get_text_constant(const std::u32string& val);
-  llvm::Constant* get_int_constant(size_t bits_size, int64_t int_val, const std::string& str_val = "",
+  llvm::Constant* get_int_constant(size_t bits_size, int64_t int_val, std::string_view str_val = "",
                                    bool is_signed = true, size_t radix = 10);
-  llvm::Constant* get_float_constant(size_t bits_size, double double_val, const std::string& str_val = "");
+  llvm::Constant* get_float_constant(size_t bits_size, double double_val, std::string_view str_val = "");
 
-  llvm::Constant* get_primtive_zeroinitializer(EPrimType ty);
-  llvm::Constant* get_zeroinitializer(const ast::AType& ty);
+  llvm::Constant* get_primtive_zeroinitializer(type::EPrimitiveTypeKind ty);
+  llvm::Constant* get_zeroinitializer(type::_id ty);
 
 
-  std::u32string utf8_to_utf32(const std::string& s);
+  std::u32string utf8_to_utf32(std::string_view s);
   llvm::Value*   primitive_coerce(llvm::Value* p_val, llvm::Type* p_src, llvm::Type* p_dst);
+  */
 };

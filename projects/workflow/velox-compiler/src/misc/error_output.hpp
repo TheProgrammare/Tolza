@@ -1,81 +1,73 @@
 #pragma once
 
-#include <array>
+#include <cassert>
+#include <cstddef>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
-#include <vector>
 
-#include "compiler/compiler.hpp"
-#include "lexer/token.hpp"
-
-namespace ast
-{
-struct Node;
-}
-
-struct ScriptInfo;
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 
 enum class EErrorSeverity { debug, warning, error, fatal };
 
-[[nodiscard]] std::string ESeverity_to_str(EErrorSeverity severity);
-[[nodiscard]] std::string ESeverity_to_color(EErrorSeverity severity);
+[[nodiscard]] std::string_view ESeverity_to_str(EErrorSeverity severity);
+[[nodiscard]] std::string_view ESeverity_to_color(EErrorSeverity severity);
 
-[[nodiscard]] std::string escapeChar(unsigned char c);
-[[nodiscard]] std::string trim(const std::string& str);
+[[nodiscard]] std::string      escapeChar(unsigned char c);
+[[nodiscard]] std::string_view trim(std::string_view str);
+
+struct Error_Raw {
+  script::_id scr_info;
+
+  size_t           start_pos = 0;
+  size_t           end_pos   = 0;
+  compiler::EPhase phase;
+  EErrorSeverity   severity = EErrorSeverity::error;
+  ErrorCode        code     = 0;
+  std::string      msg;
+  std::string      hint;
+};
 
 
-struct Error_Diagnostic {
-  const ScriptInfo& pass_scr_info;
-  const ScriptInfo* node_scr_info;
+struct Error_Elem {
+  script::_id scr_id;
 
-  Token                    token;
-  std::vector<Token>       tokens_inpacted;
-  compiler::EPhase         phase    = compiler::EPhase::parser;
-  EErrorSeverity           severity = EErrorSeverity::error;
+  size_t           start_pos = 0;
+  size_t           end_pos   = 0;
+  compiler::EPhase phase;
+  EErrorSeverity   severity = EErrorSeverity::error;
   // classic error 0000 - 0999 internal error 1000 - 1999
-  ErrorCode                code     = 0;
-  std::vector<std::string> context;
-  std::string              msg;
-  std::string              hint;
+  ErrorCode        code     = 0;
+  std::string      msg;
+  std::string      hint;
 
-  Error_Diagnostic() = delete;
-
-  Error_Diagnostic(const ScriptInfo& _pass_scr_info, ErrorCode _code, const ScriptInfo* _node_scr_info,
-                   const Token& _token, compiler::EPhase _phase, const std::string& _msg, const std::string& _hint)
-    : pass_scr_info(_pass_scr_info)
-    , node_scr_info(_node_scr_info)
-    , token(_token)
+  Error_Elem(script::_id _scr_id, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
+             std::string_view _msg, std::string_view _hint)
+    : scr_id(_scr_id)
+    , start_pos(_start_pos)
+    , end_pos(_end_pos)
     , phase(_phase)
     , severity(EErrorSeverity::error)
     , code(_code)
     , msg(_msg)
     , hint(_hint)
   {
+    assert((!_scr_id || start_pos < end_pos) && "Illegal error bounds");
   }
 
-  Error_Diagnostic(const ScriptInfo& _pass_scr_info, ErrorCode _code, const ScriptInfo* _node_scr_info,
-                   const Token& _token, const std::vector<Token>& _tokens, compiler::EPhase _phase,
-                   EErrorSeverity _severity, const std::vector<std::string>& _context, const std::string& _msg,
-                   const std::string& _hint)
-    : pass_scr_info(_pass_scr_info)
-    , node_scr_info(_node_scr_info)
-    , token(_token)
-    , tokens_inpacted(_tokens)
+  Error_Elem(script::_id _scr_id, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
+             EErrorSeverity _severity, std::string_view _msg, std::string_view _hint)
+    : scr_id(_scr_id)
+    , start_pos(_start_pos)
+    , end_pos(_end_pos)
     , phase(_phase)
     , severity(_severity)
     , code(_code)
-    , context(_context)
     , msg(_msg)
     , hint(_hint)
   {
-  }
-
-  const ScriptInfo* get_scr_info() const
-  {
-    if (node_scr_info)
-      return node_scr_info;
-    else
-      return &pass_scr_info;
+    assert((!_scr_id || start_pos < end_pos) && "Illegal error bounds");
   }
 
   // [file] file:LL:CC
@@ -84,32 +76,11 @@ struct Error_Diagnostic {
   // [error] [AAwxyz] blabla
   // [hint] blabla
   // [context] global -> fn -> ...
-  std::string print_error() const
-  {
-    return print_source() + print_line_cursor() + print_messages();
-  }
+  std::string print_error() const;
 
   std::string print_code() const;
 
-  std::string print_messages() const
-  {
-    std::string str_msg;
-    str_msg += "[" + ESeverity_to_color(severity) + ESeverity_to_str(severity) + color_RESET "] ";
-    str_msg += print_code() + " " + msg;
-    if (!hint.empty()) str_msg += "\n[hint] " + hint;
-
-    if (!context.empty()) {
-      str_msg += "\n[context] ";
-
-      size_t count = 0;
-      for (auto& elem : context) {
-        str_msg += elem;
-        if (count != context.size() - 1) str_msg += " >> ";
-      }
-    }
-
-    return str_msg;
-  }
+  std::string print_messages() const;
 
   std::string print_cursor() const;
 
@@ -125,13 +96,22 @@ struct Error_Diagnostic {
 };
 
 
-struct Error_Diagnostic_Two {
-  Error_Diagnostic_Two(const ScriptInfo& _pass_scr_info, ErrorCode code, const ast::Node& first,
-                       const ast::Node& second, compiler::EPhase _phase, const std::string& msg,
-                       const std::string& hint);
+struct Error_Diagnostic {
+  Error_Diagnostic(const Error_Elem& first, const Error_Elem& second)
+    : elem_first(first)
+    , elem_second(second)
+  {
+  }
+  Error_Diagnostic(script::_id _scr_id, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
+                   std::string_view _msg, std::string_view _hint)
+    : elem_first(_scr_id, _code, _start_pos, _end_pos, _phase, _msg, _hint)
+    , elem_second({}, 0, 0, 0, _phase, "", "")
+  {
+    assert(_scr_id && "Illegal error on unknown script");
+  }
 
-  Error_Diagnostic first;
-  Error_Diagnostic second;
+  Error_Elem elem_first;
+  Error_Elem elem_second;
 
   std::string print_error() const;
 };

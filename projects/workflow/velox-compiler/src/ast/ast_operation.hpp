@@ -1,177 +1,63 @@
 #pragma once
 
-
-#include <memory>
-
-#include "ast_base.hpp"
+#include "nexus/ast/ast.hpp"
 
 
 namespace ast
 {
-namespace operation
+
+AST_NODE(Operation_Cast_As)
 {
-struct Cast_As final : public AExpression {
-  std::unique_ptr<AExpression> expression;
-  std::shared_ptr<AType>       type;
+  SET_NODE(expression);
+  SET_TYPE(type);
 
   enum class ECastType { AS, AS_REINTERPRET, AS_SAFE };
-
   ECastType cast_type = ECastType::AS;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    switch (cast_type) {
-    case ECastType::AS:             return "cast as";
-    case ECastType::AS_REINTERPRET: return "cast as! unsafe";
-    case ECastType::AS_SAFE:        return "cast as? safe";
-    }
-  }
 };
 
-struct Is final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
-
-  Is();
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "is";
-  }
+AST_NODE(Operation_Is)
+{
+  SET_NODE(left);
+  SET_NODE(right);
 };
 
-struct In final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
-
-  In();
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "in";
-  }
+AST_NODE(Operation_In)
+{
+  SET_NODE(right);
 };
 
-// a copy= b | a clone= b | a move= b | a ref= b | a mut= b
-struct Assignment final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
-  ETransfertType               assignment_type = ETransfertType::Copy;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    switch (assignment_type) {
-    case ETransfertType::Copy:         return "copy=";
-    case ETransfertType::Clone:        return "clone=";
-    case ETransfertType::MoveSemantic: return "move=";
-    case ETransfertType::NONE:         return "=";
-    }
-  }
+// a copy= b | a move= b | a ref= b | a mut= b
+AST_NODE(Operation_Assignment)
+{
+  SET_NODE(left);
+  SET_NODE(right);
+  ETransfertType assignment_type = ETransfertType::Copy;
 };
 
 // a op b
-struct Binary final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
-  EBinOpType                   op_ty = EBinOpType::Add;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "op bin(" + EBinOpType_to_str(op_ty) + ")";
-  }
+AST_NODE(Operation_Binary)
+{
+  SET_NODE(left);
+  SET_NODE(right);
+  EBinOpType op_ty = EBinOpType::Add;
 };
 
 // !a
-struct Unary final : public AExpression {
-  std::unique_ptr<AExpression> base;
-  EUnaryOpType                 unary_op     = EUnaryOpType::_not;
-  // for
-  // pre
-  // increment/decrement
-  // or
-  // sign
-  bool                         pre_operator = false;
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "op unary(" + EUnaryOpType_to_str(unary_op) + ")";
-  }
+AST_NODE(Operation_Unary)
+{
+  SET_NODE(base);
+  EUnaryOpType unary_op = EUnaryOpType::_not;
 };
 
-// a </<=
-// b >/>=
-// c
-struct Interval final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> center;
-  std::unique_ptr<AExpression> right;
-  EBinOpType                   left_comparator  = EBinOpType::Low;
-  EBinOpType                   right_comparator = EBinOpType::Low;
-
-  Interval();
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "interval left[" + EBinOpType_to_str(left_comparator) + "] right[" + EBinOpType_to_str(right_comparator)
-           + "]";
-  }
+// a </<= b >/>= c
+AST_NODE(Operation_Interval)
+{
+  SET_NODE(left);
+  SET_NODE(center);
+  SET_NODE(right);
+  EBinOpType left_comparator  = EBinOpType::Low;
+  EBinOpType right_comparator = EBinOpType::Low;
 };
 
-// p1 <->
-// p2
-struct Ptr_Dist final : public AExpression {
-  std::unique_ptr<AExpression> left;
-  std::unique_ptr<AExpression> right;
-
-  Ptr_Dist();
-
-  SET_R_VAL
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "ptr distance";
-  }
-};
-
-} // namespace operation
-  // Operation
 } // namespace ast
   // AST

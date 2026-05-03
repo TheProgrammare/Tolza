@@ -42,7 +42,7 @@
                 "--release",
                 "--mute",
                 "-O0",
-                "--log-emit",
+                "--log-all",
                 "--debug-ast",
                 "-W0",
                 "--dir-project=/home/flo/velox-test",

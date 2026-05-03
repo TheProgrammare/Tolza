@@ -1,192 +1,83 @@
 #pragma once
 
-#include <memory>
-
-#include "ast/ast_declaration.hpp"
-#include "ast_base.hpp"
-#include "ast_evaluator.hpp"
+#include "nexus/ast/ast.hpp"
 
 
 namespace ast
 {
-namespace statement
+
+AST_NODE(Statement_If)
 {
-
-struct If final : public Node, Trait_LLVM_Passage {
-  ~If();
-
-  Evaluator evaluator;
-
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-  [[maybe_unused]]
-  std::unique_ptr<If> alternative_statement;
-  bool                is_else = false;
-  bool                is_elif = false;
-
-  CODEGEN_PASS
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return is_else ? "else" : is_elif ? "elif" : "if";
-  }
+  SET_NODE(evaluator);
+  SET_NODE(codeblock);
+  SET_NODE(alternative_statement);
+  bool is_else = false;
+  bool is_elif = false;
 };
 
 // for i in range {}
-struct For final : public Node, Trait_LLVM_Passage {
-  ~For();
-
-  std::unique_ptr<AExpression> expression;
-
-  [[maybe_unused]]
-  std::shared_ptr<declaration::local::Variable_Binding> index;
-  [[maybe_unused]]
-  std::vector<std::shared_ptr<declaration::local::Variable_Binding>> items;
-
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-  bool                                           is_reverse = false;
-
-  CODEGEN_PASS
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override;
+AST_NODE(Statement_For)
+{
+  SET_NODE(expression);
+  // variable binding
+  SET_NODE(index);
+  // variable binding
+  SET_VECTOR_NODE(items);
+  SET_NODE(codeblock);
+  bool is_reverse = false;
 };
 
 // loop {...}
-struct Loop final : public Node, Trait_LLVM_Passage {
-  ~Loop();
-
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-
-  CODEGEN_PASS
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "LOOP";
-  }
+AST_NODE(Statement_Loop)
+{
+  SET_NODE(codeblock);
 };
 
 // while condition {...}
-struct While final : public Node, Trait_LLVM_Passage {
-  ~While();
-
-  bool                                           is_do = false;
-  Evaluator                                      evaluator;
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-
-  CODEGEN_PASS
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "WHILE";
-  }
+AST_NODE(Statement_While)
+{
+  SET_NODE(evaluator);
+  SET_NODE(codeblock);
+  bool is_do = false;
 };
 
-struct GoTo_Label;
-
 // normally not an expression
-struct GoTo final : public AExpression {
-  std::string label;
-
-  SET_R_VAL
-
-  std::string debug_str() const override
-  {
-    return "GOTO \"" + label + "\"";
-  }
-
-  GoTo_Label* label_sym = nullptr;
-
-  CODEGEN_VALUE
-  VISTOR_ACCEPT
+AST_NODE(Statement_GoTo)
+{
+  std::string_view label;
 };
 
 // label azerty {...}
-struct GoTo_Label final : public ADeclaration {
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-
-  CODEGEN_PASS
-  VISTOR_ACCEPT
-
-  llvm::BasicBlock* llvm_bb = nullptr;
-
-  std::string debug_str() const override
-  {
-    return "LABEL[" + declaration_name + "]";
-  }
+AST_NODE(Statement_GoTo_Label)
+{
+  std::string_view label;
+  SET_NODE(codeblock);
 };
 
 // return a, b, c
-struct Return final : public Node, Trait_LLVM_Passage {
-  [[maybe_unused]]
-  std::unique_ptr<AExpression> value;
-
-  ACallable* target_function = nullptr;
-
-  CODEGEN_PASS
-  std::string debug_str() const override
-  {
-    return "return";
-  }
-
-  VISTOR_ACCEPT
+AST_NODE(Statement_Return)
+{
+  SET_NODE(value);
 };
 
-struct Break final : public Node, Trait_LLVM_Passage {
-  CODEGEN_PASS
-  std::string debug_str() const override
-  {
-    return "break";
-  }
+AST_NODE(Statement_Break){};
 
-  VISTOR_ACCEPT
-};
-
-struct Continue final : public Node, Trait_LLVM_Passage {
-  CODEGEN_PASS
-  std::string debug_str() const override
-  {
-    return "continue";
-  }
-
-  VISTOR_ACCEPT
-};
+AST_NODE(Statement_Continue){};
 
 // constant/comparison => {}
-struct Match_Case final : public Node, Trait_LLVM_Passage {
-  ~Match_Case();
-
-  Evaluator                                      evaluator;
-  std::unique_ptr<declaration::local::CodeBlock> codeblock;
-
-  CODEGEN_PASS
-  std::string debug_str() const override
-  {
-    return "CASE";
-  }
-
-  VISTOR_ACCEPT
+AST_NODE(Statement_Match_Case)
+{
+  SET_NODE(evaluator);
+  SET_NODE(codeblock);
 };
 
 // match <base> { <const/comparison> => {...} _ => {...} }
-struct Match final : public Node, Trait_LLVM_Passage {
-  std::shared_ptr<AExpression>             base;
-  std::vector<std::unique_ptr<Match_Case>> cases;
-  [[maybe_unused]]
-  std::unique_ptr<Match_Case> other_case;
-
-  CODEGEN_PASS
-  std::string debug_str() const override
-  {
-    return "MATCH";
-  }
-
-  VISTOR_ACCEPT
+AST_NODE(Statement_Match)
+{
+  SET_NODE(base);
+  SET_VECTOR_NODE(cases);
+  SET_NODE(other_case);
 };
 
-} // namespace statement
-  // Statement
 } // namespace ast
   // AST

@@ -1,32 +1,25 @@
 #pragma once
 
-#include <memory>
-
-#include "ast/ast_forward.hpp"
+#include "nexus/forward.hpp"
 
 namespace parser
 {
-struct Parser_Context;
-
-struct Parser_Declaration_COP {
+struct Parser_Declaration_COP final {
   Parser_Declaration_COP(Parser_Context& ctx)
-    : ctx(ctx)
+    : p(ctx)
   {
   }
 
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Component> component();
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Role>      role();
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity>    entity();
-  void parse_entity_declaration(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Op>
-  _entity_op(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Access_Op>
-  _entity_access_op(std::shared_ptr<ast::declaration::cop::Entity> p_parent_entity);
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::Entity_Cast>
-  _entity_cast(std::shared_ptr<ast::declaration::cop::Entity> p_entity);
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::System>      system();
-  [[nodiscard]] std::shared_ptr<ast::declaration::cop::System_Case> _system_case();
+  [[nodiscard]] ast::_gnid component();
+  [[nodiscard]] ast::_gnid role();
+  [[nodiscard]] ast::_gnid entity();
+  void                     parse_entity_declaration(ast::COP_Entity& entity);
+  [[nodiscard]] ast::_gnid _entity_op();
+  [[nodiscard]] ast::_gnid _entity_access_op();
+  [[nodiscard]] ast::_gnid _entity_cast(ast::_gnid entity);
+  [[nodiscard]] ast::_gnid system();
+  [[nodiscard]] ast::_gnid _system_case();
 
-  Parser_Context& ctx;
+  Parser_Context& p;
 };
 } // namespace parser

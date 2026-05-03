@@ -1,5 +1,8 @@
 #include "parser_memory.hpp"
 
+#include "nexus/lexer/token.hpp"
+#include "nexus/script.hpp"
+
 #include "parser_context.hpp"
 
 #include "parser_expression.hpp"
@@ -8,32 +11,32 @@
 
 #include "ast/ast_memory.hpp"
 
-std::unique_ptr<ast::memory::Align> parser::Parser_Memory::align()
+ast::_gnid parser::Parser_Memory::align()
 {
-  static const std::string hint = "define value memory alignment like: `align(a)`";
-  auto                     node = ctx.Create_Node<ast::memory::Align>(ctx.tok_v.peek(-1));
+  constexpr std::string_view hint = "define value memory alignment like: `align(a)`";
+  parser_add_node(node, Memory_Align, p.peek(-1).id);
 
-  ctx.tok_v.expect(106, TokTy::OPEN_PAREN, "Expected start arg '('.", hint);
-  node->target = ctx.p_expr->parse_expression();
-  ctx.tok_v.expect(107, TokTy::CLOSE_PAREN, "Expected end arg ')'.", hint);
+  p.expect(106, token::ETokenKind::OPEN_PAREN, "Expected start arg '('.", hint);
+  node->target = p.p_expr->parse_expression();
+  p.expect(107, token::ETokenKind::CLOSE_PAREN, "Expected end arg ')'.", hint);
 
-  return node;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::memory::Del> parser::Parser_Memory::del()
+ast::_gnid parser::Parser_Memory::del()
 {
-  auto node = ctx.Create_Node<ast::memory::Del>(ctx.tok_v.peek());
-  ctx.tok_v.match(TokTy::DEL);
-  node->target = ctx.p_expr->parse_expression();
+  parser_add_node(node, Memory_Del, p.peek().id);
+  p.match(token::ETokenKind::DEL);
+  node->target = p.p_expr->parse_expression();
 
-  return node;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::memory::Drop> parser::Parser_Memory::drop()
+ast::_gnid parser::Parser_Memory::drop()
 {
-  auto node = ctx.Create_Node<ast::memory::Drop>(ctx.tok_v.peek());
-  ctx.tok_v.match(TokTy::DROP);
-  node->target = ctx.p_expr->parse_expression();
+  parser_add_node(node, Memory_Drop, p.peek().id);
+  p.match(token::ETokenKind::DROP);
+  node->target = p.p_expr->parse_expression();
 
-  return node;
+  return node->node_id;
 }

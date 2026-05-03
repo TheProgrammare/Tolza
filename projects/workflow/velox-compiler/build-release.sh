@@ -1,5 +1,5 @@
 #!/bin/bash
-# build_velox.sh
+# build-release.sh
 # Script to configure and build Velox using CMake + Ninja in parallel
 
 set -e

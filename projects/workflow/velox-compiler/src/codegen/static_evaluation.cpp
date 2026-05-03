@@ -5,22 +5,21 @@
 #include <llvm/ADT/APInt.h>
 #include <cmath>
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_data.hpp"
+#include "nexus/ast/ast.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_numeric_128_bits.hpp"
 #include "ast/ast_operation.hpp"
-#include "codegen/visitor_codegen.hpp"
+#include "codegen/resolver_codegen.hpp"
 #include "codegen_tools.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
 
-Static_Evaluator::Static_Evaluator(Visitor_Codegen& _v)
+Static_Evaluator::Static_Evaluator(resolver::Codegen& _v)
   : tools(new LLVM_Tools(_v))
   , v(_v)
 {
 }
-
+/*
 
 std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression(ast::AExpression& value)
 {
@@ -420,7 +419,7 @@ bool Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::A
 std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::literal::Fixed_Point& L,
                                                                      const ast::literal::Fixed_Point& R, EBinOpType op)
 {
-  auto to_lit = [](const llvm::APInt& value, size_t scale, EPrimType raw_type) -> ast::ALiteral* {
+  auto to_lit = [](const llvm::APInt& value, size_t scale, EPrimitiveTypeKind raw_type) -> ast::ALiteral* {
     return new ast::literal::Fixed_Point(Int128(value), scale, raw_type);
   };
   auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
@@ -588,3 +587,4 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_plus(const a
     return std::unexpected(err.print_error());
   }
 }
+*/

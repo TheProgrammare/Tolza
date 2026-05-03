@@ -24,6 +24,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SOFTWARE_NAME "velox-compiler")
 # version
 string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
+set(SOFTWARE_V_NAME "CLOVIS")
 
 # ----------------------------
 # Sources
@@ -81,6 +82,7 @@ target_compile_options(velox-compiler
 target_compile_definitions(velox-compiler
     PRIVATE
         ${LLVM_DEFINITIONS}
+        $<$<CONFIG:Debug>:DEBUG>
 )
 
 # Link against LLVM + libclang

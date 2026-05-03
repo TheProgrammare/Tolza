@@ -8,12 +8,14 @@
 #include <memory>
 #include <ostream>
 
-#include <compiler_context.hpp>
+#include <compiler_options.hpp>
 #include <common.hpp>
+#include <string>
+#include <string_view>
 
-#include "ast/ast_base.hpp"
+#include "nexus/ast/ast.hpp"
 #include "binder/binder_ffi.hpp"
-#include "misc/script_info.hpp"
+#include "nexus/script.hpp"
 
 
 void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& p_bind)
@@ -28,9 +30,9 @@ void ffi::c::c_lib_to_velox_lib(const ffi::Bind_Package& p_bind)
     ofs << "#include <" << p_bind.lib << ".h>\n";
   }
 
-  ffi::AST ast = parse_translation_unit(p_bind, tmp_path, {});
+  ffi::AST ast = parse_translation_unit(p_bind, tmp_path.string());
   Import   imp;
-  imp.type = Import::EImportType::stdlib;
+  imp.type = Import::EImportType::binding;
   imp.path = {"ffi"};
   imp.name = "C";
 
@@ -50,7 +52,9 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
   CXLinkageKind linkage = clang_getCursorLinkage(p_cursor);
   if (linkage == CXLinkage_Internal) return CXChildVisit_Recurse;
 
-  auto contains_extern = [&](const std::string& name) -> bool { return ast->bind.extern_items.contains(name); };
+  auto contains_extern = [&](std::string_view name) -> bool {
+    return ast->bind.extern_items.contains(std::string(name));
+  };
 
 
   switch (kind) {
@@ -108,18 +112,17 @@ CXChildVisitResult ffi::c::universal_visitor(CXCursor p_cursor, CXCursor p_paren
   return CXChildVisit_Recurse; // continuer récursivement
 }
 
-ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& p_bind, const std::string& p_file_path,
-                                        const std::vector<std::string>& p_args = {})
+ffi::AST ffi::c::parse_translation_unit(const ffi::Bind_Package& p_bind, std::string_view p_file_path,
+                                        const std::vector<std::string_view>& p_args)
 {
   CXIndex index = clang_createIndex(0, 0);
 
   std::vector<const char*> cargs;
-  for (const auto& s : p_args) cargs.push_back(s.c_str());
+  for (const auto& s : p_args) cargs.push_back(s.data());
 
   CXTranslationUnit tu;
-  CXErrorCode       error =
-      clang_parseTranslationUnit2(index, p_file_path.c_str(), cargs.data(), static_cast<int>(cargs.size()), nullptr, 0,
-                                  CXTranslationUnit_None, &tu);
+  CXErrorCode       error = clang_parseTranslationUnit2(
+      index, p_file_path.data(), cargs.data(), static_cast<int>(cargs.size()), nullptr, 0, CXTranslationUnit_None, &tu);
 
   assert(error == CXError_Success && "Failed to parse translation unit");
 

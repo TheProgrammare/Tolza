@@ -17,33 +17,30 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "ast/ast_forward.hpp"
-#include "ast/ast_codeblock_instruction.hpp"
-#include "misc/module_manager.hpp"
-
-struct ScriptInfo;
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 
 namespace parser
 {
 struct Parser_Context;
 
-struct Parser_Base {
+struct Parser_Base final {
   Parser_Base() = delete;
   Parser_Base(Parser_Context& p_ctx);
   ~Parser_Base();
 
 
-  [[nodiscard]] std::shared_ptr<ast::declaration::Import>   parse_import();
-  [[nodiscard]] std::shared_ptr<ast::declaration::Export>   parse_export();
-  [[nodiscard]] std::shared_ptr<ast::declaration::ReExport> parse_reexport();
-  [[nodiscard]] std::shared_ptr<ast::declaration::Extern>   parse_extern();
+  [[nodiscard]] ast::_gnid parse_import();
+  [[nodiscard]] ast::_gnid parse_export();
+  [[nodiscard]] ast::_gnid parse_reexport();
+  [[nodiscard]] ast::_gnid parse_extern();
 
-  [[nodiscard]] ast::CodeBlock_instruction parse_instruction();
+  [[nodiscard]] ast::_gnid regex_path();
+  [[nodiscard]] ast::_gnid identifier(bool p_no_qualified_id = false, bool p_keyword_allowed = false);
+  [[nodiscard]] std::tuple<ast::_gnid, type::_id> identifier_typed();
 
-  Parser_Context& ctx;
+  [[nodiscard]] ast::_gnid parse_instruction();
+
+  Parser_Context& p;
 };
 } // namespace parser

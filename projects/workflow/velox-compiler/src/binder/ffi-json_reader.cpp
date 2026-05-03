@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 // Helpers pour convertir string → enum
-ffi::EType ffi::JSON::str_to_EType(const std::string& s)
+ffi::EType ffi::JSON::str_to_EType(std::string_view s)
 {
-  static const std::unordered_map<std::string, EType> table = {
+  static const std::unordered_map<std::string_view, EType> table = {
       {"",           EType::INVALID    },
       {"i8",         EType::_i8        },
       {"i16",        EType::_i16       },
@@ -78,7 +78,7 @@ ffi::EType ffi::JSON::str_to_EType(const std::string& s)
   return it != table.end() ? it->second : EType::INVALID;
 }
 
-ffi::EPassMode ffi::JSON::str_to_EPassMode(const std::string& s)
+ffi::EPassMode ffi::JSON::str_to_EPassMode(std::string_view s)
 {
   if (s == "copy") return EPassMode::copy;
   if (s == "ref") return EPassMode::ref;
@@ -136,7 +136,7 @@ ffi::Prototype ffi::JSON::json_to_prototype(const json& j)
   return proto;
 }
 
-ffi::ECallConvention ffi::JSON::str_to_ECallConvention(const std::string& s)
+ffi::ECallConvention ffi::JSON::str_to_ECallConvention(std::string_view s)
 {
   if (s == "C") return ECallConvention::C;
   if (s == "std_call") return ECallConvention::Stdcall;
@@ -168,7 +168,7 @@ ffi::Flag ffi::JSON::json_to_flag(const json& j)
 
   Flag f;
   f.name = j.value("name", "");
-  if (j.contains("underlying_type")) f.underlying_type = str_to_EType(j["underlying_type"]);
+  if (j.contains("underlying_type")) f.underlying_type = str_to_EType(std::string(j["underlying_type"]));
 
   if (j.contains("members")) {
     for (auto& n : j["members"]) f.members.emplace_back(n[0].get<std::string>(), n[1].get<size_t>());
@@ -460,9 +460,10 @@ ffi::TypeAlias ffi::JSON::json_to_typealias(const json& j)
   return t;
 }
 
-ffi::AST ffi::JSON::read_ffi_json_file(const std::string& path)
+ffi::AST ffi::JSON::read_ffi_json_file(std::string_view path)
 {
-  std::ifstream f(path);
+  std::string   path_s(path);
+  std::ifstream f(path_s);
   if (!f.is_open()) throw std::runtime_error("Cannot open JSON AST file");
 
   json j;

@@ -17,23 +17,24 @@
 #include <string>
 #include <vector>
 
-#include <compiler_context.hpp>
+#include <compiler_options.hpp>
 
-#include "ast/ast_base.hpp"
+#include "nexus/ast/ast.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_expression.hpp"
-#include "ast/ast_data.hpp"
-#include "ast/ast_declaration.hpp"
+#include "nexus/ast/ast.hpp"
+#include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_literal.hpp"
-#include "ast/ast_type.hpp"
+#include "nexus/type.hpp"
 #include "ast/ast_operation.hpp"
 
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
-#include "misc/metacode.hpp"
-#include "visitor_codegen.hpp"
+#include "nexus/metacode/metacode.hpp"
+#include "resolver_codegen.hpp"
 
+/*
 llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& p_target)
 {
   auto src = p_target.codegen(v);
@@ -45,9 +46,6 @@ llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& p_target)
   }
 }
 llvm::Value* LLVM_Tools::engage_copy_semantic(ast::AExpression& target)
-{
-}
-llvm::Value* LLVM_Tools::engage_clone_semantic(ast::AExpression& target)
 {
 }
 
@@ -68,9 +66,9 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
 {
   if (auto ptr = dynamic_cast<ast::declaration::Global*>(&p_symbol)) {
     if (ptr->expression) return ptr->expression.get();
-  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable*>(&p_symbol)) {
+  } else if (auto ptr = dynamic_cast<Local_Variable*>(&p_symbol)) {
     if (ptr->expression) return ptr->expression.get();
-  } else if (auto ptr = dynamic_cast<ast::declaration::local::Variable_Binding*>(&p_symbol)) {
+  } else if (auto ptr = dynamic_cast<Local_Variable_Binding*>(&p_symbol)) {
     return ptr->parent_pattern->right.get();
   }
   Error_Diagnostic error(v.scr_info, 166, p_symbol.node_scr_info.get(), p_symbol.node_token, compiler::EPhase::llvmir,
@@ -81,7 +79,7 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
 
 std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const ast::ALiteral& p_value)
 {
-  common::CompCtx ctx;
+  common::Compiler_Options ctx;
   if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&p_value)) {
     return get_int_constant(EPrimType_to_bits(ptr->type), 0, ptr->val.i128_to_string(), EPrimType_is_signed(ptr->type));
   } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&p_value)) {
@@ -94,9 +92,9 @@ std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const as
   } else if (auto ptr = dynamic_cast<const ast::literal::Textual_Format*>(&p_value)) {
     if (auto txt = ptr->get_if_pure_text()) {
       switch (txt->text_type) {
-      case EPrimType::c_str: return get_cstr_constant(txt->val);
-      case EPrimType::str:   return get_str_constant(txt->val);
-      case EPrimType::text:  {
+      case EPrimitiveTypeKind::c_str: return get_cstr_constant(txt->val);
+      case EPrimitiveTypeKind::str:   return get_str_constant(txt->val);
+      case EPrimitiveTypeKind::text:  {
         std::u32string utf32;
         try {
           utf32 = utf8_to_utf32(txt->val);
@@ -118,7 +116,7 @@ std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const as
   return std::unexpected("Impossible to create a constant from a complex type");
 }
 
-llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Parameter& p_param)
+llvm::Type* LLVM_Tools::generate_parameter_type(Local_Parameter& p_param)
 {
   p_param.codegen_pass(v);
   auto ty = p_param.type->codegen_ty(v);
@@ -136,8 +134,7 @@ llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Paramet
   case EPassMode::Mut: {
     return ty->getPointerTo();
   }
-  case EPassMode::Copy:
-  case EPassMode::Clone: {
+  case EPassMode::Copy: {
     if (!ty->isSingleValueType())
       return p_param.type->llvm_type = ty->getPointerTo();
     else
@@ -150,57 +147,57 @@ llvm::Type* LLVM_Tools::generate_parameter_type(ast::declaration::local::Paramet
 }
 
 
-llvm::Type* LLVM_Tools::get_primtive_type(EPrimType ty)
+llvm::Type* LLVM_Tools::get_primtive_type(EPrimitiveTypeKind ty)
 {
   switch (ty) {
-  case EPrimType::boolean: return v.i1Ty;
-  case EPrimType::cune:    return v.i8Ty;
-  case EPrimType::rune:    return v.i32Ty;
-  case EPrimType::ptrdiff:
-  case EPrimType::dSize:
-  case EPrimType::udSize:
-  case EPrimType::iSize:
-  case EPrimType::uSize:
-  case EPrimType::bSize:   return v.iSizeTy;
-  case EPrimType::i8:
-  case EPrimType::u8:
-  case EPrimType::b8:      return v.i8Ty;
-  case EPrimType::i16:
-  case EPrimType::u16:
-  case EPrimType::b16:     return v.i16Ty;
-  case EPrimType::d32:
-  case EPrimType::ud32:
-  case EPrimType::i32:
-  case EPrimType::u32:
-  case EPrimType::b32:     return v.i32Ty;
-  case EPrimType::d64:
-  case EPrimType::ud64:
-  case EPrimType::i64:
-  case EPrimType::u64:
-  case EPrimType::b64:     return v.i64Ty;
-  case EPrimType::d128:
-  case EPrimType::ud128:
-  case EPrimType::i128:
-  case EPrimType::u128:
-  case EPrimType::b128:    return v.i128Ty;
-  case EPrimType::fSize:   return v.fSizeTy;
-  case EPrimType::f16:     return v.f16Ty;
-  case EPrimType::f32:     return v.f32Ty;
-  case EPrimType::f64:     return v.f64Ty;
-  case EPrimType::f80:     return v.f80Ty;
-  case EPrimType::f128:    return v.f128Ty;
-  case EPrimType::u0:      return v.u0Ty;
-  case EPrimType::Flag:    return v.iSizeTy;
-  case EPrimType::text:    return v.textTy;
-  case EPrimType::str:     return v.strTy;
-  case EPrimType::c_str:   return v.cstrTy;
-  default:                 {
+  case EPrimitiveTypeKind::boolean: return v.i1Ty;
+  case EPrimitiveTypeKind::cune:    return v.i8Ty;
+  case EPrimitiveTypeKind::rune:    return v.i32Ty;
+  case EPrimitiveTypeKind::ptrdiff:
+  case EPrimitiveTypeKind::dSize:
+  case EPrimitiveTypeKind::udSize:
+  case EPrimitiveTypeKind::iSize:
+  case EPrimitiveTypeKind::uSize:
+  case EPrimitiveTypeKind::bSize:   return v.iSizeTy;
+  case EPrimitiveTypeKind::i8:
+  case EPrimitiveTypeKind::u8:
+  case EPrimitiveTypeKind::b8:      return v.i8Ty;
+  case EPrimitiveTypeKind::i16:
+  case EPrimitiveTypeKind::u16:
+  case EPrimitiveTypeKind::b16:     return v.i16Ty;
+  case EPrimitiveTypeKind::d32:
+  case EPrimitiveTypeKind::ud32:
+  case EPrimitiveTypeKind::i32:
+  case EPrimitiveTypeKind::u32:
+  case EPrimitiveTypeKind::b32:     return v.i32Ty;
+  case EPrimitiveTypeKind::d64:
+  case EPrimitiveTypeKind::ud64:
+  case EPrimitiveTypeKind::i64:
+  case EPrimitiveTypeKind::u64:
+  case EPrimitiveTypeKind::b64:     return v.i64Ty;
+  case EPrimitiveTypeKind::d128:
+  case EPrimitiveTypeKind::ud128:
+  case EPrimitiveTypeKind::i128:
+  case EPrimitiveTypeKind::u128:
+  case EPrimitiveTypeKind::b128:    return v.i128Ty;
+  case EPrimitiveTypeKind::fSize:   return v.fSizeTy;
+  case EPrimitiveTypeKind::f16:     return v.f16Ty;
+  case EPrimitiveTypeKind::f32:     return v.f32Ty;
+  case EPrimitiveTypeKind::f64:     return v.f64Ty;
+  case EPrimitiveTypeKind::f80:     return v.f80Ty;
+  case EPrimitiveTypeKind::f128:    return v.f128Ty;
+  case EPrimitiveTypeKind::u0:      return v.u0Ty;
+  case EPrimitiveTypeKind::Flag:    return v.iSizeTy;
+  case EPrimitiveTypeKind::text:    return v.textTy;
+  case EPrimitiveTypeKind::str:     return v.strTy;
+  case EPrimitiveTypeKind::c_str:   return v.cstrTy;
+  default:                          {
     return nullptr;
   }
   }
 }
 
-llvm::Constant* LLVM_Tools::get_cstr_constant(const std::string& val)
+llvm::Constant* LLVM_Tools::get_cstr_constant(std::string_view val)
 {
   auto txt = llvm::ConstantDataArray::getString(v.ctx, val, true);
 
@@ -210,7 +207,7 @@ llvm::Constant* LLVM_Tools::get_cstr_constant(const std::string& val)
 
   return llvm::ConstantExpr::getInBoundsGetElementPtr(txt->getType(), glo_txt, v.get_zero);
 }
-llvm::Constant* LLVM_Tools::get_str_constant(const std::string& val)
+llvm::Constant* LLVM_Tools::get_str_constant(std::string_view val)
 {
   auto txt = llvm::ConstantDataArray::getString(v.ctx, val, true);
 
@@ -247,7 +244,7 @@ llvm::Constant* LLVM_Tools::get_text_constant(const std::u32string& val)
   return fat_ptr;
 }
 
-llvm::Constant* LLVM_Tools::get_int_constant(size_t bits_size, int64_t int_val, const std::string& str_val,
+llvm::Constant* LLVM_Tools::get_int_constant(size_t bits_size, int64_t int_val, std::string_view str_val,
                                              bool is_signed, size_t radix)
 {
   llvm::APInt ap =
@@ -257,7 +254,7 @@ llvm::Constant* LLVM_Tools::get_int_constant(size_t bits_size, int64_t int_val, 
   return llvm::ConstantInt::get(int_ty, ap);
 }
 
-llvm::Constant* LLVM_Tools::get_float_constant(size_t bits_size, double double_val, const std::string& str_val)
+llvm::Constant* LLVM_Tools::get_float_constant(size_t bits_size, double double_val, std::string_view str_val)
 {
   // Sélection des semantics selon bits_size
   const llvm::fltSemantics* sem = nullptr;
@@ -276,51 +273,51 @@ llvm::Constant* LLVM_Tools::get_float_constant(size_t bits_size, double double_v
 }
 
 
-llvm::Constant* LLVM_Tools::get_primtive_zeroinitializer(EPrimType ty)
+llvm::Constant* LLVM_Tools::get_primtive_zeroinitializer(EPrimitiveTypeKind ty)
 {
   switch (ty) {
-  case EPrimType::NONE:
-  case EPrimType::boolean: get_int_constant(1, 0);
-  case EPrimType::cune:    get_int_constant(8, 0);
-  case EPrimType::rune:    get_int_constant(32, 0);
-  case EPrimType::c_str:   get_cstr_constant("");
-  case EPrimType::str:     get_str_constant("");
-  case EPrimType::text:    get_text_constant(U"");
-  case EPrimType::ptrdiff:
-  case EPrimType::dSize:
-  case EPrimType::udSize:
-  case EPrimType::iSize:
-  case EPrimType::uSize:
-  case EPrimType::bSize:   return get_int_constant(compiler::COMP_CTX.get_arch_size(), 0);
-  case EPrimType::i8:
-  case EPrimType::u8:
-  case EPrimType::b8:      return get_int_constant(8, 0);
-  case EPrimType::i16:
-  case EPrimType::u16:
-  case EPrimType::b16:     return get_int_constant(16, 0);
-  case EPrimType::d32:
-  case EPrimType::ud32:
-  case EPrimType::i32:
-  case EPrimType::u32:
-  case EPrimType::b32:     return get_int_constant(32, 0);
-  case EPrimType::d64:
-  case EPrimType::ud64:
-  case EPrimType::i64:
-  case EPrimType::u64:
-  case EPrimType::b64:     return get_int_constant(64, 0);
-  case EPrimType::d128:
-  case EPrimType::ud128:
-  case EPrimType::i128:
-  case EPrimType::u128:
-  case EPrimType::b128:    return get_int_constant(128, 0);
-  case EPrimType::fSize:   get_float_constant(compiler::COMP_CTX.get_arch_size(), 0);
-  case EPrimType::f16:     get_float_constant(16, 0);
-  case EPrimType::f32:     get_float_constant(32, 0);
-  case EPrimType::f64:     get_float_constant(64, 0);
-  case EPrimType::f80:     get_float_constant(80, 0);
-  case EPrimType::f128:    get_float_constant(128, 0);
+  case EPrimitiveTypeKind::NONE:
+  case EPrimitiveTypeKind::boolean: get_int_constant(1, 0);
+  case EPrimitiveTypeKind::cune:    get_int_constant(8, 0);
+  case EPrimitiveTypeKind::rune:    get_int_constant(32, 0);
+  case EPrimitiveTypeKind::c_str:   get_cstr_constant("");
+  case EPrimitiveTypeKind::str:     get_str_constant("");
+  case EPrimitiveTypeKind::text:    get_text_constant(U"");
+  case EPrimitiveTypeKind::ptrdiff:
+  case EPrimitiveTypeKind::dSize:
+  case EPrimitiveTypeKind::udSize:
+  case EPrimitiveTypeKind::iSize:
+  case EPrimitiveTypeKind::uSize:
+  case EPrimitiveTypeKind::bSize:   return get_int_constant(compiler::COMPILER_OPTIONS.get_arch_size(), 0);
+  case EPrimitiveTypeKind::i8:
+  case EPrimitiveTypeKind::u8:
+  case EPrimitiveTypeKind::b8:      return get_int_constant(8, 0);
+  case EPrimitiveTypeKind::i16:
+  case EPrimitiveTypeKind::u16:
+  case EPrimitiveTypeKind::b16:     return get_int_constant(16, 0);
+  case EPrimitiveTypeKind::d32:
+  case EPrimitiveTypeKind::ud32:
+  case EPrimitiveTypeKind::i32:
+  case EPrimitiveTypeKind::u32:
+  case EPrimitiveTypeKind::b32:     return get_int_constant(32, 0);
+  case EPrimitiveTypeKind::d64:
+  case EPrimitiveTypeKind::ud64:
+  case EPrimitiveTypeKind::i64:
+  case EPrimitiveTypeKind::u64:
+  case EPrimitiveTypeKind::b64:     return get_int_constant(64, 0);
+  case EPrimitiveTypeKind::d128:
+  case EPrimitiveTypeKind::ud128:
+  case EPrimitiveTypeKind::i128:
+  case EPrimitiveTypeKind::u128:
+  case EPrimitiveTypeKind::b128:    return get_int_constant(128, 0);
+  case EPrimitiveTypeKind::fSize:   get_float_constant(compiler::COMPILER_OPTIONS.get_arch_size(), 0);
+  case EPrimitiveTypeKind::f16:     get_float_constant(16, 0);
+  case EPrimitiveTypeKind::f32:     get_float_constant(32, 0);
+  case EPrimitiveTypeKind::f64:     get_float_constant(64, 0);
+  case EPrimitiveTypeKind::f80:     get_float_constant(80, 0);
+  case EPrimitiveTypeKind::f128:    get_float_constant(128, 0);
 
-  default:                 return nullptr;
+  default:                          return nullptr;
   }
 }
 
@@ -333,7 +330,7 @@ llvm::Constant* LLVM_Tools::get_zeroinitializer(const ast::AType& ty)
 }
 
 
-std::u32string LLVM_Tools::utf8_to_utf32(const std::string& s)
+std::u32string LLVM_Tools::utf8_to_utf32(std::string_view s)
 {
   std::u32string result;
   size_t         i = 0;
@@ -411,3 +408,4 @@ llvm::Value* LLVM_Tools::primitive_coerce(llvm::Value* p_val, llvm::Type* p_src,
 
   return p_val;
 }
+*/

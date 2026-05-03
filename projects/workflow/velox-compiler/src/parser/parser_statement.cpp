@@ -1,19 +1,31 @@
-
 #include "parser_statement.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_data.hpp"
-#include "ast/ast_declaration.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/lexer.hpp"
+#include "nexus/lexer/token.hpp"
+
+#include "ast/ast_statement.hpp"
+
+#include "nexus/module.hpp"
+#include "nexus/script.hpp"
+#include "nexus/symbol.hpp"
+#include "nexus/type.hpp"
+#include "parser_context.hpp"
+
+
+#include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
-#include "ast/ast_inferred_type_singleton.hpp"
+
 #include "ast/ast_statement.hpp"
-#include "ast/ast_type.hpp"
+#include "nexus/type.hpp"
 
-#include "lexer/token.hpp"
+#include "nexus/lexer/token.hpp"
 
-#include "parser_context.hpp"
-#include "parser_declaration.hpp"
+#include "parser_declaration_global.hpp"
 #include "parser_declaration_cop.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
@@ -22,296 +34,294 @@
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
+#include <string_view>
 
-#include "misc/symbol_manager.hpp"
 
-
-std::unique_ptr<ast::Node> parser::Parser_Statement::parse_statement(bool p_is_silent_error)
+ast::_gnid parser::Parser_Statement::parse_statement(bool p_is_silent_error)
 {
-  ctx.tok_v.match(TokTy::SEMICOLON); // consume because the parser use only for explicit end instruction
+  constexpr std::string_view hint =
+      "you can define in functions: variable, entity, enum, safe cast, if, "
+      "else, do, while, match, break, continue, return";
 
-  switch (ctx.tok_v.peek().type) {
-  case TokTy::IF:       return if_statement();
-  case TokTy::FOR:      return for_statement();
-  case TokTy::WHILE:
-  case TokTy::DO_WHILE: return while_statement();
-  case TokTy::LOOP:     return loop_statement();
-  case TokTy::MATCH:    return match_statement();
-  case TokTy::BREAK:    {
-    ctx.tok_v.match(TokTy::BREAK);
-    return ctx.Create_Node<ast::statement::Break>(ctx.tok_v.peek(-1));
+  p.match(token::ETokenKind::SEMICOLON); // consume because the parser use only for explicit end instruction
+
+  switch (p.peek().kind) {
+  case token::ETokenKind::IF:       return if_statement();
+  case token::ETokenKind::FOR:      return for_statement();
+  case token::ETokenKind::WHILE:
+  case token::ETokenKind::DO_WHILE: return while_statement();
+  case token::ETokenKind::LOOP:     return loop_statement();
+  case token::ETokenKind::MATCH:    return match_statement();
+  case token::ETokenKind::BREAK:    {
+    p.match(token::ETokenKind::BREAK);
+    parser_add_node(node, Statement_Break, p.peek(-1).id);
+    return node->node_id;
   }
-  case TokTy::END: {
-    ctx.tok_v.match(TokTy::END);
-    return ctx.Create_Node<ast::statement::Return>(ctx.tok_v.peek(-1));
+  case token::ETokenKind::END: {
+    p.match(token::ETokenKind::END);
+    parser_add_node(node, Statement_Return, p.peek(-1).id);
+    return node->node_id;
   }
-  case TokTy::CONTINUE: {
-    ctx.tok_v.match(TokTy::CONTINUE);
-    return ctx.Create_Node<ast::statement::Continue>(ctx.tok_v.peek(-1));
+  case token::ETokenKind::CONTINUE: {
+    p.match(token::ETokenKind::CONTINUE);
+    parser_add_node(node, Statement_Continue, p.peek(-1).id);
+    return node->node_id;
   }
-  case TokTy::RETURN:     return return_flow();
-  case TokTy::GOTO:       return goto_statement();
-  case TokTy::GOTO_LABEL: return goto_label_statement();
-  default:                break;
+  case token::ETokenKind::RETURN:     return return_flow();
+  case token::ETokenKind::GOTO:       return goto_statement();
+  case token::ETokenKind::GOTO_LABEL: return goto_label_statement();
+  default:                            break;
   }
 
   if (!p_is_silent_error)
-    ctx.tok_v.add_error(116,
-                        "Unexpected '" + ctx.tok_v.peek().val + "' keyword type (" + ctx.tok_v.peek().val
-                            + ") not allowed in function statement.",
-                        "you can define in functions: variable, entity, enum, safe cast, if, "
-                        "else, do, while, match, break, continue, return");
-  return nullptr;
+    p.add_error(
+        116, "Unexpected '" + std::string(p.tok_to_str(p.peek().id)) + "' keyword not allowed in function statement.",
+        hint);
+  return BAD_NODE_ID;
 }
 
-std::unique_ptr<ast::statement::If> parser::Parser_Statement::if_statement()
+ast::_gnid parser::Parser_Statement::if_statement()
 {
-  auto if_state = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek());
+  parser_add_node(node, Statement_If, p.peek().id);
 
-  ctx.tok_v.match(TokTy::IF);
-  ctx.tok_v.match(TokTy::ELIF);
+  p.match(token::ETokenKind::IF);
+  p.match(token::ETokenKind::ELIF);
 
-  ctx.enter_scope(nullptr, "if");
+  p.enter_scope(*node, p.peek(-1).kind == token::ETokenKind::IF ? "if" : "elif");
 
-  if_state->evaluator = ctx.p_loc->parse_evaluator(nullptr);
+  node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
 
-  if_state->codeblock = ctx.p_loc->code_block_instruction();
+  node->codeblock = p.p_loc->parse_codeblock();
 
   // else or else if case
-  if (ctx.tok_v.match(TokTy::ELIF)) {
-    std::unique_ptr<ast::statement::If> elifState;
-    elifState          = if_statement(); // recursive call
-    elifState->is_elif = true;
+  if (p.match(token::ETokenKind::ELIF)) {
+    auto node_elif_id  = if_statement(); // recursive call
+    auto node_elif     = p.scr_info.nodes->get_as<ast::Statement_If>(node_elif_id.get_node_id());
+    node_elif->is_elif = true;
 
-    if_state->alternative_statement = std::move(elifState);
-  } else if (ctx.tok_v.match(TokTy::ELSE)) {
-    std::unique_ptr<ast::statement::If> elseState;
-    elseState            = ctx.Create_Node<ast::statement::If>(ctx.tok_v.peek(-2)); // peek to else token
-    elseState->codeblock = ctx.p_loc->code_block_instruction();
-    elseState->is_else   = true;
+    node->alternative_statement = node_elif->node_id;
+  } else if (p.match(token::ETokenKind::ELSE)) {
+    parser_add_node(node_else, Statement_If, p.peek(-1).id);
+    node_else->codeblock = p.p_loc->parse_codeblock();
+    node_else->is_else   = true;
 
-    if_state->alternative_statement = std::move(elseState);
+    node->alternative_statement = node_else->node_id;
   }
 
-  ctx.exit_scope();
+  p.exit_scope();
 
-  return if_state;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::For> parser::Parser_Statement::for_statement()
+ast::_gnid parser::Parser_Statement::for_statement()
 {
-  static const std::string hint =
-      "define for state like:"
-      "\n  - for index : `for i in start..end { ... }`"
-      "\n  - for array : `for mut/ref/copy item in array` { ... }"
-      "\n  - for array with index : `for i, mut/ref/copy item in array { ... }`"
-      "\n  - for map : `for mut/ref/copy (item, key) in map { ... }`"
-      "\n  - for map with index : `for i, mut/ref/copy (item, key) in map { ... }`"
-      "\n  - for unpack : `for mut/ref/copy (a, b, ...) in array_tuple { ... }`"
-      "\n  - for unpack with index : `for i, mut/ref/copy (a, b, ...) in array_tuple { ... }`";
+  constexpr std::string_view hint =
+      R"(define for state like:
+  - for index : `for i in start..end { ... }`
+  - for array : `for mut/ref/copy item in array` { ... }
+  - for array with index : `for i, mut/ref/copy item in array { ... }`
+  - for map : `for mut/ref/copy (item, key) in map { ... }`
+  - for map with index : `for i, mut/ref/copy (item, key) in map { ... }`
+  - for unpack : `for mut/ref/copy (a, b, ...) in array_tuple { ... }`
+  - for unpack with index : `for i, mut/ref/copy (a, b, ...) in array_tuple { ... }`)";
 
-  auto forState = ctx.Create_Node<ast::statement::For>(ctx.tok_v.peek());
+  parser_add_node(node, Statement_For, p.peek().id);
 
-  ctx.tok_v.match(TokTy::FOR);
+  p.match(token::ETokenKind::FOR);
 
-  ctx.enter_scope(nullptr, "for");
+  p.enter_scope(*node, "for");
 
   // index
-  if (ctx.tok_v.check(TokTy::IDENTIFIER)) {
-    auto index              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-    index->declaration_name = ctx.parse_name("", hint);
-    index->capability       = ECapability::Mut;
+  if (p.check(token::ETokenKind::IDENTIFIER)) {
+    parser_add_node(index, Local_Binding, p.peek().id);
+    index->name       = p.parse_name("", hint);
+    index->capability = ast::ECapability::Mut;
 
-    auto type   = ctx.Create_Node<ast::type::Primitive>(index.get()->node_token);
-    type->type  = EPrimType::iSize;
-    index->type = ast::type::get_isize_type();
+    index->inferred_type = type::TYPEID_iSize;
 
-    ctx.current_module->add_item(index);
-    forState->index = std::move(index);
+    p.add_symbol(index->node_id.get_node_id());
+    node->index = index->node_id;
   }
   // items
-  if (ctx.tok_v.check_any(k_capability)) {
-    ECapability capa = TokTy_to_ECapability(ctx.tok_v.next().type);
+  if (p.check_any({token::k_capability})) {
+    ast::ECapability capa = ast::ETokenKind_to_ECapability(p.next().kind);
 
-    if (ctx.tok_v.match(TokTy::OPEN_PAREN)) {
-      while (!ctx.tok_v.is_end()) {
-        auto item              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-        item->capability       = capa;
-        item->declaration_name = ctx.parse_name("", hint);
+    if (p.match(token::ETokenKind::OPEN_PAREN)) {
+      while (!p.is_end()) {
+        parser_add_node(item, Local_Binding, p.peek().id);
+        item->capability = capa;
+        item->name       = p.parse_name("", hint);
 
-        ctx.current_module->add_item(item);
-        forState->items.push_back(std::move(item));
+        p.add_symbol(item->node_id.get_node_id());
+        node->items.push_back(item->node_id);
 
-        if (ctx.match_field_separator(TokTy::COMMA, TokTy::CLOSE_PAREN)) break;
+        if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_PAREN)) break;
       }
     } else {
-      auto item              = ctx.Create_Decl<ast::declaration::local::Variable_Binding>(ctx.tok_v.peek());
-      item->capability       = capa;
-      item->declaration_name = ctx.parse_name("", hint);
+      parser_add_node(item, Local_Binding, p.peek().id);
+      item->capability = capa;
+      item->name       = p.parse_name("", hint);
 
-      ctx.current_module->add_item(item);
-      forState->items.push_back(std::move(item));
+      p.add_symbol(item->node_id.get_node_id());
+      node->items.push_back(item->node_id);
     }
   }
 
-  ctx.tok_v.expect(117, TokTy::IN, "Expected in keyword 'in' after for identifier.", hint);
+  p.expect(117, token::ETokenKind::IN, "Expected in keyword 'in' after for identifier.", hint);
 
-  forState->expression = ctx.p_expr->parse_expression();
+  node->expression = p.p_expr->parse_expression();
 
-  forState->codeblock = ctx.p_loc->code_block_instruction();
+  node->codeblock = p.p_loc->parse_codeblock();
 
-  ctx.exit_scope();
+  p.exit_scope();
 
-  return forState;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::Loop> parser::Parser_Statement::loop_statement()
+ast::_gnid parser::Parser_Statement::loop_statement()
 {
-  static const std::string hint = "define loop statement like: `loop { ... }`";
+  constexpr std::string_view hint = "define loop statement like: `loop { ... }`";
 
-  auto flow = ctx.Create_Node<ast::statement::Loop>(ctx.tok_v.peek());
+  parser_add_node(node, Statement_Loop, p.peek().id);
 
-  ctx.tok_v.match(TokTy::LOOP);
-  ctx.enter_scope(nullptr, "loop");
+  p.match(token::ETokenKind::LOOP);
+  p.enter_scope(*node, "loop");
 
-  flow->codeblock = ctx.p_loc->code_block_instruction();
+  node->codeblock = p.p_loc->parse_codeblock();
 
-  ctx.exit_scope();
+  p.exit_scope();
 
-  return flow;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::While> parser::Parser_Statement::while_statement()
+ast::_gnid parser::Parser_Statement::while_statement()
 {
-  static const std::string while_hint =
-      "define while statement like:"
-      "\n  - `while <condition> { ... }`"
-      "\n  - `while <confition> => ...`";
-  static const std::string do_while_hint =
-      "define do-while statement like:"
-      "\n  - `do { ... } while condition;`"
-      "\n  - `do => ... while confition;`";
+  constexpr std::string_view while_hint =
+      R"(define while statement like:
+  - `while <condition> { ... }`
+  - `while <confition> => ...`)";
+  constexpr std::string_view do_while_hint =
+      R"(define do-while statement like:
+  - `do { ... } while condition;`
+  - `do => ... while confition;`)";
 
-  auto flow = ctx.Create_Node<ast::statement::While>(ctx.tok_v.peek());
-  ctx.enter_scope(nullptr, "while");
+  parser_add_node(node, Statement_While, p.peek().id);
+  p.enter_scope(*node, "while");
 
-  if (ctx.tok_v.match(TokTy::WHILE)) {
-    flow->is_do = false;
+  if (p.match(token::ETokenKind::WHILE)) {
+    node->is_do = false;
 
-    flow->evaluator = ctx.p_loc->parse_evaluator(nullptr);
+    node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
 
-    flow->codeblock = ctx.p_loc->code_block_instruction();
-  } else if (ctx.tok_v.match(TokTy::DO_WHILE)) {
-    flow->is_do = true;
+    node->codeblock = p.p_loc->parse_codeblock();
+  } else if (p.match(token::ETokenKind::DO_WHILE)) {
+    node->is_do = true;
 
-    flow->codeblock = ctx.p_loc->code_block_instruction();
+    node->codeblock = p.p_loc->parse_codeblock();
 
-    ctx.tok_v.expect(118, TokTy::WHILE, "Expected while keyword after do statement.", do_while_hint);
+    p.expect(118, token::ETokenKind::WHILE, "Expected while keyword after do statement.", do_while_hint);
 
-    flow->evaluator = ctx.p_loc->parse_evaluator(nullptr);
+    node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
 
-    ctx.tok_v.match(TokTy::SEMICOLON);
+    p.match(token::ETokenKind::SEMICOLON);
   } else
-    ctx.tok_v.add_error(119, "Expected do or while keyword!", do_while_hint);
+    p.add_error(119, "Expected do or while keyword!", do_while_hint);
 
-  ctx.exit_scope();
+  p.exit_scope();
 
-  return flow;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::Match> parser::Parser_Statement::match_statement()
+ast::_gnid parser::Parser_Statement::match_statement()
 {
-  static const std::string hint =
-      "define match like:"
-      "\n  `match value {"
-      "\n     case > 100 => ..."
-      "\n     case in 0..=10 => { ... }"
-      "\n     case Validation::Valid(a) => { ... }"
-      "\n     _ => { ... }"
-      "\n   }`";
+  constexpr std::string_view hint =
+      R"(define match like:
+  `match value {
+     case > 100 => ...
+     case in 0..=10 => { ... }
+     case Validation::Valid(a) => { ... }
+     _ => { ... }
+   }`)";
 
-  auto match = ctx.Create_Node<ast::statement::Match>(ctx.tok_v.peek());
+  parser_add_node(node, Statement_Match, p.peek().id);
 
-  ctx.tok_v.match(TokTy::MATCH);
-  ctx.enter_scope(nullptr, "match");
+  p.match(token::ETokenKind::MATCH);
+  p.enter_scope(*node, "match");
 
-  match->base = std::shared_ptr<ast::AExpression>(ctx.p_expr->parse_expression().release());
+  node->base = p.p_expr->parse_expression();
 
-  ctx.tok_v.expect(120, TokTy::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
+  p.expect(120, token::ETokenKind::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
   bool otherDefine = false;
 
   // check all cases
-  while (!ctx.tok_v.is_end()) {
-    if (otherDefine) ctx.tok_v.add_error(121, "Expected end match '}' after the other '_ =>' case definition.", hint);
+  while (!p.is_end()) {
+    if (otherDefine) p.add_error(121, "Expected end match '}' after the other '_ =>' case definition.", hint);
 
-    if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
-      if (match->cases.empty()) {
-        ctx.tok_v.add_error(122, "Match case without any case defined", hint);
+    if (p.match(token::ETokenKind::CLOSE_BRACE)) {
+      if (node->cases.empty()) {
+        p.add_error(122, "Match case without any case defined", hint);
       }
       break;
     }
 
-    if (ctx.tok_v.match(TokTy::UNDERSCORE)) {
-      auto ncase       = ctx.Create_Node<ast::statement::Match_Case>(ctx.tok_v.peek(-1));
-      ncase->codeblock = ctx.p_loc->code_block_instruction();
-      otherDefine      = true;
+    if (p.match(token::ETokenKind::UNDERSCORE)) {
+      parser_add_node(n_case, Statement_Match_Case, p.peek().id);
+      n_case->codeblock = p.p_loc->parse_codeblock();
+      otherDefine       = true;
       break;
     }
 
-    auto ncase = ctx.Create_Node<ast::statement::Match_Case>(ctx.tok_v.peek());
+    parser_add_node(n_case, Statement_Match_Case, p.peek().id);
 
-    if (ctx.tok_v.match_any({TokTy::CAPA_MUT, TokTy::CAPA_REF})) {
-      ncase->evaluator = ast::Evaluator(std::move(ctx.p_loc->parse_pattern(match->base)));
+    if (p.match_any({token::ETokenKind::CAPA_MUT, token::ETokenKind::CAPA_REF})) {
+      n_case->evaluator = p.p_loc->parse_pattern(node->base);
     } else {
-      ncase->evaluator = ctx.p_expr->parse_expression();
+      n_case->evaluator = p.p_expr->parse_expression();
     }
 
-    ncase->codeblock = ctx.p_loc->code_block_instruction();
+    n_case->codeblock = p.p_loc->parse_codeblock();
 
-    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
-  ctx.exit_scope();
+  p.exit_scope();
 
-  return match;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::GoTo> parser::Parser_Statement::goto_statement()
+ast::_gnid parser::Parser_Statement::goto_statement()
 {
-  ctx.tok_v.match(TokTy::GOTO);
-  auto goto_statement   = ctx.Create_Node<ast::statement::GoTo>(ctx.tok_v.peek(-1));
-  goto_statement->label = ctx.parse_name("", "define goto statement like: `goto name`.");
-  return goto_statement;
+  p.match(token::ETokenKind::GOTO);
+  parser_add_node(node, Statement_GoTo, p.peek().id);
+  node->label = p.parse_name("", "define goto statement like: `goto name`.");
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::Return> parser::Parser_Statement::return_flow()
+ast::_gnid parser::Parser_Statement::return_flow()
 {
-  auto node = ctx.Create_Node<ast::statement::Return>(ctx.tok_v.peek());
+  parser_add_node(node, Statement_Return, p.peek().id);
+  p.match(token::ETokenKind::RETURN);
 
-  ctx.tok_v.match(TokTy::RETURN);
-
-  node->target_function = ctx.current_function;
-
-  if (ctx.tok_v.match(TokTy::SEMICOLON)) return node;
-  if (ctx.tok_v.check(TokTy::CLOSE_BRACE)) return node;
+  if (p.match(token::ETokenKind::SEMICOLON)) return node->node_id;
+  if (p.check(token::ETokenKind::CLOSE_BRACE)) return node->node_id;
 
   // return with value
-  node->value = ctx.p_expr->parse_expression();
-  return node;
+  node->value = p.p_expr->parse_expression();
+  return node->node_id;
 }
 
-std::unique_ptr<ast::statement::GoTo_Label> parser::Parser_Statement::goto_label_statement()
+ast::_gnid parser::Parser_Statement::goto_label_statement()
 {
-  static const std::string hint = "define goto label like: `label my_label:`";
+  constexpr std::string_view hint = "define goto label like: `label my_label:`";
 
-  ctx.tok_v.match(TokTy::GOTO_LABEL);
+  p.match(token::ETokenKind::GOTO_LABEL);
 
-  auto goto_label              = ctx.Create_Decl<ast::statement::GoTo_Label>(ctx.tok_v.peek(-1));
-  goto_label->declaration_name = ctx.parse_name("", hint);
+  parser_add_node(node, Statement_GoTo_Label, p.peek().id);
+  node->label = p.parse_name("", hint);
 
-  ctx.current_module->add_item(goto_label);
+  p.add_symbol(node->node_id.get_node_id());
 
-  goto_label->codeblock = ctx.p_loc->code_block_instruction();
+  node->codeblock = p.p_loc->parse_codeblock();
 
-  return std::unique_ptr<ast::statement::GoTo_Label>(goto_label.get());
+  return node->node_id;
 }

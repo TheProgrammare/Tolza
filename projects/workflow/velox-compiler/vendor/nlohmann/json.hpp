@@ -4593,7 +4593,7 @@ class exception : public std::exception
     JSON_HEDLEY_NON_NULL(3)
     exception(int id_, const char* what_arg) : id(id_), m(what_arg) {} // NOLINT(bugprone-throw-keyword-missing)
 
-    static std::string name(const std::string& ename, int id_)
+    static std::string name(std::string_view ename, int id_)
     {
         return concat("[json.exception.", ename, '.', std::to_string(id_), "] ");
     }
@@ -4706,7 +4706,7 @@ class parse_error : public exception
     @return parse_error object
     */
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static parse_error create(int id_, const position_t& pos, const std::string& what_arg, BasicJsonContext context)
+    static parse_error create(int id_, const position_t& pos, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("parse_error", id_), "parse error",
                                      position_string(pos), ": ", exception::diagnostics(context), what_arg);
@@ -4714,7 +4714,7 @@ class parse_error : public exception
     }
 
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static parse_error create(int id_, std::size_t byte_, const std::string& what_arg, BasicJsonContext context)
+    static parse_error create(int id_, std::size_t byte_, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("parse_error", id_), "parse error",
                                      (byte_ != 0 ? (concat(" at byte ", std::to_string(byte_))) : ""),
@@ -4750,7 +4750,7 @@ class invalid_iterator : public exception
 {
   public:
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static invalid_iterator create(int id_, const std::string& what_arg, BasicJsonContext context)
+    static invalid_iterator create(int id_, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("invalid_iterator", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
@@ -4768,7 +4768,7 @@ class type_error : public exception
 {
   public:
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static type_error create(int id_, const std::string& what_arg, BasicJsonContext context)
+    static type_error create(int id_, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("type_error", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
@@ -4785,7 +4785,7 @@ class out_of_range : public exception
 {
   public:
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static out_of_range create(int id_, const std::string& what_arg, BasicJsonContext context)
+    static out_of_range create(int id_, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("out_of_range", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
@@ -4802,7 +4802,7 @@ class other_error : public exception
 {
   public:
     template<typename BasicJsonContext, enable_if_t<is_basic_json_context<BasicJsonContext>::value, int> = 0>
-    static other_error create(int id_, const std::string& what_arg, BasicJsonContext context)
+    static other_error create(int id_, std::string_view what_arg, BasicJsonContext context)
     {
         const std::string w = concat(exception::name("other_error", id_), exception::diagnostics(context), what_arg);
         return {id_, w.c_str()};
@@ -8956,7 +8956,7 @@ struct json_sax
     @return whether parsing should proceed (must return false)
     */
     virtual bool parse_error(std::size_t position,
-                             const std::string& last_token,
+                             std::string_view last_token,
                              const detail::exception& ex) = 0;
 
     json_sax() = default;
@@ -9147,7 +9147,7 @@ class json_sax_dom_parser
     }
 
     template<class Exception>
-    bool parse_error(std::size_t /*unused*/, const std::string& /*unused*/,
+    bool parse_error(std::size_t /*unused*/, std::string_view /*unused*/,
                      const Exception& ex)
     {
         errored = true;
@@ -9542,7 +9542,7 @@ class json_sax_dom_callback_parser
     }
 
     template<class Exception>
-    bool parse_error(std::size_t /*unused*/, const std::string& /*unused*/,
+    bool parse_error(std::size_t /*unused*/, std::string_view /*unused*/,
                      const Exception& ex)
     {
         errored = true;
@@ -9800,7 +9800,7 @@ class json_sax_acceptor
         return true;
     }
 
-    bool parse_error(std::size_t /*unused*/, const std::string& /*unused*/, const detail::exception& /*unused*/)
+    bool parse_error(std::size_t /*unused*/, std::string_view /*unused*/, const detail::exception& /*unused*/)
     {
         return false;
     }
@@ -9886,7 +9886,7 @@ using end_array_function_t = decltype(std::declval<T&>().end_array());
 
 template<typename T, typename Exception>
 using parse_error_function_t = decltype(std::declval<T&>().parse_error(
-        std::declval<std::size_t>(), std::declval<const std::string&>(),
+        std::declval<std::size_t>(), std::declval<std::string_view>(),
         std::declval<const Exception&>()));
 
 template<typename SAX, typename BasicJsonType>
@@ -12938,8 +12938,8 @@ class binary_reader
     @return a message string to use in the parse_error exceptions
     */
     std::string exception_message(const input_format_t format,
-                                  const std::string& detail,
-                                  const std::string& context) const
+                                  std::string_view detail,
+                                  std::string_view context) const
     {
         std::string error_msg = "syntax error while parsing ";
 
@@ -13541,7 +13541,7 @@ class parser
         return last_token = m_lexer.scan();
     }
 
-    std::string exception_message(const token_type expected, const std::string& context)
+    std::string exception_message(const token_type expected, std::string_view context)
     {
         std::string error_msg = "syntax error ";
 

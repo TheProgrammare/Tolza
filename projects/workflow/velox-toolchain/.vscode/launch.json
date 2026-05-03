@@ -6,7 +6,7 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["create", "workspace", "--path", "/mnt/data/Workspace/velox/projects/velox-workspace", "--name", "velox-example", "-f"],
+            "args": ["create", "workspace", "--path", "/media/data/Workspace/velox/projects/velox-workspace", "--name", "velox-example", "-f"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },

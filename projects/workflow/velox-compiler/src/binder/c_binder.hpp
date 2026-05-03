@@ -18,6 +18,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <clang-c/Index.h>
@@ -41,8 +42,8 @@ Type   c_type_to_type(CXType p_cType);
 void c_lib_to_velox_lib(const Bind_Package& p_bind);
 
 CXChildVisitResult universal_visitor(CXCursor p_cursor, CXCursor p_parent, CXClientData p_client_data);
-AST                parse_translation_unit(const Bind_Package& p_bind, const std::string& p_file_path,
-                                          const std::vector<std::string>& p_args);
+AST                parse_translation_unit(const Bind_Package& p_bind, std::string_view p_file_path,
+                                          const std::vector<std::string_view>& p_args = {});
 
 } // namespace c
 } // namespace ffi

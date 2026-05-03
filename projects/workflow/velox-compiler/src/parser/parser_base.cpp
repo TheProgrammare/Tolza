@@ -2,17 +2,21 @@
 #include "parser_base.hpp"
 
 #include "ast/ast_base.hpp"
-#include "ast/ast_codeblock_instruction.hpp"
-#include "ast/ast_data.hpp"
-#include "ast/ast_declaration.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/token.hpp"
+#include "nexus/ast/ast.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_operation.hpp"
 #include "ast/ast_memory.hpp"
 
-#include "misc/module_manager.hpp"
+#include "nexus/module.hpp"
+#include "nexus/scope.hpp"
 #include "parser_context.hpp"
-#include "parser_declaration.hpp"
+#include "parser_declaration_global.hpp"
 #include "parser_declaration_cop.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_context.hpp"
@@ -22,17 +26,19 @@
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
+#include "ast/ast_declaration_global.hpp"
 
-#include "misc/script_info.hpp"
-#include "misc/symbol_manager.hpp"
+#include "nexus/script.hpp"
+#include "nexus/symbol.hpp"
 
-#include "misc/metacode.hpp"
+#include "nexus/metacode/metacode.hpp"
 #include <iostream>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 parser::Parser_Base::Parser_Base(Parser_Context& p_ctx)
-  : ctx(p_ctx)
+  : p(p_ctx)
 {
 }
 
@@ -40,232 +46,150 @@ parser::Parser_Base::~Parser_Base()
 {
 }
 
-std::shared_ptr<ast::declaration::Import> parser::Parser_Base::parse_import()
+ast::_gnid parser::Parser_Base::parse_import()
 {
-  static const std::string hint =
+  constexpr std::string_view hint =
       R"(define import module like:
-  - import `import <name>[::*]`
-  - import standard `import @<name>[::*]`
-  - import user (default) `import $<name>[::*]`
-  - import external `import extern <lang>::<lib>`
+  - import `import <name>[::*] as <alias>`
+  - import user (default) `import src::<name>[::*] as <alias>`
+  - import standard `import std::<name>[::*] as <alias>`
+  - import package `import pkg::<name>[::*] as <alias>`
+  - import vendor `import ven::<name>[::*] as <alias>`
+  - import external `import bind::<lang>::<lib> as <alias>`
   - export/import module only declared in the root scope)";
 
-  auto full_path = [](const ast::AIdentifier& id) -> std::vector<std::string> {
-    if (auto ptr = dynamic_cast<const ast::Expr_ID*>(&id)) {
-      std::vector<std::string> path;
-      path.push_back(ptr->name);
-      return path;
-    } else if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) {
-      std::vector<std::string> path = ptr->path;
-      path.push_back(ptr->name);
-      return path;
+  p.match(token::ETokenKind::IMPORT);
+
+  auto base_tok = p.peek(-1);
+
+  parser_add_node(imp, Import, p.peek().id);
+
+  imp->regex = p.p_base->regex_path();
+  auto regex = p.scr_info.nodes->get_as<ast::Path_Regex>(imp->regex.get_node_id());
+
+  std::string out_err;
+  auto mod = compiler::COMPILER.modules.tools.build_module_from_path(p.scr_id, regex->path, regex->source, out_err);
+  if (!mod) {
+    auto tok = p.scr_info.file_info.tokens->get(imp->node_token_id);
+    auto err =
+        Error_Diagnostic(p.scr_id, 238, tok.begin, tok.begin + tok.length, compiler::EPhase::binder, out_err, "");
+    compiler::COMPILER.add_error(std::move(err));
+  }
+
+  p.get_current_scope().port.prepare_import(imp->node_id);
+
+  p.scr_info.imports[imp->node_id] = mod;
+
+  return imp->node_id;
+}
+
+ast::_gnid parser::Parser_Base::parse_export()
+{
+  constexpr std::string_view hint = "define export module like: `export {...}`";
+
+  p.match(token::ETokenKind::EXPORT);
+
+  parser_add_node(exp_node, Global_Export, p.peek().id);
+
+  p.expect(9, token::ETokenKind::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+  p.enter_scope(*exp_node, "export");
+
+  p.in_export = true;
+
+  if (p.match(token::ETokenKind::CLOSE_BRACE)) {
+    p.in_export = false;
+    return exp_node->node_id;
+  }
+
+  while (!p.is_end()) {
+    if (p.check_any({token::ETokenKind::EXPORT})) {
+      p.add_error_tok(10, p.peek(), "Illegal nested export module instruction.", hint);
     }
-  };
 
-  ctx.tok_v.match(TokTy::IMPORT);
+    exp_node->codeblock = p.p_loc->parse_codeblock();
 
-  auto base_tok = ctx.tok_v.peek(-1);
-
-  auto imp = ctx.Create_Decl<ast::declaration::Import>(base_tok);
-
-  EFileSource f_src;
-
-  // import std: @
-  if (ctx.tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
-    f_src = EFileSource::stdlib;
-  }
-  // import usr: $
-  else if (ctx.tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
-    f_src = EFileSource::src;
-  }
-  // import pkg: #
-  else if (ctx.tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
-    f_src = EFileSource::pkg_lib;
-  }
-  // import bind: ?
-  else if (ctx.tok_v.match_any({TokTy::INTERROGATIVE, TokTy::BIND_LIB})) {
-    f_src = EFileSource::binding;
-  } else {
-    f_src = EFileSource::relative;
+    p.match(token::ETokenKind::SEMICOLON);
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
-  // name path
-  {
-    auto next_path = full_path(*ctx.p_expr->identifier().get());
-    imp->path.insert(imp->path.end(), next_path.begin(), next_path.end());
-  }
+  p.in_export            = false;
+  p.scr_info.node_export = exp_node->node_id;
 
-  auto mod = module::build_module_from_path(ctx.current_module, imp->path, f_src);
+  return exp_node->node_id;
+}
+
+ast::_gnid parser::Parser_Base::parse_reexport()
+{
+  constexpr std::string_view hint = "define re-export module like: `reexport <path>`";
+
+  p.match(token::ETokenKind::REEXPORT);
+
+  auto base_tok = p.peek(-1);
+
+
+  parser_add_node(reexp_node, Global_Reexport, p.peek().id);
+
+  reexp_node->regex = p.p_base->regex_path();
+  auto regex        = p.scr_info.nodes->get_as<ast::Path_Regex>(reexp_node->regex.get_node_id());
+
+  std::string out_err;
+  auto mod = compiler::COMPILER.modules.tools.build_module_from_path(p.scr_id, regex->path, regex->source, out_err);
 
 
   if (!mod) {
-    ctx.tok_v.add_error_tok(238, base_tok, mod.error(), "");
-    return imp;
+    p.add_error_tok(240, base_tok, out_err, "");
+    return reexp_node->node_id;
   }
 
-  bool success = ctx.current_module->import_module(mod.value());
+  p.get_current_module().port.reexport_item(reexp_node->node_id);
 
-  if (!success) {
-    ctx.tok_v.add_error_tok(
-        239, base_tok, "Impossible to add the module \"" + mod.value()->debug_name + "\" in the current module", "");
-  }
-
-  return imp;
+  return reexp_node->node_id;
 }
 
-std::shared_ptr<ast::declaration::Export> parser::Parser_Base::parse_export()
+
+ast::_gnid parser::Parser_Base::parse_extern()
 {
-  static const std::string hint = "define export module like: `export {...}`";
+  constexpr std::string_view hint = R"(define extern like: `extern "ABI" {...}`)";
 
-  ctx.tok_v.match(TokTy::EXPORT);
+  p.match(token::ETokenKind::EXTERN);
 
-  if (ctx.current_module->find_item("export"))
-    ctx.tok_v.add_error(237, "Illegal double export declaration in same scope",
-                        "Specify only one `export {...}` declaration for each scope.");
+  auto ext_tok = p.peek(-1);
 
-  auto exp_node = ctx.Create_Decl<ast::declaration::Export>(ctx.tok_v.peek(-1));
-
-  ctx.tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
-  ctx.enter_module(exp_node, "export");
-
-  ctx.in_export = true;
+  parser_add_node(ext_node, Global_Extern, p.peek().id);
+  ext_node->api =
+      p.tok_to_str(p.expect(153, token::ETokenKind::L_TEXTUAL, "Expected literal string to define ABI.", hint).id);
 
 
-  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
-    ctx.in_export = false;
-    return exp_node;
+  p.expect(9, token::ETokenKind::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
+
+  p.in_extern = true;
+  p.enter_scope(*ext_node, "extern");
+
+  if (p.match(token::ETokenKind::CLOSE_BRACE)) {
+    p.in_extern = false;
+    return ext_node->node_id;
   }
 
-  while (!ctx.tok_v.is_end()) {
-    if (ctx.tok_v.check_any({TokTy::EXPORT})) {
-      ctx.tok_v.add_error_tok(10, ctx.tok_v.peek(), "Illegal nested export module instruction.", hint);
+  while (!p.is_end()) {
+    if (p.check_any({token::ETokenKind::IMPORT, token::ETokenKind::EXPORT})) {
+      p.add_error_tok(10, p.peek(), "Illegal nested module export/import instruction.", hint);
     }
 
-    exp_node->declarations.push_back(ctx.p_decl->parse_declaration());
+    ext_node->codeblock = p.p_loc->parse_codeblock();
 
-    ctx.tok_v.match(TokTy::SEMICOLON);
-    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
+    p.match(token::ETokenKind::SEMICOLON);
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::CLOSE_BRACE)) break;
   }
 
-  ctx.in_export = false;
+  p.in_extern = false;
+  p.exit_scope();
 
-
-  return exp_node;
+  return ext_node->node_id;
 }
 
-std::shared_ptr<ast::declaration::ReExport> parser::Parser_Base::parse_reexport()
+ast::_gnid parser::Parser_Base::parse_instruction()
 {
-  static const std::string hint = "define re-export module like: `reexport <path>`";
-
-  auto full_path = [](const ast::AIdentifier& id) -> std::vector<std::string> {
-    if (auto ptr = dynamic_cast<const ast::Expr_ID*>(&id)) {
-      std::vector<std::string> path;
-      path.push_back(ptr->name);
-      return path;
-    } else if (auto ptr = dynamic_cast<const ast::Expr_ID_Qualified*>(&id)) {
-      std::vector<std::string> path = ptr->path;
-      path.push_back(ptr->name);
-      return path;
-    }
-  };
-
-
-  ctx.tok_v.match(TokTy::REEXPORT);
-
-  auto base_tok = ctx.tok_v.peek(-1);
-
-  auto reexp_node = ctx.Create_Decl<ast::declaration::ReExport>(base_tok);
-
-
-  EFileSource f_src;
-
-  // import std: @
-  if (ctx.tok_v.match_any({TokTy::AT, TokTy::STD_LIB})) {
-    f_src = EFileSource::stdlib;
-  }
-  // import usr: $
-  else if (ctx.tok_v.match_any({TokTy::DOLLAR, TokTy::USR_LIB})) {
-    f_src = EFileSource::src;
-  }
-  // import pkg: #
-  else if (ctx.tok_v.match_any({TokTy::HASHTAG, TokTy::PKG_LIB})) {
-    f_src = EFileSource::pkg_lib;
-  }
-  // import bind: ?
-  else if (ctx.tok_v.match_any({TokTy::INTERROGATIVE, TokTy::BIND_LIB})) {
-    f_src = EFileSource::binding;
-  } else {
-    f_src = EFileSource::relative;
-  }
-
-  // name path
-  {
-    auto next_path = full_path(*ctx.p_expr->identifier().get());
-    reexp_node->path.insert(reexp_node->path.end(), next_path.begin(), next_path.end());
-  }
-
-  auto mod = module::build_module_from_path(ctx.current_module, reexp_node->path, f_src);
-
-
-  if (!mod) {
-    ctx.tok_v.add_error_tok(240, base_tok, mod.error(), "");
-    return reexp_node;
-  }
-
-  bool success = ctx.current_module->reexport_module(mod.value());
-
-  if (!success) {
-    ctx.tok_v.add_error_tok(
-        238, base_tok, "Impossible to add the module \"" + mod.value()->debug_name + "\" in the current module", "");
-  }
-
-  return reexp_node;
-}
-
-
-std::shared_ptr<ast::declaration::Extern> parser::Parser_Base::parse_extern()
-{
-  static const std::string hint = R"(define extern like: `extern "ABI" {...}`)";
-
-  ctx.tok_v.match(TokTy::EXTERN);
-
-  auto ext_tok = ctx.tok_v.peek(-1);
-
-  auto ext_node = ctx.Create_Decl<ast::declaration::Extern>(ext_tok);
-  ext_node->declaration_name =
-      ctx.tok_v.expect(153, TokTy::L_TEXTUAL, "Expected literal string to define ABI.", hint).val;
-
-
-  ctx.tok_v.expect(9, TokTy::OPEN_BRACE, "Expected export begin scope '{' after import instruction.", hint);
-
-  ctx.in_extern = true;
-  ctx.enter_module(ext_node, "extern");
-
-  if (ctx.tok_v.match(TokTy::CLOSE_BRACE)) {
-    ctx.in_extern = false;
-    return ext_node;
-  }
-
-  while (!ctx.tok_v.is_end()) {
-    if (ctx.tok_v.check_any({TokTy::IMPORT, TokTy::EXPORT})) {
-      ctx.tok_v.add_error_tok(10, ctx.tok_v.peek(), "Illegal nested module export/import instruction.", hint);
-    }
-
-    ext_node->declarations.push_back(ctx.p_decl->parse_declaration());
-
-    ctx.tok_v.match(TokTy::SEMICOLON);
-    if (ctx.match_field_separator(TokTy::S_END_OF_FILE, TokTy::CLOSE_BRACE)) break;
-  }
-
-  ctx.in_extern = false;
-  ctx.exit_module();
-
-  return ext_node;
-}
-
-ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
-{
-  static const std::string hint =
+  constexpr std::string_view hint =
       R"(define insutrction like:
   - statement `if/elif/else/match/while/do-while/loop/for/goto`
   - local variable declaration `let/var/const`
@@ -277,34 +201,167 @@ ast::CodeBlock_instruction parser::Parser_Base::parse_instruction()
   - memory deletion `del pointer_name`)";
 
   // if elif else for ...
-  if (auto statement = ctx.p_state->parse_statement(true)) {
-    return ast::CodeBlock_instruction(std::move(statement));
-  } else if (ctx.tok_v.check_any({TokTy::VAR, TokTy::LET, TokTy::CONST})
-             && ctx.tok_v.peek(1).type == TokTy::OPEN_PAREN) {
-    auto tuple = ctx.p_loc->tuple_destructuring();
-    return ast::CodeBlock_instruction(std::move(tuple));
+  if (auto statement = p.p_state->parse_statement(true)) {
+    return statement;
+  } else if (p.check_any({token::ETokenKind::VAR, token::ETokenKind::LET, token::ETokenKind::CONST})
+             && p.check_at(1, token::ETokenKind::OPEN_PAREN)) {
+    auto tuple = p.p_loc->tuple_destructuring();
+    return tuple;
   }
   // local variable + lambda
-  else if (auto local = ctx.p_loc->parse_local(true)) {
-    return ast::CodeBlock_instruction(local);
+  else if (auto local = p.p_loc->parse_local(true)) {
+    return local;
   }
   // del
-  else if (ctx.tok_v.check(TokTy::DEL)) {
-    auto del = ctx.p_mem->del();
-    return ast::CodeBlock_instruction(std::move(del));
-  } else if (auto expr = ctx.p_expr->parse_expression()) {
+  else if (p.check(token::ETokenKind::DEL)) {
+    auto del = p.p_mem->del();
+    return del;
+  } else if (auto expr = p.p_expr->parse_expression()) {
     // assignation and operator assignment
-    if (ctx.tok_v.check_any(kAssignationTokens)) {
-      auto assign = ctx.p_op->assignment(std::move(expr));
+    if (p.check_any(token::kAssignationTokens)) {
+      auto assign = p.p_op->assignment(std::move(expr));
 
-      return ast::CodeBlock_instruction(std::move(assign));
+      return assign;
     }
     // call and sys_call
-    else if (dynamic_cast<ast::expression::Call*>(expr.get())) {
-      return ast::CodeBlock_instruction(std::move(expr));
+    else if (expr) {
+      return expr;
     }
   }
 
-  ctx.tok_v.add_error_tok(11, ctx.tok_v.peek(), "Unexpected instruction", hint);
-  return ast::CodeBlock_instruction{};
+  p.add_error_tok(11, p.peek(), "Unexpected instruction", hint);
+  return BAD_NODE_ID;
+}
+
+ast::_gnid parser::Parser_Base::regex_path()
+{
+  constexpr std::string_view hint =
+      R"(define regex path like: 
+  - source: `std::` `src::` `pkg::` `bind::` `vend::` ``
+  - path: `a::b::c`
+  - multiple elements: `my_mod::{a, b, c}`
+  - all elements: `my_mod::*`)";
+
+  parser_add_node(regex, Path_Regex, p.peek().id);
+  regex->source = script::EFileSource::relative;
+
+  // import std:: @
+  if (p.match(token::ETokenKind::AT) || p.match_val("std")) {
+    p.expect(250, token::ETokenKind::STATIC_ACCESS, "Expected static access (a path) after a source specifier.", hint);
+    regex->source = script::EFileSource::stdlib;
+  }
+  // import src:: $
+  else if (p.match(token::ETokenKind::DOLLAR) || p.match_val("src")) {
+    p.expect(250, token::ETokenKind::STATIC_ACCESS, "Expected static access (a path) after a source specifier.", hint);
+    regex->source = script::EFileSource::src;
+  }
+  // import pkg:: #
+  else if (p.match(token::ETokenKind::HASHTAG) || p.match_val("pkg")) {
+    p.expect(250, token::ETokenKind::STATIC_ACCESS, "Expected static access (a path) after a source specifier.", hint);
+    regex->source = script::EFileSource::pkg_lib;
+  }
+  // import bind:: ?
+  else if (p.match(token::ETokenKind::INTERROGATIVE) || p.match_val("bind")) {
+    p.expect(250, token::ETokenKind::STATIC_ACCESS, "Expected static access (a path) after a source specifier.", hint);
+    regex->source = script::EFileSource::binding;
+  } else {
+    regex->source = script::EFileSource::relative;
+  }
+
+  while (!p.is_end()) {
+    regex->path.push_back(p.parse_name("Expected identifier in regex path.", hint));
+
+    if (p.match(token::ETokenKind::STATIC_ACCESS)) {
+      if (p.match(token::ETokenKind::OPEN_BRACKETS)) {
+        while (!p.is_end()) {
+          regex->elements.push_back(p.parse_name("Expected identifier inside a regex path element selection.", hint));
+
+          if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACKETS)) break;
+        }
+
+        break;
+      }
+    } else
+      break;
+  }
+
+  return regex->node_id;
+}
+
+
+ast::_gnid parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_allowed)
+{
+  constexpr std::string_view hint =
+      R"(define identifier like:"
+  - classic `name` -> name
+  - with scope path `mod A { name }` -> A.name
+  - with qualified id `A::B::C` -> A.B.C)";
+
+  bool root_scope    = false;
+  bool parent_scope  = false;
+  bool current_scope = false;
+
+  if (p.match(token::ETokenKind::STATIC_ACCESS)) {
+    root_scope = true;
+  } else if (p.match(token::ETokenKind::SUPER_MOD)) {
+    parent_scope = true;
+  } else if (p.match(token::ETokenKind::SELF)) {
+    current_scope = true;
+  }
+  // it's a simple id with no path
+  else if (p.peek(1).kind != token::ETokenKind::STATIC_ACCESS) {
+    parser_add_node(id, ID, p.peek().id);
+    if (!p_keyword_allowed)
+      id->name = p.parse_name("", hint);
+    else
+      id->name = std::string(p.tok_to_str(p.next().id));
+
+    return id->node_id;
+  }
+
+  // it's qualified id
+  if (p_no_qualified_id) p.add_error_tok(113, p.peek(-1), "Unexpected qualified id.", hint);
+
+  parser_add_node(id, ID_Qualified, p.peek().id);
+  size_t count = 0;
+  while (!p.is_end()) {
+    id->path.push_back(std::string(p.tok_to_str(p.next().id)));
+
+    p.match(token::ETokenKind::STATIC_ACCESS);
+
+    // no more path : the last element is the name
+    if (p.peek(1).kind != token::ETokenKind::STATIC_ACCESS) {
+      id->name = std::string(p.tok_to_str(p.next().id));
+      break;
+    }
+
+    count++;
+    if (count > 12) {
+      p.add_error(114, "Explicit path for identifier is too long (> " + std::to_string(12) + ")", hint);
+      break;
+    }
+  }
+
+  return id->node_id;
+}
+
+std::tuple<ast::_gnid, type::_id> parser::Parser_Base::identifier_typed()
+{
+  p.match_any({token::ETokenKind::TURBO_FISH, token::ETokenKind::OPEN_BRACE});
+
+  parser_add_node(id_type, ID_Typed, p.peek(-2).id);
+
+  auto ty_id = parser_type_factory.make_identifier(id_type->node_id, symbol::_id{});
+
+  if (p.match(token::ETokenKind::CLOSE_BRACKETS)) return {id_type->node_id, ty_id};
+
+  while (!p.is_end()) {
+    id_type->generic_args.push_back(p.p_type->parse_type());
+
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACKETS)) break;
+  }
+
+  // p.sym_m->check_if_unresolved_extern_sym(*id_type.get());
+
+  return {id_type->node_id, ty_id};
 }

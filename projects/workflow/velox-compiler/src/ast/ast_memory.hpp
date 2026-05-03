@@ -1,50 +1,26 @@
 #pragma once
 
-#include "ast_base.hpp"
-#include <memory>
-#include <string>
+#include "nexus/ast/ast.hpp"
 
 namespace ast
 {
-namespace memory
-{
 
 // del var
-struct Del final : public Node {
-  std::unique_ptr<AExpression> target;
-
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "delete ptr";
-  }
+AST_NODE(Memory_Del)
+{
+  SET_NODE(target);
 };
 
-struct Align final : public Node {
-  std::unique_ptr<AExpression> target;
-  size_t                       align = 0;
-
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "align(" + std::to_string(align) + ")";
-  }
+AST_NODE(Memory_Align)
+{
+  SET_NODE(target);
+  size_t align = 0;
 };
 
-struct Drop final : public Node {
-  std::unique_ptr<AExpression> target;
-
-  VISTOR_ACCEPT
-
-  std::string debug_str() const override
-  {
-    return "drop";
-  }
+AST_NODE(Memory_Drop)
+{
+  SET_NODE(target);
 };
 
-} // namespace memory
-  // Memory
 } // namespace ast
   // AST

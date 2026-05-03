@@ -1,39 +1,54 @@
 #pragma once
 
-#include <memory>
 #include <vector>
 
-#include "ast/ast_forward.hpp"
+#include "nexus/forward.hpp"
 
 namespace parser
 {
-struct Parser_Context;
-struct Parser_Type {
-  Parser_Type(Parser_Context& p_ctx)
-    : ctx(p_ctx)
-  {
-  }
+struct Parser_Type final {
+  Parser_Type(Parser_Context& p_ctx);
 
-  [[nodiscard]] std::shared_ptr<ast::AType> parse_type();
+  struct Param final {
+    token::_id     name_tok;
+    std::string    name;
+    ast::EPassMode passmode;
+    type::_id      type;
+    ast::_gnid     default_val;
+  };
+
+  struct Params final {
+    std::vector<Param> params;
+    bool               is_variadic = false;
+
+    std::vector<type::_id> to_type_params() const;
+  };
+
+  struct Proto final {
+    Params    params;
+    type::_id ret;
+    bool      is_explicit_ret;
+  };
+
+  [[nodiscard]] type::_id parse_type();
 
 private:
-  [[nodiscard]] std::shared_ptr<ast::type::Table>     table(bool p_is_const, bool p_is_optional, bool p_is_volatile);
-  [[nodiscard]] std::shared_ptr<ast::type::Ptr>       pointer(bool p_is_const, bool p_is_optional, bool p_is_volatile);
-  [[nodiscard]] std::shared_ptr<ast::type::Primitive> primitive(bool p_is_const, bool p_is_optional,
-                                                                bool p_is_volatile);
-  [[nodiscard]] std::shared_ptr<ast::Expr_ID_Type>    id_type(bool p_is_const, bool p_is_optional, bool p_is_volatile);
-  [[nodiscard]] std::shared_ptr<ast::type::Tuple>     tuple(bool p_is_const, bool p_is_optional, bool p_is_volatile);
-  [[nodiscard]] std::shared_ptr<ast::type::Function_Proto> function_proto(bool p_is_const, bool p_is_optional,
-                                                                          bool p_is_volatile);
-  // isRef, isConst, isOptional
-  [[nodiscard]] std::tuple<bool, bool, bool>               get_type_annotation();
+  [[nodiscard]] type::_id table(const type::Decorator& decorator);
+  [[nodiscard]] type::_id pointer(const type::Decorator& decorator);
+  [[nodiscard]] type::_id primitive(const type::Decorator& decorator);
+  [[nodiscard]] type::_id id_type(const type::Decorator& decorator);
+  [[nodiscard]] type::_id tuple(const type::Decorator& decorator);
+  [[nodiscard]] type::_id function_proto(const type::Decorator& decorator);
+  void                    get_decorator(type::Decorator& decorator);
+
 
 public:
-  [[nodiscard]] std::shared_ptr<ast::type::Tuple>          explicit_tuple();
-  [[nodiscard]] std::shared_ptr<ast::type::Get_Expr_Type>  expr_get_expr_type();
-  [[nodiscard]] std::shared_ptr<ast::type::Function_Proto> explicit_function_proto(bool p_is_lam = false);
-  [[nodiscard]] std::vector<std::shared_ptr<ast::declaration::local::Parameter>> parameters();
+  Proto                                parse_and_mount_local_callable(type::_id& prototype_id, bool& is_explicit_ret);
+  [[nodiscard]] std::vector<type::_id> explicit_tuple();
+  [[nodiscard]] ast::_gnid             get_type();
+  [[nodiscard]] Proto                  explicit_function_proto(bool p_is_lam = false);
+  [[nodiscard]] Params                 parameters();
 
-  Parser_Context& ctx;
+  Parser_Context& p;
 };
 } // namespace parser

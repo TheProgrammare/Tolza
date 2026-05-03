@@ -1,13 +1,19 @@
-#include "misc/error_output.hpp"
+#include "error_output.hpp"
 
-#include "ast/ast_base.hpp"
-#include "misc/script_info.hpp"
+#include "nexus/ast/ast.hpp"
+
+#include "nexus/forward.hpp"
+#include "nexus/pipeline.hpp"
+#include "nexus/script.hpp"
+#include "compiler/compiler.hpp"
 
 #include <sstream>
 #include <iomanip>
 #include <format>
+#include <string>
+#include <string_view>
 
-std::string ESeverity_to_str(EErrorSeverity severity)
+std::string_view ESeverity_to_str(EErrorSeverity severity)
 {
   switch (severity) {
   case EErrorSeverity::debug:   return "debug";
@@ -17,7 +23,7 @@ std::string ESeverity_to_str(EErrorSeverity severity)
   }
 }
 
-std::string ESeverity_to_color(EErrorSeverity severity)
+std::string_view ESeverity_to_color(EErrorSeverity severity)
 {
   switch (severity) {
   case EErrorSeverity::debug:   return "";
@@ -51,7 +57,7 @@ std::string escapeChar(unsigned char c)
   return oss.str();
 }
 
-std::string trim(const std::string& str)
+std::string_view trim(std::string_view str)
 {
   const char* whitespace = " \t\n\r\f\v";
 
@@ -70,37 +76,56 @@ std::string trim(const std::string& str)
 }
 
 
-std::string Error_Diagnostic::print_code() const
+std::string Error_Elem::print_code() const
 {
-  return "[" + ESeverity_to_color(severity) + compiler::Phase_to_code(phase) + std::format("{:04}", code)
+  return "[" + std::string(ESeverity_to_color(severity)) + compiler::Phase_to_code(phase) + std::format("{:04}", code)
          + color_RESET "] ";
 }
 
-std::string Error_Diagnostic::print_cursor() const
+std::string Error_Elem::print_error() const
 {
-  const size_t finalCursorSize = token.span.size == 0 ? 1 : token.span.size;
+  return print_source() + print_line_cursor() + print_messages();
+}
 
-  const std::string cursor            = std::string(finalCursorSize, '^');
-  const int         dist              = token.span.col - token.span.size;
+std::string Error_Elem::print_messages() const
+{
+  std::string str_msg;
+  str_msg +=
+      "[" + std::string(ESeverity_to_color(severity)) + std::string(ESeverity_to_str(severity)) + color_RESET "] ";
+  str_msg += print_code() + " " + msg;
+  if (!hint.empty()) str_msg += "\n[hint] " + hint;
+
+  return str_msg;
+}
+
+std::string Error_Elem::print_cursor() const
+{
+  auto& script = compiler::COMPILER.pipeline.get_script(scr_id);
+
+  size_t line = script.file_info.get_line_from_pos(start_pos);
+
+  const std::string cursor            = std::string(end_pos - start_pos, '^');
+  const int         dist              = end_pos - script.file_info.get_line_start(line) - cursor.size();
   const size_t      cursor_offset     = dist < 0 ? 0 : dist;
   const std::string cursor_offset_str = std::string(cursor_offset, ' ');
 
   return cursor_offset_str + cursor;
 }
 
-std::string Error_Diagnostic::print_line() const
+std::string Error_Elem::print_line() const
 {
-  if (token.span.line - 1 < 0 || token.span.line - 1 > get_scr_info()->file_info.get_line_size())
-    return "NO VALID LINE INDEX";
+  auto& script = compiler::COMPILER.pipeline.get_script(scr_id);
 
-  const std::string line_offset_str = std::string(6 - std::to_string(token.span.line).size(), ' ');
+  auto line_pos = script.file_info.get_line_from_pos(start_pos);
+  auto line_str = script.file_info.get_line(line_pos);
 
-  return line_offset_str + std::to_string(token.span.line) + " | " color_RESET
-         + get_scr_info()->file_info.get_line(token.span.line) + "\n" color_RESET;
+  const std::string line_offset_str = std::string(6 - std::to_string(line_pos + 1).size(), ' ');
+
+  return line_offset_str + std::to_string(line_pos + 1) + " | " color_RESET + std::string(line_str) + "\n" color_RESET;
 }
 
 
-std::string Error_Diagnostic::print_line_cursor() const
+std::string Error_Elem::print_line_cursor() const
 {
   const std::string line   = print_line();
   const std::string cursor = print_cursor();
@@ -108,73 +133,83 @@ std::string Error_Diagnostic::print_line_cursor() const
   return line + "       | " color_RED + cursor + color_RESET "\n";
 }
 
-std::string Error_Diagnostic::print_source() const
+std::string Error_Elem::print_source() const
 {
-  return "[file] " color_MAGENTA + get_scr_info()->file_info.path + ":" + std::to_string(token.span.line) + ":"
-         + std::to_string(token.span.col) + "\n" color_RESET;
+  auto&  script = compiler::COMPILER.pipeline.get_script(scr_id);
+  size_t column = script.file_info.get_column_from_pos(start_pos);
+  size_t line   = 0;
+
+  return "[file] " color_MAGENTA + script.file_info.path + ":" + std::to_string(line + 1) + ":"
+         + std::to_string(column + 1) + "\n" color_RESET;
 }
 
-Error_Diagnostic_Two::Error_Diagnostic_Two(const ScriptInfo& _pass_scr_info, ErrorCode code, const ast::Node& first,
-                                           const ast::Node& second, compiler::EPhase _phase, const std::string& msg,
-                                           const std::string& hint)
-  : first(Error_Diagnostic(_pass_scr_info, code, first.node_scr_info.get(), first.node_token, _phase, msg, hint))
-  , second(Error_Diagnostic(_pass_scr_info, code, second.node_scr_info.get(), second.node_token, _phase, msg, hint))
-{
-}
 
-std::string Error_Diagnostic_Two::print_error() const
+std::string Error_Diagnostic::print_error() const
 {
+  auto& first_script = compiler::COMPILER.pipeline.get_script(elem_first.scr_id);
+
+  // one file
+  if (!elem_second.scr_id) {
+    return elem_first.print_error();
+  }
+
+  auto& second_script = compiler::COMPILER.pipeline.get_script(elem_second.scr_id);
+
+  size_t first_line  = first_script.file_info.get_line_from_pos(elem_first.start_pos);
+  size_t second_line = second_script.file_info.get_line_from_pos(elem_second.start_pos);
+
+
   // same file, same line
-  if (first.get_scr_info() == second.get_scr_info() && first.token.span.line == second.token.span.line) {
-    auto line       = first.print_line();
-    auto top_cursor = first.print_cursor();
+  if (elem_first.scr_id == elem_second.scr_id && first_line == second_line) {
+    auto line       = elem_first.print_line();
+    auto top_cursor = elem_first.print_cursor();
     std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
-    auto down_cursor = second.print_cursor();
+    auto down_cursor = elem_second.print_cursor();
 
     std::string out;
     out += "       | " color_RED + top_cursor + color_RESET "\n";
     out += line;
     out += "       | " color_RED + down_cursor + color_RESET "\n";
 
-    out += first.print_messages() + "\n";
+    out += elem_first.print_messages() + "\n";
     return out;
   }
   // same file
-  else if (first.get_scr_info() == second.get_scr_info()) {
-    auto top_line   = first.print_line();
-    auto top_cursor = first.print_cursor();
+  else if (elem_first.scr_id == elem_second.scr_id) {
+    auto top_line   = elem_first.print_line();
+    auto top_cursor = elem_first.print_cursor();
     std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
-    auto down_line   = second.print_line();
-    auto down_cursor = second.print_cursor();
+    auto down_line   = elem_second.print_line();
+    auto down_cursor = elem_second.print_cursor();
 
     std::string out;
-    out += first.print_source();
+    out += elem_first.print_source();
     out += "       | " color_RED + top_cursor + color_RESET "\n";
     out += top_line;
     out += "       | ...\n";
     out += down_line;
     out += "       | " color_RED + down_cursor + color_RESET "\n";
 
-    out += first.print_messages() + "\n";
+    out += elem_first.print_messages() + "\n";
     return out;
   }
 
   // different files
-  auto top_line   = first.print_line();
-  auto top_cursor = first.print_cursor();
+  auto top_line   = elem_first.print_line();
+  auto top_cursor = elem_first.print_cursor();
   std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
-  auto down_line   = second.print_line();
-  auto down_cursor = second.print_cursor();
+  auto down_line   = elem_second.print_line();
+  auto down_cursor = elem_second.print_cursor();
 
   std::string out;
-  out += first.print_source();
+  out += elem_first.print_source();
   out += "       | " color_RED + top_cursor + color_RESET "\n";
   out += top_line;
   out += "       | ...\n";
   out += down_line;
   out += "       | " color_RED + down_cursor + color_RESET "\n";
-  out += second.print_source();
+  out += elem_second.print_source();
 
-  out += first.print_messages() + "\n";
+  out += elem_first.print_messages() + "\n";
   return out;
 }

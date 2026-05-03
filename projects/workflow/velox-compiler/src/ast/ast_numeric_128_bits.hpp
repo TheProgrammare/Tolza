@@ -13,15 +13,15 @@ class APInt;
 class Float128 final
 {
 public:
-  llvm::APFloat* val;
+  llvm::APFloat* const val;
 
   Float128();
   ~Float128();
   explicit Float128(const llvm::APFloat& value);
   explicit Float128(double value);
-  explicit Float128(const std::string& s);
+  explicit Float128(std::string_view s);
 
-  void        string_to_f128(const std::string& s);
+  void        string_to_f128(std::string_view s);
   std::string float128_to_string(int precision = 36) const;
 };
 
@@ -34,8 +34,8 @@ public:
   ~Int128();
   explicit Int128(const llvm::APInt& value);
   explicit Int128(long long value);
-  explicit Int128(const std::string& s, uint8_t radix = 10);
+  explicit Int128(std::string_view s, uint8_t radix = 10);
 
-  void        string_to_i128(const std::string& s, int base = 10);
+  void        string_to_i128(std::string_view s, int base = 10);
   std::string i128_to_string(int radix = 10) const;
 };

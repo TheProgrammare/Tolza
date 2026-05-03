@@ -19,6 +19,9 @@ BreakBeforeConceptDeclarations: Always
 AlignAfterOpenBracket: Align
 AlignArrayOfStructures: Left
 
+MacroBlockBegin: "^AST_NODE\\("
+MacroBlockEnd: "^\\);"
+
 AlignConsecutiveShortCaseStatements:
   Enabled: true
   AcrossEmptyLines: true

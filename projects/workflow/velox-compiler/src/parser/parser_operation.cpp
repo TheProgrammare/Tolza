@@ -1,8 +1,10 @@
 
 #include "parser_operation.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_data.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/lexer/token.hpp"
+#include "nexus/script.hpp"
 #include "ast/ast_operation.hpp"
 
 #include "parser_context.hpp"
@@ -28,204 +30,202 @@
 //                           -> logical OR (OR, NOR)
 //                             -> logical XNOR (XNOR)
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_15_power()
+ast::_gnid parser::Parser_Operator::_15_power()
 {
-  auto left = ctx.p_expr->parse_expression_term();
-  if (ctx.tok_v.match(TokTy::OP_POWER)) {
+  auto left = p.p_expr->parse_expression_term();
+  if (p.match(token::ETokenKind::OP_POWER)) {
     auto right = _15_power();
-    return Create_BinOp(std::move(left), EBinOpType::Pow, std::move(right));
+    return Create_BinOp(std::move(left), ast::EBinOpType::Pow, std::move(right));
   }
   return left;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_14_scalar()
+ast::_gnid parser::Parser_Operator::_14_scalar()
 {
   auto node = _15_power();
-  while (ctx.tok_v.match_any(
-      {TokTy::OP_ASTERISK, TokTy::OP_DIVIDE, TokTy::OP_MODULO, TokTy::OP_QUOTIEN, TokTy::OP_REMAIN})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_ASTERISK, token::ETokenKind::OP_DIVIDE, token::ETokenKind::OP_MODULO,
+                      token::ETokenKind::OP_QUOTIEN, token::ETokenKind::OP_REMAIN})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _15_power();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_13_cumulate()
+ast::_gnid parser::Parser_Operator::_13_cumulate()
 {
   auto node = _14_scalar();
-  while (ctx.tok_v.match_any({TokTy::OP_PLUS, TokTy::OP_MINUS})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_PLUS, token::ETokenKind::OP_MINUS})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _14_scalar();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_12_shift()
+ast::_gnid parser::Parser_Operator::_12_shift()
 {
   auto node = _13_cumulate();
-  while (ctx.tok_v.match_any(k_op_bitwise_shift)) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any(token::k_op_bitwise_shift)) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _13_cumulate();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_11_comparison()
+ast::_gnid parser::Parser_Operator::_11_comparison()
 {
   auto node = _12_shift();
-  while (ctx.tok_v.match_any({TokTy::OPEN_BRACKETS, TokTy::CLOSE_BRACKETS, TokTy::OP_LEQ, TokTy::OP_GEQ})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OPEN_BRACKETS, token::ETokenKind::CLOSE_BRACKETS, token::ETokenKind::OP_LEQ,
+                      token::ETokenKind::OP_GEQ})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _12_shift();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_10_equality()
+ast::_gnid parser::Parser_Operator::_10_equality()
 {
   auto node = _11_comparison();
-  while (ctx.tok_v.match_any({TokTy::OP_EQ, TokTy::OP_NEQ, TokTy::OP_EQS, TokTy::OP_NEQS, TokTy::IN, TokTy::IS})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_EQ, token::ETokenKind::OP_NEQ, token::ETokenKind::OP_EQS,
+                      token::ETokenKind::OP_NEQS, token::ETokenKind::IN, token::ETokenKind::IS})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _11_comparison();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_9_bitwise_not()
+ast::_gnid parser::Parser_Operator::_9_bitwise_not()
 {
-  if (ctx.tok_v.match(TokTy::B_NOT)) {
-    auto op      = TokTy_to_EUnaryOpType(ctx.tok_v.peek(-1).type);
+  if (p.match(token::ETokenKind::OP_B_NOT)) {
+    auto op      = ast::ETokenKind_to_EUnaryOpType(p.peek(-1).kind);
     auto operand = _9_bitwise_not();
     return Create_UnOp(op, std::move(operand));
   }
   return _10_equality();
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_8_bitwise_and_nand()
+ast::_gnid parser::Parser_Operator::_8_bitwise_and_nand()
 {
   auto node = _9_bitwise_not();
-  while (ctx.tok_v.match_any({TokTy::B_AND, TokTy::B_NAND})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_B_AND, token::ETokenKind::OP_B_NAND})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _9_bitwise_not();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_7_bitwise_xor_xnor()
+ast::_gnid parser::Parser_Operator::_7_bitwise_xor_xnor()
 {
   auto node = _8_bitwise_and_nand();
-  while (ctx.tok_v.match_any({TokTy::B_XOR, TokTy::B_XNOR})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_B_XOR, token::ETokenKind::OP_B_XNOR})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _8_bitwise_and_nand();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_6_bitwise_or_nor()
+ast::_gnid parser::Parser_Operator::_6_bitwise_or_nor()
 {
   auto node = _7_bitwise_xor_xnor();
-  while (ctx.tok_v.match_any({TokTy::B_OR, TokTy::B_NOR})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_B_OR, token::ETokenKind::OP_B_NOR})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _7_bitwise_xor_xnor();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_5_logical_not()
+ast::_gnid parser::Parser_Operator::_5_logical_not()
 {
-  if (ctx.tok_v.match(TokTy::NOT)) {
-    auto op      = TokTy_to_EUnaryOpType(ctx.tok_v.peek(-1).type);
+  if (p.match(token::ETokenKind::OP_NOT)) {
+    auto op      = ast::ETokenKind_to_EUnaryOpType(p.peek(-1).kind);
     auto operand = _5_logical_not();
     return Create_UnOp(op, std::move(operand));
   }
   return _6_bitwise_or_nor();
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_4_logical_and_nand()
+ast::_gnid parser::Parser_Operator::_4_logical_and_nand()
 {
   auto node = _5_logical_not();
-  while (ctx.tok_v.match_any({TokTy::AND, TokTy::NAND})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_AND, token::ETokenKind::OP_NAND})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _5_logical_not();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_3_logicial_xor_xnor()
+ast::_gnid parser::Parser_Operator::_3_logicial_xor_xnor()
 {
   auto node = _4_logical_and_nand();
-  while (ctx.tok_v.match_any({TokTy::XOR, TokTy::XNOR})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.peek(-1).type);
+  while (p.match_any({token::ETokenKind::OP_XOR, token::ETokenKind::OP_XNOR})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.peek(-1).kind);
     auto right = _4_logical_and_nand();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_2_logicial_or_nor()
+ast::_gnid parser::Parser_Operator::_2_logicial_or_nor()
 {
   auto node = _3_logicial_xor_xnor();
-  while (ctx.tok_v.check_any({TokTy::OR, TokTy::NOR})) {
-    auto op    = TokTy_to_EBinOpType(ctx.tok_v.next().type);
+  while (p.check_any({token::ETokenKind::OP_OR, token::ETokenKind::OP_NOR})) {
+    auto op    = ast::ETokenKind_to_EBinOpType(p.next().kind);
     auto right = _3_logicial_xor_xnor();
     node       = Create_BinOp(std::move(node), op, std::move(right));
   }
   return node;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::_1_memory_distance()
+ast::_gnid parser::Parser_Operator::_1_memory()
 {
   auto node = _2_logicial_or_nor();
-  while (ctx.tok_v.check(TokTy::MEM_DIST)) {
-    auto dist   = ctx.Create_Node<ast::operation::Ptr_Dist>(ctx.tok_v.peek());
+  while (p.check_any({token::ETokenKind::OP_MEM_DIST, token::ETokenKind::OP_MEM_ADD, token::ETokenKind::OP_MEM_SUB})) {
+    parser_add_node(dist, Operation_Binary, p.peek().id);
     auto right  = _2_logicial_or_nor();
-    dist->left  = std::move(node);
-    dist->right = std::move(right);
-    node        = std::move(dist);
+    dist->left  = node;
+    dist->right = right;
+    node        = dist->node_id;
   }
   return node;
 }
 
-std::unique_ptr<ast::operation::Assignment>
-parser::Parser_Operator::assignment(std::unique_ptr<ast::AExpression> p_left)
+ast::_gnid parser::Parser_Operator::assignment(ast::_gnid p_left)
 {
-  auto assign_tok = ctx.tok_v.expect_any(110, kAssignationTokens, "Expected assignation token.", "");
+  auto assign_tok = p.expect_any(110, token::kAssignationTokens, "Expected assignation token.", "");
 
-  auto assign             = ctx.Create_Node<ast::operation::Assignment>(assign_tok);
-  assign->left            = std::move(p_left);
-  assign->assignment_type = TokTy_to_ETransfertType(assign_tok.type);
-  assign->right           = ctx.p_expr->parse_expression();
-  return assign;
+  parser_add_node(assign, Operation_Assignment, p.peek().id);
+  assign->left            = p_left;
+  assign->assignment_type = ast::ETokenKind_to_ETransfertType(assign_tok.kind);
+  assign->right           = p.p_expr->parse_expression();
+  return assign->node_id;
 }
 
-std::unique_ptr<ast::AExpression> parser::Parser_Operator::try_operation()
+ast::_gnid parser::Parser_Operator::try_operation()
 {
-  return _1_memory_distance();
+  return _1_memory();
 }
 
-std::unique_ptr<ast::operation::Binary> parser::Parser_Operator::Create_BinOp(std::unique_ptr<ast::AExpression> p_left,
-                                                                              EBinOpType                        p_op,
-                                                                              std::unique_ptr<ast::AExpression> p_right)
+ast::_gnid parser::Parser_Operator::Create_BinOp(ast::_gnid p_left, ast::EBinOpType p_op, ast::_gnid p_right)
 {
-  auto node   = ctx.Create_Node<ast::operation::Binary>(p_left->node_token);
-  node->left  = std::move(p_left);
+  parser_add_node(node, Operation_Binary, p.peek().id);
+  node->left  = p_left;
   node->op_ty = p_op;
-  node->right = std::move(p_right);
-  return node;
+  node->right = p_right;
+  return node->node_id;
 }
 
-std::unique_ptr<ast::operation::Unary> parser::Parser_Operator::Create_UnOp(EUnaryOpType                      p_op,
-                                                                            std::unique_ptr<ast::AExpression> p_base)
+ast::_gnid parser::Parser_Operator::Create_UnOp(ast::EUnaryOpType p_op, ast::_gnid p_base)
 {
-  auto node      = ctx.Create_Node<ast::operation::Unary>(p_base->node_token);
+  parser_add_node(node, Operation_Unary, p.peek().id);
   node->unary_op = p_op;
-  node->base     = std::move(p_base);
-  return node;
+  node->base     = p_base;
+  return node->node_id;
 }

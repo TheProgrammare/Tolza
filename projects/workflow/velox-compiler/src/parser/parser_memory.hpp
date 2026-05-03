@@ -1,23 +1,20 @@
 #pragma once
 
-#include <memory>
-
-#include "ast/ast_forward.hpp"
+#include "nexus/forward.hpp"
 
 namespace parser
 {
-struct Parser_Context;
-struct Parser_Memory {
+struct Parser_Memory final {
   Parser_Memory(Parser_Context& p_ctx)
-    : ctx(p_ctx)
+    : p(p_ctx)
   {
   }
 
   // special memory expression
-  [[nodiscard]] std::unique_ptr<ast::memory::Del>   del();
-  [[nodiscard]] std::unique_ptr<ast::memory::Align> align();
-  [[nodiscard]] std::unique_ptr<ast::memory::Drop>  drop();
+  [[nodiscard]] ast::_gnid del();
+  [[nodiscard]] ast::_gnid align();
+  [[nodiscard]] ast::_gnid drop();
 
-  Parser_Context& ctx;
+  Parser_Context& p;
 };
 } // namespace parser

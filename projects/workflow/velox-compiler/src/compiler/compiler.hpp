@@ -17,12 +17,12 @@
 
 #pragma once
 
-#include <string>
-#include <set>
 #include <map>
-#include <vector>
-#include <memory>
+#include <string>
 
+#include "nexus/forward.hpp"
+#include "misc/error_output.hpp"
+#include "nexus/ids.hpp"
 
 // log color
 #define color_RESET   "\033[0m"
@@ -32,13 +32,15 @@
 #define color_YELLOW  "\033[33m" /* Yellow */
 #define color_MAGENTA "\033[35m" /* Magenta */
 
+#define MAX_ERRORS 100
+
 
 #define k_max_path_seg_size 12
 #define k_max_keyword_size  32
 
 using ErrorCode = short;
 
-struct ScriptInfo;
+struct Error_Diagnostic;
 
 namespace llvm
 {
@@ -48,43 +50,25 @@ class TargetMachine;
 
 namespace common
 {
-struct CompCtx;
+struct Compiler_Options;
 }
 
 inline const char* k_comp_abort =
     R"([velox-compiler] Compilation aborted
-[note] You must resolve all stage errors before to pass to the next stage!"
-Please see above to locate all errors.
+  [note] You must resolve all stage errors before to pass to the next stage!"
+  Please see above to locate all errors.
 )";
-
-struct Compiler {
-
-
-  Compiler()
-  {
-  }
-
-
-  std::map<std::string, std::shared_ptr<ScriptInfo>> prepared_scripts;
-  std::set<std::string>                              imported_modules;
-
-  double actual_duration = 0.0f;
-
-
-  bool start_compilation();
-  bool prepare_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos);
-  bool analyze_scripts(const std::vector<std::shared_ptr<ScriptInfo>>& scr_infos);
-};
-
 
 namespace compiler
 {
+
 
 enum class EPhase {
   filesystem,
   lexer,
   preprosessor,
   parser,
+  shipowner,
   binder,
   resolver_symbol,
   resolver_type,
@@ -93,12 +77,59 @@ enum class EPhase {
   linker
 };
 
+
+struct Compiler {
+  Compiler(module::Graph& p_modules, ast::Arena& p_nodes, type::Arena& p_types, symbol::Arena& p_symbols,
+           pipeline::Pipeline& p_pipeline, scope::Graph& p_scopes, unresolved::Arena& p_unresolved,
+           resolved::Arena& p_resolved, inference::Arena& p_inference)
+    : modules(p_modules)
+    , nodes(p_nodes)
+    , types(p_types)
+    , symbols(p_symbols)
+    , pipeline(p_pipeline)
+    , scopes(p_scopes)
+    , unresolved(p_unresolved)
+    , resolved(p_resolved)
+    , inference(p_inference)
+  {
+  }
+
+  module::Graph&      modules;
+  type::Arena&        types;
+  symbol::Arena&      symbols;
+  scope::Graph&       scopes;
+  pipeline::Pipeline& pipeline;
+  unresolved::Arena&  unresolved;
+  resolved::Arena&    resolved;
+  inference::Arena&   inference;
+  ast::Arena&         nodes;
+
+
+  std::map<script::_id, std::vector<Error_Diagnostic>> errors;
+
+  double actual_duration = 0.0f;
+
+  bool start_compilation();
+
+  void add_error(Error_Diagnostic&& error);
+};
+
 [[nodiscard]] std::string Phase_to_code(EPhase phase);
 [[nodiscard]] std::string Phase_to_str(EPhase phase);
 
-extern Compiler             COMP;
-extern common::CompCtx      COMP_CTX;
-extern llvm::LLVMContext    LLVM_CTX;
-inline llvm::TargetMachine* TM = nullptr;
+extern pipeline::Pipeline pipeline;
+extern module::Graph      modules;
+extern ast::Arena         nodes;
+extern type::Arena        types;
+extern symbol::Arena      symbols;
+extern scope::Graph       scopes;
+extern unresolved::Arena  unresolved;
+extern resolved::Arena    resolved;
+extern inference::Arena   inference;
+
+extern Compiler                 COMPILER;
+extern common::Compiler_Options COMPILER_OPTIONS;
+extern llvm::LLVMContext        LLVM_CTX;
+inline llvm::TargetMachine*     TM = nullptr;
 
 } // namespace compiler
