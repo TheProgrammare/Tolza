@@ -58,7 +58,7 @@ This project uses the following open-source libraries:
 1. [variables](docs/wiki/variable.md)
 2. [operators](docs/wiki/operators.md)	
 3. [control flow](docs/wiki/flow.md)
-4. [pattern matching] (docs/wiki/pattern.md)
+4. [pattern matching](docs/wiki/pattern.md)
 
 ## B. Functional Programming
 1. [functions](docs/wiki/function.md)
