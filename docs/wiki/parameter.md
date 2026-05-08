@@ -8,7 +8,6 @@ There is 6 pass modes:
 | `ref` | `ref name: T [= default_val]` | by reference (immutable)
 | `mut` | `mut name: T` | by mutation (mutable)
 | `copy` | `copy name: T [= default_val]` | by copy forced
-| `clone` | `clone name: T [= default_val]` | by clone forced
 | `move` | `move name: T` | by move semantic
 | `addr` | `addr name: T` | only pointer address manipulation
 | `...` | `<pass_mode> args: T...` | Variadic, non type (C convention) : `ptr'u0`
@@ -22,7 +21,6 @@ There is 6 pass modes:
 | `ref` | `copy` | add `ref`
 | `mut` | local `mut` capbility, no calling scope `mut`/`ref` revoked | idem
 | `copy` | `copy` | call `copy`, fallback `clone`*
-| `clone` | `clone` | call `clone`, fallback `copy`*
 | `move` | `copy` | `move` and invalidate origin 
 | `addr` | only `b8`-`b128` | only `ptr'T`
 
@@ -35,7 +33,6 @@ There is 6 pass modes:
 | `ref` | local ref, no add ref | add ref to origin | X 
 | `mut` | local mut, no add mut | X | redirect mut 
 | `copy` | read operation, call copy | idem | idem 
-| `clone` | read operation, call clone | idem | idem 
 | `move` | consumed | ref consumed | mut consumed 
 | `addr` | only raw pointer `ptr'T` | X | X
 
@@ -45,7 +42,6 @@ There is 6 pass modes:
 | `ref` | read only ptr and pointee | X | read only sptr and pointee |
 | `mut` | read only ptr, mutable pointee | X | read only sptr, mutable pointee | 
 | `copy` | copy ptr address | X | share uptr (sharing > copy) |
-| `clone` | new ptr address affected, call clone on pointee put in new ptr address | X | share sptr (sharing > copy) |
 | `move` | ptr consumed | uptr consumed | uptr consumed | 
 | `addr` | mutable ptr, mutable pointee | X | X
 
