@@ -20,7 +20,7 @@ There is 6 pass modes:
 |-|-|-|
 | `ref` | `copy` | add `ref`
 | `mut` | local `mut` capbility, no calling scope `mut`/`ref` revoked | idem
-| `copy` | `copy` | call `copy`, fallback `clone`*
+| `copy` | `copy` | call `copy`
 | `move` | `copy` | `move` and invalidate origin 
 | `addr` | only `b8`-`b128` | only `ptr'T`
 
