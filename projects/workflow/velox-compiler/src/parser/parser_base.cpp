@@ -67,6 +67,14 @@ ast::_gnid parser::Parser_Base::parse_import()
   imp->regex = p.p_base->regex_path();
   auto regex = p.scr_info.nodes->get_as<ast::Path_Regex>(imp->regex.get_node_id());
 
+  if (auto regex = p.compilation_nodes->get_as<ast::Path_Regex>(imp->regex)) {
+    if (regex->source == script::EFileSource::binding) {
+      p.expect(251, token::ETokenKind::AS, "expected alias after a importation", "");
+    } else if (p.match(token::ETokenKind::AS)) {
+      imp->
+    }
+  }
+
   std::string out_err;
   auto mod = compiler::COMPILER.modules.tools.build_module_from_path(p.scr_id, regex->path, regex->source, out_err);
   if (!mod) {
