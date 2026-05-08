@@ -24,9 +24,6 @@ There is 6 pass modes:
 | `move` | `copy` | `move` and invalidate origin 
 | `addr` | only `b8`-`b128` | only `ptr'T`
 
-> \* Copy and Clone arguments can be overrided during the call by `copy` or `clone` `fn copy_myvar(copy a: MyVar)` `copy_myvar(clone my_var)`<\br>
-> The compiler will check if the clone or copy method exists, otherwise he will try to call the other method, if no copy and clone exists, a compilation error occur.
-
 ### by Capability
 | mode | regular variable | ref | mut
 |-|-|-|-|
