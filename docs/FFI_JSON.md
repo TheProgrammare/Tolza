@@ -91,6 +91,8 @@ Binding script compilation:
 
 `type_data` must be the type name or the type json structure 
 
+> if you have already define a named type by his declaration (`comp` `role` `entity` `flag` `enum` `union`), use directly `ID` type
+
 ## base type
 ``` json
 "type": {
