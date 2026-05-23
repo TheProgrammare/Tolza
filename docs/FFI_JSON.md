@@ -81,54 +81,146 @@ Binding script compilation:
 ```
 
 # Type
+`kind` must have one of this value: `Primitive` `String` `Tuple` `StaticArray` `Ptr` `DynamicArray` `Prototype` `Component` `Role` `Entity` `Enum` `Flag` `Union` `Identifier`
+
+`primitive` must have one of this value: `u0` `bool` `cune` `rune` `ssize` `s8` `s16` `s32` `s64` `s128` `usize` `u8` `u16` `u32` `u64` `u128` `bsize` `b8` `b16` `b32` `b64` `b128` `ptrdiff` `fsize` `f16` `f32` `f64` `f80` `f128` `dsize` `d32` `d64` `d128` `udsize` `ud32` `ud64` `ud128` `ptr` 
+
+`decorator` must have one of this value: `const` `volatile` `optional`
+
+`str_kind` must have one of this value: `c_str` `str` `rune` `cune` `text`
+
+`type_data` must be the type name or the type json structure 
+
+## base type
 ``` json
 "type": {
-  "base_type": "",
-  "complex_type_name": "",
-  "is_pointer": false,
-  "is_pointer_double": false,
-  "is_pointer_const": false,
-  "is_pointer_volatile": false,
-  "is_table": false,
-  "is_table_of_pointers": false,
-  "is_val_type_const": false,
-  "is_val_type_volatile": false,
-  "is_atomic": false,
-  "table_size": [number, ...]
+  "kind": "my_kind",
+  "decorator": "my_decorator",
+  "data": { <type_data> }
 }
 ```
-
-## Base Type
-It's a string keyword
-
-Velox convention:
-- `i8`-`i128`-`isize`: signed integrals
-- `u8`-`u128`-`usize`: unsigned integrals
-- `b8`-`b128`-`bsize`: binary
-- `f32`-`f128`-`fsize`: float
-- `ptrdiff`: pointer distance
-- `void`: no type
-- `bool`: boolean
-- `ascii`: ascii character
-- `utf32`: utf32 character
-- `str`: string (ascii)
-- `text`: text (utf32)
-- `enum`: enumeration
-- `comp`: component
-- `entity`: entity
-- `union`: union
-- `flag`: flag
-- `prototype`: function prototype
-
-C convention:
-- `schar` `sc` / `uchar` `uc`: character / unsigned character
-- `short` `s` / `ushort` `us`: short / unsigned short
-- `long` `l` / `ulong` `ul`: long / unsigned long
-- `longlong` `ll` / `ulonglong` `ull`: long long / unsigned long long (64 bits)
-- `int` `i` / `uint` `ui`: integer / unsigned integer
-- `float` `f`: float
-- `double` `d`: double
-- `longdouble` `ld`: long double (128 bits)
+## primitive type
+``` json
+"data": {
+  "primitive": "bool"
+}
+```
+## ptr type
+``` json
+"data": {
+  "inner": { <type_data> }
+}
+```
+## string type
+``` json
+"data": {
+  "str_kind": "str"
+}
+```
+## static array type
+``` json
+"data": {
+  "inner": { <type_data> }
+"size": 10
+}
+```
+## dynamic array type
+``` json
+"data": {
+  "inner": { <type_data> }
+}
+```
+## tupe type
+``` json
+"data": {
+  "elements": [
+    { <type_data> }
+  ]
+}
+```
+## prototype type
+``` json
+"data": {
+  "ret_type": { <type> },
+  "is_variadic": false, 
+  "params": [ <parameters> ]
+}
+```
+## enum tyoe
+``` json
+"data": {
+  "name": "my_enum" 
+  "variants": [
+    {
+      "name": "my_variant",
+      "type": { <type_data> }
+    },
+    ...
+  ]
+}
+```
+## flag type
+``` json
+"data": {
+  "name": "my_flag" 
+  "flags": [
+    "name": "my_variant",
+    ...
+  ]
+}
+```
+## union type
+``` json
+"data": {
+  "name": "my_union" 
+  "variants": [
+    {
+      "name": "my_variant",
+      "type": { <type_data> }
+    },
+    ...
+  ]
+}
+```
+## component type
+``` json
+"data": {
+  "name": "my_comp" 
+  "fields": [
+    {
+      "name": "my_field",
+      "type": { <type_data> }
+    },
+    ...
+  ]
+}
+```
+## role type
+``` json
+"data": {
+  "name": "my_role" 
+  "components": [
+    "my_comp",
+    ...
+  ]
+}
+```
+## entity type
+``` json
+"data": {
+  "name": "my_role" 
+  "components": [
+    "my_comp",
+    ...
+  ]
+}
+```
+## ID type
+``` json
+"data": {
+  "name": "my_role" 
+}
+```
 
 # Param
 `pass_mode` must have one string value: `copy` `ref` `mut` `move` `addr`
@@ -136,22 +228,15 @@ C convention:
 ``` json
 [
   {
-    "pass_mode",
-    { <type> },
-    false // is_restrict
+    "pass_mode": "my_passmode",
+    "type": { <type> },
+    "is_restrict": false
   },
   ...
 ]
 ```
 
-# Prototype
-``` json
-"prototype": {
-  { <type> }, // return type
-  false, // is_variadic
-  [ <parameters> ] // parameters
-}
-```
+
 
 # Component
 ``` json
