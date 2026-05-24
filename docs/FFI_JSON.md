@@ -166,7 +166,7 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      { "my_field_name", { <type> } },
+      { "my_field_name": { <type> } },
       ...
     ],
     // optional
@@ -199,7 +199,7 @@ for params, check function section
   {
     "name": "",
     "variants": [
-      { "my_field_name", { <type> } },
+      { "my_field_name": { <type> } },
       ...
     ]
   },
@@ -213,7 +213,7 @@ for params, check function section
   {
     "name": "",
     "variants": [
-      { "my_field_name", { <type> } },
+      { "my_field_name": { <type> } },
       ...
     ]
   },
