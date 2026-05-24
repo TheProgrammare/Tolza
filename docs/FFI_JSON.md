@@ -135,7 +135,7 @@ Binding script compilation:
 ## Tuple type
 ``` json
 "data": {
-  "elements": [
+  "types": [
     { <type_data> }
   ]
 }
@@ -197,8 +197,8 @@ for params, check function section
 "enums": [
   {
     "name": "",
-    "members": [
-      [ "member_name", { <type> } ],
+    "fields": [
+      [ "my_field_name", { <type> } ],
       ...
     ]
   },
@@ -211,8 +211,8 @@ for params, check function section
 "unions": [
   {
     "name": "",
-    "members": [
-      [ "member_name", { <type> } ],
+    "fields": [
+      [ "my_field_name", { <type> } ],
       ...
     ]
   },
@@ -225,8 +225,8 @@ for params, check function section
 "flags": [
   {
     "name": "",
-    "members": [
-      [ "member_name", { <type> } ],
+    "fields": [
+      [ "my_field_name", { <type> } ],
       ...
     ],
     "underlying_type": "<base_type>"
