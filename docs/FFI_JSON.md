@@ -197,7 +197,7 @@ for params, check function section
 "enums": [
   {
     "name": "",
-    "fields": [
+    "variants": [
       { "my_field_name", { <type> } },
       ...
     ]
@@ -211,7 +211,7 @@ for params, check function section
 "unions": [
   {
     "name": "",
-    "fields": [
+    "variants": [
       { "my_field_name", { <type> } },
       ...
     ]
