@@ -132,7 +132,7 @@ Binding script compilation:
   "inner": { <type_data> }
 }
 ```
-## tupe type
+## tuple type
 ``` json
 "data": {
   "elements": [
