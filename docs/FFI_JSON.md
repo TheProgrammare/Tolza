@@ -141,6 +141,8 @@ Binding script compilation:
 }
 ```
 ## Prototype type
+for params, check function section
+
 ``` json
 "data": {
   "ret_type": { <type> },
