@@ -268,7 +268,7 @@ Binding script compilation:
 "functions": [
   {
     "name": "",
-    "call_convention": "C|std_call|fast_call|vector_call|systemv",
+    "call_convention": "unknown",
     "prototype": { <prototype> },
     "param_names": [ "param_name", ... ]
   },
