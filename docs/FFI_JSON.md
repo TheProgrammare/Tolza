@@ -259,7 +259,8 @@ Binding script compilation:
 ```
 
 # function
-`call_convention` must have one string value: `C` `std_call` `fast_call` `vector_call` `systemv`
+`call_convention` must have one string value: `cdecl`, `stdcall`, `fastcall`, `thiscall`, `sysv`, `win64`, `aapcs`, `aapcs_vfp`, `vectorcall`, `custom`, `unknown`
+
 `param_names` must have the same size as `prototype` parameter list
 
 
