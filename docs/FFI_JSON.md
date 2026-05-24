@@ -166,7 +166,7 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      [ "field_name", { <type> } ],
+      [ "my_field_name", { <type> } ],
       ...
     ],
     "layouts": [
@@ -226,7 +226,7 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      [ "my_field_name", { <type> } ],
+      "my_field_name",
       ...
     ],
     "underlying_type": "<base_type>"
