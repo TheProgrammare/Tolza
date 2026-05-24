@@ -169,6 +169,7 @@ for params, check function section
       { "my_field_name", { <type> } },
       ...
     ],
+    // optional
     "layouts": [
       { 0, 1, 1 }, // offset, size, align
       ...
