@@ -166,11 +166,11 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      [ "my_field_name", { <type> } ],
+      { "my_field_name", { <type> } },
       ...
     ],
     "layouts": [
-      [ 0, 1, 1 ], // offset, size, align
+      { 0, 1, 1 }, // offset, size, align
       ...
     ]
   },
@@ -198,7 +198,7 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      [ "my_field_name", { <type> } ],
+      { "my_field_name", { <type> } },
       ...
     ]
   },
@@ -212,7 +212,7 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      [ "my_field_name", { <type> } ],
+      { "my_field_name", { <type> } },
       ...
     ]
   },
