@@ -113,10 +113,10 @@ Binding script compilation:
   "inner": { <type_data> }
 }
 ```
-## string type
+## textual type
 ``` json
 "data": {
-  "str_kind": "str"
+  "kind": "str"
 }
 ```
 ## static array type
