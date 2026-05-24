@@ -85,7 +85,7 @@ Binding script compilation:
 
 `primitive` must have one of this value: `u0` `bool` `cune` `rune` `ssize` `s8` `s16` `s32` `s64` `s128` `usize` `u8` `u16` `u32` `u64` `u128` `bsize` `b8` `b16` `b32` `b64` `b128` `ptrdiff` `fsize` `f16` `f32` `f64` `f80` `f128` `dsize` `d32` `d64` `d128` `udsize` `ud32` `ud64` `ud128` `ptr` 
 
-`decorator` must have one of this value: `const` `volatile` `optional`
+`decorator` must have some or nothing of this value: `const` `volatile` `optional` (concatenate with `,`)
 
 `str_kind` must have one of this value: `c_str` `str` `rune` `cune` `text`
 
@@ -97,7 +97,7 @@ Binding script compilation:
 ``` json
 "type": {
   "kind": "my_kind",
-  "decorator": "my_decorator",
+  "decorator": "volatile,const",
   "data": { <type_data> }
 }
 ```
