@@ -81,7 +81,7 @@ Binding script compilation:
 ```
 
 # Type
-`kind` must have one of this value: `Primitive` `String` `Tuple` `StaticArray` `Ptr` `DynamicArray` `Prototype` `Component` `Role` `Entity` `Enum` `Flag` `Union` `Identifier`
+`kind` must have one of this value: `primitive` `textual` `Tuple` `static_array` `ptr` `dynamic_array` `prototype` `identifier`
 
 `primitive` must have one of this value: `u0` `bool` `cune` `rune` `ssize` `s8` `s16` `s32` `s64` `s128` `usize` `u8` `u16` `u32` `u64` `u128` `bsize` `b8` `b16` `b32` `b64` `b128` `ptrdiff` `fsize` `f16` `f32` `f64` `f80` `f128` `dsize` `d32` `d64` `d128` `udsize` `ud32` `ud64` `ud128` `ptr` 
 
@@ -91,7 +91,7 @@ Binding script compilation:
 
 `type_data` must be the type name or the type json structure 
 
-> if you have already define a named type by his declaration (`comp` `role` `entity` `flag` `enum` `union`), use directly `ID` type
+> if you have already define a named type by his declaration (`comp` `role` `entity` `flag` `enum` `union`), use directly `Identifier` type
 
 ## base type
 ``` json
@@ -107,19 +107,19 @@ Binding script compilation:
   "primitive": "bool"
 }
 ```
-## ptr type
+## Ptr type
 ``` json
 "data": {
   "inner": { <type_data> }
 }
 ```
-## textual type
+## Textual type
 ``` json
 "data": {
   "kind": "str"
 }
 ```
-## static array type
+## Static array type
 ``` json
 "data": {
   "inner": { <type_data> }
@@ -132,7 +132,7 @@ Binding script compilation:
   "inner": { <type_data> }
 }
 ```
-## tuple type
+## Tuple type
 ``` json
 "data": {
   "elements": [
@@ -140,7 +140,7 @@ Binding script compilation:
   ]
 }
 ```
-## prototype type
+## Prototype type
 ``` json
 "data": {
   "ret_type": { <type> },
@@ -148,95 +148,13 @@ Binding script compilation:
   "params": [ <parameters> ]
 }
 ```
-## enum tyoe
-``` json
-"data": {
-  "name": "my_enum" 
-  "variants": [
-    {
-      "name": "my_variant",
-      "type": { <type_data> }
-    },
-    ...
-  ]
-}
-```
-## flag type
-``` json
-"data": {
-  "name": "my_flag" 
-  "flags": [
-    "name": "my_variant",
-    ...
-  ]
-}
-```
-## union type
-``` json
-"data": {
-  "name": "my_union" 
-  "variants": [
-    {
-      "name": "my_variant",
-      "type": { <type_data> }
-    },
-    ...
-  ]
-}
-```
-## component type
-``` json
-"data": {
-  "name": "my_comp" 
-  "fields": [
-    {
-      "name": "my_field",
-      "type": { <type_data> }
-    },
-    ...
-  ]
-}
-```
-## role type
-``` json
-"data": {
-  "name": "my_role" 
-  "components": [
-    "my_comp",
-    ...
-  ]
-}
-```
-## entity type
-``` json
-"data": {
-  "name": "my_role" 
-  "components": [
-    "my_comp",
-    ...
-  ]
-}
-```
-## ID type
+## Identifier type
 ``` json
 "data": {
   "name": "my_role" 
 }
 ```
 
-# Param
-`pass_mode` must have one string value: `copy` `ref` `mut` `move` `addr`
-
-``` json
-[
-  {
-    "pass_mode": "my_passmode",
-    "type": { <type> },
-    "is_restrict": false
-  },
-  ...
-]
-```
 
 
 
@@ -264,7 +182,7 @@ Binding script compilation:
   {
     "name": "",
     "components": [
-      { <components> },
+      "my_component_name",
       ...
     ]
   },
@@ -352,6 +270,21 @@ Binding script compilation:
     "call_convention": "C|std_call|fast_call|vector_call|systemv",
     "prototype": { <prototype> },
     "param_names": [ "param_name", ... ]
+  },
+  ...
+]
+```
+
+
+## Parameter
+`pass_mode` must have one string value: `copy` `ref` `mut` `move` `addr`
+
+``` json
+[
+  {
+    "pass_mode": "my_passmode",
+    "type": { <type> },
+    "is_restrict": false
   },
   ...
 ]
