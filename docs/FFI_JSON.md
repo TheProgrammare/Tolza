@@ -178,8 +178,8 @@ for params, check function section
 `kind` must have one of this value `var` `ref` `mut` 
 ```json
 "field_name": {
-  kind: "",
-  type: { <type> }
+  "kind": "",
+  "type": { <type> }
 }
 ```
 
