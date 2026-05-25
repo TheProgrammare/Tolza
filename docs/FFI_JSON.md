@@ -166,17 +166,21 @@ for params, check function section
   {
     "name": "",
     "fields": [
-      { "my_field_name": { <type> } },
+      <field>
       ...
     ],
-    // optional
-    "layouts": [
-      { 0, 1, 1 }, // offset, size, align
-      ...
-    ]
   },
   ...
 ]
+```
+
+## Field
+`kind` must have one of this value `var` `ref` `mut` 
+```json
+"field_name": {
+  kind: "",
+  type: { <type> }
+}
 ```
 
 # Entity
