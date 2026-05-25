@@ -68,8 +68,7 @@ Binding script compilation:
 
 ```json
 "imports": [
-  {
-    "name": "my_module_name",
+  "my_module_name": {
     "path": [
       "module_path_elem_1",
       ...
@@ -163,8 +162,7 @@ for params, check function section
 # Component
 ``` json
 "components": [
-  {
-    "name": "",
+  "my_comp_name": {
     "fields": [
       <field>
       ...
@@ -186,8 +184,7 @@ for params, check function section
 # Entity
 ``` json
 "entities": [
-  {
-    "name": "",
+  "my_entity_name": {
     "components": [
       "my_component_name",
       ...
@@ -200,8 +197,7 @@ for params, check function section
 # Enum
 ``` json
 "enums": [
-  {
-    "name": "",
+  "my_enum_name": {
     "variants": [
       { "my_field_name": { <type> } },
       ...
@@ -214,8 +210,7 @@ for params, check function section
 # Union
 ``` json
 "unions": [
-  {
-    "name": "",
+  "my_union_name": {
     "variants": [
       { "my_field_name": { <type> } },
       ...
@@ -228,8 +223,7 @@ for params, check function section
 # Flag
 ``` json
 "flags": [
-  {
-    "name": "",
+  "my_flag_name": {
     "fields": [
       "my_field_name",
       ...
@@ -245,8 +239,7 @@ for params, check function section
 # Global
 ``` json
 "globals": [
-  {
-    "name": "",
+  "my_global_name": {
     "type": { <type> },
     "is_const": false
   },
@@ -257,8 +250,7 @@ for params, check function section
 # Typealias
 ``` json
 "typealiases": [
-  {
-    "name": "",
+  "my_typealias_name": {
     "type": { <type> }
   },
   ...
@@ -273,8 +265,7 @@ for params, check function section
 
 ``` json
 "functions": [
-  {
-    "name": "",
+  "my_func_name": {
     "call_convention": "unknown",
     "prototype": { <prototype> },
     "param_names": [ "param_name", ... ]
