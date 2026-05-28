@@ -102,12 +102,12 @@ sys add_item<T>(item: T) {
 }
 
 // user code
-entity Item { ID: usize, name: !str, amount: usize }
+entity Item { ID: usize = -1 as usize, name: $str, amount: usize = 0 }
 entity Inventory { use CBufferData<Item> }
 
 fn main() {
   let apple = Item{0, "Apple", 10}
-  let sword = Item{1, Sword", 1}
+  let sword = Item{1, "Sword", 1}
   let player_inv = Inventory::>populate({apple, sword})
   for i in 2..5 {
     let rand_item = Item{i, std::rand(0) as str, i * 2}
