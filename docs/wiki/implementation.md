@@ -20,8 +20,8 @@ So implementation functions can have the same name on different `self` parameter
 
 e.g.
 ```
-fn print(ref self: usize) { C::printf("%u", self) }
-fn print(ref self: ssize) { C::printf("%d", self) }
+impl $usize::print() { C::printf("%u", self) }
+impl $ssize::print() { C::printf("%d", self) }
 
 let a: usize = 10
 let b: ssize = -5
@@ -38,7 +38,7 @@ It's possible to set generics on implementation parameters, even on `self`.
 
 e.g.
 ```
-fn incr<T: op+>(self: T) { self += 1 }
+impl T::incr<T: op+>() { self += 1 }
 
 let a: usize = 10
 let b: ssize = -5
@@ -50,7 +50,7 @@ generic on static implementation: the type namespace fix the generic type
 
 e.g.
 ```
-fn PI<T: floating>(self: T) { self = 3.14159265359 }
+impl T::PI<T: floating>(self: T) { self = 3.14159265359 }
 
 let my_pi = f32::PI()
 ```
