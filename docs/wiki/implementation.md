@@ -1,20 +1,18 @@
 # Implementation
 An implementation is a function callable by the dot access '.' on any data with the same type of the first special parameter function
 
-To define a implementation, use the function syntax, then name the first parameter with the keyword `self`, the compiler will allow to call this function on any data with the same type
+To define a implementation, use the keyword `impl` then function syntax with the type before the name use as a path access, then name the first parameter with the keyword `self`, the compiler will allow to call this function on any data with the same type
 
 Syntax: 
 ```
-fn name([<passmode>] self: <type> [, ...]) [-> <return_type> {...}
+impl type::name([params]) [-> <return_type>] {...}
 ```
 
-The passmode is either `ref` or `mut` or nothing:
-
-| passmode | syntax | consequence | call |
+| type | syntax | consequence | call |
 |-|-|-|-|
-| `ref` | `fn print_message(ref self: str, lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
-| `mut` | `fn incr(mut self: usize) { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
-| nothing | `fn PI(self: fsize) { self = 3.14159265359 }` | the implementation is marked static | `let my_pi = fsize::PI()` |
+| constant implementation | `impl $str::print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant (`$` constant decorator) | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
+| mutable implementation | `impl usize::incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
+| static implementation | `impl ::fsize::PI() { self = 3.14159265359 }` | the implementation is marked static (`::` root path, inplace type creation), always returns the type implemented | `let my_pi = fsize::PI()` |
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
 
