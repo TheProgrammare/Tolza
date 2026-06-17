@@ -16,10 +16,10 @@ impl type::name([params]) [-> <return_type>] {...}
 | mutable implementation | `impl usize::incr(mut self) { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
 | static implementation | `impl fsize::PI() { return 3.14159265359 }` | the implementation is marked static (no self), always returns the type implemented | `let my_pi = fsize::PI()` |
 | cast from implementation | `impl str as ssize {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast from | `let my_size: ssize = "12345" as ssize` |
-| validation implementation | `impl MyType as bool {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, return boolean) | the implementation is marked validation | `if my_type {...}` |
+| predicat implementation | `impl MyType pred {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, returns boolean) | the implementation is marked predicat | `if my_type {...}` |
 | immuable operator implementation | `impl MyType op + { return self + other }` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
 | mutable operator implementation | `impl MyType op += { self = self + other }` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
-| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns boolean value | `my_type1 > my_type2`
+| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns ordering value, generate boolean version, generate equality, can be overrided | `my_type1 > my_type2`
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
