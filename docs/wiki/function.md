@@ -59,31 +59,3 @@ fn add_counter() -> i32 {
   return counter
 }
 ```
-
-## Pipe-call (experimental)
-functions can call mutiple of times with differents parameters without too many syntax
-
-- pure pipe-call begins by `callee |` return a tuple of each call 
-- mutable pipe-call begins by `callee <-|` return a unique value concatened with all possibles operators (priority calculation only from left to right!)
-
-Syntax pure pipe-call:
-```
-<callee_name> | <args1> [| <args2> | ...]
-```
-
-Syntax mutable pipe-call:
-```
-<callee_name> <-| <args1> [|<operator> <args2> | ...]
-```
-
-you can call nested functions in pipe-call
-
-the type verification is static
-
-| type | syntax |
-|-|-|
-| mutable pip-call | `let result: f32 = sum <-\| 10 \|+ 2.0 \|+ avg(a, b, c) \|+ k \|+ "100" as f32 \|+ 10.5`
-| pure pip-call | `let position3D: (f32, f32, f32) = offset \| x \| y \| z`
-| mutable pip-call generic args | `let result: f32 = sum <-\| <i32> 10 \|+ <f32> 2.0 \|+ <i32> avg(a, b, c) \|+ <i32> k \|+ <f32> "100" as f32 \|+ <f32> 10.5`
-| pure pip-call generic args | `let position3D: (f32, f32, f32) = offset<f32> \| x \| y \| z`
-
