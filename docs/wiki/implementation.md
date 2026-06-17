@@ -67,13 +67,13 @@ The call start by a value and a implementation function, then the next call must
 The execution flow is left to right 
 
 e.g.
+```
+var filtered = my_collection | sort() | exclude("NONE") | normalize()
 
-`var filtered = my_collection | sort() | exclude("NONE") | normalize()` 
+// this is equivalent to
 
-is the equivalent of
-
-`var filtered = normalize(exclude(sort(my_collection), "NONE"))`
-
+var filtered = normalize(exclude(sort(my_collection), "NONE"))
+```
 
 > Avoid pipe-call when there is only one call
 
