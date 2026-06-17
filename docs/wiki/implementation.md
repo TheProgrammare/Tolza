@@ -12,7 +12,7 @@ impl type::name([params]) [-> <return_type>] {...}
 |-|-|-|-|
 | constant implementation | `impl $str::print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant (`$` constant decorator) | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
 | mutable implementation | `impl usize::incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
-| static implementation | `impl ::fsize::PI() { self = 3.14159265359 }` | the implementation is marked static (`::` root path, inplace type creation), always returns the type implemented | `let my_pi = fsize::PI()` |
+| static implementation | `impl ::fsize::PI() { return 3.14159265359 }` | the implementation is marked static (`::` root path, inplace type creation), always returns the type implemented | `let my_pi = fsize::PI()` |
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
 
@@ -32,6 +32,9 @@ b.print()
 > Static implementation functions are type constructor like 
 
 > Avoid implementation functions when a more elaborated data managment is required, use COP paradigm instead
+
+> The most specific implementation always win (generics are the least selected)
+
 
 ## Generics
 It's possible to set generics on implementation parameters, even on `self`.
