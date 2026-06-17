@@ -12,12 +12,11 @@ impl type::name([params]) [-> <return_type>] {...}
 
 | type | syntax | consequence | call |
 |-|-|-|-|
-| constant implementation | `# const`</br>`impl str::print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
-| mutable implementation | `impl usize::incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
-| static implementation | `# static`</br>`impl fsize::PI() { return 3.14159265359 }` | the implementation is marked static (it's a inplace constructor), always returns the type implemented | `let my_pi = fsize::PI()` |
-| cast into implementation | `impl ssize::into<str>() {`</br>`  var buf: [cune; 32]`</br>`  C::snprintf(buf, sizeof(buf), "%zu", self);`</br>`  return str.from<ptr'cune>(buf)`</br>`}` | the implementation is marked castable from | `let my_str: str = (154 * 100).into<str>()` |
-| cast from implementation | `impl str::into<ssize>() {`</br>`  var end: ptr'cune`</br>`  let n: ssize = C::strtoull(self, end, 10) as ssize`</br>`}` | the implementation is marked castable into | `let my_size: ssize = "12345".into<ssize>()` |
-
+| constant implementation | `# const`</br>`impl str fn print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
+| mutable implementation | `impl usize fn incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
+| static implementation | `# static`</br>`impl fsize fn PI() { return 3.14159265359 }` | the implementation is marked static (it's a inplace constructor), always returns the type implemented | `let my_pi = fsize::PI()` |
+| cast from implementation | `impl ssize from str {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(other, end, 10) as ssize`</br>`}` | the implementation is marked cast from | `let my_size: ssize = ssize::from<str>(12345)` |
+| operator implementation | `impl MyType op + { self = self + other }` | the two terms are always the same types, op assignation are also generated, returns the type, or the boolean value | `my_type1 + my_type2`
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
