@@ -15,7 +15,8 @@ impl type::name([params]) [-> <return_type>] {...}
 | constant implementation | `# const`</br>`impl str::print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
 | mutable implementation | `impl usize::incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
 | static implementation | `# static`</br>`impl fsize::PI() { return 3.14159265359 }` | the implementation is marked static (it's a inplace constructor), always returns the type implemented | `let my_pi = fsize::PI()` |
-| cast implementation | `# cast`</br>`impl ssize::string() -> str {`</br>`  var buf: [cune; 32]`</br>`  C::snprintf(buf, sizeof(buf), "%zu", self);`</br>`  return str.from_buf(buf)`</br>`}` | the implementation is marked castable (it's a inplace cast) | `let my_str: str = 158 * 100 as .string()` |
+| cast into implementation | `impl ssize::into<str>() {`</br>`  var buf: [cune; 32]`</br>`  C::snprintf(buf, sizeof(buf), "%zu", self);`</br>`  return str.from<ptr'cune>(buf)`</br>`}` | the implementation is marked castable from | `let my_str: str = (154 * 100).into<str>()` |
+| cast from implementation | `impl str::into<ssize>() {`</br>`  var end: ptr'cune`</br>`  let n: ssize = C::strtoull(self, end, 10) as ssize`</br>`}` | the implementation is marked castable into | `let my_size: ssize = "12345".into<ssize>()` |
 
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
