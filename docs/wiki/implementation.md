@@ -30,7 +30,10 @@ let b: ssize = -5
 a.print()
 b.print() 
 ```
- 
+
+> Static implementation functions are type constructor like 
+
+> Avoid implementation functions when a more elaborated data managment is required, use COP paradigm instead
 
 ## Generics
 It's possible to set generics on implementation parameters, even on `self`.
@@ -54,32 +57,23 @@ fn PI<T: floating>(self: T) { self = 3.14159265359 }
 let my_pi = f32::PI()
 ```
 
+# Pipe-call 
+Implementations permit to use pipe call to show the data flow intention
+
+To make a pipe-call, use the pipe operator `|`
+
+The call start by a value and a implementation function, then the next call must be a compatible implementation on the returned type of the anterior call.
+
+The execution flow is left to right 
+
+e.g.
+
+`var filtered = my_collection | sort() | exclude("NONE") | normalize()` 
+
+is the equivalent of
+
+`var filtered = normalize(exclude(sort(my_collection), "NONE"))`
 
 
+> Avoid pipe-call when there is only one call
 
-## Pipe-call (experimental)
-functions can call mutiple of times with differents parameters without too many syntax
-
-- pure pipe-call begins by `callee |` return a tuple of each call 
-- mutable pipe-call begins by `callee <-|` return a unique value concatened with all possibles operators (priority calculation only from left to right!)
-
-Syntax pure pipe-call:
-```
-<callee_name> | <args1> [| <args2> | ...]
-```
-
-Syntax mutable pipe-call:
-```
-<callee_name> <-| <args1> [|<operator> <args2> | ...]
-```
-
-you can call nested functions in pipe-call
-
-the type verification is static
-
-| type | syntax |
-|-|-|
-| mutable pip-call | `let result: f32 = sum <-\| 10 \|+ 2.0 \|+ avg(a, b, c) \|+ k \|+ "100" as f32 \|+ 10.5`
-| pure pip-call | `let position3D: (f32, f32, f32) = offset \| x \| y \| z`
-| mutable pip-call generic args | `let result: f32 = sum <-\| <i32> 10 \|+ <f32> 2.0 \|+ <i32> avg(a, b, c) \|+ <i32> k \|+ <f32> "100" as f32 \|+ <f32> 10.5`
-| pure pip-call generic args | `let position3D: (f32, f32, f32) = offset<f32> \| x \| y \| z`
