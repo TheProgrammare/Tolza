@@ -12,11 +12,14 @@ impl type::name([params]) [-> <return_type>] {...}
 
 | type | syntax | consequence | call |
 |-|-|-|-|
-| constant implementation | `# const`</br>`impl str fn print_message(lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
-| mutable implementation | `impl usize fn incr() { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
-| static implementation | `# static`</br>`impl fsize fn PI() { return 3.14159265359 }` | the implementation is marked static (it's a inplace constructor), always returns the type implemented | `let my_pi = fsize::PI()` |
-| cast from implementation | `impl ssize from str {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(other, end, 10) as ssize`</br>`}` | the implementation is marked cast from | `let my_size: ssize = ssize::from<str>(12345)` |
-| operator implementation | `impl MyType op + { self = self + other }` | the two terms are always the same types, op assignation are also generated, returns the type, or the boolean value | `my_type1 + my_type2`
+| immuable implementation | `impl str::print_message(ref self, lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
+| mutable implementation | `impl usize::incr(mut self) { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
+| static implementation | `impl fsize::PI() { return 3.14159265359 }` | the implementation is marked static (no self), always returns the type implemented | `let my_pi = fsize::PI()` |
+| cast from implementation | `impl str as ssize {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast from | `let my_size: ssize = "12345" as ssize` |
+| validation implementation | `impl MyType as bool {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, return boolean) | the implementation is marked validation | `if my_type {...}` |
+| immuable operator implementation | `impl MyType op + { return self + other }` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
+| mutable operator implementation | `impl MyType op += { self = self + other }` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
+| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns boolean value | `my_type1 > my_type2`
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
