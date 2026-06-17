@@ -19,7 +19,7 @@ impl type::name([params]) [-> <return_type>] {...}
 | predicat implementation | `impl MyType pred {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, returns boolean) | the implementation is marked predicat | `if my_type {...}` |
 | immuable operator implementation | `impl MyType op + { return self + other }` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
 | mutable operator implementation | `impl MyType op += { self = self + other }` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
-| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns ordering value, generate boolean version, generate equality, can be overrided | `my_type1 > my_type2`
+| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns ordering value, generate boolean version, no equality, can be overrided | `my_type1 > my_type2`
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
