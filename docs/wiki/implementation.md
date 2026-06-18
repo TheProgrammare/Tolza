@@ -12,14 +12,13 @@ impl type::name([params]) [-> <return_type>] {...}
 
 | type | syntax | consequence | call |
 |-|-|-|-|
-| immuable implementation | `impl str::print_message(ref self, lvl: EMsgLvl) {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
-| mutable implementation | `impl usize::incr(mut self) { self += 1 }` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
-| static implementation | `impl fsize::PI() { return 3.14159265359 }` | the implementation is marked static (no self), always returns the type implemented | `let my_pi = fsize::PI()` |
-| cast from implementation | `impl str as ssize {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast from | `let my_size: ssize = "12345" as ssize` |
-| predicat implementation | `impl MyType pred {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, returns boolean) | the implementation is marked predicat | `if my_type {...}` |
+| immuable implementation | `impl T::method_name(ref self, args...) -> U {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
+| mutable implementation | `impl T::method_name(mut self, args...) -> U {...}` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
+| static implementation | `impl T::method_name(args...) -> T {...}` | the implementation is marked static (no self), always returns the type implemented | `let my_pi = fsize::PI()` |
+| cast from implementation | `impl T as U {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast from | `let my_size: ssize = "12345" as ssize` |
+| predicat implementation | `impl T pred {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, returns boolean) | the implementation is marked predicat | `if my_type {...}` |
 | immuable operator implementation | `impl MyType op + { return self + other }` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
-| mutable operator implementation | `impl MyType op += { self = self + other }` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
-| comparison operator implementation | `impl MyType op <=> { return self.member <=> other.member }` | the two terms are always the same types, returns ordering value, generate boolean version, no equality, can be overrided | `my_type1 > my_type2`
+
 > Note: the `# pure` metacode can be used to forbidding any border effects
 
 An implementation have a type namespace, the module importation will allow the usage but the path will be on the type (like a static implementation)
@@ -37,7 +36,23 @@ b.print()
 
 > Avoid implementation functions when a more elaborated data managment is required, use COP paradigm instead
 
+## operation implementation
 
+| type | syntax | consequence | call |
+|-|-|-|-|
+| immuable operator | `impl MyType op + {...}` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
+| mutable operator | `impl MyType op += {...}` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
+| ordering | `impl MyType op <=> {...}` | the two terms are always the same types, returns ordering value, generate boolean version, no equality, can be overrided | `my_type1 > my_type2`
+| index operator | `impl T op [index: usize] -> U {...}` | returns the type reference mut/ref | `ref elem = my_type[1]`
+| index bound operator | `impl MyType op ?[index: usize] -> T? {...}` | returns optional | `if let elem = my_type?[1]`
+| slice operator | `impl T op [start..end] -> Slice<U> {...}` | returns the slice type | `ref elem = my_type[1]`
+| slice bound operator | `impl T op [start..end] -> Slice<U> {...}` | returns the slice type | `ref elem = my_type[1]`
+| slice bits operator | `impl T op ~[start..end] -> Slice<U> {...}` | returns byte type | `let bits: b64 = my_type~[0..64]`
+| transfert copy operator | `impl T op copy -> T {...}` | returns a copy | `let my_copy: MyType copy= my_type`
+| transfert move operator | `impl T op move -> T {...}` | returns a copy | `let my_copy: MyType = my_type`
+
+| type | syntax | consequence | call |
+|-|-|-|-|
 
 ## Generics
 It's possible to set generics on implementation parameters, even on `self`.
