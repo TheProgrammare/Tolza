@@ -49,7 +49,8 @@ b.print()
 | slice bound operator | `impl T op [start..end] -> Slice<U> {...}` | returns the slice type | `ref elem = my_type[1]`
 | slice bits operator | `impl T op ~[start..end] -> Slice<U> {...}` | returns byte type | `let bits: b64 = my_type~[0..64]`
 | transfert copy operator | `impl T op copy -> T {...}` | returns a copy | `let my_copy: MyType copy= my_type`
-| transfert move operator | `impl T op move -> T {...}` | returns a copy | `let my_copy: MyType = my_type`
+| transfert move operator | `impl T op move -> T {...}` | move semantic, drop self | `let my_copy: MyType = my_type`
+| delete operator | `impl T op del {...}` | drop self | `del my_type`
 
 | type | syntax | consequence | call |
 |-|-|-|-|
