@@ -13,41 +13,10 @@ The COP paradigm can be used in functions to simplify the code and avoid the gen
 
 Keep in mind that any component and role type in parameter is values garantee.
 
+# COP in Implementations
+Components and Entities, Roles can be implemented by any implementation items (function, cast, op, etc...)
 
+> Tips: implement setter and getter on components, implement cast, op, constructors on entities, keep entities behaviours for systems
 
-# COP and Function Generics and Function Calls
-> Usage is the same as rust generic call type args
-> It's possible tu specify a generic in the args
-
-generic function call (turbofish used in calling)
-```
-<name>::'<'type[, type, ...]'>'([<parameters>])
-```
-e.g.
-```
-add::<GNumeric, i32>(10, 20)
-```
-
-entity with generic fixed component:
-```
-entity TCity {
-  use CArray<THouse>
-}
-```
-
-entity with generic component:
-```
-entity TAnimal<T> {
-  use CLife<T>
-}
-```
-
-component with generic fixed:
-```
-comp CNames { names: TArray<str> }
-```
-
-component with generic:
-```
-comp CLife<T: GDecimalScaled, U> { render: U, metabolism: Map<str, T> }
-```
+# COP in Generics
+Components and Entities can be generic, have generics members, use generic type, fixed generic types
