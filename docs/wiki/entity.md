@@ -10,10 +10,10 @@ entity name<gen_args> {...}
 
  ### Entity Members
 
-| member | syntax | info | method | return |
-|-|-|-|-|-|
-| component default | `use name { field: value }` | with default value | | |
-| component | `use name` | default value from component | | |
+| member | syntax | info |
+|-|-|-|
+| component default override | `use name { field: value }` | with default value |
+| component | `use name` | default value from component | 
 
 
 examples:
@@ -42,16 +42,66 @@ Components members are a unique set inside entities
 
 e.g. Good design
 ```
-// public std lib comp CBuffer<T> {...} // generic buffer data component
-// private std lib entity List<T> {...} // generic buffer data formalization (entity with composition and all operations)
-// public std lib comp CList<T> { mut list: List<T> } // List entity component wrapper
+mod game_entity_data {
+  comp Position { x: fsize = 0, y: fsize = 0, z: fsize = 0 }
+  comp Velocity { speed: fsize = 0.0f }
+  comp Vitality { health: fsize = 0.0f, stamina: fsize = 0.0f, mana: fsize = 0.0f, max_mana: fsize = 0.0f }
+  comp Combat {strength: fsize = 0.0f, protection: fsize = 0.0f}
 
-comp CatalogueItem { name: str= "", price: f32= 0 } // user component
- 
-entity Catalogue {
-  use CList<CatalogueItem>
+  impl Velocity::calculate_speed(mut pos1: Position, mut pos2: Position) {
+    self.speed = ((pos1.x - pos2.x) + (pos1.y - pos2.y) + (pos1.z - pos2.z)) / 3
+  }
+
+  role Movable {Position, Velocity,}
+  role Fightable {Vitality, Combat,}
+
+  entity Player {
+    use Position,
+    use Velocity,
+    use Vitality{.health= 2.0f},
+    use Combat {.strength= 10.0f},
+  }
+
+ entity NPC {
+   use Position,
+   use Vitality{.health= 1.0f},
+   use Combat {.strength= 5.0f},
+ }
+
+  sys move(x: fsize = 0, y: fsize = 0, z: fsize = 0) {
+    Position(p) + Velocity(v) => {
+      v.calculate_speed(p, Position{.x= x, .y= y, .z= z}) // implementation called
+      p->move(x, y, z) // system called only on component position
+      return
+    }
+    Position(p) => {
+      p.x += x
+      p.y += y
+      p.z += z
+    }
+  }
+
+  sys apply_damage(ref combat: Combat) {
+    Vitality(v) => {
+      v.health -= combat.strength
+    }
+  }
+
+  sys is_dead() {
+    Vitality(v) => {
+      return v.health <= 0
+    }
+  }
+
+  var my_player: Player
+  my_player->move(1000, 10, 0)
+  var ennemy: NPC
+  ennemy->move(1000, 10, 0)
+  my_player->apply_damage(ennemy) // ennemy deals 5 damage to my_player
+  ennemy->apply_damage(my_player) // my_player deals 10 damage to ennemy
+  if my_player->is_dead() => println("Player is dead")
+  if ennemy->is_dead() => println("Ennemy is dead")
 }
-
 ```
 
 ## Literal Entity
