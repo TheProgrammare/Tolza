@@ -15,7 +15,7 @@ impl type::name([params]) [-> <return_type>] {...}
 | immuable implementation | `impl T::method_name(ref self, args...) -> U {...}` | the implementation is marked constant | `"hello world".print_message(EMsgLvl::log)` `msg.print_message(EMsgLvl::log)` |
 | mutable implementation | `impl T::method_name(mut self, args...) -> U {...}` | the implementation is marked mutable | `var count: usize = 0`</br>`count.incr()` |
 | static implementation | `impl T::method_name(args...) -> T {...}` | the implementation is marked static (no self), always returns the type implemented | `let my_pi = fsize::PI()` |
-| cast from implementation | `impl T as U {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast from | `let my_size: ssize = "12345" as ssize` |
+| cast from implementation | `impl T as U {`</br>`  var end: ptr'cune`</br>`  return C::strtoull(self, end, 10) as ssize`</br>`}` (self is the origin, return the value converted) | the implementation is marked cast | `let my_size: ssize = "12345" as ssize` |
 | predicat implementation | `impl T pred {`</br>`  return self.is_genreated and self.not_empty()`</br>`}` (self is the origin, returns boolean) | the implementation is marked predicat | `if my_type {...}` |
 | immuable operator implementation | `impl MyType op + { return self + other }` | the two terms are always the same types, returns the type | `my_type1 + my_type2`
 
