@@ -85,6 +85,17 @@ mod game_entity_data {
     Vitality(v) => {
       v.health -= combat.strength
     }
+    Vitality(v) + Combat(c) => {
+      if self->is_dead() { // self is the entity, OK vitality binded 
+        c.damage = 0
+        c.protection = 0
+      }
+    }
+    Vitality(v) + Velocity(vel) => {
+      if self->is_dead() { // idem
+        vel.speed = 0
+      }
+    }
   }
 
   sys is_dead() {
