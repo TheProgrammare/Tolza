@@ -27,12 +27,12 @@ Avoid any type abiguity
 > optional metadata annotation for component members</br>
 - no default value requied `# no default` really unsafe
 
-A component used in function parameter is a guarantee of the presence of the values as long as the entity have the component expected.
+A component used in function parameter or implemented is a guarantee of the presence of the values (or on entitity as long as the entity have the component expected).
 
 ## Component Field entity typed
-A field is a primtive type or an entity, no inline component/entity field are accepted. To keep the composition clean
+A field is a primtive type or an entity reference, no inline component/entity field are accepted. To keep the composition clean
 
-Components can't handle a nested entity/component for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
+Components can't handle a nested entity/component value for contigous memory sanity and avoid infinitive structures loop. When an entity is specified, it's always a reference to an entity instance.
 
 There is differents usage mod of entity who define the pointer type.
 
@@ -43,6 +43,8 @@ Filed entity/component typed mode
 | pointer | `mut name: EntityT/CompT` | non-nullable, mutable reference, same lifetime |
 | pointer | `name: ptr'EntityT/CompT` | nullable, raw pointer, independent lifetime |
 | pointer | `name: sptr'EntityT/CompT` | nullable, reference counted, lifetime shared |
+
+> Tips: Implement del on components to manage pointer lifetime on entity type field
 
 ## Component Parameters
 CPosition and CPhysic guarantee the members values for the entity calling
@@ -79,13 +81,19 @@ role name { components, ... }
 ## Role Parameters
 ```
 role RMovable { CPosition, CPhysic }
-fn move_entity_role(mut mov: RMovable, copy new_pos: xyz_pos, copy vel: f32) {
-  mov.CPosition.x copy= new_pos.x
-  mov.CPosition.y copy= new_pos.y
-  mov.CPosition.z copy= new_pos.z
-  mov.CPhysic.vel copy= vel
+impl RMovable::move(mut self, ref new_pos: xyz_pos, copy vel: f32) {
+  self.CPosition = CPosition{.x= new_pos.x, .y= new_pos.y, .z= new_pos.z}
+  self.CPhysic.vel = vel
 }
+
+entity Car { use CPosition, use CPhysic }
+
+var my_car: Car
+my_car@RMovable.move({.x= 10}, 100)
 ```
+
+> Tips: use roles to implement some cross-component behaviour without specific entity context
+
 calling
 ```
 move_entity_role(player, (10.0, 20.0, 30.0), 5.0)
