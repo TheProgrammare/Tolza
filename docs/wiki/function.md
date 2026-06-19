@@ -32,7 +32,7 @@ return element kind:
 | kind | syntax | out mode | info |
 |-|-|-|-|
 | Primitive type | `fn() -> i32` | `copy` | Local variables can't survive, a copy is the convention |
-| Complex type | `fn() -> MyEntity` | `move` | A move semantic always make because local variables can't survive |
+| Complex type | `fn() -> MyForm` | `move` | A move semantic always make because local variables can't survive |
 | mut | `fn(mut a: i32, mut b: i32) -> mut'i32` | `move` | but explicit lifetime is required here (mut is exclusive) see Return mut matching
 | ref | `fn(ref a: i32, ref b: i32) -> ref'i32` | add `ref` | no explicit lifetime required because ref are cumulatives
 | ptr | `fn() -> ptr'i32` | `move` | pointer is escaped

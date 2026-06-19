@@ -1,55 +1,49 @@
 # Examples
 
-## Game entity system
+## Game Entity System
 
 store to a module
 ```
-mod game::entity_system {
+mod game::system::entity {
 ```
 define some base data
 ```
-  comp Position { x: fsize = 0, y: fsize = 0, z: fsize = 0 }
-  comp Velocity { speed: fsize = 0.0f }
-  comp Vitality { health: fsize = 0.0f, stamina: fsize = 0.0f, mana: fsize = 0.0f, max_mana: fsize = 0.0f }
-  comp Combat {strength: fsize = 0.0f, protection: fsize = 0.0f}
+  facet Position { x: fsize = 0, y: fsize = 0, z: fsize = 0 }
+  facet Velocity { speed: fsize = 0.0f }
+  facet Vitality { health: fsize = 0.0f, stamina: fsize = 0.0f, mana: fsize = 0.0f, max_mana: fsize = 0.0f }
+  facet Combat {strength: fsize = 0.0f, protection: fsize = 0.0f}
 ```
 
-use a specific implementation for some components logics
+use a specific extension for some facets logics
 ```
-  impl Velocity::calculate_speed(mut pos1: Position, mut pos2: Position) {
+  extend Velocity::calculate_speed(mut pos1: Position, mut pos2: Position) {
     self.speed = ((pos1.x - pos2.x) + (pos1.y - pos2.y) + (pos1.z - pos2.z)) / 3
   }
 ```
 
-define some roles to reuse them or show a (packaged components) logic independent of any entity context
+define some roles to reuse them or show a (packaged facets) logic independent of any form context
 ```
   role Movable {Position, Velocity,}
   role Fightable {Vitality, Combat,}
 ```
 
-define entities with a composition and some default values
+define forms with a composition and some default values
 ```
-  entity Player {
+  form Entity {
     use Position,
     use Velocity,
     use Vitality{.health= 2.0f},
     use Combat {.strength= 10.0f},
   }
-
- entity NPC {
-   use Position,
-   use Vitality{.health= 1.0f},
-   use Combat {.strength= 5.0f},
- }
 ```
 
-define systems designed to execute some pertinent behaviour for any entities with compatible composition
+define rules designed to execute some pertinent behaviour for any forms with compatible composition
 
 Move is applied for this set of composition : (Positon and velocity) or (Position)
 ```
-  sys move(x: fsize = 0, y: fsize = 0, z: fsize = 0) {
+  rule move(x: fsize = 0, y: fsize = 0, z: fsize = 0) {
     Position(p) + Velocity(v) => {
-      v.calculate_speed(p, Position{.x= x, .y= y, .z= z}) // implementation called
+      v.calculate_speed(p, Position{.x= x, .y= y, .z= z}) // extension called
       fallthrough
     }
     Position(p) => {
@@ -60,15 +54,15 @@ Move is applied for this set of composition : (Positon and velocity) or (Positio
   }
 ```
 
-complex system composition graph with some specific design 
+complex rule composition graph with some specific design 
 ```
-  sys apply_damage(ref combat: Combat) {
+  rule apply_damage(ref combat: Combat) {
     Vitality(v) => {
       v.health -= combat.strength
       fallthrough
     }
     Vitality(v) + Combat(c) + Velocity(vel) => { // micro optimization to avoid double call on is_dead()
-      if self->is_dead() { // self is the entity, OK because vitality binded in context 
+      if self->is_dead() { // self is the form, OK because vitality binded in context 
         c.damage = 0
         c.protection = 0
         vel.speed = 0
@@ -76,7 +70,7 @@ complex system composition graph with some specific design
       return // not useful, no fallthrough by default
     }
     Vitality(v) + Combat(c) => {
-      if self->is_dead() { // self is the entity, OK because vitality binded in context 
+      if self->is_dead() { // self is the form, OK because vitality binded in context 
         c.damage = 0
         c.protection = 0
       }
@@ -91,9 +85,9 @@ complex system composition graph with some specific design
   }
 ```
 
-This system is better than a implementation on Vitality component because "is_dead" is useful in entity context
+This rule is better than a extension on Vitality facet because "is_dead" is useful in form context
 ```
-  sys is_dead() {
+  rule is_dead() {
     Vitality(v) => {
       return v.health <= 0
     }
@@ -103,10 +97,10 @@ This system is better than a implementation on Vitality component because "is_de
 logic code permitted
 ```
   fn main() {
-    // the player and NPC move to the same direction
-    var my_player: Player
+    // the player and ennemy move to the same direction
+    var my_player: Entity
     my_player->move(1000, 10, 0)
-    var ennemy: NPC
+    var ennemy: Entity
     ennemy->move(1000, 10, 0)
 
     // some combat !
@@ -116,7 +110,7 @@ logic code permitted
     if my_player->is_dead() => println("Player is dead")
     if ennemy->is_dead() => println("Ennemy is dead")
 
-    // what if is_dead was a implementation on Vitality :
+    // what if is_dead was a extension on Vitality :
     // if my_player@Vitality.is_dead() => ...
     // if ennemy@Vitality.is_dead() => ...
   }

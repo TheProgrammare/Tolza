@@ -13,9 +13,9 @@ pattern element kind | e.g. | info |
 |-|-|
 | enum pattern | `MyEnum::Elem(a, _, 10) = <expression>` |
 | tuple pattern | `(a, _, 7, "hello") = <expression>` |
-| entity pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
-| entity pattern | `Player{CId{name: name, id 10}} = <expression>` |
-| component pattern | `CId{name: name, id: 10} = <expression>` |
+| form pattern | `Player{CId.name: name, CId.id 10} = <expression>` |
+| form pattern | `Player{CId{name: name, id 10}} = <expression>` |
+| facet pattern | `CId{name: name, id: 10} = <expression>` |
 
 ## Pattern Binding Mode
 | Binding Mode | syntax | info |

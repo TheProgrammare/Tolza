@@ -46,8 +46,8 @@ Literal reading mode
 | flag | `flag FMyFlag { read, write, access }` | `FMyFlag::read` | `u8` 
 | union | `union UMyUnion { i: i32; u: u64 }` | `UMyUnion.i = ...` `var a = UMyUnion.i` | size of the biggest type
 | generic | `gen GNumeric<T> { ... }` | `var a: GNumeric = ...` | 
-| component | `comp CID { name: str = "", age: i32 = 20, id: b64 = 0x0 }` | `var marc = CID{ .name= "Marc", .age= 40, .id= 0x00FFF }` | list of related data | sum of type + offset on largest
-| entity | `entity Player { use CPosition, use CID { .name= "Player" } }` | `var player2 = Player{ CID.name= "Player2", CID.id= 0x00AAA }` | list of component for static composition | sum of components (and offset)
+| facet | `facet FID { name: str = "", age: i32 = 20, id: b64 = 0x0 }` | `var marc = CID{ .name= "Marc", .age= 40, .id= 0x00FFF }` | list of related data | sum of type + offset on largest
+| form | `form Player { use CPosition, use CID { .name= "Player" } }` | `var player2 = Player{ CID.name= "Player2", CID.id= 0x00AAA }` | list of facet for static composition | sum of facets (and offset)
 
 ### Implicit Cast
 no memory loss allowed 

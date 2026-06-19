@@ -13,11 +13,11 @@ standard io error handler : `io::Error`
 | output critical | `output::critical arg... \| args...` | no buffered
 | output critical | `output::flush arg... \| args...` | sugar syntax of `output "my text" \| io::flush`
 | open file | `open my_file = "path" \| args...` | create variable, open any file with `open` args
-| open as entity | `open::MyEntity my_file = "path" \| args...` | create variable, open with entity operation and  `open` args
-| close file | `close my_file` | close any file or entity
-| read file/stream | `read my_file in target \| args...` | read any file or entity source and put in variable reference with `read` args
+| open as form | `open::MyForm my_file = "path" \| args...` | create variable, open with form operation and  `open` args
+| close file | `close my_file` | close any file or form
+| read file/stream | `read my_file in target \| args...` | read any file or form source and put in variable reference with `read` args
 | input message | `input name = "Input message" \| args...` | create variable type `Result<T, io::Error>`, read any user input with `input` args, type is string by default
-| input entity | `input::MyEntity name = "Input message" \| args...` | create variable type `Result<MyEntity, io::Error>`, read any user input with `input` args, type is string by default
+| input form | `input::MyForm name = "Input message" \| args...` | create variable type `Result<MyForm, io::Error>`, read any user input with `input` args, type is string by default
 | write file/stream | `write source in my_file \| args...` | write any data in file or flow stream target with `write` args
 
 ## Arguments
@@ -126,6 +126,6 @@ export IO {
 ```
 
 ## custom I/O
-Users can write down their own I/O by using entity operation overload, see [entity](#entity)
+Users can write down their own I/O by using form operation overload, see [form](#form)
 
 

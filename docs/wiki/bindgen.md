@@ -5,7 +5,7 @@ The bindgen will store the importations of the external lib and generate all the
 
 user script: 
 ```
-// entity_messages.vlx
+// form_messages.vlx
 
 import ext: C::stdio
 

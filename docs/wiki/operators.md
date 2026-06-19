@@ -14,7 +14,7 @@
 | address of     | `addr'my_val` | get the memory address of value -> returns raw ptr'T of val type| 
 
 ## Arithmetic
-> See COP section
+> See SFM section
 
 | arithmetic | syntax | info |
 |-|-|-|
@@ -32,7 +32,7 @@
 | decrement      | `--`         |                         |
 
 ## Comparison
-> See COP section
+> See SFM section
 
 | comparison | syntax | info |
 |-|-|-|
@@ -46,7 +46,7 @@
 | not eq strictly| `!==`        | for string and float    |
 
 ## Logical
-> See COP section
+> See SFM section
 
 | logical | bitwise | syntax | syntax bitwise |
 |-|-|-|-|

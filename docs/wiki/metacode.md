@@ -22,7 +22,7 @@ e.g.
 fn functionOnThreads() {}
 
 # align 8
-comp City {
+facet City {
   code: i32 = 0,
   name: str = "",
 }
@@ -85,16 +85,16 @@ e.g.
 # scope
 export operations {
   fn add() {}
-  comp CMap_pos { 
+  facet CMap_pos { 
     var lat: i32 = 0
     var long: i32 = 0 
   }
 
-  entity THouse {
+  form THouse {
     use CMap_pos
   }
 
-  sys get_map_pos -> (lat: i32, long: i32) {
+  rule get_map_pos -> (lat: i32, long: i32) {
     CMap_pos(pos) {
       return pos.lat, pos.long    
     } 
@@ -129,7 +129,7 @@ metacodes can set condition during the compilation to compile or exclude code pa
 |-|-|-|-|
 | bits condition | `# if bits == ...` | `# if bits == 64` | indicate the architecture bits (8/16/32/64) |
 | architecture condition | `# if arch == ...` | `# if arch == x86_64` | indicate the architecture type (ARM64/x86_64/x86/IBM/...) |
-| operating system condition | `# if os == ...` | `# if os == linux` | indicate the operating system (Linux/Windows/MacOS/...) |
+| operating rule condition | `# if os == ...` | `# if os == linux` | indicate the operating rule (Linux/Windows/MacOS/...) |
 | mode condition | `# if debug` | `# if debug` | for the compilation in debug mode |
 
 ## Metacode Expansion
@@ -200,7 +200,7 @@ You can set some exceptions or conditions during the expansion:
 | copyright| `# copyright ""` | |
 | wiki | `# wiki ""` | |
 | documentation | `# doc ""` | |
-| operating system used | `# os ""` | |
+| operating rule used | `# os ""` | |
 
 ## Function / Lambda Target (`fn`, `lam`)
 | name | syntax | info 
@@ -213,7 +213,7 @@ You can set some exceptions or conditions during the expansion:
 | unit test | `# test` | the function is a unit test. |
 | for performance | `# benchmark` | the function is for performance benchmarking. |
 
-## Entity Target
+## Form Target
 | name | syntax | info 
 |-|-|-|
 |  | `# align N` | enforce memory alignment (e.g. `# align(8)`). |

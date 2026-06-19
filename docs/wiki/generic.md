@@ -9,10 +9,10 @@ gen <name>'<'<typename> [, <typename2>, ...]'>' { .. }
 Generics are usable on:
 - functions
 - parameters
-- entity
-- systems
-- components
-- roles (for generic components)
+- form
+- rules
+- facets
+- roles (for generic facets)
 - type-alias
 
 
@@ -25,28 +25,28 @@ Conditions are cumulatives and not alternatives
 | filter kind | kind | syntax |
 |-|-|-|
 | operator filter | `op` | `T op *` |
-| component filter | `comp` | `T comp Position` |
+| facet filter | `facet` | `T facet Position` |
 | role filter | `role` | `T role Merchant` |
-| system filter | `sys` | `T sys Move` |
+| rule filter | `rule` | `T rule Move` |
 | cast filter | `cast to`<br> `cast from` | `T cast to i32` `T cast from i32` `T cast to U` (commutative : valid if at least one cast is compatible) |
 | generic filter | `is` | `T is gen::base_of<CAnimal> \| ...` or `T is Integral \| Signed \| i128 \| ...` (first arg is left of `is`) can have alternative |
 
 Named generic example: 
 ```
 gen GMoveable<T> { 
-  T comp CPosition,
+  T facet FPosition,
   T use op +,
   T use op -,
 } 
 
 gen GVelocity_Applied<T> {
   T is GMoveable
-  T comp CVelocity
+  T facet FVelocity
 }
 ```
 
 ## Generic Usage
-generic usage on functions/component/entity/lambda 
+generic usage on functions/facet/form/lambda 
 
 function:
 ```
@@ -59,7 +59,7 @@ fn add<T: is i32 + is i64, U: op + + is integral>(a: T, b: U) {
 
 generic without condition is possible (not recommended)
 ```
-comp items<T> { size: usize, value: T }
+facet items<T> { size: usize, value: T }
 ```
 
 generic type usage is possible (not recommended)

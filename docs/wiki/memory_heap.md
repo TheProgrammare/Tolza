@@ -51,12 +51,12 @@ diff | `my_ptr1 <-> my_ptr2` | `ptrdiff` | distance between two pointers |
 
 
 ## Pointer usage
-Pointers are handled by the language, despite of the capability system.
+Pointers are handled by the language, despite of the capability rule.
 It's designed for low-level operations
 You can use them for some operations: (non-exhaustive list)
 | usage | syntax | info |
 |-|-|-|
-| arbitrary memory location | `let my_console_input: $ptr'i32! = 0xFFFFFF as! $ptr'i32!` | classic const pointer of volatile value from a input for embbed systems |
+| arbitrary memory location | `let my_console_input: $ptr'i32! = 0xFFFFFF as! $ptr'i32!` | classic const pointer of volatile value from a input for embbed rules |
 | change memory address | `fn swap_ptr(addr a: i32, addr b: i32) {...} swap(my_ptr1, my_ptr2)` | any addr parameter is considered aliased by security |
 | complex function return | `fn get_hardware_output(copy hardware_ty: EHardwareOutType) -> ptr'i32` |  |
 

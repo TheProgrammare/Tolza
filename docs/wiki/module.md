@@ -71,7 +71,7 @@ They MUST NOT resolve to parent, sibling, or cross-file modules implicitly.
 
 You can simplify module access:
 ```
-mod fs = core::filesystem
+mod fs = core::filerule
 ```
 **Usage:**
 ```
@@ -109,10 +109,10 @@ It will make a shortcut to the last identifier(s) (or alias) in the current scop
 
 special path prefix:
 - `std::` search on standard library
-- `src::` search on the root of the project source (filesystem structure)
+- `src::` search on the root of the project source (filerule structure)
 - `pkg::` search on packages installed
 - `bind::` search on bindings
-- none search first on relative file (filesystem structure)
+- none search first on relative file (filerule structure)
   - then try other path -> src -> std -> pkg -> bind
 
 
