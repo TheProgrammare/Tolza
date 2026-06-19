@@ -1,14 +1,14 @@
 #pragma once
 
-#include "nexus/forward.hpp"
 #include <cassert>
 #include <cstdint>
 #include <initializer_list>
 #include <map>
-#include <stdexcept>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+
+#include "nexus/forward.hpp"
 
 
 namespace token
@@ -18,7 +18,7 @@ constexpr uint32_t INVALID_POS = -1;
 constexpr uint16_t INVALID_LEN = -1;
 
 // T_ = Type L_ = Literal S_ = Special (no text key representation)
-enum class ETokenKind {
+enum class ETokenKind : uint8_t {
   UNKNOWN,
   S_END_OF_FILE,
   // end of metacode (end of line)
@@ -42,12 +42,12 @@ enum class ETokenKind {
   T_CUNE,
   // 32 bits
   T_RUNE,
-  T_I8,
-  T_I16,
-  T_I32,
-  T_I64,
-  T_I128,
-  T_ISIZE,
+  T_S8,
+  T_S16,
+  T_S32,
+  T_S64,
+  T_S128,
+  T_SSIZE,
   T_U8,
   T_U16,
   T_U32,
@@ -116,29 +116,24 @@ enum class ETokenKind {
   // flag
   CAPA_REF,
   ADDR,
+  AMPERSAND,
   CAPA_MOVE,
   VARIADIC,
   CAPA_MUT,
   CAPA_COPY,
-  CAPA_REF_OF,
-  VAL_OF,
-  CAPA_MOVE_OF,
-  CAPA_MUT_OF,
-  CAPA_COPY_OF,
-  SIZE_OF,
-  ADDR_OF,
   MEM_DIST,
-  SYSTEM,
+  RULE,
   WITH,
   ON,
   COMPILETIME,
   // fn lam keyword
   FUNCTION,
+  EXTENSION,
   LAMBDA,
-  ENTITY,
+  FORM,
   METACODE,
-  ROLE,
-  COMPONENT,
+  VIEW,
+  FACET,
   USE,
   ENUM,
   FLAG,
@@ -158,14 +153,14 @@ enum class ETokenKind {
   DEL,
   DROP,
   // structure
-  OPEN_PAREN,
-  CLOSE_PAREN,
-  OPEN_BRACKETS,
-  CLOSE_BRACKETS,
-  OPEN_BRACE,
-  CLOSE_BRACE,
-  OPEN_SQUARE,
-  CLOSE_SQUARE,
+  L_PAREN,
+  R_PAREN,
+  L_ANGLE,
+  R_ANGLE,
+  L_CURLY,
+  R_CURLY,
+  L_SQUARE,
+  R_SQUARE,
   COLON,
   SEMICOLON,
   COMMA,
@@ -180,7 +175,7 @@ enum class ETokenKind {
   UNDERSCORE,
   SPACE,
   TURBO_FISH,
-  RUN_SYSTEM,
+  RUN_RULE,
   OP,
   // logical gates
   OP_AND,
@@ -279,21 +274,21 @@ const std::map<std::string_view, ETokenKind> k_keywords = {
     {"cune",     ETokenKind::T_CUNE    },
     {"rune",     ETokenKind::T_RUNE    },
     {"fsize",    ETokenKind::T_FSIZE   },
-    {"isize",    ETokenKind::T_ISIZE   },
+    {"ssize",    ETokenKind::T_SSIZE   },
     {"usize",    ETokenKind::T_USIZE   },
-    {"i8",       ETokenKind::T_I8      },
+    {"s8",       ETokenKind::T_S8      },
     {"u8",       ETokenKind::T_U8      },
     {"b8",       ETokenKind::T_B8      },
-    {"i16",      ETokenKind::T_I16     },
+    {"s16",      ETokenKind::T_S16     },
     {"u16",      ETokenKind::T_U16     },
     {"b16",      ETokenKind::T_B16     },
-    {"i32",      ETokenKind::T_I32     },
+    {"s32",      ETokenKind::T_S32     },
     {"u32",      ETokenKind::T_U32     },
     {"b32",      ETokenKind::T_B32     },
-    {"i64",      ETokenKind::T_I64     },
+    {"s64",      ETokenKind::T_S64     },
     {"u64",      ETokenKind::T_U64     },
     {"b64",      ETokenKind::T_B64     },
-    {"i128",     ETokenKind::T_I64     },
+    {"s128",     ETokenKind::T_S64     },
     {"u128",     ETokenKind::T_U64     },
     {"b128",     ETokenKind::T_B128    },
     {"f16",      ETokenKind::T_F16     },
@@ -312,7 +307,7 @@ const std::map<std::string_view, ETokenKind> k_keywords = {
     {"ud32",     ETokenKind::T_UD32    },
     {"ud64",     ETokenKind::T_UD64    },
     {"ud128",    ETokenKind::T_UD128   },
-    {"ptrdiff",  ETokenKind::T_PTRDIFF },
+    {"ptrsize",  ETokenKind::T_PTRDIFF },
     // variable declaration
     {"let",      ETokenKind::LET       },
     {"var",      ETokenKind::VAR       },
@@ -324,14 +319,14 @@ const std::map<std::string_view, ETokenKind> k_keywords = {
     {"is",       ETokenKind::IS        },
     {"nis",      ETokenKind::NIS       },
     // class keys
-    {"entity",   ETokenKind::ENTITY    },
-    {"role",     ETokenKind::ROLE      },
-    {"comp",     ETokenKind::COMPONENT },
+    {"form",     ETokenKind::FORM      },
+    {"view",     ETokenKind::VIEW      },
+    {"facet",    ETokenKind::FACET     },
     {"use",      ETokenKind::USE       },
     {"enum",     ETokenKind::ENUM      },
     {"flag",     ETokenKind::FLAG      },
     {"union",    ETokenKind::UNION     },
-    {"sys",      ETokenKind::SYSTEM    },
+    {"rule",     ETokenKind::RULE      },
     // generic keys
     {"gen",      ETokenKind::GENERIC   },
     {"import",   ETokenKind::IMPORT    },
@@ -340,6 +335,7 @@ const std::map<std::string_view, ETokenKind> k_keywords = {
     {"extern",   ETokenKind::EXTERN    },
     // function keys
     {"fn",       ETokenKind::FUNCTION  },
+    {"extend",   ETokenKind::EXTENSION },
     {"lam",      ETokenKind::LAMBDA    },
 
     // pointers
@@ -352,7 +348,7 @@ const std::map<std::string_view, ETokenKind> k_keywords = {
     {"move",     ETokenKind::CAPA_MOVE },
     {"mut",      ETokenKind::CAPA_MUT  },
     {"copy",     ETokenKind::CAPA_COPY },
-    {"sys",      ETokenKind::SYSTEM    },
+    {"rule",     ETokenKind::RULE      },
     {"with",     ETokenKind::WITH      },
     {"on",       ETokenKind::ON        },
     // operator overloading
@@ -428,36 +424,40 @@ const std::unordered_map<std::string_view, ETokenKind> k_DFA = {
     {"d.dre=",  ETokenKind::ASSIGN_DIVREM   },
     {"m.add=",  ETokenKind::ASSIGN_MEM_ADD  },
     {"m.sub=",  ETokenKind::ASSIGN_MEM_SUB  },
+    {"&",       ETokenKind::AMPERSAND       },
     {"!",       ETokenKind::EXCLAMATION     },
     {"?",       ETokenKind::INTERROGATIVE   },
     {"$",       ETokenKind::DOLLAR          },
     {"_",       ETokenKind::UNDERSCORE      },
     {"=",       ETokenKind::ASSIGN          },
     {"=>",      ETokenKind::INJECT          },
+    {"->",      ETokenKind::ARROW           },
     {"==",      ETokenKind::OP_EQ           },
     {"!=",      ETokenKind::OP_NEQ          },
     {">=",      ETokenKind::OP_GEQ          },
     {"<=",      ETokenKind::OP_LEQ          },
     {"===",     ETokenKind::OP_EQS          },
     {"!==",     ETokenKind::OP_NEQS         },
-    {"<",       ETokenKind::OPEN_BRACE      },
-    {">",       ETokenKind::CLOSE_BRACE     },
-    {"{",       ETokenKind::OPEN_BRACKETS   },
-    {"}",       ETokenKind::CLOSE_BRACKETS  },
-    {"(",       ETokenKind::OPEN_PAREN      },
-    {")",       ETokenKind::CLOSE_PAREN     },
-    {"[",       ETokenKind::OPEN_SQUARE     },
-    {"]",       ETokenKind::CLOSE_SQUARE    },
+    {"<",       ETokenKind::L_ANGLE         },
+    {">",       ETokenKind::R_ANGLE         },
+    {"{",       ETokenKind::L_CURLY         },
+    {"}",       ETokenKind::R_CURLY         },
+    {"(",       ETokenKind::L_PAREN         },
+    {")",       ETokenKind::R_PAREN         },
+    {"[",       ETokenKind::L_SQUARE        },
+    {"]",       ETokenKind::R_SQUARE        },
     {"'",       ETokenKind::TICK            },
+    {",",       ETokenKind::COMMA           },
     {"~",       ETokenKind::TILDE           },
     {".",       ETokenKind::DOT             },
     {"..",      ETokenKind::RANGE           },
     {"..=",     ETokenKind::RANGE_INCLUSIVE },
     {"...",     ETokenKind::VARIADIC        },
     {":",       ETokenKind::COLON           },
+    {";",       ETokenKind::SEMICOLON       },
     {"::",      ETokenKind::STATIC_ACCESS   },
     {"::<",     ETokenKind::TURBO_FISH      },
-    {"::>",     ETokenKind::RUN_SYSTEM      },
+    {"::>",     ETokenKind::RUN_RULE        },
     {"#",       ETokenKind::METACODE        },
 };
 
@@ -482,12 +482,6 @@ const std::initializer_list<ETokenKind> k_capability = {
     ETokenKind::CAPA_COPY,
 };
 
-const std::initializer_list<ETokenKind> k_expression_passmode = {
-    ETokenKind::CAPA_MUT_OF,
-    ETokenKind::CAPA_REF_OF,
-    ETokenKind::CAPA_COPY_OF,
-    ETokenKind::CAPA_MOVE_OF,
-};
 
 const std::initializer_list<ETokenKind> k_operator = {
     ETokenKind::OP_PLUS,          ETokenKind::OP_MINUS,
@@ -497,8 +491,8 @@ const std::initializer_list<ETokenKind> k_operator = {
     ETokenKind::OP_DIVREM,        ETokenKind::OP_EQ,
     ETokenKind::OP_NEQ,           ETokenKind::OP_EQS,
     ETokenKind::OP_NEQS,          ETokenKind::OP_GEQ,
-    ETokenKind::OP_LEQ,           ETokenKind::OPEN_BRACKETS,
-    ETokenKind::CLOSE_BRACKETS,   ETokenKind::OP_AND,
+    ETokenKind::OP_LEQ,           ETokenKind::L_ANGLE,
+    ETokenKind::R_ANGLE,          ETokenKind::OP_AND,
     ETokenKind::OP_NAND,          ETokenKind::OP_OR,
     ETokenKind::OP_XOR,           ETokenKind::OP_NOR,
     ETokenKind::OP_XNOR,          ETokenKind::OP_NOT,
@@ -526,9 +520,12 @@ const std::initializer_list<ETokenKind> k_op_bitwise = {
     ETokenKind::OP_SHIFT_RIGHT_A, ETokenKind::OP_ROTATE_LEFT,   ETokenKind::OP_ROTATE_RIGHT,
 };
 
+const std::initializer_list<ETokenKind> k_op_unary = {ETokenKind::OP_PLUS, ETokenKind::OP_MINUS, ETokenKind::OP_NOT,
+                                                      ETokenKind::EXCLAMATION};
+
 const std::initializer_list<ETokenKind> k_op_comparison = {
-    ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_EQ,  ETokenKind::OP_NEQ, ETokenKind::OP_EQS,
-    ETokenKind::OP_NEQS,       ETokenKind::OP_LEQ,         ETokenKind::OP_GEQ, ETokenKind::IN,     ETokenKind::NIN,
+    ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_EQ,  ETokenKind::OP_NEQ, ETokenKind::OP_EQS,
+    ETokenKind::OP_NEQS, ETokenKind::OP_LEQ,  ETokenKind::OP_GEQ, ETokenKind::IN,     ETokenKind::NIN,
 };
 const std::initializer_list<ETokenKind> kAssignationTokens = {
     ETokenKind::MOVE_ASSIGN,   ETokenKind::COPY_ASSIGN,     ETokenKind::ASSIGN,        ETokenKind::ASSIGN_PLUS,
@@ -539,8 +536,8 @@ const std::initializer_list<ETokenKind> kAssignationTokens = {
 const std::initializer_list<ETokenKind> k_type_primitive = {
     ETokenKind::T_U0,     ETokenKind::T_BOOL,  ETokenKind::T_CUNE,    ETokenKind::T_C_STRING, ETokenKind::T_STRING,
     ETokenKind::T_RUNE,   ETokenKind::T_TEXT,  ETokenKind::T_USIZE,   ETokenKind::L_BIN,      ETokenKind::L_HEX,
-    ETokenKind::L_OCT,    ETokenKind::L_I,     ETokenKind::L_D,       ETokenKind::T_I8,       ETokenKind::T_I16,
-    ETokenKind::T_I32,    ETokenKind::T_I64,   ETokenKind::T_I128,    ETokenKind::T_ISIZE,    ETokenKind::T_U8,
+    ETokenKind::L_OCT,    ETokenKind::L_I,     ETokenKind::L_D,       ETokenKind::T_S8,       ETokenKind::T_S16,
+    ETokenKind::T_S32,    ETokenKind::T_S64,   ETokenKind::T_S128,    ETokenKind::T_SSIZE,    ETokenKind::T_U8,
     ETokenKind::T_U16,    ETokenKind::T_U32,   ETokenKind::T_U64,     ETokenKind::T_U128,     ETokenKind::T_USIZE,
     ETokenKind::T_B8,     ETokenKind::T_B16,   ETokenKind::T_B32,     ETokenKind::T_B64,      ETokenKind::T_B128,
     ETokenKind::T_BSIZE,  ETokenKind::T_F16,   ETokenKind::T_F32,     ETokenKind::T_F64,      ETokenKind::T_F80,
@@ -549,14 +546,14 @@ const std::initializer_list<ETokenKind> k_type_primitive = {
     ETokenKind::T_UDSIZE,
 };
 const std::initializer_list<ETokenKind> k_type_integral = {
-    ETokenKind::T_I8, ETokenKind::T_I16, ETokenKind::T_I32, ETokenKind::T_I64, ETokenKind::T_I128, ETokenKind::T_ISIZE,
+    ETokenKind::T_S8, ETokenKind::T_S16, ETokenKind::T_S32, ETokenKind::T_S64, ETokenKind::T_S128, ETokenKind::T_SSIZE,
     ETokenKind::T_U8, ETokenKind::T_U16, ETokenKind::T_U32, ETokenKind::T_U64, ETokenKind::T_U128, ETokenKind::T_USIZE,
     ETokenKind::T_B8, ETokenKind::T_B16, ETokenKind::T_B32, ETokenKind::T_B64, ETokenKind::T_B128, ETokenKind::T_BSIZE,
 };
 const std::initializer_list<ETokenKind> k_type_integral_signed = {
-    ETokenKind::T_I8, ETokenKind::T_I16, ETokenKind::T_I32, ETokenKind::T_I64, ETokenKind::T_I128, ETokenKind::T_ISIZE,
+    ETokenKind::T_S8, ETokenKind::T_S16, ETokenKind::T_S32, ETokenKind::T_S64, ETokenKind::T_S128, ETokenKind::T_SSIZE,
 };
-const std::initializer_list<ETokenKind> k_type_integra_unsigned = {
+const std::initializer_list<ETokenKind> k_type_integral_unsigned = {
     ETokenKind::T_U8, ETokenKind::T_U16, ETokenKind::T_U32, ETokenKind::T_U64, ETokenKind::T_U128, ETokenKind::T_USIZE,
 };
 const std::initializer_list<ETokenKind> k_type_integral_binary = {
@@ -567,8 +564,8 @@ const std::initializer_list<ETokenKind> k_type_floating_point = {
 };
 const std::initializer_list<ETokenKind> k_type_numeric = {
     ETokenKind::L_BIN,   ETokenKind::L_HEX,   ETokenKind::L_OCT,     ETokenKind::L_I,   ETokenKind::L_D,
-    ETokenKind::T_I8,    ETokenKind::T_I16,   ETokenKind::T_I32,     ETokenKind::T_I64, ETokenKind::T_I128,
-    ETokenKind::T_ISIZE, ETokenKind::T_U8,    ETokenKind::T_U16,     ETokenKind::T_U32, ETokenKind::T_U64,
+    ETokenKind::T_S8,    ETokenKind::T_S16,   ETokenKind::T_S32,     ETokenKind::T_S64, ETokenKind::T_S128,
+    ETokenKind::T_SSIZE, ETokenKind::T_U8,    ETokenKind::T_U16,     ETokenKind::T_U32, ETokenKind::T_U64,
     ETokenKind::T_U128,  ETokenKind::T_USIZE, ETokenKind::T_B8,      ETokenKind::T_B16, ETokenKind::T_B32,
     ETokenKind::T_B64,   ETokenKind::T_B128,  ETokenKind::T_BSIZE,   ETokenKind::T_F32, ETokenKind::T_F64,
     ETokenKind::T_F128,  ETokenKind::T_FSIZE, ETokenKind::T_PTRDIFF,
@@ -593,8 +590,8 @@ const std::initializer_list<ETokenKind> k_text_interpolation = {
     ETokenKind::S_INTERPOLATION_END,
 };
 const std::initializer_list<ETokenKind> k_type = {
-    ETokenKind::T_I8,       ETokenKind::T_I16,     ETokenKind::T_I32,   ETokenKind::T_I64,    ETokenKind::T_I128,
-    ETokenKind::T_ISIZE,    ETokenKind::T_U8,      ETokenKind::T_U16,   ETokenKind::T_U32,    ETokenKind::T_U64,
+    ETokenKind::T_S8,       ETokenKind::T_S16,     ETokenKind::T_S32,   ETokenKind::T_S64,    ETokenKind::T_S128,
+    ETokenKind::T_SSIZE,    ETokenKind::T_U8,      ETokenKind::T_U16,   ETokenKind::T_U32,    ETokenKind::T_U64,
     ETokenKind::T_U128,     ETokenKind::T_USIZE,   ETokenKind::T_B8,    ETokenKind::T_B16,    ETokenKind::T_B32,
     ETokenKind::T_B64,      ETokenKind::T_B128,    ETokenKind::T_BSIZE, ETokenKind::T_F16,    ETokenKind::T_F32,
     ETokenKind::T_F64,      ETokenKind::T_F80,     ETokenKind::T_F128,  ETokenKind::T_FSIZE,  ETokenKind::T_BOOL,
@@ -604,16 +601,16 @@ const std::initializer_list<ETokenKind> k_type = {
     ETokenKind::TYPE,       ETokenKind::T_PTRDIFF,
 };
 const std::initializer_list<ETokenKind> k_hybrid_namespace = {
-    ETokenKind::T_I8,       ETokenKind::T_I16,     ETokenKind::T_I32,   ETokenKind::T_I64,     ETokenKind::T_I128,
-    ETokenKind::T_ISIZE,    ETokenKind::T_U8,      ETokenKind::T_U16,   ETokenKind::T_U32,     ETokenKind::T_U64,
+    ETokenKind::T_S8,       ETokenKind::T_S16,     ETokenKind::T_S32,   ETokenKind::T_S64,     ETokenKind::T_S128,
+    ETokenKind::T_SSIZE,    ETokenKind::T_U8,      ETokenKind::T_U16,   ETokenKind::T_U32,     ETokenKind::T_U64,
     ETokenKind::T_U128,     ETokenKind::T_USIZE,   ETokenKind::T_B8,    ETokenKind::T_B16,     ETokenKind::T_B32,
     ETokenKind::T_B64,      ETokenKind::T_B128,    ETokenKind::T_BSIZE, ETokenKind::T_F16,     ETokenKind::T_F32,
     ETokenKind::T_F64,      ETokenKind::T_F80,     ETokenKind::T_F128,  ETokenKind::T_FSIZE,   ETokenKind::T_BOOL,
     ETokenKind::T_RUNE,     ETokenKind::T_CUNE,    ETokenKind::T_D32,   ETokenKind::T_D64,     ETokenKind::T_D128,
     ETokenKind::T_DSIZE,    ETokenKind::T_UD32,    ETokenKind::T_UD64,  ETokenKind::T_UD128,   ETokenKind::T_UDSIZE,
     ETokenKind::T_C_STRING, ETokenKind::T_STRING,  ETokenKind::T_TEXT,  ETokenKind::FUNCTION,  ETokenKind::IDENTIFIER,
-    ETokenKind::TYPE,       ETokenKind::T_U0,      ETokenKind::CAST,    ETokenKind::FUNCTION,  ETokenKind::LAMBDA,
-    ETokenKind::FLAG,       ETokenKind::PTR,       ETokenKind::ENTITY,  ETokenKind::COMPONENT, ETokenKind::USE,
+    ETokenKind::TYPE,       ETokenKind::T_U0,      ETokenKind::CAST,    ETokenKind::EXTENSION, ETokenKind::LAMBDA,
+    ETokenKind::FLAG,       ETokenKind::PTR,       ETokenKind::FORM,    ETokenKind::FACET,     ETokenKind::USE,
     ETokenKind::GENERIC,    ETokenKind::T_PTRDIFF,
 };
 const std::initializer_list<ETokenKind> k_op_logical = {ETokenKind::OP_AND, ETokenKind::OP_NAND, ETokenKind::OP_OR,
@@ -621,31 +618,26 @@ const std::initializer_list<ETokenKind> k_op_logical = {ETokenKind::OP_AND, ETok
                                                         ETokenKind::OP_NOT};
 
 const std::initializer_list<ETokenKind> k_args_ending = {
-    ETokenKind::CLOSE_BRACKETS, ETokenKind::CLOSE_BRACE, ETokenKind::OPEN_BRACE, ETokenKind::CLOSE_PAREN,
-    ETokenKind::CLOSE_SQUARE,   ETokenKind::SEMICOLON,   ETokenKind::ASSIGN,     ETokenKind::PIPE,
-    ETokenKind::PIPE_MUT,       ETokenKind::SEMICOLON,   ETokenKind::METACODE,
+    ETokenKind::R_ANGLE, ETokenKind::R_CURLY, ETokenKind::L_CURLY,  ETokenKind::R_PAREN,   ETokenKind::R_SQUARE,
+    ETokenKind::ASSIGN,  ETokenKind::PIPE,    ETokenKind::PIPE_MUT, ETokenKind::SEMICOLON, ETokenKind::METACODE,
 };
 const std::initializer_list<ETokenKind> k_args_delimitation = {
-    ETokenKind::CLOSE_BRACKETS, ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_PAREN, ETokenKind::OPEN_PAREN,
-    ETokenKind::CLOSE_SQUARE,   ETokenKind::OPEN_SQUARE,   ETokenKind::SEMICOLON,   ETokenKind::PIPE};
+    ETokenKind::R_ANGLE,  ETokenKind::L_ANGLE,  ETokenKind::R_PAREN,   ETokenKind::L_PAREN,
+    ETokenKind::R_SQUARE, ETokenKind::L_SQUARE, ETokenKind::SEMICOLON, ETokenKind::PIPE};
 const std::initializer_list<ETokenKind> k_args_generic_valid = {
-    ETokenKind::T_I8,           ETokenKind::T_I16,         ETokenKind::T_I32,
-    ETokenKind::T_I64,          ETokenKind::T_I128,        ETokenKind::T_ISIZE,
-    ETokenKind::T_U8,           ETokenKind::T_U16,         ETokenKind::T_U32,
-    ETokenKind::T_U64,          ETokenKind::T_U128,        ETokenKind::T_USIZE,
-    ETokenKind::T_B8,           ETokenKind::T_B16,         ETokenKind::T_B32,
-    ETokenKind::T_B64,          ETokenKind::T_B128,        ETokenKind::T_BSIZE,
-    ETokenKind::T_F32,          ETokenKind::T_F64,         ETokenKind::T_F128,
-    ETokenKind::T_FSIZE,        ETokenKind::DOLLAR,        ETokenKind::INTERROGATIVE,
-    ETokenKind::IDENTIFIER,     ETokenKind::STATIC_ACCESS, ETokenKind::PTR,
-    ETokenKind::TICK,           ETokenKind::HASHTAG,       ETokenKind::OPEN_BRACKETS,
-    ETokenKind::CLOSE_BRACKETS, ETokenKind::IDENTIFIER,    ETokenKind::T_BOOL,
-    ETokenKind::T_RUNE,         ETokenKind::T_CUNE,        ETokenKind::T_D32,
-    ETokenKind::T_D64,          ETokenKind::T_D128,        ETokenKind::T_DSIZE,
-    ETokenKind::T_UD32,         ETokenKind::T_UD64,        ETokenKind::T_UD128,
-    ETokenKind::T_UDSIZE,       ETokenKind::T_STRING,      ETokenKind::T_TEXT,
-    ETokenKind::FUNCTION,       ETokenKind::IDENTIFIER,    ETokenKind::TYPE,
-    ETokenKind::COMMA,          ETokenKind::LET,           ETokenKind::T_PTRDIFF,
+    ETokenKind::T_S8,       ETokenKind::T_S16,         ETokenKind::T_S32,      ETokenKind::T_S64,
+    ETokenKind::T_S128,     ETokenKind::T_SSIZE,       ETokenKind::T_U8,       ETokenKind::T_U16,
+    ETokenKind::T_U32,      ETokenKind::T_U64,         ETokenKind::T_U128,     ETokenKind::T_USIZE,
+    ETokenKind::T_B8,       ETokenKind::T_B16,         ETokenKind::T_B32,      ETokenKind::T_B64,
+    ETokenKind::T_B128,     ETokenKind::T_BSIZE,       ETokenKind::T_F32,      ETokenKind::T_F64,
+    ETokenKind::T_F128,     ETokenKind::T_FSIZE,       ETokenKind::DOLLAR,     ETokenKind::INTERROGATIVE,
+    ETokenKind::IDENTIFIER, ETokenKind::STATIC_ACCESS, ETokenKind::PTR,        ETokenKind::TICK,
+    ETokenKind::HASHTAG,    ETokenKind::L_ANGLE,       ETokenKind::R_ANGLE,    ETokenKind::IDENTIFIER,
+    ETokenKind::T_BOOL,     ETokenKind::T_RUNE,        ETokenKind::T_CUNE,     ETokenKind::T_D32,
+    ETokenKind::T_D64,      ETokenKind::T_D128,        ETokenKind::T_DSIZE,    ETokenKind::T_UD32,
+    ETokenKind::T_UD64,     ETokenKind::T_UD128,       ETokenKind::T_UDSIZE,   ETokenKind::T_STRING,
+    ETokenKind::T_TEXT,     ETokenKind::FUNCTION,      ETokenKind::IDENTIFIER, ETokenKind::TYPE,
+    ETokenKind::COMMA,      ETokenKind::LET,           ETokenKind::T_PTRDIFF,
 };
 
 const std::initializer_list<ETokenKind> k_lit = {
@@ -670,8 +662,8 @@ const std::initializer_list<ETokenKind> k_op_integral = {
     ETokenKind::OP_DIVIDE,       ETokenKind::OP_MODULO,     ETokenKind::OP_QUOTIEN,    ETokenKind::OP_REMAIN,
     ETokenKind::OP_DIVREM,       ETokenKind::ASSIGN,        ETokenKind::ASSIGN_PLUS,   ETokenKind::ASSIGN_MINUS,
     ETokenKind::ASSIGN_MULTIPLY, ETokenKind::ASSIGN_POWER,  ETokenKind::ASSIGN_DIVIDE, ETokenKind::ASSIGN_MODULO,
-    ETokenKind::ASSIGN_QUOTIEN,  ETokenKind::ASSIGN_REMAIN, ETokenKind::ASSIGN_DIVREM, ETokenKind::OPEN_BRACKETS,
-    ETokenKind::CLOSE_BRACKETS,  ETokenKind::OP_GEQ,        ETokenKind::OP_LEQ,        ETokenKind::OP_EQ,
+    ETokenKind::ASSIGN_QUOTIEN,  ETokenKind::ASSIGN_REMAIN, ETokenKind::ASSIGN_DIVREM, ETokenKind::L_ANGLE,
+    ETokenKind::R_ANGLE,         ETokenKind::OP_GEQ,        ETokenKind::OP_LEQ,        ETokenKind::OP_EQ,
     ETokenKind::OP_NEQ,
 };
 const std::initializer_list<ETokenKind> k_op_numeric = {
@@ -679,34 +671,33 @@ const std::initializer_list<ETokenKind> k_op_numeric = {
     ETokenKind::OP_DIVIDE,       ETokenKind::OP_MODULO,     ETokenKind::OP_QUOTIEN,    ETokenKind::OP_REMAIN,
     ETokenKind::OP_DIVREM,       ETokenKind::ASSIGN,        ETokenKind::ASSIGN_PLUS,   ETokenKind::ASSIGN_MINUS,
     ETokenKind::ASSIGN_MULTIPLY, ETokenKind::ASSIGN_POWER,  ETokenKind::ASSIGN_DIVIDE, ETokenKind::ASSIGN_MODULO,
-    ETokenKind::ASSIGN_QUOTIEN,  ETokenKind::ASSIGN_REMAIN, ETokenKind::ASSIGN_DIVREM, ETokenKind::OPEN_BRACKETS,
-    ETokenKind::CLOSE_BRACKETS,  ETokenKind::OP_GEQ,        ETokenKind::OP_LEQ,        ETokenKind::OP_EQ,
+    ETokenKind::ASSIGN_QUOTIEN,  ETokenKind::ASSIGN_REMAIN, ETokenKind::ASSIGN_DIVREM, ETokenKind::L_ANGLE,
+    ETokenKind::R_ANGLE,         ETokenKind::OP_GEQ,        ETokenKind::OP_LEQ,        ETokenKind::OP_EQ,
     ETokenKind::OP_NEQ,          ETokenKind::OP_EQS,        ETokenKind::OP_NEQS,
 };
 const std::initializer_list<ETokenKind> k_op_char = {
-    ETokenKind::ASSIGN, ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_GEQ,  ETokenKind::OP_LEQ,
-    ETokenKind::OP_EQ,  ETokenKind::OP_NEQ,        ETokenKind::OP_EQS,         ETokenKind::OP_NEQS,
+    ETokenKind::ASSIGN, ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_GEQ,  ETokenKind::OP_LEQ,
+    ETokenKind::OP_EQ,  ETokenKind::OP_NEQ,  ETokenKind::OP_EQS,  ETokenKind::OP_NEQS,
 };
 const std::initializer_list<ETokenKind> k_op_text = {
-    ETokenKind::OP_PLUS,        ETokenKind::ASSIGN, ETokenKind::ASSIGN_PLUS, ETokenKind::OPEN_BRACKETS,
-    ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_GEQ, ETokenKind::OP_LEQ,      ETokenKind::OP_EQ,
-    ETokenKind::OP_NEQ,         ETokenKind::OP_EQS, ETokenKind::OP_NEQS,
+    ETokenKind::OP_PLUS, ETokenKind::ASSIGN, ETokenKind::ASSIGN_PLUS, ETokenKind::L_ANGLE,
+    ETokenKind::R_ANGLE, ETokenKind::OP_GEQ, ETokenKind::OP_LEQ,      ETokenKind::OP_EQ,
+    ETokenKind::OP_NEQ,  ETokenKind::OP_EQS, ETokenKind::OP_NEQS,
 };
 const std::initializer_list<ETokenKind> k_op_enum = {
-    ETokenKind::ASSIGN, ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_GEQ,
-    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,         ETokenKind::OP_NEQ,
+    ETokenKind::ASSIGN, ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_GEQ,
+    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,   ETokenKind::OP_NEQ,
 };
 const std::initializer_list<ETokenKind> k_op_address = {
-    ETokenKind::ASSIGN, ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_GEQ,
-    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,         ETokenKind::OP_NEQ,
+    ETokenKind::ASSIGN, ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_GEQ,
+    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,   ETokenKind::OP_NEQ,
 };
 const std::initializer_list<ETokenKind> k_op_array = {
-    ETokenKind::ASSIGN, ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_GEQ,
-    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,         ETokenKind::OP_NEQ,
+    ETokenKind::ASSIGN, ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_GEQ,
+    ETokenKind::OP_LEQ, ETokenKind::OP_EQ,   ETokenKind::OP_NEQ,
 };
 const std::initializer_list<ETokenKind> k_op_format = {
-    ETokenKind::OPEN_BRACKETS, ETokenKind::CLOSE_BRACKETS, ETokenKind::OP_CIRCUMFLEX,
-    ETokenKind::TILDE,         ETokenKind::ASSIGN,
+    ETokenKind::L_ANGLE, ETokenKind::R_ANGLE, ETokenKind::OP_CIRCUMFLEX, ETokenKind::TILDE, ETokenKind::ASSIGN,
 };
 
 const std::initializer_list<ETokenKind> k_identifier_possible = {
@@ -714,9 +705,9 @@ const std::initializer_list<ETokenKind> k_identifier_possible = {
     ETokenKind::MOD,
     // type keys
     ETokenKind::TYPE, ETokenKind::T_U0, ETokenKind::T_BOOL, ETokenKind::ENUM, ETokenKind::T_RUNE, ETokenKind::T_CUNE,
-    ETokenKind::T_ISIZE, ETokenKind::T_USIZE, ETokenKind::T_BSIZE, ETokenKind::T_FSIZE, ETokenKind::T_I8,
-    ETokenKind::T_U8, ETokenKind::T_B8, ETokenKind::T_I16, ETokenKind::T_U16, ETokenKind::T_B16, ETokenKind::T_I32,
-    ETokenKind::T_U32, ETokenKind::T_B32, ETokenKind::T_I64, ETokenKind::T_U64, ETokenKind::T_B64, ETokenKind::T_I128,
+    ETokenKind::T_SSIZE, ETokenKind::T_USIZE, ETokenKind::T_BSIZE, ETokenKind::T_FSIZE, ETokenKind::T_S8,
+    ETokenKind::T_U8, ETokenKind::T_B8, ETokenKind::T_S16, ETokenKind::T_U16, ETokenKind::T_B16, ETokenKind::T_S32,
+    ETokenKind::T_U32, ETokenKind::T_B32, ETokenKind::T_S64, ETokenKind::T_U64, ETokenKind::T_B64, ETokenKind::T_S128,
     ETokenKind::T_U128, ETokenKind::T_B128, ETokenKind::T_F16, ETokenKind::T_F32, ETokenKind::T_F64, ETokenKind::T_F80,
     ETokenKind::T_F128, ETokenKind::T_C_STRING, ETokenKind::T_STRING, ETokenKind::T_TEXT, ETokenKind::T_D32,
     ETokenKind::T_D64, ETokenKind::T_D128, ETokenKind::T_DSIZE, ETokenKind::T_UD32, ETokenKind::T_UD64,
@@ -730,12 +721,12 @@ const std::initializer_list<ETokenKind> k_identifier_possible = {
     // typeid
     // checking
     ETokenKind::IS,
-    // COP keys
-    ETokenKind::ENTITY, ETokenKind::USE, ETokenKind::ROLE, ETokenKind::COMPONENT, ETokenKind::SYSTEM, ETokenKind::SELF,
+    // SFM keys
+    ETokenKind::FORM, ETokenKind::USE, ETokenKind::VIEW, ETokenKind::FACET, ETokenKind::RULE, ETokenKind::SELF,
     // generic keys
     ETokenKind::GENERIC,
     // function keys
-    ETokenKind::FUNCTION, ETokenKind::LAMBDA,
+    ETokenKind::FUNCTION, ETokenKind::EXTENSION, ETokenKind::LAMBDA,
     // pointers
     ETokenKind::PTR, ETokenKind::NEW, ETokenKind::DEL,
     // variable pass mode
@@ -757,62 +748,56 @@ const std::initializer_list<ETokenKind> k_identifier_possible = {
     ETokenKind::IDENTIFIER};
 
 
-struct Token {
-  Token() = default;
-
-  _id      id;
-  uint32_t begin  = INVALID_POS;
-  uint16_t length = INVALID_LEN;
+struct Token final {
+  ID         tokid;
+  uint32_t   begin  = INVALID_POS;
+  uint16_t   length = INVALID_LEN;
+  ETokenKind kind   = ETokenKind::UNKNOWN;
 #ifdef DEBUG
-  std::string_view debug_val;
+  std::string debug_val;
 #endif
-  ETokenKind kind = ETokenKind::UNKNOWN;
 };
 
 struct Arena final {
-  Arena(script::ScriptInfo& _scr_info)
-    : scr_info(_scr_info)
+  Arena(cu::ID _cuid)
+    : cuid(_cuid)
   {
   }
 
   struct Audit final {
     Arena& arena;
 
-    [[nodiscard]] std::string_view Token_to_str(_id id);
-    [[nodiscard]] size_t           Token_to_line(_id id);
-    [[nodiscard]] std::string_view Token_to_line_str(_id end);
+    [[nodiscard]] std::string_view Token_to_str(ID tokid) const noexcept;
+    [[nodiscard]] size_t           Token_to_line(ID tokid) const noexcept;
+    [[nodiscard]] std::string_view Token_to_line_str(ID tokid) const noexcept;
   };
 
-  Audit audit{*this};
+  const Audit audit{*this};
 
-  script::ScriptInfo& scr_info;
+  const cu::ID cuid;
 
   // index = token id
   std::vector<Token> tokens;
 
-  _id add(Token&& tok)
+  [[nodiscard]] ID add(Token& tok) noexcept;
+
+  [[nodiscard]] const Token& get(ID id) const noexcept
   {
-    const _id id(tokens.size());
-    tok.id = id;
-    tokens.push_back(std::move(tok));
-    return id;
+    const auto offset = id.offset();
+    assert(id && offset < tokens.size());
+    return tokens[offset];
   }
 
-  const Token& get(_id id) const
+  [[nodiscard]] Token& get(ID id) noexcept
   {
-    assert(id && id.value() < tokens.size());
-    return tokens[id.value()];
-  }
-
-  Token& get_mut(_id id)
-  {
-    assert(id && id.value() < tokens.size());
-    return tokens[id.value()];
+    const auto offset = id.offset();
+    assert(id && offset < tokens.size());
+    return tokens[offset];
   }
 };
 
 
-inline bool str_is_identifier(std::string_view s)
+[[nodiscard]] inline bool str_is_identifier(std::string_view s)
 {
   if (s.empty()) return false;
   if (!std::isalpha(s[0]) && s[0] != '_') return false;
@@ -821,12 +806,12 @@ inline bool str_is_identifier(std::string_view s)
   return true;
 }
 
-inline bool isKeywordChar(char ch)
+[[nodiscard]] inline bool isKeywordChar(char ch)
 {
   return !std::isspace(ch) && !std::iscntrl(ch);
 }
 
-inline ETokenKind str_to_ETokenKind(std::string_view str)
+[[nodiscard]] inline ETokenKind str_to_ETokenKind(std::string_view str)
 {
   if (auto it = k_keywords.find(str); it != k_keywords.end()) return it->second;
   return ETokenKind::UNKNOWN;

@@ -5,14 +5,12 @@
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
-#include <map>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
 
-#include "common.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
@@ -20,21 +18,21 @@
 namespace metacode
 {
 
-using _Key     = std::string_view;
-using _Pattern = std::initializer_list<std::string_view>;
+using _Meta_Key     = std::string_view;
+using _Meta_Pattern = std::initializer_list<std::string_view>;
 
 constexpr uint32_t k_section_size = std::numeric_limits<uint32_t>::max() / 4;
 
 // file tokens : 1+2+3 section        |x|x|x|_|
 // placeholder tokens : 3rd section   |_|_|_|x| - 1
 // metacode flag : max u32            |_|_|_|_| - 1 <-
-constexpr token::_id k_placeholder_flag_start = token::_id(k_section_size * 3);
-constexpr token::_id k_placeholder_flag_end   = token::_id(k_section_size * 4 - 1);
-constexpr token::_id k_metacode_flag          = token::_id(std::numeric_limits<uint32_t>::max());
+constexpr token::ID k_placeholder_flag_start = token::ID::make(cu::ID::main(), k_section_size * 3);
+constexpr token::ID k_placeholder_flag_end   = token::ID::make(cu::ID::main(), (k_section_size * 4) - 1);
+constexpr token::ID k_metacode_flag          = token::ID::make(cu::ID::main(), std::numeric_limits<uint32_t>::max());
 
-constexpr inline size_t to_placeholder_index(token::_id id)
+[[nodiscard]] constexpr size_t to_placeholder_index(token::ID id)
 {
-  return size_t(id.value() - k_placeholder_flag_start.value());
+  return size_t(id.raw() - k_placeholder_flag_start.raw());
 }
 
 #define METACODE_SET_KIND(kind)                                                                                        \
@@ -44,8 +42,8 @@ constexpr inline size_t to_placeholder_index(token::_id id)
   {                                                                                                                    \
   }
 
-#define METACODE_NODE(name)        _id name;
-#define METACODE_VECTOR_NODE(name) std::vector<_id> name;
+#define METACODE_NODE(name)        ID name;
+#define METACODE_VECTOR_NODE(name) std::vector<ID> name;
 
 enum class EMetacodeKind : uint8_t {
   Root,
@@ -59,23 +57,23 @@ enum class EMetacodeKind : uint8_t {
 };
 
 struct Word final {
-  Word(script::ScriptInfo& p_scr_info)
-    : scr_info(p_scr_info)
+  Word(cu::CU& p_CU)
+    : CU(p_CU)
   {
   }
 
-  script::ScriptInfo& scr_info;
+  cu::CU& CU;
 
-  std::vector<std::string_view> tokens;
+  std::vector<std::string> tokens;
 
-  [[nodiscard]] bool contains(std::string_view s) const;
-  [[nodiscard]] bool contains(token::ETokenKind type) const;
-  [[nodiscard]] bool contains_one(const std::initializer_list<token::ETokenKind>& l) const;
+  [[nodiscard]] bool contains(std::string_view s) const noexcept;
+  [[nodiscard]] bool contains(token::ETokenKind kind) const noexcept;
+  [[nodiscard]] bool contains_one(const std::initializer_list<token::ETokenKind>& l) const noexcept;
 
-  [[nodiscard]] bool have_key(const _Key& key) const;
+  [[nodiscard]] bool have_key(const _Meta_Key& key) const noexcept;
 };
 
-enum class EPatternKey {
+enum class EPatternKey : uint8_t {
   None,
   Any,         // "<*>"
   Identifier,  // "<a>"
@@ -83,13 +81,13 @@ enum class EPatternKey {
   Alternative, // "<_>"
 };
 
-[[nodiscard]] EPatternKey str_to_EPatternKey(const _Key& pattern);
+[[nodiscard]] EPatternKey str_to_EPatternKey(const _Meta_Key& key) noexcept;
 
 struct Instruction final {
   std::vector<Word> words;
 
-  [[nodiscard]] bool             match_pattern(const _Pattern& pattern) const;
-  [[nodiscard]] std::string_view at_str(size_t pos, size_t alt) const;
+  [[nodiscard]] bool             match_pattern(const _Meta_Pattern& pattern) const noexcept;
+  [[nodiscard]] std::string_view at_str(size_t pos, size_t alt) const noexcept;
 };
 
 
@@ -102,13 +100,13 @@ struct Metacode {
     bool        is_inline = true;
   };
 
-  _id id;
+  ID metaid;
 
   Scope                    scope;
   std::vector<Instruction> instructions;
   size_t                   start_toks = -1;
   size_t                   end_toks   = -1;
-  std::vector<token::_id>  tokens_to_generate;
+  std::vector<token::ID>   tokens_to_generate;
 
 
   size_t position = -1;
@@ -123,7 +121,7 @@ protected:
   }
 
 public:
-  EMetacodeKind kind() const
+  [[nodiscard]] EMetacodeKind kind() const
   {
     return metacode_kind;
   }
@@ -145,15 +143,15 @@ struct Macro final : Metacode {
   METACODE_SET_KIND(Macro)
 
   std::vector<std::string> params;
-  std::vector<token::_id>  body;
+  std::vector<token::ID>   body;
 };
 
 struct Cond_expr final : Metacode {
   METACODE_SET_KIND(Cond_expr)
 
-  bool       is_constant    = false;
-  bool       is_placeholder = false;
-  token::_id val;
+  bool      is_constant    = false;
+  bool      is_placeholder = false;
+  token::ID val;
 };
 
 struct Binary_Cond final : Metacode {
@@ -186,8 +184,8 @@ struct Expand final : Metacode {
 
 
   struct Placeholder final {
-    std::string_view        name;
-    std::vector<token::_id> variants;
+    std::string_view       name;
+    std::vector<token::ID> variants;
   };
 
   std::vector<Placeholder> placeholders;
@@ -201,65 +199,64 @@ template <typename T>
 concept DerivedMetacode = std::is_base_of_v<Metacode, T> && (!std::is_same_v<Metacode, T>);
 
 
-struct ScriptGraph final {
+struct Graph final {
   struct Audit final {
-    ScriptGraph& graph;
+    Graph& graph;
 
-    bool               contains(_id id, _Key s) const;
-    bool               contains(_id id, token::ETokenKind tok) const;
-    const Instruction* get_instruction(_id start_id, _Pattern pattern) const;
-    const Metacode*    get_metacode(_id start_id, _Pattern pattern) const;
+    [[nodiscard]] bool               contains(ID id, _Meta_Key s) const noexcept;
+    [[nodiscard]] bool               contains(ID id, token::ETokenKind tok) const noexcept;
+    [[nodiscard]] const Instruction* get_instruction(ID start_id, _Meta_Pattern pattern) const noexcept;
+    [[nodiscard]] const Metacode*    get_metacode(ID start_id, _Meta_Pattern pattern) const noexcept;
     // will returns the closets metacode to file_pos
-    const Metacode*    get_metacode_from_pos(size_t file_pos) const;
+    [[nodiscard]] const Metacode*    get_metacode_from_pos(size_t file_pos) const noexcept;
   };
 
-  ScriptGraph()
-    : root(new_metacode<metacode::Root>(NO_ID))
+  Graph()
   {
+    (void)add<metacode::Root>(NO_ID);
   }
+
+  bool freeze = false;
 
   Audit audit{*this};
 
-
   std::vector<Metacode*> metacodes;
 
-  std::unordered_map<_id, _id, _id_hash>              parent;
-  std::unordered_map<_id, std::vector<_id>, _id_hash> children;
+  std::unordered_map<ID, ID, ID::Hash>              parent;
+  std::unordered_map<ID, std::vector<ID>, ID::Hash> children;
 
-
-  _id root;
-
-
-  ~ScriptGraph()
+  ~Graph()
   {
-    for (auto m : metacodes) delete m;
+    for (const auto* m : metacodes) delete m;
   }
 
   template <DerivedMetacode T>
-  _id new_metacode(_id p_parent)
+  [[nodiscard]] ID add(ID p_parent)
   {
-    const _id new_id(metacodes.size());
+    assert(!freeze && "Pool is immutable after preprocessor pass");
 
-    T* obj  = new T();
-    obj->id = new_id;
+    const auto new_id = ID::make(metacodes.size());
+
+    T* obj      = new T();
+    obj->metaid = new_id;
     metacodes.emplace_back(obj);
 
     if (p_parent) {
       parent[new_id] = p_parent;
-      children[p_parent].push_back(new_id);
+      children[p_parent].emplace_back(new_id);
     }
 
     return new_id;
   }
 
-  Metacode& get(_id id)
+  [[nodiscard]] Metacode& get(ID id) noexcept
   {
-    assert(id.value() < metacodes.size());
-    return *metacodes[id.value()];
+    assert(id.raw() < metacodes.size());
+    return *metacodes[id.raw()];
   }
 
   template <DerivedMetacode T>
-  T* get_as(_id id)
+  [[nodiscard]] T* as(ID id) noexcept
   {
     Metacode* m = &get(id);
     if (!m) return nullptr;
@@ -267,6 +264,11 @@ struct ScriptGraph final {
     if (m->kind() != T::static_kind) return nullptr;
 
     return static_cast<T*>(m);
+  }
+
+  [[nodiscard]] Root& get_file_root() noexcept
+  {
+    return *as<Root>(ID::make(0));
   }
 };
 

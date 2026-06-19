@@ -11,28 +11,28 @@ struct Parser_Literal final {
   {
   }
 
-  [[nodiscard]] ast::_gnid try_literal(bool p_is_silent_error = false);
-  [[nodiscard]] ast::_gnid literal_range(ast::_gnid p_start = ast::_gnid());
+  [[nodiscard]] ast::ID try_literal(bool p_is_silent_error = false);
+  [[nodiscard]] ast::ID literal_range(ast::ID p_start = ast::ID::invalid());
 
 
 private:
-  [[nodiscard]] ast::_gnid literal_boolean();
-  [[nodiscard]] ast::_gnid literal_numeric();
-  [[nodiscard]] ast::_gnid literal_decimal();
-  [[nodiscard]] ast::_gnid literal_fixed_point(std::string_view p_val);
-  [[nodiscard]] ast::_gnid literal_floating_point(std::string_view p_val);
-  [[nodiscard]] ast::_gnid literal_integral(const token::Token& p_tok);
-  [[nodiscard]] ast::_gnid literal_cune();
-  [[nodiscard]] ast::_gnid format_specifier();
-  [[nodiscard]] ast::_gnid literal_textual();
-  [[nodiscard]] ast::_gnid literal_table();
-  [[nodiscard]] ast::_gnid literal_table_population();
-  [[nodiscard]] ast::_gnid literal_tuple();
+  [[nodiscard]] ast::ID literal_boolean();
+  [[nodiscard]] ast::ID literal_numeric();
+  [[nodiscard]] ast::ID literal_decimal();
+  [[nodiscard]] ast::ID literal_fixed_point(std::string_view p_val);
+  [[nodiscard]] ast::ID literal_floating_point(std::string_view p_val);
+  [[nodiscard]] ast::ID literal_integral(const token::Token& p_tok);
+  [[nodiscard]] ast::ID literal_cune();
+  [[nodiscard]] ast::ID format_specifier();
+  [[nodiscard]] ast::ID literal_textual();
+  [[nodiscard]] ast::ID literal_table();
+  [[nodiscard]] ast::ID literal_table_population();
+  [[nodiscard]] ast::ID literal_tuple();
 
 public:
-  [[nodiscard]] ast::_gnid literal_entity(ast::_gnid p_id = ast::_gnid());
-  [[nodiscard]] ast::_gnid literal_component(ast::_gnid p_id = ast::_gnid());
-  [[nodiscard]] ast::_gnid literal_field();
+  [[nodiscard]] ast::ID literal_form(ast::ID nodeid = ast::ID::invalid());
+  [[nodiscard]] ast::ID literal_facet(ast::ID nodeid = ast::ID::invalid());
+  [[nodiscard]] ast::ID literal_field();
 
 
 private:

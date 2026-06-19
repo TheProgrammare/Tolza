@@ -19,7 +19,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <string_view>
 #include <vector>
 #include <set>
@@ -45,66 +44,36 @@ public:
     token::ETokenKind                  kind;
     DFA_State                          id = DFA_INVALID;
   };
-  DFA build_DFA();
+  [[nodiscard]] static constexpr DFA build_DFA();
 
-  Lexer(script::ScriptInfo& _scr_info);
+  Lexer(cu::CU& _CU);
 
-  enum class EPrefixFound { None, Prefix, All };
+  enum class EPrefixFound : uint8_t { None, Prefix, All };
 
-  bool tokenize(const std::set<char>& p_exit_char = {});
+  [[nodiscard]] bool tokenize(const std::set<char>& p_exit_char = {}) noexcept;
 
-  bool tokenize_DFA();
-  void tokenize_textual();
-  bool tokenize_spec();
-  void tokenize_comment();
-  void tokenize_metacode();
-  void tokenize_numeric();
-  bool tokenize_keyword_identifier();
+  [[nodiscard]] bool tokenize_DFA() noexcept;
+  void               tokenize_textual() noexcept;
+  [[nodiscard]] bool tokenize_spec() noexcept;
+  void               tokenize_comment() noexcept;
+  void               tokenize_metacode() noexcept;
+  void               tokenize_numeric() noexcept;
+  [[nodiscard]] bool tokenize_keyword_identifier() noexcept;
 
-  void read_identifier();
+  void read_identifier() noexcept;
 
 
-  void process_escape();
+  void process_escape() noexcept;
 
-  void add_token(token::ETokenKind type, bool do_not_move = false);
-  void add_error(ErrorCode code, std::string_view msg, std::string_view hint);
+  void add_token(token::ETokenKind kind, bool do_not_move = false) noexcept;
+  void add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept;
 
-  void             start_buffer();
-  std::string_view get_buffer_str() const;
-  bool             is_buffer_empty() const;
+  void                           start_buffer() noexcept;
+  [[nodiscard]] std::string_view get_buffer_str() const noexcept;
+  [[nodiscard]] bool             is_buffer_empty() const noexcept;
 
-  script::ScriptInfo& scr_info;
-  StreamTracker       stream;
-  size_t              buffer_start_pos = -1;
-  bool                on_escape        = false;
+  cu::CU&       CU;
+  StreamTracker stream;
+  size_t        buffer_start_pos = -1;
+  bool          on_escape        = false;
 };
-
-inline bool is_space(unsigned char c) noexcept
-{
-  return (c == ' ' || (c >= '\t' && c <= '\r'));
-}
-
-inline bool is_ctrl(unsigned char c) noexcept
-{
-  return (c < 32 || c == 127);
-}
-
-inline bool is_digit(unsigned char c) noexcept
-{
-  return c >= '0' && c <= '9';
-}
-
-inline bool is_hex(unsigned char c) noexcept
-{
-  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
-}
-
-inline bool is_alnum(unsigned char c) noexcept
-{
-  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-
-inline bool is_alpha(unsigned char c) noexcept
-{
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}

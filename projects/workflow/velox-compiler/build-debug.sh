@@ -13,7 +13,7 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR" || exit 1
 
 # Configure CMake with the Ninja generator and C++23 standard
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 ../../
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 -DCMAKE_CXX_FLAGS_DEBUG="-O0 -g" ../../
 
 # Build in parallel using Ninja
 echo "Building Velox with $NUM_THREADS threads..."

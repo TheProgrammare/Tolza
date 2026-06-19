@@ -2,22 +2,16 @@
 
 #include <string>
 
-#include <compiler_context.hpp>
+#include <string_view>
 
-std::string remove_quotes(const std::string& str);
+std::string remove_quotes(std::string_view str);
 
-namespace command
-{
-namespace build
+namespace command::build
 {
 
-void log(const std::string& msg);
-void err(const std::string& msg);
 
-common::CompCtx generate_compilation_context(const std::string& path);
-common::CompCtx config_to_compilation_context(const std::string& config_path);
-bool generate_ffi_json(const std::string& compiler_file, const std::string& target_dir, const std::string& dest_dir);
+bool generate_ffi_json(std::string_view from, std::string_view to);
+bool generate_ffi_c(std::string_view from, std::string_view to);
 bool start_compilation(int argc, const char* argv[]);
 
-} // namespace build
-} // namespace command
+} // namespace command::build

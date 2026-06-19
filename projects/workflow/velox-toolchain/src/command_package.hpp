@@ -2,23 +2,17 @@
 
 #include <string>
 
-namespace command
-{
-namespace package
+namespace command::package
 {
 
-void err(const std::string& msg);
-void log(const std::string& msg);
+[[nodiscard]] bool install(std::string_view pkg_name) noexcept;
+[[nodiscard]] bool remove(std::string_view pkg_name) noexcept;
+[[nodiscard]] bool info(std::string_view pkg_name) noexcept;
+[[nodiscard]] bool purge(std::string_view pkg_name) noexcept;
+[[nodiscard]] bool check(std::string_view pkg_name) noexcept;
+[[nodiscard]] bool list(std::string_view regex, bool only_installed, bool only_upgradable) noexcept;
+[[nodiscard]] bool update() noexcept;
+[[nodiscard]] bool upgrade() noexcept;
+[[nodiscard]] bool clean() noexcept;
 
-bool install(const std::string& pkg_name);
-bool remove(const std::string& pkg_name);
-bool info(const std::string& pkg_name);
-bool purge(const std::string& pkg_name);
-bool check(const std::string& pkg_name);
-bool list(const std::string& regex, bool only_installed, bool only_upgradable);
-bool update();
-bool upgrade();
-bool clean();
-
-} // namespace package
-} // namespace command
+} // namespace command::package

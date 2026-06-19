@@ -1,0 +1,43 @@
+#pragma once
+
+#include <string_view>
+
+constexpr std::string_view FFI_C_FILE = R"(
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : %vc_version
+ * 
+ * Source Language         : C
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is compiler injection.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+%exports
+
+
+extern "C" {
+fn __errno_location() -> ptr's32
+}
+
+export {
+
+
+
+const NULL = 0
+  
+fn errno() -> ptr's32 {
+  return __errno_location();
+}
+
+
+%code
+
+
+}
+)";

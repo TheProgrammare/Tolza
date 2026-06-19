@@ -3,107 +3,114 @@
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include <cassert>
+#include <set>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 
 
 namespace scope
 {
 
+using Imp_Ref = std::pair<module::ID, ast::ID>;
+
 
 struct Scope final {
-  struct Symbols final {
-    // declaration name, ast::ADeclaration
-    std::unordered_map<std::string_view, symbol::_id> symbols;
+  [[nodiscard]] static Scope make_from_module(module::ID modid, ast::ID nodeid) noexcept;
+  [[nodiscard]] static Scope make_from_node(ast::ID nodeid) noexcept;
+  [[nodiscard]] static Scope make_from_script_root(module::ID modid, ast::ID nodeid) noexcept;
 
-    void                      add_symbol(std::string_view name, symbol::_id sym);
-    [[nodiscard]] symbol::_id get_scope_symbol(std::string_view name);
+  struct Items final {
+    // declaration name, reference
+    StringMap<symbol::ID> symbols;
+
+    [[nodiscard]] bool       add_symbol(symbol::ID sym) noexcept;
+    [[nodiscard]] symbol::ID find_symbol(std::string_view name) const noexcept;
   };
 
   struct Port final {
-    // import node instruction
-    std::unordered_set<ast::_gnid, ast::_gnid_hash> imports_prepared;
+    // alias, <module, node>
+    StringMap<std::set<Imp_Ref>> imported;
 
-    // target_module, import node instruction
-    std::unordered_map<module::_id, ast::_gnid, module::_id_hash> imported;
-
-    void               prepare_import(ast::_gnid import_node_id);
-    [[nodiscard]] bool import_module(module::_id target_module, ast::_gnid import_node_id);
+    [[nodiscard]] bool                     import_module(module::ID target_module, ast::ID import_nodeid) noexcept;
+    [[nodiscard]] const std::set<Imp_Ref>& find_imports(std::string_view alias) const noexcept;
   };
 
-  Scope() = default;
-
-  static Scope from_any(std::string_view p_debug_name)
-  {
-    Scope scp;
-    scp.debug_name = p_debug_name;
-    return scp;
-  }
-  static Scope from_node(ast::_gnid p_gnid, std::string_view p_debug_name)
-  {
-    Scope scp;
-    scp.gnid       = p_gnid;
-    scp.scr_id     = p_gnid.get_script_id();
-    scp.debug_name = p_debug_name;
-    return scp;
-  }
-  static Scope from_module(script::_id p_script, module::_id p_mod)
-  {
-    Scope scp;
-    scp.scr_id    = p_script;
-    scp.module_id = p_mod;
-    return scp;
-  }
-
-  _id         id;
+  ID          scpid;
   std::string debug_name;
 
 
-  Symbols symbols;
-  Port    port;
+  Items items;
+  Port  port;
 
-  script::_id scr_id;    // script origin
-  module::_id module_id; // module origin
-  ast::_gnid  gnid;      // node origin
+  EVisibility visibility;
+
+  ast::ID    nodeid; // node origin
+  module::ID modid;
 };
 
+[[nodiscard]] Scope& get(ID id) noexcept;
+
+[[nodiscard]] ast::ID get_scope_node(ast::ENodeKind kind, ID start_scpid) noexcept;
+
+[[nodiscard]] symbol::ID find_lexical_symbol(scope::ID ctx, std::string_view name) noexcept;
+[[nodiscard]] symbol::ID find_in_chain_scope(scope::ID ctx, std::string_view name) noexcept;
+
 struct Graph final {
-  struct Tools final {
-    Graph& graph;
+  Graph() = delete;
 
-    // will check in local scope and parent scopes
-    [[nodiscard]] symbol::_id find_symbol(_id start_scope_id, std::string_view name) const;
-    [[nodiscard]] ast::_gnid  get_scope_node(ast::ENodeKind kind, _id start_scope_id) const;
-  };
+  Graph(cu::ID _cuid)
+    : cuid(_cuid)
+  {
+    (void)add(ID::invalid(), Scope());
+  }
 
-  Tools tools{*this};
+  bool freeze = false;
+
+  const cu::ID cuid;
 
   std::vector<Scope> scopes;
 
-  std::unordered_map<_id, _id, _id_hash>              parent;
-  std::unordered_map<_id, std::vector<_id>, _id_hash> children;
+  std::unordered_map<ID, ID, ID::Hash>              parent;
+  std::unordered_map<ID, std::vector<ID>, ID::Hash> children;
 
-  std::unordered_map<_id, module::_id, _id_hash> module;
+  std::unordered_map<ID, module::ID, ID::Hash> module;
 
 
-  Scope& get(_id id)
+  [[nodiscard]] Scope& get(ID id) noexcept
   {
-    assert(id < scopes.size());
-    return scopes[id.value()];
+
+    assert(id.cu() == cuid && "Must be the same script");
+    assert(id.offset() < scopes.size());
+    return scopes[id.offset()];
   }
 
-  _id new_scope(_id p_parent, Scope p_scp)
+  [[nodiscard]] const Scope& get(ID id) const noexcept
   {
-    const _id new_id(scopes.size());
-    p_scp.id = new_id;
+    assert(id.cu() == cuid && "Must be the same script");
+    assert(id.offset() < scopes.size());
+    return scopes[id.offset()];
+  }
+
+  [[nodiscard]] ID add(ID p_parent, Scope p_scp)
+  {
+    assert(!freeze && "Pool is immutable after parsing pass");
+
+    const auto new_id = ID::make(cuid, scopes.size());
+    p_scp.scpid       = new_id;
 
     scopes.emplace_back(std::move(p_scp));
 
-    parent[new_id] = p_parent;
-    children[p_parent].push_back(new_id);
+    if (p_parent) {
+      parent[new_id] = p_parent;
+      children[p_parent].emplace_back(new_id);
+    }
 
     return new_id;
+  }
+
+  [[nodiscard]] Scope& get_file_root() noexcept
+  {
+    return get(ID::make(cuid, 0));
   }
 };
 

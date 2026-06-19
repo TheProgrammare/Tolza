@@ -1,31 +1,41 @@
 #include "symbol.hpp"
 
-#include <string_view>
+#include <algorithm>
 
-#include "compiler/compiler.hpp"
-
-#include "nexus/pipeline.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/module.hpp"
 #include "nexus/ast/ast.hpp"
 
 std::string symbol::Symbol::mangle_name() const
 {
-  auto& mod = compiler::COMPILER.modules.get(module_id);
+  auto modid = symid.module();
 
-  return compiler::modules.tools.mangle_name(mod.id) + "." + std::string(get_name());
+  return module::mangle_canonical_module_path(modid) + "." + std::string(get_name());
 }
 
-std::string_view symbol::Symbol::get_name() const
+std::string symbol::Symbol::get_name() const
 {
-  auto& scr = compiler::COMPILER.pipeline.get_script(gnid.get_script_id());
-  return scr.nodes->tools.get_node_declaration_name(gnid.get_node_id());
+  return ast::get_decl_name(nodeid);
 }
 
-std::string_view symbol::Arena::get_sym_name(_id sym_id) const
+std::string symbol::Arena::get_sym_name(ID symid) const
 {
-  auto& sym = get(sym_id);
+  const auto& sym = get(symid);
 
-  auto& scr = compiler::COMPILER.pipeline.get_script(sym.gnid.get_script_id());
-  return scr.nodes->tools.get_node_declaration_name(sym.gnid.get_node_id());
+  return ast::get_decl_name(sym.nodeid);
+}
+
+symbol::Symbol* symbol::Arena::from_node(ast::ID nodeid) noexcept
+{
+  const auto it = std::ranges::find_if(symbols, [&](const symbol::Symbol& sym) { return sym.nodeid == nodeid; });
+  if (it == symbols.end()) return nullptr;
+  return &(*it);
+}
+
+
+symbol::Symbol& symbol::get(ID symid) noexcept
+{
+  auto cu = symid.cu();
+  assert(cu && "Must be a valid script");
+  return cu.get().symbols->get(symid);
 }

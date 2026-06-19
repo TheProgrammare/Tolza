@@ -1,417 +1,451 @@
 #include "binder_ffi.hpp"
 
+#include <cstddef>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
-#include <stdexcept>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
+#include <common/time.hpp>
+#include <common/utils.hpp>
+#include <common/compiler_options.hpp>
+
+
+#include "Neargye/magic_enum.hpp"
+#include "ast/ast_base.hpp"
+#include "ast/ast_declaration_extension.hpp"
+#include "ast/ast_declaration_sfm.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_literal.hpp"
 #include "nexus/ast/ast.hpp"
-#include "common.hpp"
 #include "compiler/compiler.hpp"
-#include "compiler_options.hpp"
-#include "misc/error_output.hpp"
+#include "nexus/ids.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "nexus/inference.hpp"
+#include "nexus/type/type.hpp"
 
 namespace fs = std::filesystem;
 
-std::string ffi::Bind_Package::get_file_path() const
+
+const size_t ffi::AST::k_type_offset = type::TYPEID_text.offset() + 1;
+
+
+void ffi::AST::velox_codegen(std::string_view dest) const
 {
-  fs::path path = compiler::COMPILER_OPTIONS.get_dir_binding();
-  if (!lang.empty()) path /= lang;
-  if (!lib.empty()) path /= lib;
-  path.replace_extension(".vlxbind");
-  return path.string();
-}
-
-
-ffi::EPassMode ffi::type_to_passMode(const Type& ty)
-{
-  if (!ty.is_pointer && ty.base_type != ffi::EType::_comp && ty.base_type != ffi::EType::_proto
-      && ty.base_type != ffi::EType::_union && ty.base_type != ffi::EType::_entity && ty.base_type != ffi::EType::_enum)
-    return ffi::EPassMode::copy;
-
-  if (ty.is_pointer && ty.is_val_type_const) return ffi::EPassMode::ref;
-
-  if (ty.is_pointer) return ffi::EPassMode::mut;
-
-  if (ty.is_pointer_double) return ffi::EPassMode::addr;
-
-  return ffi::EPassMode::NONE;
-}
-
-std::string ffi::EPassMode_to_str(ffi::EPassMode pm)
-{
-  switch (pm) {
-  case ffi::EPassMode::NONE: return "/*INVALID PASS MODE*/";
-  case ffi::EPassMode::copy: return "copy";
-  case ffi::EPassMode::ref:  return "ref";
-  case ffi::EPassMode::mut:  return "mut";
-  case ffi::EPassMode::move: return "move";
-  case ffi::EPassMode::addr: return "addr";
-  }
-}
-
-std::string ffi::EType_to_str(const EType ty)
-{
-  switch (ty) {
-  case ffi::EType::INVALID:     return "/*INVALID TYPE*/";
-
-  case ffi::EType::_i8:         return "i8";
-  case ffi::EType::_i16:        return "i16";
-  case ffi::EType::_i32:        return "i32";
-  case ffi::EType::_i64:        return "i64";
-  case ffi::EType::_i128:       return "i128";
-  case ffi::EType::_isize:      return "isize";
-
-  case ffi::EType::_u8:         return "u8";
-  case ffi::EType::_u16:        return "u16";
-  case ffi::EType::_u32:        return "u32";
-  case ffi::EType::_u64:        return "u64";
-  case ffi::EType::_u128:       return "u128";
-  case ffi::EType::_usize:      return "usize";
-
-  case ffi::EType::_b8:         return "b8";
-  case ffi::EType::_b16:        return "b16";
-  case ffi::EType::_b32:        return "b32";
-  case ffi::EType::_b64:        return "b64";
-  case ffi::EType::_b128:       return "b128";
-
-  case ffi::EType::_f32:        return "f32";
-  case ffi::EType::_f64:        return "f64";
-  case ffi::EType::_f128:       return "f128";
-
-  case ffi::EType::_cstr:       return "c_str";
-  case ffi::EType::_str:        return "str";
-  case ffi::EType::_text:       return "text";
-  case ffi::EType::_cune:       return "cune";
-  case ffi::EType::_rune:       return "rune";
-
-  case ffi::EType::_schar:      return "ffi::C::_schar";
-  case ffi::EType::_short:      return "ffi::C::_short";
-  case ffi::EType::_long:       return "ffi::C::_long";
-  case ffi::EType::_longlong:   return "ffi::C::_longlong";
-  case ffi::EType::_int:        return "ffi::C::_int";
-
-  case ffi::EType::_uchar:      return "ffi::C::_uchar";
-  case ffi::EType::_ushort:     return "ffi::C::_ushort";
-  case ffi::EType::_ulong:      return "ffi::C::_ulong";
-  case ffi::EType::_ulonglong:  return "ffi::C::_ulonglong";
-  case ffi::EType::_uint:       return "ffi::C::_uint";
-
-  case ffi::EType::_ptrdiff:    return "ptrdiff";
-
-  case ffi::EType::_float:      return "ffi::C::_float";
-  case ffi::EType::_double:     return "ffi::C::_double";
-  case ffi::EType::_longdouble: return "ffi::C::_longdouble";
-
-  case ffi::EType::_bool:       return "bool";
-  case ffi::EType::_void:       return "void";
-  default:                      return "";
-  }
-}
-
-std::string ffi::type_to_str(const Type& ty)
-{
-  std::string ptr;
-  std::string type;
-  std::string table_dim;
-
-  if (ty.is_opaque()) return "ptr'void";
-  if (ty.is_string()) return "c_str";
-
-  // qualifiers
-  if (ty.is_pointer) {
-    if (ty.is_pointer_const) ptr += "$";
-    if (ty.is_pointer_volatile) ptr += "!";
-    ptr += "ptr'";
-  } else if (ty.is_pointer_double) {
-    ptr = "ptr'ptr'";
-  }
-
-  if (ty.is_table) {
-    for (size_t i = 0; i < ty.table_size.size(); i++) {
-      const size_t& size = ty.table_size[i];
-      table_dim += std::to_string(size);
-      if (i != ty.table_size.size() - 1) table_dim += ", ";
-    }
-    table_dim += "]";
-  }
-
-  if (ty.is_table_of_pointers) {
-    ptr += "[";
-  }
-
-  // base types
-  type = ffi::EType_to_str(ty.base_type);
-
-  switch (ty.base_type) {
-  case ffi::EType::_comp:
-  case ffi::EType::_entity:
-  case ffi::EType::_union:
-  case ffi::EType::_flag:
-  case ffi::EType::_enum:
-  case ffi::EType::_alias:  type = ty.complex_type_name; break;
-  case ffi::EType::_proto:  {
-    if (ty.proto_type.get()) {
-      std::string str_params;
-
-      for (size_t i = 0; i < ty.proto_type->params.size(); i++) {
-        auto& [pass_mode, type, _] = ty.proto_type->params[i];
-        str_params += ffi::type_to_str(type);
-        if (i != ty.proto_type->params.size() - 1) str_params += ", ";
-      }
-
-      std::string str_return = ffi::type_to_str(ty.proto_type->return_type);
-
-      std::string fn(BINDER_PROTOTYPE_TEMPLATE);
-      common::fmt_template(fn, {str_params, str_return});
-      type = fn;
-    } else {
-      std::runtime_error("Undefined function type");
-    }
-    break;
-  }
-  default: break;
-  }
-
-  if (ty.is_val_type_const) type = "$" + type;
-  if (ty.is_val_type_volatile) type = "!" + type;
-
-  return ptr + type + table_dim;
-}
-
-std::string ffi::import_to_str(const Import& _imp)
-{
-  std::string type;
-  std::string path;
-
-  switch (_imp.type) {
-  case Import::EImportType::pkg:     type = "pkg:"; break;
-  case Import::EImportType::user:    type = "usr:"; break;
-  case Import::EImportType::stdlib:  type = "std:"; break;
-  case Import::EImportType::binding: type = "ext:"; break;
-  case Import::EImportType::unknown: break;
-  }
-
-  for (auto& elem : _imp.path) path += elem + "::";
-  path += _imp.name;
-
-  std::string out(BINDER_IMPORT_TEMPLATE);
-  common::fmt_template(out, {type, path});
-  return out;
-}
-
-
-std::string ffi::comp_to_str(const Comp& p_comp)
-{
-  std::string members;
-
-  for (size_t i = 0; i < p_comp.fields.size(); i++) {
-    auto& [name, type] = p_comp.fields[i];
-    std::string field(BINDER_EXTERN_FIELD);
-    common::fmt_template(field, {name, type_to_str(type)});
-
-    members += field;
-  }
-
-  std::string out(BINDER_EXTERN_COMP_TEMPLATE);
-  common::fmt_template(out, {p_comp.name, members});
-  return out;
-}
-
-std::string ffi::entity_to_str(const Entity& p_entity)
-{
-  std::string members;
-
-  for (size_t i = 0; i < p_entity.components.size(); i++) {
-    auto& comp = p_entity.components[i];
-    members += "use " + comp.name + ", \n";
-  }
-
-  std::string out(BINDER_EXTERN_ENTITY_TEMPLATE);
-  common::fmt_template(out, {p_entity.name, members});
-  return out;
-}
-
-std::string ffi::union_to_str(const Union& p_union)
-{
-  std::string members;
-
-  for (auto& [name, type] : p_union.members) {
-    members += name + ": " + type_to_str(type) + ",\n";
-  }
-
-  bool test = members.empty() ? true : false;
-
-  std::string out(BINDER_EXTERN_UNION_TEMPLATE);
-  common::fmt_template(out, {p_union.name, members});
-  return out;
-}
-
-std::string ffi::flag_to_str(const Flag& p_flag)
-{
-  std::string members;
-
-  for (auto& [name, bits] : p_flag.members) {
-    members += name + ": " + std::to_string(bits) + ",\n";
-  }
-
-  std::string out(BINDER_EXTERN_FLAG_TEMPLATE);
-  common::fmt_template(out, {p_flag.name, ffi::EType_to_str(p_flag.underlying_type), members});
-  return out;
-}
-
-std::string ffi::enum_to_str(const Enum& p_enum)
-{
-  std::string members;
-
-  for (auto& [name, types] : p_enum.members) {
-    members += name + "(";
-    for (size_t i = 0; i < types.size(); ++i) {
-      const Type& ty = types[i];
-      members += type_to_str(ty);
-
-      if (i != types.size() - 1) members += ", ";
-    }
-
-    members += "),\n";
-  }
-
-  std::string out(BINDER_EXTERN_ENUM_TEMPLATE);
-  common::fmt_template(out, {p_enum.name, members});
-  return out;
-}
-
-std::string ffi::func_to_str(const Func& p_func)
-{
-  std::string params;
-
-  for (size_t i = 0; i < p_func.proto.params.size(); i++) {
-    auto& [pass_mode, type, is_restrict] = p_func.proto.params[i];
-    auto&       name                     = p_func.param_names[i];
-    std::string str_pass_mode            = ffi::EPassMode_to_str(pass_mode);
-
-    params += str_pass_mode + " " + name + ": " + type_to_str(type);
-
-    if (i != p_func.proto.params.size() - 1) params += ", ";
-  }
-
-  if (p_func.proto.is_variadic) {
-    if (p_func.proto.params.size() > 0) params += ", ";
-    params += "...";
-  }
-
-  std::string out(BINDER_EXTERN_FN_TEMPALTE);
-  common::fmt_template(out, {p_func.name, params, type_to_str(p_func.proto.return_type)});
-  return out;
-}
-
-std::string ffi::global_to_str(const Global& p_glo)
-{
-  std::string kind = p_glo.is_const ? "let" : "var";
-
-  std::string out(BINDER_EXTERN_GLOBAL_TEMPLATE);
-  common::fmt_template(out, {kind, p_glo.name, type_to_str(p_glo.type)});
-  return out;
-}
-
-std::string ffi::typealias_to_str(const TypeAlias& p_ty_alias)
-{
-  std::string out(BINDER_EXTERN_TYPEALIAS_TEMPLATE);
-  common::fmt_template(out, {p_ty_alias.name, type_to_str(p_ty_alias.type)});
-  return out;
-}
-
-
-void ffi::write_ast(const ffi::AST& p_ast, std::string_view p_dest_file)
-{
-  // if (!check_ast_generation(ast)) return;
-
-  fs::create_directories(fs::path(p_dest_file).parent_path());
-  std::ofstream os(p_dest_file.data());
-
-  if (!os) throw std::runtime_error("Cannot open file: \"" + fs::path(p_dest_file).string() + "\"");
-
-  os.clear();
-
-  {
-    std::string _lang = p_ast.bind.lang + std::string(labs(static_cast<long>(29 - p_ast.bind.lang.size())), ' ');
-    std::string _lib  = p_ast.bind.lib + std::string(labs(static_cast<long>(29 - p_ast.bind.lib.size())), ' ');
-    std::string _imp;
-
-    if (!p_ast.imports.empty()) {
-      _imp = ffi::BINDER_IMPORT_HEADER;
-
-      for (auto& [name, import] : p_ast.imports) _imp += ffi::import_to_str(import);
-    }
-
-    std::string header(ffi::BINDER_FILE_HEADER);
-    common::fmt_template(header, {_lang, _lib, _imp, p_ast.bind.abi});
-    os << header << std::flush;
-  }
-
-  if (!p_ast.enums.empty()) {
-    os << ffi::BINDER_ENUM_HEADER;
-
-    for (auto& [name, elem] : p_ast.enums) {
-      if (p_ast.bind.extern_items.contains(name)) os << ffi::enum_to_str(elem);
+  fs::create_directories(fs::path(dest).parent_path());
+  fs::path f(dest);
+
+  std::ofstream os(f, std::ios::out | std::ios::trunc);
+
+  if (!os) common::FATAL_ERROR("Cannot open file: \"" + fs::path(dest).string() + "\"");
+
+  std::vector<ast::Global_Reexport const*>   reexports;
+  std::vector<ast::Import const*>            imports;
+  std::vector<ast::Global_Enum const*>       enums;
+  std::vector<ast::SFM_Facet const*>         facets;
+  std::vector<ast::Global_Union const*>      unions;
+  std::vector<ast::Global_Variable const*>   globals;
+  std::vector<ast::Global_Function const*>   funcs;
+  std::vector<ast::Global_Alias_Type const*> typealiases;
+  std::vector<ast::Global_Flag const*>       flags;
+  std::vector<ast::SFM_Form const*>          entities;
+
+  // distribute nodes
+  for (const auto& elem : nodes->nodes) {
+    switch (elem->kind()) {
+    case ast::ENodeKind::Global_Reexport: reexports.emplace_back(nodes->as<ast::Global_Reexport>(elem->nodeid)); break;
+    case ast::ENodeKind::Import:          imports.emplace_back(nodes->as<ast::Import>(elem->nodeid)); break;
+    case ast::ENodeKind::Global_Enum:     enums.emplace_back(nodes->as<ast::Global_Enum>(elem->nodeid)); break;
+    case ast::ENodeKind::SFM_Facet:       facets.emplace_back(nodes->as<ast::SFM_Facet>(elem->nodeid)); break;
+    case ast::ENodeKind::Global_Union:    unions.emplace_back(nodes->as<ast::Global_Union>(elem->nodeid)); break;
+    case ast::ENodeKind::Global_Variable: globals.emplace_back(nodes->as<ast::Global_Variable>(elem->nodeid)); break;
+    case ast::ENodeKind::Global_Function: funcs.emplace_back(nodes->as<ast::Global_Function>(elem->nodeid)); break;
+    case ast::ENodeKind::Global_Alias_Type:
+      typealiases.emplace_back(nodes->as<ast::Global_Alias_Type>(elem->nodeid));
+      break;
+    case ast::ENodeKind::Global_Flag: flags.emplace_back(nodes->as<ast::Global_Flag>(elem->nodeid)); break;
+    case ast::ENodeKind::SFM_Form:    entities.emplace_back(nodes->as<ast::SFM_Form>(elem->nodeid)); break;
+    default:                          continue;
     }
   }
-  if (!p_ast.comps.empty()) {
-    os << ffi::BINDER_COMP_HEADER;
 
-    for (auto& [name, elem] : p_ast.comps) {
-      if (p_ast.bind.extern_items.contains(name)) os << ffi::comp_to_str(elem);
-    }
-  }
-  if (!p_ast.unions.empty()) {
-    os << ffi::BINDER_UNION_HEADER;
+  std::string date = common::time::now_datetime();
 
-    for (auto& [name, elem] : p_ast.unions) {
-      if (p_ast.bind.extern_items.contains(name)) os << union_to_str(elem);
-    }
-  }
-  if (!p_ast.globals.empty()) {
-    os << ffi::BINDER_GLOBAL_HEADER;
+  std::map<std::string_view, std::string_view> header_fmt = {
+      {"vc_version", common::VELOX_COMMON_VERSION},
+      {"date",       date                        },
+      {"language",   bind.lang                   },
+      {"lib",        bind.lib                    },
+      {"g_version",  "NONE"                      },
+      {"author",     "NONE"                      },
+      {"abi",        bind.lang                   },
+  };
 
-    for (auto& [name, elem] : p_ast.globals) {
-      if (p_ast.bind.extern_items.contains(name)) os << global_to_str(elem);
-    }
-  }
-  if (!p_ast.funcs.empty()) {
-    os << ffi::BINDER_FUNCTION_HEADER;
 
-    for (auto& [name, elem] : p_ast.funcs) {
-      if (p_ast.bind.extern_items.contains(name)) os << func_to_str(elem);
-    }
+  std::string header(ffi::BINDER_FILE_HEADER);
+  common::utils::fmt_template(header, header_fmt);
+  os << header << std::flush;
+
+  if (!reexports.empty()) {
+    os << ffi::BINDER_REEXPORT_HEADER;
+
+    for (const auto* elem : reexports) os << reexport_to_str(*elem);
   }
-  if (!p_ast.typealias.empty()) {
+
+  if (!imports.empty()) {
+    os << ffi::BINDER_IMPORT_HEADER;
+
+    for (const auto* elem : imports) os << import_to_str(*elem);
+  }
+
+  if (!typealiases.empty()) {
     os << ffi::BINDER_TYPEALIAS_HEADER;
 
-    for (auto& [name, elem] : p_ast.typealias) {
-      if (p_ast.bind.extern_items.contains(name)) os << typealias_to_str(elem);
-    }
+    for (const auto* elem : typealiases) os << typealias_to_str(*elem);
   }
-  if (!p_ast.flags.empty()) {
+  if (!enums.empty()) {
+    os << ffi::BINDER_ENUM_HEADER;
+
+    for (const auto* elem : enums) os << enum_to_str(*elem);
+  }
+  if (!facets.empty()) {
+    os << ffi::BINDER_FACET_HEADER;
+
+    for (const auto* elem : facets) os << facet_to_str(*elem);
+  }
+  if (!unions.empty()) {
+    os << ffi::BINDER_UNION_HEADER;
+
+    for (const auto* elem : unions) os << union_to_str(*elem);
+  }
+  if (!globals.empty()) {
+    os << ffi::BINDER_GLOBAL_HEADER;
+
+    for (const auto* elem : globals) os << global_to_str(*elem);
+  }
+  if (!funcs.empty()) {
+    os << ffi::BINDER_FUNCTION_HEADER;
+
+    for (const auto* elem : funcs) os << func_to_str(*elem);
+  }
+
+  if (!flags.empty()) {
     os << ffi::BINDER_FLAG_HEADER;
 
-    for (auto& [name, elem] : p_ast.flags) {
-      if (p_ast.bind.extern_items.contains(name)) os << flag_to_str(elem);
-    }
+    for (const auto* elem : flags) os << flag_to_str(*elem);
   }
-  if (!p_ast.entities.empty()) {
-    os << ffi::BINDER_ENTITY_HEADER;
+  if (!entities.empty()) {
+    os << ffi::BINDER_FORM_HEADER;
 
-    for (auto& [name, elem] : p_ast.entities) {
-      if (p_ast.bind.extern_items.contains(name)) os << entity_to_str(elem);
-    }
+    for (const auto* elem : entities) os << form_to_str(*elem);
   }
 
-  os << "\n} // " << p_ast.bind.abi << "\n\n} // export" << std::flush;
+  os << "\n} // extern" << bind.abi << "\n\n} // export\n" << std::flush;
 
   os.close();
 }
 
-bool ffi::check_ast_generation(const AST& p_ast)
+
+std::string ffi::Bind_Package::get_file_path() const noexcept
+{
+  fs::path path = compiler::OPTIONS.dir.get_dir_binding();
+  if (!lang.empty()) path /= lang;
+  if (!lib.empty()) path /= lib;
+  path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+  return path.string();
+}
+
+
+std::string ffi::AST::import_to_str(const ast::Import& _imp) const noexcept
+{
+  std::string path;
+
+  const auto* regex = nodes->as<ast::Path_Regex>(_imp.regex);
+
+  path = cu::EFileSource_to_str(regex->source);
+  path += "::";
+
+  for (const auto& elem : regex->elements) path += elem + "::";
+  path = path.substr(0, path.size() - 2);
+
+  std::string out(BINDER_IMPORT_TEMPLATE);
+  common::utils::fmt_template(out, {path, regex->path.back()});
+  return out;
+}
+
+std::string ffi::AST::reexport_to_str(const ast::Global_Reexport& _imp) const noexcept
+{
+  std::string path;
+
+  const auto* regex = nodes->as<ast::Path_Regex>(_imp.regex);
+
+  path = cu::EFileSource_to_str(regex->source);
+  path += "::";
+
+  for (const auto& elem : regex->elements) path += elem + "::";
+  path = path.substr(0, path.size() - 2);
+
+  std::string out(BINDER_REEXPORT_TEMPLATE);
+  common::utils::fmt_template(out, {path, regex->path.back()});
+  return out;
+}
+
+
+std::string ffi::AST::facet_to_str(const ast::SFM_Facet& p_facet) const noexcept
+{
+  std::string members;
+
+  for (auto nodeid : p_facet.fields) {
+    const auto* f = nodes->as<ast::SFM_Facet_Field>(nodeid);
+
+    std::string field(BINDER_EXTERN_FIELD);
+    common::utils::fmt_template(field, {f->name, type_to_str(types->get(f->type))});
+
+    members += field;
+  }
+
+  std::string out(BINDER_EXTERN_FACET_TEMPLATE);
+  common::utils::fmt_template(out, {p_facet.name, members});
+  return out;
+}
+
+std::string ffi::AST::form_to_str(const ast::SFM_Form& p_form) const noexcept
+{
+  std::string members;
+
+  for (auto nodeid : p_form.facets) {
+    const auto* facet = nodes->as<ast::SFM_Facet>(nodeid);
+    members += std::string(facet->name) + ", \n";
+  }
+
+  std::string out(BINDER_EXTERN_FORM_TEMPLATE);
+  common::utils::fmt_template(out, {p_form.name, members});
+  return out;
+}
+
+std::string ffi::AST::union_to_str(const ast::Global_Union& p_union) const noexcept
+{
+  std::string members;
+
+  for (const auto& f_id : p_union.variants) {
+    const auto* uf     = nodes->as<ast::Union_Field>(f_id);
+    size_t      offset = uf->type.offset();
+    size_t      cu     = uf->type.cu().raw();
+    assert(uf->type && "Invalid type");
+    members += std::string(uf->name) + ": " + type_to_str(types->get(uf->type)) + ",\n";
+  }
+
+  std::string out(BINDER_EXTERN_UNION_TEMPLATE);
+  common::utils::fmt_template(out, {p_union.name, members});
+  return out;
+}
+
+std::string ffi::AST::flag_to_str(const ast::Global_Flag& p_flag) const noexcept
+{
+  std::string members;
+
+  for (const auto& f_id : p_flag.flags) {
+    const auto* ff = nodes->as<ast::Flag_Field>(f_id);
+    members += std::string(ff->name) + ",\n";
+  }
+
+  std::string out(BINDER_EXTERN_FLAG_TEMPLATE);
+  common::utils::fmt_template(out, {p_flag.name, type_to_str(type::TYPEID_usize.get()), members});
+  return out;
+}
+
+std::string ffi::AST::enum_to_str(const ast::Global_Enum& p_enum) const noexcept
+{
+  std::string members;
+
+  for (const auto& v_id : p_enum.variants) {
+    const auto* v = nodes->as<ast::Enum_Field>(v_id);
+    members += std::string(v->name) + "(" + type_to_str(types->get(v->type)) + "),\n";
+  }
+
+  std::string out(BINDER_EXTERN_ENUM_TEMPLATE);
+  common::utils::fmt_template(out, {p_enum.name, members});
+  return out;
+}
+
+std::string ffi::AST::func_to_str(const ast::Global_Function& p_func) const noexcept
+{
+  std::string params;
+  const auto* proto = types->as<type::Prototype>(p_func.prototype);
+
+  for (size_t i = 0; i < proto->params.size(); i++) {
+    const auto& param_ty = types->get(proto->params[i].type);
+    const auto* param    = nodes->as<ast::Local_Parameter>(p_func.parameters[i]);
+    std::string str_pm(ast::EPassMode_to_str(param->passmode));
+
+    params += str_pm + " " + std::string(param->name) + ": " + type_to_str(param_ty);
+
+    if (i != proto->params.size() - 1) params += ", ";
+  }
+
+  if (proto->is_variadic) {
+    if (proto->params.size() > 0) params += ", ";
+    params += "...";
+  }
+
+  std::string out(BINDER_EXTERN_FN_TEMPALTE);
+  common::utils::fmt_template(out, {p_func.name, params, type_to_str(types->get(proto->ret))});
+  return out;
+}
+
+std::string ffi::AST::global_to_str(const ast::Global_Variable& p_glo) const noexcept
+{
+  std::string kind = p_glo.kind == ast::EVariableKind::Let ? "let" : "var";
+
+  std::string out(BINDER_EXTERN_GLOBAL_TEMPLATE);
+  common::utils::fmt_template(out, {kind, p_glo.name, type_to_str(types->get(p_glo.type))});
+  return out;
+}
+
+std::string ffi::AST::typealias_to_str(const ast::Global_Alias_Type& p_ty_alias) const noexcept
+{
+  if (p_ty_alias.type) {
+    std::string out(BINDER_EXTERN_TYPEALIAS_TEMPLATE);
+    common::utils::fmt_template(out, {p_ty_alias.alias, type_to_str(types->get(p_ty_alias.type))});
+    return out;
+  }
+
+  std::string out(BINDER_EXTERN_OPAQUE_TEMPLATE);
+  common::utils::fmt_template(out, {p_ty_alias.alias});
+  return out;
+}
+
+std::string ffi::AST::type_to_str(const type::Type& ty) const noexcept
+{
+  switch (ty.kind()) {
+  case type::ETypeKind::NONE: return "";
+  case type::ETypeKind::Primitive:
+    return std::string(
+               magic_enum::enum_name<type::EPrimitiveTypeKind>(static_cast<const type::Primitive*>(&ty)->primitive))
+        .substr(1);
+  case type::ETypeKind::String:
+    return std::string(magic_enum::enum_name<type::ETextType>(static_cast<const type::String*>(&ty)->kind)).substr(1);
+  case type::ETypeKind::Tuple: {
+    std::string out;
+    const auto* tu = static_cast<const type::Tuple*>(&ty);
+    for (const auto& tyid : tu->elems) {
+      out += type_to_str(types->get(tyid));
+      out += ", ";
+    }
+
+    return "(" + out.substr(0, out.size() - 2) + ")";
+  }
+  case type::ETypeKind::StaticArray:
+  case type::ETypeKind::Ptr:         {
+    const auto* ptr = static_cast<const type::Ptr*>(&ty);
+    return "ptr'" + type_to_str(types->get(ptr->inner));
+  }
+  case type::ETypeKind::DynamicArray:
+  case type::ETypeKind::Prototype:    {
+    std::string params;
+    const auto* proto = static_cast<const type::Prototype*>(&ty);
+    for (const auto& param : proto->params) {
+      params += type_to_str(types->get(param.type));
+      params += ", ";
+    }
+    params = params.substr(0, params.size() - 2);
+
+    return "(" + params + ") -> " + type_to_str(types->get(proto->ret));
+  }
+  case type::ETypeKind::Flag: {
+    auto nodeid = inferences->get_declaration(ty.tyid);
+    assert(nodeid && "Type must refer to an declaration");
+    const auto* node = nodes->as<ast::Global_Flag>(nodeid);
+    assert(node && "type node must be a flag");
+
+    std::string fields;
+    for (auto fid : node->flags) {
+      const auto* fnode = nodes->as<ast::Flag_Field>(fid);
+      assert(fnode && "type node must be a flag field");
+
+      fields += "  " + fnode->name + ",\n";
+    }
+
+    return "flag " + node->name + "{\n" + fields + "}\n";
+  }
+  case type::ETypeKind::Enum: {
+    auto nodeid = inferences->get_declaration(ty.tyid);
+    assert(nodeid && "Type must refer to an declaration");
+    const auto* node = nodes->as<ast::Global_Enum>(nodeid);
+    assert(node && "type node must be a enum");
+
+    std::string fields;
+    for (auto vid : node->variants) {
+      const auto* vnode = nodes->as<ast::Enum_Field>(vid);
+      assert(vnode && "type node must be a enum field");
+
+      if (!vnode->type) {
+        fields += "  " + vnode->name + "(),\n";
+        continue;
+      }
+
+      fields += "  " + vnode->name + "(" + type_to_str(types->get(vnode->type)) + "),\n";
+    }
+
+    return "enum " + node->name + "{\n" + fields + "}\n";
+  }
+  case type::ETypeKind::Union: {
+    auto nodeid = inferences->get_declaration(ty.tyid);
+    assert(nodeid && "Type must refer to an declaration");
+    const auto* node = nodes->as<ast::Global_Union>(nodeid);
+    assert(node && "type node must be a union");
+
+    std::string fields;
+    for (auto vid : node->variants) {
+      const auto* vnode = nodes->as<ast::Union_Field>(vid);
+      assert(vnode && "type node must be a union field");
+
+      fields += "  " + vnode->name + ": " + type_to_str(types->get(vnode->type)) + ",\n";
+    }
+
+    return "union " + node->name + "{\n" + fields + "}\n";
+  }
+  case type::ETypeKind::Facet: {
+    auto nodeid = inferences->get_declaration(ty.tyid);
+    assert(nodeid && "Type must refer to an declaration");
+    const auto* node = nodes->as<ast::SFM_Facet>(nodeid);
+    assert(node && "type node must be a facet");
+
+    std::string fields;
+    for (const auto& fid : node->fields) {
+      const auto* f_node = nodes->as<ast::SFM_Facet_Field>(fid);
+      assert(f_node && "a facet must have field nodes");
+
+      fields += std::string(f_node->name) + ": " + type_to_str(types->get(f_node->type)) + "\n";
+    }
+
+    return "facet" + std::string(node->name) + " {\n" + fields + "}\n";
+  }
+  case type::ETypeKind::View: {
+    auto nodeid = inferences->get_declaration(ty.tyid);
+    assert(nodeid && "Type must refer to an declaration");
+    const auto* node = nodes->as<ast::SFM_View>(nodeid);
+    assert(node && "type node must be a view");
+  }
+  case type::ETypeKind::Identifier: {
+    const auto* id = static_cast<const type::Identifier*>(&ty);
+    assert(!id->forward_name.empty() && "A name is mandatory");
+    return id->forward_name;
+  }
+  case type::ETypeKind::Form: break;
+  }
+
+  return "";
+}
+
+
+bool ffi::check_ast_generation(const AST& ast) noexcept
 {
   std::vector<std::string> errs;
 
@@ -421,24 +455,105 @@ bool ffi::check_ast_generation(const AST& p_ast)
 
   // need change
   /*
-  for (auto& item : p_ast.bind.extern_items) {
+  for (const auto& item : ast.bind.extern_items) {
     bool find = false;
-    for (auto& [name, fn] : p_ast.funcs) {
+    for (const auto& [name, fn] : ast.funcs) {
       if (name == item->declaration_name) find = true;
     }
     if (!find) {
-      Error_Diagnostic err(*p_ast.bind.scr_info, 203, p_ast.bind.scr_info.get(), item->node_token,
+      Error_Diagnostic err(*ast.bind.CU, 203, ast.bind.CU.get(), item->node_token,
                            compiler::EPhase::binder, "External reference never generated.",
                            "Check your workspace ressources, your packages, or the reference name.");
-      errs.push_back(err.print_error());
+      errs.emplace_back(err.print_error());
     }
     break;
   }
     */
 
-  for (auto& err : errs) {
+  for (const auto& err : errs) {
     std::cerr << err;
   }
 
   return errs.empty();
 }
+
+ffi::AST::AST()
+  : nodes(new ast::Arena(cu::ID::make(-1)))
+  , types(new type::Arena(cu::ID::make(-1)))
+  , inferences(new inference::Arena())
+{
+}
+
+
+template <typename T>
+T& ffi::AST::add_get_node() noexcept
+{
+  static_assert(std::is_base_of_v<ast::Node, T>, "Must be a node");
+  auto obj    = std::make_unique<T>();
+  // assume compilation unit doesn't exists already, focus on main compilation unit
+  obj->nodeid = ast::ID::make(cu::ID::main(), nodes->nodes.size());
+  T* raw      = obj.get();
+  nodes->nodes.emplace_back(std::move(obj));
+  return *raw;
+}
+
+
+template <typename T>
+T& ffi::AST::add_get_type(const type::Qualifier& dec) noexcept
+{
+  static_assert(type::IsDataType<T>, "Must be a type");
+
+  auto ty       = std::make_unique<T>();
+  ty->qualifier = dec;
+  // assume compilation unit doesn't exists already, focus on main compilation unit
+  ty->tyid      = type::ID::make(cu::ID::main(), types->types.size() + ffi::AST::k_type_offset);
+
+  T* raw = static_cast<T*>(ty.get());
+
+  types->types.emplace_back(std::move(ty));
+
+  return *raw;
+}
+
+#define AST_ADD_NODE(T) template T& ffi::AST::add_get_node<T>() noexcept;
+
+
+AST_ADD_NODE(ast::Global_Reexport)
+AST_ADD_NODE(ast::Import)
+AST_ADD_NODE(ast::Global_Enum)
+AST_ADD_NODE(ast::SFM_Facet)
+AST_ADD_NODE(ast::Global_Union)
+AST_ADD_NODE(ast::Global_Variable)
+AST_ADD_NODE(ast::Global_Function)
+AST_ADD_NODE(ast::Global_Alias_Type)
+AST_ADD_NODE(ast::Global_Flag)
+AST_ADD_NODE(ast::SFM_Form)
+AST_ADD_NODE(ast::Identifier)
+AST_ADD_NODE(ast::Local_Parameter)
+AST_ADD_NODE(ast::SFM_Facet_Field)
+AST_ADD_NODE(ast::Union_Field)
+AST_ADD_NODE(ast::Flag_Field)
+AST_ADD_NODE(ast::Enum_Field)
+AST_ADD_NODE(ast::Literal_Structured_Data)
+
+#undef AST_ADD_NODE
+
+
+#define ADD_GET_TYPE(T) template T& ffi::AST::add_get_type<T>(const type::Qualifier& dec) noexcept;
+
+ADD_GET_TYPE(type::Primitive)
+ADD_GET_TYPE(type::String)
+ADD_GET_TYPE(type::Tuple)
+ADD_GET_TYPE(type::StaticArray)
+ADD_GET_TYPE(type::Ptr)
+ADD_GET_TYPE(type::DynamicArray)
+ADD_GET_TYPE(type::Prototype)
+ADD_GET_TYPE(type::Facet)
+ADD_GET_TYPE(type::View)
+ADD_GET_TYPE(type::Form)
+ADD_GET_TYPE(type::Enum)
+ADD_GET_TYPE(type::Flag)
+ADD_GET_TYPE(type::Union)
+ADD_GET_TYPE(type::Identifier)
+
+#undef ADD_GET_TYPE

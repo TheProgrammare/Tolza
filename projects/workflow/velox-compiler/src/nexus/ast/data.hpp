@@ -1,4 +1,9 @@
+#pragma once
+
 #include "nexus/forward.hpp"
+
+#include <cstdint>
+#include <string_view>
 
 namespace ast
 {
@@ -7,7 +12,7 @@ enum class ENodeKind : uint8_t {
   Unknown,
 
   // identifiers
-  ID,
+  Identifier,
   ID_Qualified,
   ID_Typed,
 
@@ -21,6 +26,13 @@ enum class ENodeKind : uint8_t {
   // globals
   Global_Variable,
   Global_Function,
+  Global_Extend_Fn,
+  Global_Extend_Cast,
+  Global_Extend_Op_Bin,
+  Global_Extend_Op_Un,
+  Global_Extend_Op_Access,
+  Global_Extend_Op_Transfert,
+  Global_Extend_Op_Other,
   Global_Module,
   Global_Extern,
   Global_Export,
@@ -32,9 +44,14 @@ enum class ENodeKind : uint8_t {
   Global_Alias_Module,
   Global_Generic,
 
+  Enum_Field,
+  Flag_Field,
+  Union_Field,
+
+  CodeBlock,
+
   // declarations
   // locals
-  Local_CodeBlock,
   Local_Lambda,
   Local_Lambda_Capture,
   Local_Parameter,
@@ -43,35 +60,30 @@ enum class ENodeKind : uint8_t {
   Local_Pattern_Element,
   Local_Pattern_Enum,
   Local_Pattern_Tuple,
-  Local_Pattern_Entity,
-  Local_Pattern_Sys_Comp,
-  Local_Pattern_Comp,
+  Local_Pattern_Form,
+  Local_Pattern_Rule_Facet,
+  Local_Pattern_Facet,
   Local_Binding,
   Local_Tuple_Destructuring,
   Local_Variable,
   Local_Capability,
 
   // compositional oriented paradigm
-  COP_Component,
-  COP_Role,
-  COP_Entity,
-  COP_Entity_New,
-  COP_Entity_Del,
-  COP_Entity_Cast,
-  COP_Entity_Op,
-  COP_Entity_Access_Op,
-  COP_Entity_Transfert,
-  COP_System,
-  COP_Component_Field,
-  COP_System_Case,
+  SFM_Facet,
+  SFM_Facet_Field,
+  SFM_View,
+  SFM_Form,
+  SFM_Rule,
+  SFM_Rule_Case,
 
   // generics
-  Generic_Is_Type,
-  Generic_Can_Cast,
-  Generic_Have_Op,
-  Generic_Have_Role,
-  Generic_Use_Component,
-  Generic_Compatible_System,
+  Generic_Type,
+  Generic_Cast,
+  Generic_Op,
+  Generic_View,
+  Generic_Facet,
+  Generic_Extension,
+  Generic_Rule,
 
   // literals
   Literal_Boolean,
@@ -92,7 +104,7 @@ enum class ENodeKind : uint8_t {
   Literal_Iterator,
   Literal_Enum,
   Literal_Structured_Data,
-  Literal_Entity,
+  Literal_Form,
 
   // expressions
   Expression_If_Ternary,
@@ -101,7 +113,7 @@ enum class ENodeKind : uint8_t {
   Expression_Other,
   Expression_Call,
   Expression_Call_Argument,
-  Expression_Call_System,
+  Expression_Call_Rule,
   Expression_Call_Pipe,
   Expression_Table_Access,
   Expression_Ptr_Val,
@@ -143,55 +155,55 @@ enum class ENodeKind : uint8_t {
   Memory_Drop,
 };
 
-inline bool ENodeKind_is_ID(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_ID(ENodeKind kind)
 {
-  return kind >= ENodeKind::ID && kind <= ENodeKind::ID_Typed;
+  return kind >= ENodeKind::Identifier && kind <= ENodeKind::ID_Typed;
 }
 
-inline bool ENodeKind_is_literal(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_literal(ENodeKind kind)
 {
-  return kind >= ENodeKind::Literal_Boolean && kind <= ENodeKind::Literal_Entity;
+  return kind >= ENodeKind::Literal_Boolean && kind <= ENodeKind::Literal_Form;
 }
 
-inline bool ENodeKind_is_callable(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_callable(ENodeKind kind)
 {
-  return kind == ENodeKind::Expression_Call || kind == ENodeKind::Global_Function || kind == ENodeKind::Local_Lambda
-         || kind == ENodeKind::COP_System || kind == ENodeKind::Expression_Call_System;
+  return kind == ENodeKind::Expression_Call || kind == ENodeKind::Global_Function || kind == ENodeKind::Global_Extend_Fn
+         || kind == ENodeKind::Local_Lambda || kind == ENodeKind::SFM_Rule || kind == ENodeKind::Expression_Call_Rule;
 }
 
-inline bool ENodeKind_is_local(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_local(ENodeKind kind)
 {
-  return kind >= ENodeKind::Local_CodeBlock && kind <= ENodeKind::Local_Capability;
+  return kind >= ENodeKind::CodeBlock && kind <= ENodeKind::Local_Capability;
 }
 
-inline bool ENodeKind_is_global(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_global(ENodeKind kind)
 {
   return (kind >= ENodeKind::Global_Variable && kind <= ENodeKind::Global_Generic)
-         || (kind >= ENodeKind::COP_Component && kind <= ENodeKind::COP_System) || kind == ENodeKind::Import;
+         || (kind >= ENodeKind::SFM_Facet && kind <= ENodeKind::SFM_Rule) || kind == ENodeKind::Import;
 }
 
-inline bool ENodeKind_is_declaration(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_declaration(ENodeKind kind)
 {
   return ENodeKind_is_local(kind) || ENodeKind_is_global(kind);
 }
 
-inline bool ENodeKind_is_statement(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_statement(ENodeKind kind)
 {
   return kind >= ENodeKind::Statement_If && kind <= ENodeKind::Statement_Match_Case;
 }
 
-inline bool ENodeKind_is_operation(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_operation(ENodeKind kind)
 {
   return kind >= ENodeKind::Operation_Cast_As && kind <= ENodeKind::Operation_Interval;
 }
 
-inline bool ENodeKind_is_expression(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_expression(ENodeKind kind)
 {
   return kind >= ENodeKind::Literal_Boolean && kind <= ENodeKind::Expression_New_Ptr;
 }
 
 
-enum class EUnaryOpType {
+enum class EUnaryOpType : uint8_t {
   NONE,
   // arithmetic
   _not,         // not !
@@ -204,42 +216,44 @@ enum class EUnaryOpType {
 
 [[nodiscard]] std::string_view EUnaryOpType_to_str(EUnaryOpType opTy);
 
-enum class EAccessOpType {
-  Index,      // NO BIN OP AST USED, index[i] -> T
-  IndexBound, // NO BIN OP AST USED, index?[i] -> T?
-  Slice,      // NO BIN OP AST USED, slicing[start..end] -> Slice<T>
-  SliceBound, // NO BIN OP AST USED, slicing?[start..end] -> Slice<T>?
-  bSlice,     // NO BIN OP AST USED, slicing bits ~[start..end]
+enum class EAccessOpType : uint8_t {
+  NONE,
+  _index,       // NO BIN OP AST USED, index[i] -> T
+  _index_bound, // NO BIN OP AST USED, index?[i] -> T?
+  _slice,       // NO BIN OP AST USED, slicing[start..end] -> Slice<T>
+  _slice_bound, // NO BIN OP AST USED, slicing?[start..end] -> Slice<T>?
+  _b_slice,     // NO BIN OP AST USED, slicing bits ~[start..end]
 };
 
 [[nodiscard]] std::string_view EAccessOpType_to_str(EAccessOpType opTy);
 
 
-enum class EBinOpType {
+enum class EBinOpType : uint8_t {
   NONE,
   // arithmetic
-  Add,    // add +
-  Sub,    // substract -
-  Mul,    // multiply *
-  Div,    // divide /
-  Mod,    // modulo %mod% not signed if divided > 0
-  Quo,    // quotien %quo%
-  Rem,    // remain %rem% signed with dividend
-  Divrem, // quotien + remainder in one operation %divrem%
-  Pow,    // power **
+  _add,    // add +
+  _sub,    // substract -
+  _mul,    // multiply *
+  _div,    // divide /
+  _mod,    // modulo %mod% not signed if divided > 0
+  _quo,    // quotien %quo%
+  _rem,    // remain %rem% signed with dividend
+  _divrem, // quotien + remainder in one operation %divrem%
+  _pow,    // power **
   // comparator
-  Gre,    // greater >
-  Low,    // lower <
-  Gre_eq, // greater equal >=
-  Low_eq, // lower equal <=
-  _eq,    // equal ==
-  _in,    // inside in
-  _nin,   // not inside !in or nin
-  _is,    // is
-  _nis,   // not is !is or nis
-  _neq,   // not equal !=
-  _eqs,   // equal strictly ===
-  _neqs,  // not equal strictly !==
+  _ordering, // ordering <=>
+  _gre,      // greater >
+  _low,      // lower <
+  _gre_eq,   // greater equal >=
+  _low_eq,   // lower equal <=
+  _eq,       // equal ==
+  _in,       // inside in
+  _nin,      // not inside !in or nin
+  _is,       // is
+  _nis,      // not is !is or nis
+  _neq,      // not equal !=
+  _eqs,      // equal strictly ===
+  _neqs,     // not equal strictly !==
   // logical
   _and,    // and logical and
   _nand,   // not and logical
@@ -272,81 +286,78 @@ enum class EBinOpType {
 
 [[nodiscard]] std::string_view EBinOpType_to_str(EBinOpType op);
 
-inline bool EBinOpType_is_logical(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_logical(EBinOpType op)
 {
   return op >= EBinOpType::_and && op <= EBinOpType::_xnor;
 }
 
-inline bool EBinOpType_is_memory(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_memory(EBinOpType op)
 {
   return op >= EBinOpType::_mem_add && op <= EBinOpType::_mem_dist;
 }
 
-inline bool EBinOpType_is_comparison(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_comparison(EBinOpType op)
 {
-  return op >= EBinOpType::Gre && op <= EBinOpType::_xnor;
+  return op >= EBinOpType::_ordering && op <= EBinOpType::_xnor;
 }
 
-inline bool EBinOpType_is_bitwise(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_bitwise(EBinOpType op)
 {
   return op >= EBinOpType::_b_and && op <= EBinOpType::_b_ror;
 }
 
-inline bool EBinOpType_is_boolean(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_boolean(EBinOpType op)
 {
-  return op >= EBinOpType::_eq && op <= EBinOpType::_neq;
+  return op >= EBinOpType::_gre && op <= EBinOpType::_neq;
 }
 
-inline bool EBinOpType_is_textual(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_textual(EBinOpType op)
 {
-  return (op >= EBinOpType::_eq && op <= EBinOpType::_neqs) || op == EBinOpType::Add;
+  return (op >= EBinOpType::_eq && op <= EBinOpType::_neqs) || op == EBinOpType::_add;
 }
 
-inline bool EBinOpType_is_decimal(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_decimal(EBinOpType op)
 {
-  return op >= EBinOpType::Add && op <= EBinOpType::_neqs;
+  return op >= EBinOpType::_add && op <= EBinOpType::_neqs;
 }
 
-inline bool EBinOpType_is_integral(EBinOpType op)
+[[nodiscard]] inline bool EBinOpType_is_integral(EBinOpType op)
 {
-  return op >= EBinOpType::Add && op <= EBinOpType::_neqs;
+  return op >= EBinOpType::_add && op <= EBinOpType::_neqs;
 }
 
 
-enum class ECapability { NONE, Ref, Mut, Copy, Move };
+enum class ECapability : uint8_t { NONE, Ref, Mut, Copy, Move };
 
 [[nodiscard]] ECapability      ETokenKind_to_ECapability(token::ETokenKind tok);
 [[nodiscard]] std::string_view ECapability_to_str(ECapability capa);
 [[nodiscard]] ECapability      deduce_type_ECapability(bool is_complex, bool is_mut);
 
 
-enum class EPassMode { NONE, Mut, Ref, Copy, Move, Addr };
+enum class EPassMode : uint8_t { NONE, Mut, Ref, Copy, Move, Addr };
 
 [[nodiscard]] EPassMode        ETokenKind_to_EPassMode(token::ETokenKind tok);
 [[nodiscard]] std::string_view EPassMode_to_str(EPassMode passMode);
 [[nodiscard]] bool             EPassMode_Can_Default(EPassMode passMode);
 
 
-enum class EExprPassMode { NONE, Mut, Ref, Copy, Move };
+enum class EExprPassMode : uint8_t { NONE, Mut, Ref, Copy, Move };
 
 [[nodiscard]] EExprPassMode ETokenKind_to_EExprPassMode(token::ETokenKind tok);
 
 
-enum class EVariableKind { NONE, Const, Let, Var };
+enum class EVariableKind : uint8_t { NONE, Const, Let, Var };
 
 [[nodiscard]] EVariableKind    ETokenKind_to_EVariableKind(token::ETokenKind tok);
 [[nodiscard]] std::string_view EVariableKind_to_str(EVariableKind kind);
 
 
-enum class ETransfertType { NONE, Copy, MoveSemantic };
+enum class ETransfertType : uint8_t { NONE, Copy, MoveSemantic };
 
 [[nodiscard]] ETransfertType   ETokenKind_to_ETransfertType(token::ETokenKind tok);
 [[nodiscard]] std::string_view ETransfertType_to_str(ETransfertType type);
 
+enum class EOtherOp : uint8_t { NONE, del, predicat };
 
-enum class EPathSource { NONE, Self, Super, Root };
-
-[[nodiscard]] EPathSource      ETokenKind_to_EPathSource(token::ETokenKind tok);
-[[nodiscard]] std::string_view EPathSource_to_str(EPathSource type);
 
 } // namespace ast

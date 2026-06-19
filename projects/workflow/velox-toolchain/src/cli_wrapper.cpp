@@ -1,24 +1,28 @@
 #include "cli_wrapper.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <iostream>
 
 
-bool cli::is_valid_filename(const std::string& name)
+bool cli::is_valid_filename(std::string_view name) noexcept
 {
   // file name only
   static const std::regex pattern("^[A-Za-z0-9_-]+$");
-  return std::regex_match(name, pattern);
+  try {
+    return std::regex_match(std::string(name), pattern);
+  } catch (...) {
+    return false;
+  }
 }
 
-std::string cli::sanitize_filename(std::string name)
+void cli::sanitize_filename(std::string& name) noexcept
 {
   // rempalce unautorized characters as '_'
-  std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(c) && c != '_' && c != '-'; }, '_');
-  return name;
+  std::ranges::replace_if(name, [](char c) { return !std::isalnum(c) && c != '_' && c != '-'; }, '_');
 }
 
-bool cli::yes_no_question(const std::string& msg)
+bool cli::yes_no_question(std::string_view msg) noexcept
 {
   std::cout << "[velox:ask] " << msg << " [Y/n]: ";
   std::string reponse;
@@ -27,7 +31,7 @@ bool cli::yes_no_question(const std::string& msg)
   return reponse[0] == 'y' || reponse[0] == 'Y';
 }
 
-std::string cli::get_input(const std::string& msg)
+std::string cli::get_input(std::string_view msg) noexcept
 {
   std::cout << "[velox:ask] " << msg << " : ";
   std::string reponse;
@@ -36,7 +40,7 @@ std::string cli::get_input(const std::string& msg)
   return reponse;
 }
 
-std::string cli::ask_filename()
+std::string cli::ask_filename() noexcept
 {
 retry:
   std::cout << "[velox:ask] Write down the file name: ";
@@ -49,7 +53,7 @@ retry:
 
     if (yes_no_question("Do you want to continue ?")) goto retry;
 
-    std::cout << "[velox] Operation aborted..." << std::endl;
+    std::cout << "[velox] Operation aborted...\n";
   }
   return name;
 }

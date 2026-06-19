@@ -28,32 +28,33 @@
 
 #include <string>
 
+#include <common/commands.hpp>
+
 namespace CLI
 {
 class App;
 }
 
-class Command
+namespace compiler
+{
+
+class Commander : common::Commander
 {
 public:
-  Command(CLI::App& _app, int _argc, const char* _argv[])
-    : app(_app)
-    , argc(_argc)
-    , argv(_argv)
+  Commander(CLI::App& _app)
+    : common::Commander(_app)
   {
     init_commands();
   }
 
 private:
-  CLI::App& app;
+  void init_commands() noexcept;
 
-  int          argc;
-  const char** argv;
-  std::string  dir_source;
-  std::string  dir_dest;
+  void init_command_cogito() noexcept;
+  void init_command_ffi() noexcept;
 
-  void init_commands();
-  void init_command_cogito();
-  void init_command_build();
-  void init_command_ffi_json();
+  void init_command_build() noexcept override;
+  void exec_ffi_command() noexcept override;
 };
+
+} // namespace compiler

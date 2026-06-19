@@ -11,36 +11,40 @@ namespace metacode
 {
 
 struct Generator final {
-  Generator(script::ScriptInfo& p_scr_info, metacode::Preprocessor& p_prepro);
+  Generator(cu::CU& p_CU, metacode::Preprocessor& p_prepro) noexcept;
 
-  script::ScriptInfo&     scr_info;
+  cu::CU&                 CU;
   metacode::Preprocessor& prepro;
 
-  std::vector<_id>*   get_children(metacode::_id id);
-  metacode::Metacode& get_child(const std::vector<metacode::_id>* children, size_t gen_count);
 
-  void add_token(token::Token& tok);
+  [[nodiscard]] bool start_generator() noexcept;
+
+  void normalize_tokens_generated_ids() noexcept;
 
 
-  bool start_generator();
+  [[nodiscard]] std::vector<ID>*    get_children(metacode::ID id) const noexcept;
+  [[nodiscard]] metacode::Metacode& get_child(const std::vector<metacode::ID>* children,
+                                              size_t                           gen_count) const noexcept;
 
-  void gen_tokens(const std::vector<token::_id>& toks);
+  void add_token(token::Token& tok) noexcept;
 
-  void gen_Metacode(metacode::Metacode& m);
+  void gen_tokens(const std::vector<token::ID>& toks) noexcept;
 
-  void gen_Root(metacode::Root& m);
-  void gen_Metablock(metacode::Metablock& m);
-  void gen_If(metacode::If& m);
-  void gen_Expand(metacode::Expand& m);
+  void gen_Metacode(metacode::Metacode& m) noexcept;
 
-  bool        eval_cond(metacode::_id id);
-  bool        eval_binary(metacode::Binary_Cond& c);
-  bool        eval_not_unary(metacode::Unary_Not_Cond& c);
-  std::string eval_expr(metacode::_id id);
+  void gen_Root(metacode::Root& m) noexcept;
+  void gen_Metablock(metacode::Metablock& m) noexcept;
+  void gen_If(metacode::If& m) noexcept;
+  void gen_Expand(metacode::Expand& m) noexcept;
 
-  enum class EPostTokenKind { filesource, metacode, placeholder };
+  [[nodiscard]] bool        eval_cond(metacode::ID id) noexcept;
+  [[nodiscard]] bool        eval_binary(metacode::Binary_Cond& c) noexcept;
+  [[nodiscard]] bool        eval_not_unary(metacode::Unary_Not_Cond& c) noexcept;
+  [[nodiscard]] std::string eval_expr(metacode::ID id) noexcept;
 
-  EPostTokenKind scan_token(token::_id tok);
+  enum class EPostTokenKind : uint8_t { filesource, metacode, placeholder };
+
+  [[nodiscard]] static EPostTokenKind scan_token(token::ID tok) noexcept;
 
   std::vector<token::Token> tokens_generated;
 

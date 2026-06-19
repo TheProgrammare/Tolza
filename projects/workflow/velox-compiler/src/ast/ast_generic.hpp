@@ -5,42 +5,48 @@
 namespace ast
 {
 
-AST_NODE(Generic_Is_Type)
+AST_NODE(Generic_Type)
 {
-  std::string_view source_typename;
+  std::string source_typename;
   SET_VECTOR_TYPE(in_type)
 };
 
-AST_NODE(Generic_Can_Cast)
+AST_NODE(Generic_Cast)
 {
-  std::string_view source_typename; // typename
+  std::string source_typename; // typename
   SET_TYPE(target);
   bool is_cast_from = false; // false = cast to | true = cast from
 };
 
-AST_NODE(Generic_Have_Op)
+AST_NODE(Generic_Op)
 {
-  std::string_view target_gen_sym;          // typename
-  EBinOpType       op_ty = EBinOpType::Add; // operator
+  std::string target_gen_sym;           // typename
+  EBinOpType  op_ty = EBinOpType::_add; // operator
   SET_TYPE(ret);
 };
 
-AST_NODE(Generic_Have_Role)
+AST_NODE(Generic_View)
 {
-  std::string_view target_gen_sym;
-  SET_NODE(role);
+  std::string target_gen_sym;
+  SET_NODE(view);
 };
 
-AST_NODE(Generic_Use_Component)
+AST_NODE(Generic_Facet)
 {
-  std::string_view target_gen_sym;
-  SET_NODE(component);
+  std::string target_gen_sym;
+  SET_NODE(facet);
 };
 
-AST_NODE(Generic_Compatible_System)
+AST_NODE(Generic_Extension)
 {
-  std::string_view target_gen_sym;
-  SET_NODE(system);
+  std::string target_gen_sym;
+  SET_NODE(extension);
+};
+
+AST_NODE(Generic_Rule)
+{
+  std::string target_gen_sym;
+  SET_NODE(rule);
 };
 
 } // namespace ast

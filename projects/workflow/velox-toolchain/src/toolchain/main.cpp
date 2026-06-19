@@ -17,19 +17,36 @@
 
 #include <CLIUtils/CLI11.hpp>
 
-#include "common.hpp"
+#include <common/common.hpp>
 #include "toolchain/parser_command.hpp"
 #include "toolchain/toolchain.hpp"
-#include "toolchain_context.hpp"
+#include <common/toolchain_options.hpp>
+#include <exception>
 
-int main(int argc, const char* argv[])
+
+int run_toolchain(int argc, const char* argv[])
 {
-  common::init_toolchain_context();
+  common::toolchain::init_toolchain_context();
 
-  CLI::App app{"Velox toolchain (" + common::SOFTWARE_VERSION + ")", "velox"};
-  Command  command(app);
+  CLI::App             app{"Velox toolchain (" + common::SOFTWARE_VERSION + ")", "velox"};
+  toolchain::Commander commander(app);
 
   toolchain::link_stdlib();
 
   CLI11_PARSE(app, argc, argv);
+
+  return 0;
+}
+
+int main(int argc, const char* argv[])
+{
+  try {
+    run_toolchain(argc, argv);
+  } catch (const std::exception& e) {
+    std::cerr << "fatal error: " << e.what() << "\n";
+  } catch (...) {
+    std::cerr << "unknown fatal error\n";
+  }
+
+  return 1;
 }

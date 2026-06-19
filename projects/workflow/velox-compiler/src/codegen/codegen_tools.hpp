@@ -52,8 +52,8 @@ public:
   llvm::Value* engage_move_semantic(ast::Node& p_target);
   llvm::Value* engage_copy_semantic(ast::Node& p_target);
 
-  std::expected<symbol::_id, std::string> find_symbol(ast::Node& p_expr);
-  std::expected<ast::_gnid, std::string>      get_symbol_expression(symbol::_id p_symbol);
+  std::expected<symbol::ID, std::string> find_symbol(ast::Node& p_expr);
+  std::expected<ast::ID, std::string>      get_symbol_expression(symbol::ID p_symbol);
   std::expected<llvm::Constant*, std::string>    create_constant(ast::Node& p_value);
   llvm::Type*                                    generate_parameter_type(ast::Local_Parameter& p_param);
   llvm::Type*                                    get_primtive_type(type::EPrimitiveTypeKind p_ty);
@@ -67,7 +67,7 @@ public:
   llvm::Constant* get_float_constant(size_t bits_size, double double_val, std::string_view str_val = "");
 
   llvm::Constant* get_primtive_zeroinitializer(type::EPrimitiveTypeKind ty);
-  llvm::Constant* get_zeroinitializer(type::_id ty);
+  llvm::Constant* get_zeroinitializer(type::ID ty);
 
 
   std::u32string utf8_to_utf32(std::string_view s);

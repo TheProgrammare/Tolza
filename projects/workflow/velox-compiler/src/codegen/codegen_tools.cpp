@@ -17,16 +17,16 @@
 #include <string>
 #include <vector>
 
-#include <compiler_options.hpp>
+#include <common/compiler_options.hpp>
 
 #include "nexus/ast/ast.hpp"
-#include "ast/ast_declaration_cop.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_expression.hpp"
 #include "nexus/ast/ast.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_literal.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 #include "ast/ast_operation.hpp"
 
 #include "compiler/compiler.hpp"
@@ -42,7 +42,7 @@ llvm::Value* LLVM_Tools::engage_move_semantic(ast::AExpression& p_target)
 
   auto dest = v.builder.CreateAlloca(ty, nullptr, "tmp_moved");
 
-  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::cop::Entity>(p_target.expression_inferred_type)) {
+  if (auto ptr = std::dynamic_pointer_cast<ast::declaration::sfm::Form>(p_target.expression_inferred_type)) {
   }
 }
 llvm::Value* LLVM_Tools::engage_copy_semantic(ast::AExpression& target)
@@ -71,7 +71,7 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
   } else if (auto ptr = dynamic_cast<Local_Variable_Binding*>(&p_symbol)) {
     return ptr->parent_pattern->right.get();
   }
-  Error_Diagnostic error(v.scr_info, 166, p_symbol.node_scr_info.get(), p_symbol.node_token, compiler::EPhase::llvmir,
+  Error_Diagnostic error(v.CU, 166, p_symbol.node_CU.get(), p_symbol.node_token, compiler::EPhase::llvmir,
                          "The symbol don't have an expression.", "");
   return std::unexpected(error.print_error());
 }
@@ -79,7 +79,7 @@ std::expected<ast::AExpression*, std::string> LLVM_Tools::get_symbol_expression(
 
 std::expected<llvm::Constant*, std::string> LLVM_Tools::create_constant(const ast::ALiteral& p_value)
 {
-  common::Compiler_Options ctx;
+  common::compiler::Options ctx;
   if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&p_value)) {
     return get_int_constant(EPrimType_to_bits(ptr->type), 0, ptr->val.i128_to_string(), EPrimType_is_signed(ptr->type));
   } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&p_value)) {
@@ -227,7 +227,7 @@ llvm::Constant* LLVM_Tools::get_text_constant(const std::u32string& val)
 {
   std::vector<uint32_t> codepoints;
   codepoints.reserve(val.size());
-  for (char32_t c : val) codepoints.push_back(static_cast<uint32_t>(c));
+  for (char32_t c : val) codepoints.emplace_back(static_cast<uint32_t>(c));
 
   auto txt = llvm::ConstantDataArray::get(v.ctx, codepoints);
 
@@ -288,7 +288,7 @@ llvm::Constant* LLVM_Tools::get_primtive_zeroinitializer(EPrimitiveTypeKind ty)
   case EPrimitiveTypeKind::udSize:
   case EPrimitiveTypeKind::iSize:
   case EPrimitiveTypeKind::uSize:
-  case EPrimitiveTypeKind::bSize:   return get_int_constant(compiler::COMPILER_OPTIONS.get_arch_size(), 0);
+  case EPrimitiveTypeKind::bSize:   return get_int_constant(compiler::OPTIONS.get_arch_size(), 0);
   case EPrimitiveTypeKind::i8:
   case EPrimitiveTypeKind::u8:
   case EPrimitiveTypeKind::b8:      return get_int_constant(8, 0);
@@ -310,7 +310,7 @@ llvm::Constant* LLVM_Tools::get_primtive_zeroinitializer(EPrimitiveTypeKind ty)
   case EPrimitiveTypeKind::i128:
   case EPrimitiveTypeKind::u128:
   case EPrimitiveTypeKind::b128:    return get_int_constant(128, 0);
-  case EPrimitiveTypeKind::fSize:   get_float_constant(compiler::COMPILER_OPTIONS.get_arch_size(), 0);
+  case EPrimitiveTypeKind::fSize:   get_float_constant(compiler::OPTIONS.get_arch_size(), 0);
   case EPrimitiveTypeKind::f16:     get_float_constant(16, 0);
   case EPrimitiveTypeKind::f32:     get_float_constant(32, 0);
   case EPrimitiveTypeKind::f64:     get_float_constant(64, 0);
@@ -339,25 +339,25 @@ std::u32string LLVM_Tools::utf8_to_utf32(std::string_view s)
     uint32_t c = static_cast<unsigned char>(s[i]);
 
     if (c < 0x80) {
-      result.push_back(c);
+      result.emplace_back(c);
       i++;
     } else if ((c >> 5) == 0x6) {
       if (i + 1 >= s.size()) throw std::runtime_error("UTF8 truncated");
       uint32_t cp = ((c & 0x1F) << 6) | (static_cast<unsigned char>(s[i + 1]) & 0x3F);
-      result.push_back(cp);
+      result.emplace_back(cp);
       i += 2;
     } else if ((c >> 4) == 0xE) {
       if (i + 2 >= s.size()) throw std::runtime_error("UTF8 truncated");
       uint32_t cp = ((c & 0x0F) << 12) | ((static_cast<unsigned char>(s[i + 1]) & 0x3F) << 6)
                     | (static_cast<unsigned char>(s[i + 2]) & 0x3F);
-      result.push_back(cp);
+      result.emplace_back(cp);
       i += 3;
     } else if ((c >> 3) == 0x1E) {
       if (i + 3 >= s.size()) throw std::runtime_error("UTF8 truncated");
       uint32_t cp = ((c & 0x07) << 18) | ((static_cast<unsigned char>(s[i + 1]) & 0x3F) << 12)
                     | ((static_cast<unsigned char>(s[i + 2]) & 0x3F) << 6)
                     | (static_cast<unsigned char>(s[i + 3]) & 0x3F);
-      result.push_back(cp);
+      result.emplace_back(cp);
       i += 4;
     } else {
       throw std::runtime_error("Invalid UTF8");

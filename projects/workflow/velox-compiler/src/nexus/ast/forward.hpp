@@ -4,6 +4,8 @@
 namespace ast
 {
 
+struct Node;
+
 // identifiers
 struct ID;
 struct ID_Qualified;
@@ -19,6 +21,13 @@ struct Import;
 // globals
 struct Global_Variable;
 struct Global_Function;
+struct Global_Extend_Fn;
+struct Global_Extend_Cast;
+struct Global_Extend_Op_Bin;
+struct Global_Extend_Op_Un;
+struct Global_Extend_Op_Access;
+struct Global_Extend_Op_Transfert;
+struct Global_Extend_Op_Other;
 struct Global_Module;
 struct Global_Extern;
 struct Global_Export;
@@ -30,9 +39,13 @@ struct Global_Alias_Type;
 struct Global_Alias_Module;
 struct Global_Generic;
 
+struct Enum_Field;
+struct Flag_Field;
+struct Union_Field;
+
 // declarations
 // locals
-struct Local_CodeBlock;
+struct CodeBlock;
 struct Local_Lambda;
 struct Local_Lambda_Capture;
 struct Local_Parameter;
@@ -41,35 +54,30 @@ struct Local_Gen_Params;
 struct Local_Pattern_Element;
 struct Local_Pattern_Enum;
 struct Local_Pattern_Tuple;
-struct Local_Pattern_Entity;
-struct Local_Pattern_Sys_Comp;
-struct Local_Pattern_Comp;
+struct Local_Pattern_Form;
+struct Local_Pattern_Rule_Facet;
+struct Local_Pattern_Facet;
 struct Local_Binding;
 struct Local_Tuple_Destructuring;
 struct Local_Variable;
 struct Local_Capability;
 
 // compositional oriented paradigm
-struct COP_Component;
-struct COP_Role;
-struct COP_Entity;
-struct COP_Entity_New;
-struct COP_Entity_Del;
-struct COP_Entity_Cast;
-struct COP_Entity_Op;
-struct COP_Entity_Access_Op;
-struct COP_Entity_Transfert;
-struct COP_System;
-struct COP_Component_Field;
-struct COP_System_Case;
+struct SFM_Facet;
+struct SFM_Facet_Field;
+struct SFM_View;
+struct SFM_Form;
+struct SFM_Rule;
+struct SFM_Rule_Case;
 
 // generics
-struct Generic_Is_Type;
-struct Generic_Can_Cast;
-struct Generic_Have_Op;
-struct Generic_Have_Role;
-struct Generic_Use_Component;
-struct Generic_Compatible_System;
+struct Generic_Type;
+struct Generic_Cast;
+struct Generic_Op;
+struct Generic_View;
+struct Generic_Facet;
+struct Generic_Extension;
+struct Generic_Rule;
 
 // literals
 struct Literal_Boolean;
@@ -90,7 +98,7 @@ struct Literal_Range;
 struct Literal_Iterator;
 struct Literal_Enum;
 struct Literal_Structured_Data;
-struct Literal_Entity;
+struct Literal_Form;
 
 // expressions
 struct Expression_If_Ternary;
@@ -99,7 +107,7 @@ struct Expression_Self;
 struct Expression_Other;
 struct Expression_Call;
 struct Expression_Call_Argument;
-struct Expression_Call_System;
+struct Expression_Call_Rule;
 struct Expression_Call_Pipe;
 struct Expression_Table_Access;
 struct Expression_Ptr_Val;

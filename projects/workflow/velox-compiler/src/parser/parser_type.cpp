@@ -16,9 +16,7 @@
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/lexer/token_viewer.hpp"
-#include "nexus/script.hpp"
-#include "nexus/symbol.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 
 #include "ast/ast_declaration_local.hpp"
 
@@ -33,13 +31,13 @@ parser::Parser_Type::Parser_Type(Parser_Context& p_ctx)
 }
 
 
-std::vector<type::_id> parser::Parser_Type::Params::to_type_params() const
+std::vector<type::ID> parser::Parser_Type::Params::to_type_params() const
 {
-  std::vector<type::_id> out;
+  std::vector<type::ID> out;
   out.reserve(params.size());
 
-  for (auto elem : params) {
-    out.push_back(elem.type);
+  for (const auto& elem : params) {
+    out.emplace_back(elem.type);
   }
 
   return out;
@@ -47,115 +45,129 @@ std::vector<type::_id> parser::Parser_Type::Params::to_type_params() const
 
 
 // const, optional, volatile
-void parser::Parser_Type::get_decorator(type::Decorator& decorator)
+void parser::Parser_Type::get_qualifier(type::Qualifier& qualifier)
 {
   for (size_t i = 0; i < 3; i++) {
-    if (p.match(token::ETokenKind::DOLLAR)) decorator.is_optional = true;
-    if (p.match(token::ETokenKind::INTERROGATIVE)) decorator.is_volatile = true;
-    if (p.match(token::ETokenKind::OP_NOT)) decorator.is_constant = true;
+    if (p.match(token::ETokenKind::DOLLAR)) qualifier.is_optional = true;
+    if (p.match(token::ETokenKind::INTERROGATIVE)) qualifier.is_volatile = true;
+    if (p.match(token::ETokenKind::OP_NOT)) qualifier.is_constant = true;
   }
 }
 
-type::_id parser::Parser_Type::table(const type::Decorator& decorator)
+type::ID parser::Parser_Type::table(const type::Qualifier& qualifier)
 {
-  p.match(token::ETokenKind::OPEN_SQUARE);
+  (void)p.match(token::ETokenKind::L_SQUARE);
 
-  auto       dec   = decorator;
-  auto       inner = p.p_type->parse_type();
-  ast::_gnid size;
-  Int128     size_val;
+  auto    dec   = qualifier;
+  auto    inner = p.p_type->parse_type();
+  ast::ID size;
+  Int128  size_val;
 
   // static table (sized)
   if (p.match(token::ETokenKind::ARROW)) {
     size = p.p_expr->parse_expression();
-    if (auto size_node = p.scr_info.nodes->get_as<ast::Literal_Integral>(size.get_node_id())) {
+    if (const auto* size_node = size.as<ast::Literal_Integral>()) {
       size_val = size_node->val;
     }
   }
 
-  if (p.match(token::ETokenKind::CLOSE_SQUARE)) {
-    get_decorator(dec);
+  if (p.match(token::ETokenKind::R_SQUARE)) {
+    get_qualifier(dec);
   }
 
-  if (size_val.val)
-    return parser_type_factory.make_static_array(inner, size_val.val->getZExtValue(), dec);
-  else
-    return parser_type_factory.make_dynamic_array(inner, dec);
+  if (size_val.val) return parser_type_factory.make_static_array(inner, size_val.val->getZExtValue(), dec);
+
+  return parser_type_factory.make_dynamic_array(inner, dec);
 }
 
-type::_id parser::Parser_Type::pointer(const type::Decorator& decorator)
+type::ID parser::Parser_Type::pointer(const type::Qualifier& qualifier)
 {
-  auto ptr = ast::ETokenKind_to_EBinOpType(p.peek().kind);
+  (void)p.next(); // consume ptr
 
-  p.next(); // consume ptr
+  auto dec = qualifier;
+  get_qualifier(dec);
 
-  auto dec = decorator;
-  get_decorator(dec);
-
-  p.expect(124, token::ETokenKind::TICK, "Expected tick ''' after pointer specification.",
-           "define pointer like:"
-           "  - `ptr'T` `std::unique_ptr'T` `std::shared_ptr'T` `std::weak_ptr'T`");
+  (void)p.expect(124, token::ETokenKind::TICK, "Expected tick ''' after pointer specification.",
+                 "define pointer like:"
+                 "  - `ptr'T`" /*"`uptr'T` `sptr'T` `wptr'T`"*/);
 
   auto inner = p.p_type->parse_type();
-
 
   return parser_type_factory.make_ptr(inner);
 }
 
-type::_id parser::Parser_Type::primitive(const type::Decorator& decorator)
+type::ID parser::Parser_Type::primitive(const type::Qualifier& qualifier)
 {
-  auto tok = p.next();
+  auto& tok = p.next();
+  auto  dec = qualifier;
+  get_qualifier(dec);
 
-  auto prim = type::ETokenKind_to_EPrimitiveTypeKind(tok.kind);
-
-  auto dec = decorator;
-  get_decorator(dec);
-
-  return parser_type_factory.make_primitive(prim, dec);
-}
-
-type::_id parser::Parser_Type::id_type(const type::Decorator& decorator)
-{
-  auto base_tok = p.peek();
-
-  auto gnid = p.p_base->identifier();
-
-  if (p.match_any({token::ETokenKind::OPEN_BRACKETS, token::ETokenKind::TURBO_FISH})) {
-    auto old_id       = gnid;
-    auto [_gnid, _ty] = p.p_base->identifier_typed();
-    gnid              = _gnid;
-    auto id_node      = p.scr_info.nodes->get_as<ast::ID_Typed>(gnid.get_node_id());
-    id_node->name     = old_id;
+  if (auto prim = type::ETokenKind_to_EPrimitiveTypeKind(tok.kind); prim != type::EPrimitiveTypeKind::NONE) {
+    return parser_type_factory.make_primitive(prim, dec);
   }
 
-  auto dec = decorator;
-  get_decorator(dec);
+  if (auto txt = type::ETokenKind_to_ETextType(tok.kind); txt != type::ETextType::NONE) {
+    return parser_type_factory.make_string(txt, dec);
+  }
 
-  return parser_type_factory.make_identifier(gnid, symbol::_id(), dec);
+  common::compiler::DEBUG_VELOX_ICE("bad token interpreted as type before primitive parsing");
+
+  return NO_ID;
 }
 
-type::_id parser::Parser_Type::tuple(const type::Decorator& decorator)
+type::ID parser::Parser_Type::id_type(const type::Qualifier& qualifier)
+{
+  auto& base_tok = p.peek();
+
+  auto id = p.p_base->identifier();
+
+  if (p.match_any({token::ETokenKind::L_ANGLE, token::ETokenKind::TURBO_FISH})) {
+    auto old_id         = id;
+    auto [_nodeid, _ty] = p.p_base->identifier_typed();
+
+    id            = _nodeid;
+    auto* id_node = id.as<ast::ID_Typed>();
+    id_node->name = old_id;
+  }
+
+  auto dec = qualifier;
+  get_qualifier(dec);
+
+  return parser_type_factory.make_identifier(ast::get_decl_name(id), id, symbol::ID::invalid(), dec);
+}
+
+type::ID parser::Parser_Type::tuple(const type::Qualifier& qualifier)
 {
   auto elems = explicit_tuple();
 
-  auto dec = decorator;
-  get_decorator(dec);
+  auto dec = qualifier;
+  get_qualifier(dec);
 
   return parser_type_factory.make_tuple(elems, dec);
 }
 
-type::_id parser::Parser_Type::function_proto(const type::Decorator& decorator)
+type::ID parser::Parser_Type::function_proto(const type::Qualifier& qualifier)
 {
   auto proto = explicit_function_proto();
 
-  auto dec = decorator;
-  get_decorator(dec);
+  std::vector<type::Prototype::Param> ty_params;
+  ty_params.reserve(proto.params.params.size());
 
-  return parser_type_factory.make_prototype(proto.params.to_type_params(), proto.ret, proto.params.is_variadic,
-                                            symbol::_id(), dec);
+  for (const auto& param : proto.params.params) {
+    type::Prototype::Param out;
+    out.type        = param.type;
+    out.is_restrict = param.is_restrict;
+    out.passmode    = param.passmode;
+    ty_params.emplace_back(out);
+  }
+
+  auto dec = qualifier;
+  get_qualifier(dec);
+
+  return parser_type_factory.make_prototype(ty_params, proto.ret, proto.params.is_variadic, dec);
 }
 
-type::_id parser::Parser_Type::parse_type()
+type::ID parser::Parser_Type::parse_type()
 {
   constexpr std::string_view hint =
       R"(define type like:
@@ -164,78 +176,88 @@ type::_id parser::Parser_Type::parse_type()
   - generic args `T<i32, U>`, `T<gen_args>`, `T<gen_args>::U`, ...
   - from module/namespace `A::B::T`, `A::B<U, V>`, `A::B<U, V>::T`, ...)";
 
-  type::Decorator dec;
-  get_decorator(dec);
+  type::Qualifier dec;
+  get_qualifier(dec);
 
   switch (p.peek().kind) {
-  case token::ETokenKind::OPEN_SQUARE: return table(dec);
-  case token::ETokenKind::PTR:         return pointer(dec);
-  case token::ETokenKind::OPEN_PAREN:  return tuple(dec);
-  case token::ETokenKind::FUNCTION:    return function_proto(dec);
-  default:                             break;
+  case token::ETokenKind::L_SQUARE: return table(dec);
+  case token::ETokenKind::PTR:      return pointer(dec);
+  case token::ETokenKind::L_PAREN:  return tuple(dec);
+  case token::ETokenKind::FUNCTION: return function_proto(dec);
+  default:                          break;
   }
 
   if (p.check_any(token::k_type_primitive)) return primitive(dec);
 
   if (p.check(token::ETokenKind::IDENTIFIER)) return id_type(dec);
 
-  p.add_error(126, "Unexpected type definition '" + std::string(p.tok_to_str(p.peek().id)) + "'.", hint);
+  p.add_error(126, "Unexpected type definition '" + std::string(p.tok_to_str(p.peek().tokid)) + "'.", hint);
   return type::BAD_TYPE_ID;
 };
 
-std::vector<type::_id> parser::Parser_Type::explicit_tuple()
+std::vector<type::ID> parser::Parser_Type::explicit_tuple()
 {
   constexpr std::string_view hint = "define named tuple like `(filed1: i32, ...)`.";
 
-  std::vector<type::_id> tuple;
+  std::vector<type::ID> tuple;
 
-  bool endByParen = p.match(token::ETokenKind::OPEN_PAREN);
+  bool endByParen = p.match(token::ETokenKind::L_PAREN);
 
   while (!p.is_end()) {
-    tuple.push_back(p.p_type->parse_type());
+    tuple.emplace_back(p.p_type->parse_type());
 
     if (!endByParen && p.match_field_any_separator(token::ETokenKind::COMMA, token::k_args_ending)) {
       p.rewind(p.tok_v->position() - 1);
       break;
     }
-    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_PAREN)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_PAREN)) break;
   }
 
   return tuple;
 }
 
-ast::_gnid parser::Parser_Type::get_type()
+ast::ID parser::Parser_Type::get_type()
 {
-  parser_add_node(get, Expression_Get_Type, p.peek(-1).id);
+  auto& get = p.add_get_node<ast::Expression_Get_Type>(p.peek(-1).tokid);
 
-  p.expect(129, token::ETokenKind::OPEN_PAREN, "Expected start arg '('.",
-           "define get type at compilation time like: `comptime::type(var)`");
+  (void)p.expect(129, token::ETokenKind::L_PAREN, "Expected start arg '('.",
+                 "define get type at compilation time like: `comptime::type(var)`");
 
-  get->target = p.p_expr->parse_expression();
+  get.target = p.p_expr->parse_expression();
 
-  p.expect(130, token::ETokenKind::CLOSE_PAREN, "Expected end arg ')'.",
-           "define get type at compilation time like: `comptime::type(var)`");
+  (void)p.expect(130, token::ETokenKind::R_PAREN, "Expected end arg ')'.",
+                 "define get type at compilation time like: `comptime::type(var)`");
 
-  return get->node_id;
+  return get.nodeid;
 }
 
-parser::Parser_Type::Proto parser::Parser_Type::parse_and_mount_local_callable(type::_id& prototype_id,
-                                                                               bool&      is_explicit_ret)
+parser::Parser_Type::Proto parser::Parser_Type::parse_and_mount_local_callable(type::ID& prototype_id,
+                                                                               bool&     is_explicit_ret)
 {
   auto proto = p.p_type->explicit_function_proto();
 
-  prototype_id =
-      parser_type_factory.make_prototype(proto.params.to_type_params(), proto.ret, proto.params.is_variadic, NO_ID);
+  std::vector<type::Prototype::Param> ty_params;
+  ty_params.reserve(proto.params.params.size());
 
-  for (auto& param : proto.params.params) {
-    parser_add_node(n_param, Local_Parameter, param.name_tok);
+  for (const auto& param : proto.params.params) {
+    type::Prototype::Param out;
+    out.type        = param.type;
+    out.is_restrict = param.is_restrict;
+    out.passmode    = param.passmode;
+    ty_params.emplace_back(out);
+  }
 
-    n_param->name          = param.name;
-    n_param->passmode      = param.passmode;
-    n_param->default_value = param.default_val;
-    n_param->type          = param.type;
+  prototype_id = parser_type_factory.make_prototype(ty_params, proto.ret, proto.params.is_variadic, NO_ID);
 
-    p.add_symbol(n_param->node_id.get_node_id());
+  for (const auto& param : proto.params.params) {
+    auto& n_param = p.add_get_node<ast::Local_Parameter>(param.name_tok);
+
+    n_param.name          = param.name;
+    n_param.passmode      = param.passmode;
+    n_param.default_value = param.default_val;
+    n_param.type          = param.type;
+
+    (void)p.add_symbol(n_param.nodeid);
   }
 
   is_explicit_ret = proto.is_explicit_ret;
@@ -250,14 +272,14 @@ parser::Parser_Type::Proto parser::Parser_Type::explicit_function_proto(bool p_i
   - `fn myName() { ... }`
   - with return `fn myName() -> (i32, ...) { ... }`)";
 
-  p.match_any({token::ETokenKind::FUNCTION, token::ETokenKind::LAMBDA});
+  (void)p.match_any({token::ETokenKind::FUNCTION, token::ETokenKind::LAMBDA});
 
   Proto proto;
 
   // check
   // parameters
-  p.expect(131, token::ETokenKind::OPEN_PAREN, "Expected start parameter defintion '(' after function declaration.",
-           hint);
+  (void)p.expect(131, token::ETokenKind::L_PAREN, "Expected start parameter defintion '(' after function declaration.",
+                 hint);
 
   proto.params = parameters();
 
@@ -287,7 +309,7 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
       "Parameters default by pass mode:\n  - Allowed default: `copy`, `ref`\n  - Prohibied default: `mut`, "
       "`move`";
 
-  if (p.match(token::ETokenKind::CLOSE_PAREN)) return {};
+  if (p.match(token::ETokenKind::R_PAREN)) return {};
 
   Params params;
 
@@ -295,8 +317,8 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
     if (p.match(token::ETokenKind::VARIADIC)) {
       params.is_variadic = true;
 
-      p.expect(154, token::ETokenKind::CLOSE_PAREN,
-               "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
+      (void)p.expect(154, token::ETokenKind::R_PAREN,
+                     "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
       break;
     }
 
@@ -306,9 +328,9 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
       p.add_error(132, "Expected parameter pass mode before the parameter name.", hint);
 
     param.name     = p.parse_name("", hint);
-    param.name_tok = p.peek(-1).id;
+    param.name_tok = p.peek(-1).tokid;
     // check pointer parameter type
-    p.expect(133, token::ETokenKind::COLON, "Expected type definition ':' after parameter name.", hint);
+    (void)p.expect(133, token::ETokenKind::COLON, "Expected type definition ':' after parameter name.", hint);
     param.type = p.p_type->parse_type();
 
     // check parameter default value
@@ -321,7 +343,9 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
       param.default_val = p.p_expr->parse_expression();
     }
 
-    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_PAREN)) break;
+    params.params.emplace_back(param);
+
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_PAREN)) break;
   }
 
   return params;

@@ -44,13 +44,13 @@ AST_NODE(Statement_While)
 // normally not an expression
 AST_NODE(Statement_GoTo)
 {
-  std::string_view label;
+  std::string label;
 };
 
 // label azerty {...}
 AST_NODE(Statement_GoTo_Label)
 {
-  std::string_view label;
+  std::string label;
   SET_NODE(codeblock);
 };
 

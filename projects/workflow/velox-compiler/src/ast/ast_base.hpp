@@ -18,25 +18,36 @@
 #pragma once
 
 #include "nexus/ast/ast.hpp"
-#include <set>
-#include <string_view>
+#include "compiler/compilation_unit.hpp"
+#include "nexus/forward.hpp"
+#include <cstdint>
 #include <vector>
+
+namespace cu
+{
+enum class EFileSource : uint8_t;
+}
 
 
 namespace ast
 {
 
-AST_NODE(ID)
+AST_NODE(CodeBlock)
 {
-  std::string_view name;
+  SET_VECTOR_NODE(elements);
+};
+
+AST_NODE(Identifier)
+{
+  std::string name;
 };
 
 AST_NODE(ID_Qualified)
 {
-  std::string_view              name;
-  std::vector<std::string_view> path;
+  std::string              name;
+  std::vector<std::string> path;
 
-  EPathSource src = EPathSource::NONE;
+  EPathAnchor anchor = EPathAnchor::relative_self;
 };
 
 // for every node who need a type resolution
@@ -48,13 +59,13 @@ AST_NODE(ID_Typed)
 
 AST_NODE(Path_Regex)
 { // a::b::c
-  std::vector<std::string_view> path;
+  std::vector<std::string> path;
 
-  // src::, std::, pkg::, bind::, vendor::, relative (my_mod::)
-  script::EFileSource source;
+  // src::, std::, pkg::, bind::, vendor::, self::
+  cu::EFileSource source = static_cast<cu::EFileSource>(0);
 
   // my_mod::{ a, b, c }
-  std::vector<std::string_view> elements;
+  std::vector<std::string> elements;
 
   // my_mod::*
   bool all_elements = false;
@@ -65,12 +76,7 @@ AST_NODE(Import)
   SET_NODE(regex);
 
   // one or multiple if multiple elements
-  std::vector<std::string_view> aliases;
-};
-
-AST_NODE(Root)
-{
-  SET_VECTOR_NODE(global_nodes);
+  std::string alias;
 };
 
 

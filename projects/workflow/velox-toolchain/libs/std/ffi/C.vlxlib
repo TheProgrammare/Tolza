@@ -53,4 +53,6 @@ export {
 
   type _f=            _float
   type _d=            _double
+
+  const NULL=         0
 }

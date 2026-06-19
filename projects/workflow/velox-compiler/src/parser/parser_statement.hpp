@@ -12,15 +12,15 @@ struct Parser_Statement final {
   }
 
   // decl_possible means parse_instruction can failed without error to try to parse a declaration after
-  [[nodiscard]] ast::_gnid parse_statement(bool p_is_silent_error = false);
-  [[nodiscard]] ast::_gnid if_statement();
-  [[nodiscard]] ast::_gnid for_statement();
-  [[nodiscard]] ast::_gnid while_statement();
-  [[nodiscard]] ast::_gnid loop_statement();
-  [[nodiscard]] ast::_gnid match_statement();
-  [[nodiscard]] ast::_gnid goto_statement();
-  [[nodiscard]] ast::_gnid goto_label_statement();
-  [[nodiscard]] ast::_gnid return_flow();
+  [[nodiscard]] ast::ID parse_statement(bool p_is_silent_error = false);
+  [[nodiscard]] ast::ID if_statement();
+  [[nodiscard]] ast::ID for_statement();
+  [[nodiscard]] ast::ID while_statement();
+  [[nodiscard]] ast::ID loop_statement();
+  [[nodiscard]] ast::ID match_statement();
+  [[nodiscard]] ast::ID goto_statement();
+  [[nodiscard]] ast::ID goto_label_statement();
+  [[nodiscard]] ast::ID return_flow();
 
   Parser_Context& p;
 };

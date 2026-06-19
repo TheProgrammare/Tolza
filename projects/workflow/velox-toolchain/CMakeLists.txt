@@ -26,14 +26,33 @@ string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
 # ----------------------------
 # Sources
 # ----------------------------
-file(GLOB_RECURSE VELOX_SOURCES
-    CONFIGURE_DEPENDS
-    src/*.cpp
+set(VELOX_SOURCES
+
+    src/command_package.hpp
+    src/command_workspace.hpp
+    src/command_audit.cpp
+    src/cli_wrapper.hpp
+    src/command_compiler.cpp
+    src/command_compiler.hpp
+    src/command_workspace.cpp
+    src/toolchain/toolchain.hpp
+    src/toolchain/main.cpp
+    src/toolchain/parser_command.hpp
+    src/toolchain/parser_command.cpp
+    src/toolchain/toolchain.cpp
+    src/command_audit.hpp
+    src/command_build.cpp
+    src/cli_wrapper.cpp
+    src/command_check.hpp
+    src/command_package.cpp
+    src/command_check.cpp
+    src/command_build.hpp
+
 )
 
 # add velox-common scripts
 # for the compiler data interface
-add_subdirectory(../velox-common common_build)
+add_subdirectory(../velox-common velox-common)
 
 add_executable(velox ${VELOX_SOURCES})
 

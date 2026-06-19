@@ -1,6 +1,7 @@
 #include "pipeline.hpp"
 
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <filesystem>
 #include <functional>
@@ -13,7 +14,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include <common.hpp>
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
 
 // LLVM core
 #include <llvm/IR/Module.h>
@@ -44,23 +46,23 @@
 #include <llvm/Linker/Linker.h>
 
 // Project headers
-#include "binder/c_binder.hpp"
-#include "binder/ffi-json_reader.hpp"
+#include "Neargye/magic_enum_flags.hpp"
+#include "binder/ffi_c_reader.hpp"
+#include "binder/ffi_json_reader.hpp"
 #include "binder/binder_ffi.hpp"
 
 #include "codegen/resolver_codegen.hpp"
 #include "compiler/compiler.hpp"
-#include "compiler_options.hpp"
+#include <common/compiler_options.hpp>
 
 #include "ast/ast_base.hpp"
-#include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/metacode/token_generator.hpp"
 #include "nexus/module.hpp"
 #include "nexus/unresolved.hpp"
 #include "nexus/metacode/preprocessor.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 
 #include "lexer/lexer.hpp"
 #include "parser/parser_context.hpp"
@@ -71,12 +73,27 @@
 
 namespace fs = std::filesystem;
 
+#define can_log(_pass)                                                                                                 \
+  magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, common::compiler::FPass::_pass)                              \
+      || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, common::compiler::FPass::all)
 
-std::unique_ptr<script::ScriptInfo> pipeline::Pipeline::build_script_from_path(std::string_view path)
+
+pipeline::Pipeline::Pipeline()
 {
-  assert(fs::exists(path));
+  auto root_cu         = std::make_unique<cu::CU>();
+  root_cu->status.root = true;
 
-  std::ifstream f(std::string(path).c_str());
+  compilation_units.emplace_back(std::move(root_cu));
+}
+
+
+std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path)
+{
+  assert(common::fileutils::is_velox_file(path));
+
+  auto p = common::fileutils::get_velox_file(path);
+
+  std::ifstream f(std::string(p).c_str());
 
   const std::string   data((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
   std::vector<size_t> last_offset_line;
@@ -86,55 +103,53 @@ std::unique_ptr<script::ScriptInfo> pipeline::Pipeline::build_script_from_path(s
 
   for (char c : data) {
     offset++;
-    if (c == '\n') last_offset_line.push_back(offset);
+    if (c == '\n') last_offset_line.emplace_back(offset);
   }
 
-  auto ptr = std::make_unique<script::ScriptInfo>(script::ScriptInfo(path, data, last_offset_line));
+  auto cuid = cu::ID::make(compiler::pipeline.compilation_units.size());
 
-  ptr->metacodes = new metacode::ScriptGraph();
-  ptr->nodes     = new ast::ScriptArena{.scr = *ptr.get()};
-  ptr->nodes->add<ast::Unknown>();
-  ptr->file_info.tokens = new token::Arena(*ptr.get());
+  auto ptr = std::make_unique<cu::CU>(parent_cuid, cuid, path, data, last_offset_line);
 
   return ptr;
 }
 
-std::vector<script::_id> pipeline::Pipeline::query_scripts_at_dir(std::string_view path)
+std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path)
 {
-  auto f_founds = common::filesystem::find_velox_files(path, true);
+  auto f_founds = common::fileutils::find_velox_files(path, true);
 
-  std::vector<script::_id> scripts_ids;
+  std::vector<cu::ID> compilation_units_ids;
 
-  for (auto file : f_founds) {
+  for (const auto& file : f_founds) {
     if (auto it = path_generated.find(file); it != path_generated.end()) {
-      scripts_ids.push_back(it->second);
+      compilation_units_ids.emplace_back(it->second);
       continue;
     }
 
-    auto scr    = build_script_from_path(file);
-    auto new_id = script::_id(compilation_scripts.size());
-    scr->id     = new_id;
-    scripts_ids.push_back(new_id);
-    compilation_scripts.push_back(std::move(scr));
+    auto cu   = build_CU_from_path(parent_cuid, file);
+    auto cuid = cu->cuid;
+    compilation_units_ids.emplace_back(cu->cuid);
+    compilation_units.emplace_back(std::move(cu));
 
-    path_generated.try_emplace(file, new_id);
-    if (!prepared_scripts.contains(new_id)) unprepared_scripts.insert(new_id);
+    path_generated.try_emplace(file, cuid);
+    if (!prepared_compilation_units.contains(cuid)) unprepared_compilation_units.insert(cuid);
   }
 
-  return scripts_ids;
+  return compilation_units_ids;
 }
-script::_id pipeline::Pipeline::query_script_at_path(std::string_view path)
+cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view path)
 {
-  if (auto it = path_generated.find(std::string(path)); it != path_generated.end()) return it->second;
+  if (auto it = path_generated.find(path); it != path_generated.end()) return it->second;
 
-  auto scr    = build_script_from_path(path);
-  auto new_id = script::_id(compilation_scripts.size());
-  scr->id     = new_id;
-  compilation_scripts.push_back(std::move(scr));
+  auto cu     = build_CU_from_path(parent_cuid, path);
+  auto new_id = cu->cuid;
+  compilation_units.emplace_back(std::move(cu));
+
+  path_generated.try_emplace(std::string(path), new_id);
+
   return new_id;
 }
 
-double pipeline::Pipeline::timing(std::function<void()> f)
+double pipeline::Pipeline::timing(const std::function<void()>& f)
 {
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -148,162 +163,170 @@ double pipeline::Pipeline::timing(std::function<void()> f)
 }
 
 
-script::ScriptInfo& pipeline::Pipeline::get_script(script::_id scr_id)
+bool pipeline::Pipeline::engage_preparer(cu::ID cuid)
 {
-  assert(scr_id.value() < compilation_scripts.size());
-  auto& scr = compilation_scripts[scr_id.value()];
-  return *scr.get();
+  const bool lexer_success        = pass_lexer(cuid);
+  const bool preprocessor_success = pass_preprocessor(cuid);
+  const bool parser_success       = pass_parser(cuid);
+
+  prepared_compilation_units.insert(cuid);
+
+  return lexer_success && preprocessor_success && parser_success;
 }
 
-bool pipeline::Pipeline::engage_preparer(script::_id scr_id)
+bool pipeline::Pipeline::pass_lexer(cu::ID cuid)
 {
-  if (!pass_lexer(scr_id)) return false;
-  if (!pass_preprocessor(scr_id)) return false;
-  if (!pass_parser(scr_id)) return false;
+  static bool log = can_log(lexer);
 
-  prepared_scripts.insert(scr_id);
-
-  return true;
-}
-
-bool pipeline::Pipeline::pass_lexer(script::_id scr_id)
-{
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("lexer") || compiler::COMPILER_OPTIONS.logs.contains("all");
-
-  auto& scr = get_script(scr_id);
+  auto& cu = cuid.get();
 
   bool  success = false;
-  Lexer lex(scr);
+  Lexer lex(cu);
 
   auto duration = timing([&]() { success = lex.tokenize(); });
 
   static size_t count = 1;
   if (log && success) {
-    std::cout << "[lexer:" << count << "] \"" << scr.file_info.path << "\" | " << lex.stream.data().size()
-              << " characters | " color_YELLOW << duration << " ms" color_RESET << std::endl;
+    std::cout << "[lexer:" << count << "] \"" << cu.file_info.path << "\" | " << lex.stream.data().size()
+              << " characters | " color_YELLOW << duration << " ms" color_RESET << "\n"; /*endl*/
   }
   if (!success) {
-    std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "\"" << scr.file_info.path << "\" " color_YELLOW
-              << duration << " ms" color_RESET << std::endl;
+    std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
+              << duration << " ms" color_RESET << "\n"; /*endl*/
   }
 
   count++;
 
   return success;
 }
-bool pipeline::Pipeline::pass_preprocessor(script::_id scr_id)
+bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid)
 {
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("preprocessor") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(preprocessor);
 
-  auto& scr = get_script(scr_id);
+  auto& cu = cuid.get();
 
   bool                   pre_success = false;
   bool                   gen_success = false;
-  metacode::Preprocessor pre(scr);
-  metacode::Generator    gen(scr, pre);
+  metacode::Preprocessor pre(cu);
+  metacode::Generator    gen(cu, pre);
 
   auto pre_duration = timing([&]() { pre_success = pre.start_preprocessor(); });
   auto gen_duration = timing([&]() { gen_success = gen.start_generator(); });
 
   // put the final generated tokens to the script tokens
-  scr.file_info.tokens->tokens = gen.tokens_generated;
+  cu.file_info.tokens->tokens = gen.tokens_generated;
 
   static size_t count = 1;
   if (log && pre_success && gen_success) {
-    std::cout << "[preprocessor:" << count << "] \"" << scr.file_info.path << "\" | " << gen.tokens_generated.size()
-              << " tokens | " color_YELLOW << pre_duration + gen_duration << " ms" color_RESET << std::endl;
+    std::cout << "[preprocessor:" << count << "] \"" << cu.file_info.path << "\" | " << gen.tokens_generated.size()
+              << " tokens | " color_YELLOW << pre_duration + gen_duration << " ms" color_RESET << "\n"; /*endl*/
   }
   if (!pre_success) {
-    std::cerr << color_RED "[preprocessor:" << count << ":error] " color_RESET "\"" << scr.file_info.path
-              << "\" " color_YELLOW << pre_duration << " ms" color_RESET << std::endl;
+    std::cerr << color_RED "[preprocessor:" << count << ":error] " color_RESET "\"" << cu.file_info.path
+              << "\" " color_YELLOW << pre_duration << " ms" color_RESET << "\n"; /*endl*/
   }
   if (!gen_success) {
-    std::cerr << color_RED "[preprocessor:generator:" << count << ":error] " color_RESET "\"" << scr.file_info.path
-              << "\" " color_YELLOW << gen_duration << " ms" color_RESET << std::endl;
+    std::cerr << color_RED "[preprocessor:generator:" << count << ":error] " color_RESET "\"" << cu.file_info.path
+              << "\" " color_YELLOW << gen_duration << " ms" color_RESET << "\n"; /*endl*/
   }
 
   count++;
 
   return pre_success && gen_success;
 }
-bool pipeline::Pipeline::pass_parser(script::_id scr_id)
+bool pipeline::Pipeline::pass_parser(cu::ID cuid)
 {
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("parser") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(parser);
 
   bool                   success = false;
-  parser::Parser_Context parser(scr_id);
+  parser::Parser_Context parser(cuid);
 
   auto duration = timing([&]() { success = parser.start_parsing(); });
 
-  auto& scr = get_script(scr_id);
+  auto& cu = cuid.get();
 
   static size_t count = 1;
   if (log && success) {
-    std::cout << "[parser:" << count << "] \"" << scr.file_info.path << "\" | " << parser.node_count
-              << " nodes | " color_YELLOW << duration << " ms" color_RESET << std::endl;
+    std::cout << "[parser:" << count << "] \"" << cu.file_info.path << "\" | " << parser.node_count
+              << " nodes | " color_YELLOW << duration << " ms" color_RESET << "\n"; /*endl*/
   }
 
   if (!success) {
-    std::cerr << color_RED "[parser:" << count << ":error] " color_RESET "\"" << scr.file_info.path
-              << "\" " color_YELLOW << duration << " ms" color_RESET << std::endl;
+    std::cerr << color_RED "[parser:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
+              << duration << " ms" color_RESET << "\n"; /*endl*/
   }
 
   count++;
 
   return success;
 }
-bool pipeline::Pipeline::pass_binding_generation(std::vector<std::string_view> path, std::string_view alias)
+bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>& path, std::string_view alias)
 {
+  static bool log = can_log(binder);
+
   // path must specify the language, then the file
-  assert(path.size() < 2);
-  fs::create_directories(compiler::COMPILER_OPTIONS.get_dir_binding());
+  assert(path.size() >= 2);
+  fs::create_directories(compiler::OPTIONS.dir.get_dir_binding());
   size_t bind_count = 0;
 
   ffi::Bind_Package bind;
   bind.lang = path[0];
   bind.lib  = path[1];
 
-  std::unordered_set<ast::_gnid, ast::_gnid_hash> resolved_nodes;
-  resolved_nodes.reserve(compiler::COMPILER.unresolved.nodes.size() / compilation_scripts.size());
+  std::unordered_set<ast::ID, ast::ID::Hash> resolved_nodes;
+  resolved_nodes.reserve(compiler::unresolved.nodes.size() / compilation_units.size());
 
 
-  for (auto gnid : compiler::COMPILER.unresolved.nodes) {
-    auto n = compiler::COMPILER.nodes.get_as<ast::ID_Qualified>(gnid);
+  for (auto id : compiler::unresolved.nodes) {
+    const auto* n = id.as<ast::ID_Qualified>();
     if (!n) continue;
 
     if (n->path[0] != alias) continue;
 
-    bind.extern_items.try_emplace(std::string(n->path.back()), gnid);
-    resolved_nodes.insert(gnid);
+    bind.extern_items.try_emplace(std::string(n->path.back()), id);
+    resolved_nodes.insert(id);
   }
 
-
-  fs::path bind_path = compiler::COMPILER_OPTIONS.get_dir_binding();
-  fs::path ffi_path  = compiler::COMPILER_OPTIONS.get_dir_ffi_json();
-
-  for (size_t i = 0; i < path.size() - 1; i++) {
-    bind_path /= path[i];
-    ffi_path /= path[i];
-  }
-
-  // clean binding
-  std::fstream bind_file(bind_path);
-  bind_file.clear();
-  bind_file.close();
-
+  fs::path bind_path = compiler::OPTIONS.dir.get_dir_binding();
 
   if (path[0] == "C") {
-    // native C language lib handler
-    ffi::c::c_lib_to_velox_lib(bind);
+    static bool once = false;
+    if (!once) {
+      once = true;
+
+      // native C language lib handler
+      auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });
+
+      if (log) {
+        std::cout << "[binder:C] C wrappers generation completed  | " color_YELLOW << duration << " ms" color_RESET
+                  << "\n"; /*endl*/
+      }
+
+      fs::path c_path = bind_path / "C";
+      c_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+      compiler::pipeline.binding_compilation_units_to_prepare.insert(c_path);
+    }
+
+    for (const auto& i : path) bind_path /= i;
   } else {
+    fs::path ffi_path = compiler::OPTIONS.dir.get_dir_ffi_json();
+    for (const auto& i : path) ffi_path /= i;
+    ffi_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+    fs::create_directories(ffi_path);
+
+    std::ofstream f(ffi_path);
+
+    auto cu = build_CU_from_path(cu::ID::main(), ffi_path.string());
+
     // universal ffi json
-    auto ast = ffi::JSON::read_ffi_json_file(ffi_path.string());
-    ast.bind = bind; // will indicate what to generate with extern_items list
-    ffi::write_ast(ast, bind_path.string());
+    auto ast = ffi::JSON_Reader::parse_json_compilation_unit(ffi_path.string());
+    ast->velox_codegen(ast->bind.get_file_path());
   }
+
+  bind_path = common::fileutils::get_velox_file(bind_path.string());
+
+  compiler::pipeline.binding_compilation_units_to_prepare.insert(bind_path);
+
 
   return true;
 }
@@ -311,68 +334,77 @@ bool pipeline::Pipeline::pass_binding_generation(std::vector<std::string_view> p
 
 size_t pipeline::Pipeline::engage_shipowner()
 {
-  std::unordered_set<script::_id, script::_id_hash> imported_nodes;
-  std::unordered_set<ast::_gnid, ast::_gnid_hash>   exported_nodes;
+  std::unordered_set<cu::ID, cu::ID::Hash>   imported_nodes;
+  std::unordered_set<ast::ID, ast::ID::Hash> exported_nodes;
 
-  for (auto scr_id : prepared_scripts) {
-    auto& scr = get_script(scr_id);
+  for (auto cuid : prepared_compilation_units) {
+    auto& cu = cuid.get();
 
-    imported_nodes.insert(scr_id);
+    imported_nodes.insert(cuid);
 
-    exported_nodes.insert(scr.node_export);
+    exported_nodes.insert(cu.node_export);
   }
 
-  for (auto& scr_id : imported_nodes) {
-    auto& scr = get_script(scr_id);
+  for (auto cuid : imported_nodes) {
+    auto& cu = cuid.get();
 
-    for (auto& [node_id, mod_id] : scr.imports) {
-      if (mod_id) continue;
+    for (const auto& [id, modid] : cu.imports) {
+      // if (modid) continue;
 
-      auto imp = compiler::COMPILER.nodes.get_as<ast::Import>(node_id);
+      const auto* imp = id.as<ast::Import>();
       assert(imp);
 
-      auto regex = compiler::COMPILER.nodes.get_as<ast::Path_Regex>(imp->regex);
+      const auto* regex = imp->regex.as<ast::Path_Regex>();
       assert(regex);
 
       // binding generation query
-      if (regex->source == script::EFileSource::binding)
-        pass_binding_generation(regex->path, std::string(imp->aliases[0]));
+      if (regex->source == cu::EFileSource::binding) (void)pass_binding_generation(regex->path, imp->alias);
 
       // resolve import module source
-      auto mod_id_found = compiler::COMPILER.modules.crawler.find_module(regex->path, regex->source);
-      if (!mod_id_found) {
+      auto modid_found = cu::resolve_regex_path(modid, regex->path, regex->source);
+      if (!modid_found) {
         std::string out_err;
-        mod_id_found =
-            compiler::COMPILER.modules.tools.build_module_from_path(scr_id, regex->path, regex->source, out_err);
-        if (!mod_id_found) {
-          auto& tok = scr.file_info.tokens->get(regex->node_token_id);
+        modid_found = module::build_module_from_path(cuid, regex->path, regex->source, out_err);
+        if (!modid_found) {
+          auto& tok = cu.file_info.tokens->get(regex->node_token_id);
 
-          auto err = Error_Diagnostic(scr_id, 249, tok.begin, tok.begin + tok.length, compiler::EPhase::shipowner,
+          auto err = Error_Diagnostic(cuid, 249, tok.begin, tok.begin + tok.length, compiler::EPhase::shipowner,
                                       "Impossible to generate the file at \""
-                                          + script::file_path_to_str(regex->path, regex->source) + ".vlx*\"",
+                                          + cu::file_path_to_str(regex->path, regex->source) + "."
+                                          + std::string(common::fileutils::VELOX_FILE_EXTENSION) + "*\"",
                                       "");
-          compiler::COMPILER.add_error(std::move(err));
+          compiler::COMPILER.add_error(err);
         }
       }
 
-
-      scr.imports[node_id] = mod_id_found;
+      cu.imports[id] = modid_found;
     }
   }
 
   return true;
 }
 
-bool pipeline::Pipeline::engage_analyzer(script::_id scr_id)
+bool pipeline::Pipeline::engage_bindings()
 {
-  static bool log_sym = compiler::COMPILER_OPTIONS.logs.contains("symbolic");
-  static bool log_ty  = compiler::COMPILER_OPTIONS.logs.contains("type");
-  static bool log_sem = compiler::COMPILER_OPTIONS.logs.contains("semantic");
+  for (const auto& bind_path : binding_compilation_units_to_prepare) {
+    auto cu = query_CU_at_path(cu::ID::main(), bind_path);
+    if (!engage_preparer(cu)) return false;
+  }
+
+  return true;
+}
+
+
+bool pipeline::Pipeline::engage_analyzer(cu::ID cuid)
+{
+  static bool log_sym = can_log(resolver_symbol);
+  static bool log_ty  = can_log(resolver_type);
+  static bool log_sem = can_log(resolver_semantic);
 
   size_t err_count  = compiler::COMPILER.errors.size();
   auto   have_error = [&]() { return compiler::COMPILER.errors.size() > err_count; };
 
-  auto& scr = get_script(scr_id);
+  auto& cu = cuid.get();
 
   size_t sym = 0;
   size_t ty  = 0;
@@ -380,112 +412,118 @@ bool pipeline::Pipeline::engage_analyzer(script::_id scr_id)
 
   static size_t count = 1;
 
-  auto sym_duration = timing([&]() { sym = pass_resolution_symbol(scr_id); });
-  if (have_error())
-    std::cerr << color_RED "[resolver:symbol:" << count << "] \"" << scr.file_info.path << "\" " color_YELLOW
-              << sym_duration << " ms" color_RESET << std::endl;
-  auto ty_duration = timing([&]() { ty = pass_resolution_inference(scr_id); });
-  if (have_error())
-    std::cerr << color_RED "[resolver:inference:" << count << "] \"" << scr.file_info.path << "\" " color_YELLOW
-              << sym_duration << " ms" color_RESET << std::endl;
-  auto sem_duration = timing([&]() { sem = pass_resolution_semantic(scr_id); });
-  if (have_error())
-    std::cerr << color_RED "[resolver:semantic:" << count << "] \"" << scr.file_info.path << "\" " color_YELLOW
-              << sym_duration << " ms" color_RESET << std::endl;
-  if (log_sym)
-    std::cout << "[resolver:symbol:" << count << "] \"" << scr.file_info.path << "\" | " << sym
-              << " references resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << std::endl;
-  if (log_ty)
-    std::cout << "[resolver:inference:" << count << "] \"" << scr.file_info.path << "\" | " << ty
-              << " inferences resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << std::endl;
-  if (log_sem)
-    std::cout << "[resolver:semantic:" << count << "] \"" << scr.file_info.path << "\" | " << color_YELLOW
-              << sym_duration << " ms" color_RESET << std::endl;
+  auto sym_duration = timing([&]() { sym = pass_resolution_symbol(cuid); });
+  if (log_sym) {
+    std::cout << "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" | " << sym
+              << " references resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << "\n"; /*endl*/
+  } else if (have_error()) {
+    std::cerr << color_RED "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
+              << sym_duration << " ms" color_RESET << "\n"; /*endl*/
+    compiler::COMPILER.print_errors();
+    return false;
+  }
+  auto ty_duration = timing([&]() { ty = pass_resolution_inference(cuid); });
+  if (log_ty) {
+    std::cout << "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" | " << ty
+              << " inferences resolved | " << color_YELLOW << ty_duration << " ms" color_RESET << "\n"; /*endl*/
+  } else if (have_error()) {
+    std::cerr << color_RED "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
+              << ty_duration << " ms" color_RESET << "\n"; /*endl*/
+    compiler::COMPILER.print_errors();
+    return false;
+  }
+  auto sem_duration = timing([&]() { sem = pass_resolution_semantic(cuid); });
+  if (log_sem) {
+    std::cout << "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" | " << color_YELLOW
+              << sem_duration << " ms" color_RESET << "\n"; /*endl*/
+  } else if (have_error()) {
+    std::cerr << color_RED "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
+              << sem_duration << " ms" color_RESET << "\n"; /*endl*/
+    compiler::COMPILER.print_errors();
+    return false;
+  }
 
   count++;
 
-  if (sym && ty && sem) analyzed_scripts.insert(scr_id);
+  if (sym && ty && sem) analyzed_compilation_units.insert(cuid);
   return sym && ty && sem;
 }
-size_t pipeline::Pipeline::pass_resolution_symbol(script::_id scr_id)
+size_t pipeline::Pipeline::pass_resolution_symbol(cu::ID cuid)
 {
-  auto&            scr = get_script(scr_id);
-  resolver::Symbol sym(scr);
+  resolver::Symbol sym(cuid.get());
   return sym.start_resolver();
 }
-size_t pipeline::Pipeline::pass_resolution_inference(script::_id scr_id)
+size_t pipeline::Pipeline::pass_resolution_inference(cu::ID cuid)
 {
-  auto&               scr = get_script(scr_id);
-  resolver::Inference inf(scr);
+  resolver::Inference inf(cuid.get());
   return inf.start_resolver();
 }
-size_t pipeline::Pipeline::pass_resolution_semantic(script::_id scr_id)
+size_t pipeline::Pipeline::pass_resolution_semantic(cu::ID cuid)
 {
-  auto&              scr = get_script(scr_id);
-  resolver::Semantic sem(scr);
+  resolver::Semantic sem(cuid.get());
   return sem.start_resolver();
 }
-bool pipeline::Pipeline::engage_generator(script::_id scr_id)
+bool pipeline::Pipeline::engage_generator(cu::ID cuid)
 {
-  bool codegen_success = pass_code_generation(scr_id);
+  bool codegen_success = pass_code_generation(cuid);
 
   if (codegen_success) {
     // llvm .ll file emission is before llvm optimization
-    if (compiler::COMPILER_OPTIONS.target_emits.contains(common::Compiler_Options::EEmit::LLVM))
-      pass_llvm_emitter(scr_id);
+    if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::llvm))
+      (void)pass_llvm_emitter(cuid);
 
-    pass_llvm_optimization(scr_id);
+    (void)pass_llvm_optimization(cuid);
 
     // other kind of emission maked after optimization
-    pass_script_emitter(scr_id);
+    (void)pass_script_emitter(cuid);
   }
 
   return true;
 }
 
-bool pipeline::Pipeline::pass_code_generation(script::_id scr_id)
+bool pipeline::Pipeline::pass_code_generation(cu::ID cuid)
 {
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("codegen") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(codegen);
 
-  auto& scr = get_script(scr_id);
 
-  if (compiler::COMPILER_OPTIONS.llvm_args.size() > 0) {
-    llvm::cl::ParseCommandLineOptions(compiler::COMPILER_OPTIONS.llvm_args.size(),
-                                      compiler::COMPILER_OPTIONS.llvm_args.data());
+  auto& cu = cuid.get();
+
+  if (compiler::OPTIONS.llvm.args.size() > 0) {
+    llvm::cl::ParseCommandLineOptions(int(compiler::OPTIONS.llvm.args.size()), compiler::OPTIONS.llvm.args.data());
   }
 
   auto duration = timing([&]() {
-    resolver::Codegen cg(scr);
+    resolver::Codegen cg(cu);
     cg.start_resolver();
   });
 
   static size_t count = 1;
   if (log)
-    std::cout << "[codegen:" << count << "/" << scr_id.value() << "] \"" << scr.file_info.path << "\"" << color_YELLOW
-              << duration << " ms" color_RESET << std::endl;
+    std::cout << "[codegen:" << count << "/" << cuid.raw() << "] \"" << cu.file_info.path << "\"" << color_YELLOW
+              << duration << " ms" color_RESET << "\n"; /*endl*/
 
   count++;
 
   return true;
 }
-bool pipeline::Pipeline::pass_llvm_emitter(script::_id scr_id)
+bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid)
 {
-  static bool log = compiler::COMPILER_OPTIONS.logs.contains("emit") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(emit);
 
-  auto& scr = get_script(scr_id);
+
+  auto& cu = cuid.get();
 
   try {
-    std::filesystem::create_directories(compiler::COMPILER_OPTIONS.get_llvmir_dir());
+    fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
   } catch (const std::runtime_error& e) {
-    std::cerr << "[emit:ERROR] Directory creation failed: " << e.what() << std::endl;
+    std::cerr << "[emit:ERROR] Directory creation failed: " << e.what() << "\n"; /*endl*/
     return false;
   }
 
 
-  std::filesystem::path out_llvm_file(compiler::COMPILER_OPTIONS.get_llvmir_dir());
-  std::filesystem::create_directories(out_llvm_file);
-  out_llvm_file /= scr.llvm_module->getName().str();
+  fs::path out_llvm_file(compiler::OPTIONS.dir.get_llvmir_dir());
+  fs::create_directories(out_llvm_file);
+  out_llvm_file /= cu.llvm_module->getName().str();
   out_llvm_file.replace_extension("ll");
 
   std::error_code EC;
@@ -499,21 +537,21 @@ bool pipeline::Pipeline::pass_llvm_emitter(script::_id scr_id)
     return false;
   }
 
-  scr.llvm_module->print(out_f, nullptr);
-  if (log) std::cout << "[emit:llvm:" << count << "] emission of the llvm-ir to " << out_llvm_file << std::endl;
+  cu.llvm_module->print(out_f, nullptr);
+  if (log) std::cout << "[emit:llvm:" << count << "] emission of the llvm-ir to " << out_llvm_file << "\n"; /*endl*/
   count++;
 
   return true;
 }
 
-bool pipeline::Pipeline::pass_llvm_optimization(script::_id scr_id)
+bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const
 {
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("optimization") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(optimization);
 
-  if (analyzed_scripts.empty()) return true;
 
-  llvm::Module* mod = get_script(scr_id).llvm_module;
+  if (analyzed_compilation_units.empty()) return true;
+
+  llvm::Module* mod = cuid.get().llvm_module;
   assert(mod);
 
   auto duration = timing([&]() {
@@ -523,7 +561,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(script::_id scr_id)
     llvm::InitializeNativeTargetAsmParser();
 
     // Init target
-    std::string target_triple = compiler::COMPILER_OPTIONS.get_target_triple();
+    std::string target_triple = compiler::OPTIONS.target.get_target_triple();
     mod->setTargetTriple(target_triple);
 
     std::string         err;
@@ -535,28 +573,31 @@ bool pipeline::Pipeline::pass_llvm_optimization(script::_id scr_id)
     }
 
     llvm::Reloc::Model reloc;
-    switch (compiler::COMPILER_OPTIONS.target_reloc_model) {
-    case common::Compiler_Options::ERelocModel::Static:    reloc = llvm::Reloc::Static; break;
-    case common::Compiler_Options::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
-    case common::Compiler_Options::ERelocModel::PIE:       reloc = llvm::Reloc::DynamicNoPIC; break;
-    case common::Compiler_Options::ERelocModel::ROPI:      reloc = llvm::Reloc::ROPI; break;
-    case common::Compiler_Options::ERelocModel::RWPI:      reloc = llvm::Reloc::RWPI; break;
-    case common::Compiler_Options::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
+    switch (compiler::OPTIONS.target.reloc_model) {
+    case common::compiler::ERelocModel::STATIC:    reloc = llvm::Reloc::Static; break;
+    case common::compiler::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
+    case common::compiler::ERelocModel::PIE:       reloc = llvm::Reloc::DynamicNoPIC; break;
+    case common::compiler::ERelocModel::ROPI:      reloc = llvm::Reloc::ROPI; break;
+    case common::compiler::ERelocModel::RWPI:      reloc = llvm::Reloc::RWPI; break;
+    case common::compiler::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
+    case common::compiler::ERelocModel::NONE:      reloc = llvm::Reloc::PIC_; break;
     }
 
     // Init target machine
     llvm::TargetOptions opt;
-    compiler::TM = target->createTargetMachine(target_triple, compiler::COMPILER_OPTIONS.target_cpu,
-                                               compiler::COMPILER_OPTIONS.target_features, opt, reloc);
+    compiler::TM =
+        target->createTargetMachine(target_triple, compiler::OPTIONS.target.cpu,
+                                    magic_enum::enum_flags_name(compiler::OPTIONS.target.features), opt, reloc);
 
     mod->setDataLayout(compiler::TM->createDataLayout());
 
     if (!mod) {
-      std::cerr << "[llvm-opti:ERROR] module is nullptr!" << std::endl;
+      std::cerr << "[llvm-opti:ERROR] module is nullptr!"
+                << "\n"; /*endl*/
       return false;
     }
 
-    if (compiler::COMPILER_OPTIONS.llvm_verify_module && llvm::verifyModule(*mod, &llvm::errs())) {
+    if (compiler::OPTIONS.llvm.verify_module && llvm::verifyModule(*mod, &llvm::errs())) {
       llvm::errs() << "[llvm-opti:ERROR] Module verification failed";
       return false;
     }
@@ -576,13 +617,14 @@ bool pipeline::Pipeline::pass_llvm_optimization(script::_id scr_id)
 
     llvm::OptimizationLevel opt_level = llvm::OptimizationLevel::O0;
 
-    switch (compiler::COMPILER_OPTIONS.profile_optimization) {
-    case common::Compiler_Options::EOptimization::O0: opt_level = llvm::OptimizationLevel::O0; break;
-    case common::Compiler_Options::EOptimization::O1: opt_level = llvm::OptimizationLevel::O1; break;
-    case common::Compiler_Options::EOptimization::O2: opt_level = llvm::OptimizationLevel::O2; break;
-    case common::Compiler_Options::EOptimization::O3: opt_level = llvm::OptimizationLevel::O3; break;
-    case common::Compiler_Options::EOptimization::Os: opt_level = llvm::OptimizationLevel::Os; break;
-    case common::Compiler_Options::EOptimization::Oz: opt_level = llvm::OptimizationLevel::Oz; break;
+    switch (compiler::OPTIONS.profile.optimization) {
+    case common::compiler::EOptimization::O0:   opt_level = llvm::OptimizationLevel::O0; break;
+    case common::compiler::EOptimization::O1:   opt_level = llvm::OptimizationLevel::O1; break;
+    case common::compiler::EOptimization::O2:   opt_level = llvm::OptimizationLevel::O2; break;
+    case common::compiler::EOptimization::O3:   opt_level = llvm::OptimizationLevel::O3; break;
+    case common::compiler::EOptimization::Os:   opt_level = llvm::OptimizationLevel::Os; break;
+    case common::compiler::EOptimization::Oz:   opt_level = llvm::OptimizationLevel::Oz; break;
+    case common::compiler::EOptimization::NONE: opt_level = llvm::OptimizationLevel::O0; break;
     }
 
     if (mod->empty()) {
@@ -604,24 +646,24 @@ bool pipeline::Pipeline::pass_llvm_optimization(script::_id scr_id)
 
   if (log)
     std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << duration << " ms\n"
-              << std::endl;
+              << "\n"; /*endl*/
 
   return true;
 }
-bool pipeline::Pipeline::pass_script_emitter(script::_id scr_id)
+bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const
 {
-  static bool log = compiler::COMPILER_OPTIONS.logs.contains("emit") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(emit);
 
-  if (compilation_scripts.empty()) return true;
 
-  auto mod = get_script(script::_id(0)).llvm_module;
+  if (compilation_units.empty()) return true;
+
+  auto* mod = cu::ID::main().get().llvm_module;
   assert(mod);
 
   // Emit object
-  if (compiler::COMPILER_OPTIONS.target_emits.contains(common::Compiler_Options::EEmit::Obj)) {
-    std::error_code       err_c;
-    std::filesystem::path dest_path = std::filesystem::path(compiler::COMPILER_OPTIONS.get_dir_build())
-                                      / compiler::COMPILER_OPTIONS.get_project_name();
+  if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::obj)) {
+    std::error_code err_c;
+    fs::path        dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
     dest_path.replace_extension(".o");
 
     llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
@@ -635,30 +677,30 @@ bool pipeline::Pipeline::pass_script_emitter(script::_id scr_id)
     llvm::legacy::PassManager pass;
 
     if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
-      llvm::errs() << "[emitter:ERROR] TargetMachine dosen't support obj emit";
+      llvm::errs() << "[emitter:ERROR] TargetMachine doesn't support obj emit";
       return false;
     }
 
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::cout << "[emitter] Object emitted at " << dest_path << std::endl;
+    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n"; /*endl*/
   }
 
   return true;
 }
-bool pipeline::Pipeline::engage_module_linker(script::_id scr_id)
+bool pipeline::Pipeline::engage_module_linker(cu::ID cuid) const
 {
-  static bool log =
-      compiler::COMPILER_OPTIONS.logs.contains("linker") || compiler::COMPILER_OPTIONS.logs.contains("all");
+  static bool log = can_log(linker);
 
-  if (compilation_scripts.empty()) return true;
+  if (compilation_units.empty()) return true;
 
-  auto main_mod = get_script(script::_id(0)).llvm_module;
+  auto* main_mod = cu::ID::main().get().llvm_module;
   assert(main_mod);
 
   if (!main_mod) {
-    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking." << std::endl;
+    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking."
+              << "\n"; /*endl*/
     return false;
   }
 
@@ -673,24 +715,24 @@ bool pipeline::Pipeline::engage_module_linker(script::_id scr_id)
 
   bool first_linked = true;
   bool failed       = false;
-  for (size_t i = 1; i < compilation_scripts.size(); ++i) {
-    auto& scr = get_script(script::_id(i));
-    if (!scr.llvm_module) continue; // safe
+  for (size_t i = 1; i < compilation_units.size(); ++i) {
+    auto& cu = cu::ID::make(i).get();
+    if (!cu.llvm_module) continue; // safe
 
 
-    llvm::outs() << "[linker] verify module " << scr.llvm_module->getName() << "\n"
-                 << "  file: \"" << scr.file_info.path << "\"\n";
-    if (llvm::verifyModule(*scr.llvm_module, &llvm::errs())) {
-      llvm::errs() << "[linker:ERROR] Module verification \"" << scr.file_info.path << "\" failed !\n ";
+    llvm::outs() << "[linker] verify module " << cu.llvm_module->getName() << "\n"
+                 << "  file: \"" << cu.file_info.path << "\"\n";
+    if (llvm::verifyModule(*cu.llvm_module, &llvm::errs())) {
+      llvm::errs() << "[linker:ERROR] Module verification \"" << cu.file_info.path << "\" failed !\n ";
       return false;
     }
 
 
-    if (log) std::cout << "[linker] Linking module: " << scr.llvm_module->getModuleIdentifier() << std::endl;
+    if (log) std::cout << "[linker] Linking module: " << cu.llvm_module->getModuleIdentifier() << "\n"; /*endl*/
 
-    auto module_to_link = std::move(scr.llvm_module);
-    if (linker.linkModules(*main_mod, std::unique_ptr<llvm::Module>(module_to_link))) {
-      std::cerr << "[linker:ERROR] Link failed on script " << scr.file_info.path << std::endl;
+    auto module_to_link = std::unique_ptr<llvm::Module>(cu.llvm_module);
+    if (llvm::Linker::linkModules(*main_mod, std::move(module_to_link))) {
+      std::cerr << "[linker:ERROR] Link failed on script " << cu.file_info.path << "\n"; /*endl*/
       failed = true;
     }
   }
@@ -707,25 +749,24 @@ bool pipeline::Pipeline::engage_module_linker(script::_id scr_id)
 
 bool pipeline::Pipeline::engage_linker()
 {
+  std::string extension = compiler::OPTIONS.target.platform == common::env::EPlatform::windows ? ".exe" : "";
 
-
-  std::string extension = compiler::COMPILER_OPTIONS.target_os == "windows" ? ".exe" : "";
-
-  std::filesystem::path dest_path =
-      std::filesystem::path(compiler::COMPILER_OPTIONS.get_dir_build()) / compiler::COMPILER_OPTIONS.get_project_name();
+  fs::path dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
   dest_path.replace_extension(".o");
-  std::filesystem::path out_bin =
-      std::filesystem::path(compiler::COMPILER_OPTIONS.get_dir_build()) / compiler::COMPILER_OPTIONS.get_project_name();
+  fs::path out_bin = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
   out_bin.replace_extension(extension);
 
   std::string command = "clang \"" + dest_path.string() + "\" -o \"" + out_bin.string() + "\"";
 
-  std::cout << "[linker] Clang linking command:\n  " << command << std::endl;
+  std::cout << "[linker] Clang linking command:\n  " << command << "\n"; /*endl*/
   if (auto err_code = system(command.c_str()); err_code != 0) {
-    std::cerr << "[linker:ERROR] Linker failed: system code error " << err_code << std::endl;
+    std::cerr << "[linker:ERROR] Linker failed: system code error " << err_code << "\n"; /*endl*/
     return false;
   }
 
-  std::cout << "[linker] Executable created at " << out_bin << std::endl;
+  std::cout << "[linker] Executable created at " << out_bin << "\n"; /*endl*/
   return true;
 }
+
+
+#undef can_log

@@ -1,213 +1,134 @@
-#include "compiler/parser_command.hpp"
+#include "parser_command.hpp"
 
 #include <iostream>
 #include <string>
 #include <filesystem>
 
-#include "binder/ffi-json_reader.hpp"
-#include "common.hpp"
-#include "compiler/compiler.hpp"
-#include "compiler_options.hpp"
 
-#include "nexus/pipeline.hpp"
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
+#include <common/compiler_options.hpp>
 
 #include <CLIUtils/CLI11.hpp>
+#include <Neargye/magic_enum.hpp>
+
+
+#include "binder/ffi_c_reader.hpp"
+#include "binder/ffi_json_reader.hpp"
+
+// unused false positive
+// mandatory
+#include "CLI11_type_seralization.hpp"
+
+
+#include "compiler/compiler.hpp"
 
 
 namespace fs = std::filesystem;
 
 
-void Command::init_command_cogito()
+#define OUT_LOG std::cout << "[ffi] "
+#define OUT_ERR std::cerr << "[ffi:ERROR] "
+
+
+void compiler::Commander::init_command_cogito() noexcept
 {
-  auto cogito   = app.add_subcommand("velox-toolchain", "Revceive the toolchain cogito ask");
-  auto ergo_sum = cogito->add_subcommand("cogito", "Respond to René Descartes");
+  auto* cogito   = app.add_subcommand("velox-toolchain", "Revceive the toolchain cogito ask");
+  auto* ergo_sum = cogito->add_subcommand("cogito", "Respond to René Descartes");
   ergo_sum->callback([&]() {
-    std::cout << "[velox-compiler] ergo sum\n  " << common::get_exe_dir() << std::endl;
+    std::cout << "[velox-compiler] ergo sum\n  " << common::env::get_exe_dir() << "\n"; /*endl*/
     exit(0);
   });
 }
 
-void Command::init_command_ffi_json()
+void compiler::Commander::init_command_build() noexcept
 {
-  auto ffi_json = app.add_subcommand("generate-ffi-json", "Translate .json ast ffi to .vlxbind binder wrapper");
-  ffi_json->alias("gen-ffi");
-  ffi_json->add_option("source", dir_source, "Source file of the .json to convert")->required();
-  ffi_json->add_option("dest", dir_dest, "Destination directory of the .vlxbind wrapper generated")->required();
-  ffi_json->callback([&]() {
-    dir_dest   = common::resolve_path(dir_dest);
-    dir_source = common::resolve_path(dir_source);
-
-    if (!fs::exists(dir_source)) {
-      std::cerr << "[gen-ffi:ERROR] The source path dosen't exists." << std::endl;
-      exit(1);
-    }
-    if (!fs::exists(dir_dest)) {
-      std::cerr << "[gen-ffi:ERROR] The destination path dosen't exists." << std::endl;
-      exit(1);
-    }
-
-    if (fs::is_regular_file(dir_source)) {
-      auto     ast       = ffi::JSON::read_ffi_json_file(dir_source);
-      fs::path dest_file = fs::path(dir_dest) / ast.bind.lang / std::string(ast.bind.lib + ".vlxbind");
-      ffi::write_ast(ast, dest_file.string());
-      exit(0);
-    } else {
-      std::cerr << "[gen-ffi:ERROR] The source path must be a file." << std::endl;
-      exit(1);
-    }
-  });
-}
-
-void Command::init_command_build()
-{
-  auto build = app.add_subcommand("build", "Compile your velox project");
+  auto* build = app.add_subcommand("build", "Compile your velox project");
   build->alias("b");
-  compiler::COMPILER_OPTIONS.argc = argc;
-  compiler::COMPILER_OPTIONS.argv = argv;
 
-  auto insert_set = [&](std::set<std::string>& set, std::string_view flag_option, std::string set_elem_key,
-                        std::string_view description) {
-    return build->add_flag_function(
-        std::string(flag_option), [&, set_elem_key](std::size_t count) { set.insert(set_elem_key); },
-        std::string(description));
-  };
 
   auto add_opt_path = [&](std::string_view option_name, std::basic_string<char>& variable,
                           std::string_view option_description) {
     return build
         ->add_option_function<fs::path>(
-            std::string(option_name), [&](const fs::path& path) { variable = common::resolve_path(path.string()); },
+            std::string(option_name),
+            [&](const fs::path& path) { variable = common::fileutils::resolve_path(path.string()); },
             std::string(option_description))
         ->type_name("<path>");
   };
 
-  auto opt_path = build
-                      ->add_option_function<fs::path>(
-                          "path",
-                          [&](const fs::path path) {
-                            compiler::COMPILER_OPTIONS.current_config_file = common::resolve_path(path.string());
-                          },
-                          "Path to the velox.toml config file")
-                      ->required()
-                      ->type_name("<path>");
 
-  build->add_flag("--mute", compiler::COMPILER_OPTIONS.mute, "Mute any output log");
+#define new_flag(flag_name, flag, desc) build->add_flag(flag_name, compiler::OPTIONS.flag, desc)->type_name("<flag>")
+#define new_opt(opt_name, var, desc)    build->add_option(opt_name, compiler::OPTIONS.var, desc)->type_name("<type>")
+
+  new_flag("--mute", mute, "Mute any output log");
+
+  // base
+  new_opt("--project-name", project_name, "Set the target project name");
+  new_opt("--sub-config", sub_configs, "Set the sub config to apply after main config");
+
+  // preset
+  build
+      ->add_option_function<std::string>(
+          "--preset",
+          [&](const std::string& s) {
+            auto preset = magic_enum::enum_cast<common::compiler::EPlatformFlavor>(s, magic_enum::case_insensitive);
+            if (preset) compiler::OPTIONS = common::compiler::Options::get_preset(preset.value());
+          },
+          "e.g. linux_glibc, linux_musl, apple_macos, apple_ios, windows_msvc, windows_mingw, bsd_generic, wasi, "
+          "baremetal, custom")
+      ->type_name("<platform>");
+
+  // error stop mode
+  new_opt("--error-mode", error_mode, "Mode of failure on error encounted during the compilation.");
 
   // target
-  build->add_option("--project-name", compiler::COMPILER_OPTIONS.target_project_name, "Set the target project name")
-      ->type_name("<info>");
-  build->add_option("--arch", compiler::COMPILER_OPTIONS.target_arch, "e.g. x86_64, aarch64, wasm32")
-      ->type_name("<info>");
-  build->add_option("--os", compiler::COMPILER_OPTIONS.target_os, "e.g. linux, windows, macos")->type_name("<info>");
-  build->add_option("--vendor", compiler::COMPILER_OPTIONS.target_vendor, "e.g. pc, apple, ...")->type_name("<info>");
-  build->add_option("--abi", compiler::COMPILER_OPTIONS.target_abi, "e.g. gnu, msvc")->type_name("<info>");
-  build->add_option("--libc", compiler::COMPILER_OPTIONS.target_libc, "e.g. glibc, musl, bionic, msvc")
-      ->type_name("<info>");
-  build->add_option("--cpu", compiler::COMPILER_OPTIONS.target_cpu, "e.g. generic, core-avx2, znver4")
-      ->type_name("<info>");
-  build->add_option("--features", compiler::COMPILER_OPTIONS.target_features, "e.g. \"+avx2,+bmi2,-sse2\"")
-      ->type_name("<info>");
-  build
-      ->add_option("--code-model", compiler::COMPILER_OPTIONS.target_features,
-                   "e.g. tiny, small, kernel, medium, large")
-      ->type_name("<type>");
-  build
-      ->add_option("--reloc-model", compiler::COMPILER_OPTIONS.target_features,
-                   "e.g. pic, static, pie, ropi, rwpi, ropi_rwpi")
-      ->type_name("<type>");
-  build
-      ->add_option("--sub-config", compiler::COMPILER_OPTIONS.sub_configs,
-                   "Set the sub config to apply after main config")
-      ->type_name("<info>");
+  new_opt("--arch", target.arch,
+          "e.g. x86_64, x86_32, arm64, arm32, ppc64, ppc32, mips64, mips32, wasm64, wasm32, sparc64, custom");
+  new_opt("--platform", target.platform,
+          "e.g. linux, macos, windows, freebsd, openbsd, netbsd, dragonflybsd, android, ios, solaris, custom");
+  new_opt("--vendor", target.vendor, "e.g. apple, pc, w64");
+  new_opt("--abi", target.abi,
+          "e.g. sysv, win64, gnu, aapcs, aapcs64, darwin_arm64, msvc_x86, msvc_x64, riscv_ilp32, riscv_lp64, "
+          "wasm64, wasm32, custom");
+  new_opt("--cpu", target.cpu, "e.g. generic, core-avx2, znver4");
+  new_opt("--features", target.features, "e.g. \"sse,sse2,sse3,ssse3,avx,avx2,avx512,neon,sve,rvc,rvv,custom\"");
+  new_opt("--call-conv", target.calling_conv,
+          "e.g. sysv, cdecl, stdcall, fastcall, thiscall, win64, aapcs, aapcs_vfp, vectorcall, custom");
+  new_opt("--code-model", target.code_model, "e.g. tiny, small, kernel, medium, large");
+  new_opt("--reloc-model", target.reloc_model, "e.g. pic, static, pie, ropi, rwpi, ropi_rwpi");
 
-  // debug
-  auto opt_debug   = build->add_flag("--debug,-d", compiler::COMPILER_OPTIONS.profile_debug, "Compile in debug mode");
-  auto opt_release = build->add_flag_function(
-      "--release,-r", [&](std::size_t count) { compiler::COMPILER_OPTIONS.profile_debug = false; },
-      "Compile in release mode");
+  // profile
+  auto* opt_debug   = new_opt("--debug,-d", profile.debug, "Compile in debug mode");
+  auto* opt_release = build->add_flag(
+      "--release,-r", [&](std::size_t count) { compiler::OPTIONS.profile.debug = false; }, "Compile in release mode");
   opt_debug->excludes(opt_release);
+  new_opt("--optimization,-O", profile.optimization, "Optimization level 0..3..s..z");
 
 
-  build
-      ->add_option_function<char>(
-          "-O",
-          [&](char opt) {
-            switch (opt) {
-            case '0':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::O0;
-              return;
-            case '1':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::O1;
-              return;
-            case '2':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::O2;
-              return;
-            case '3':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::O3;
-              return;
-            case 's':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::Os;
-              return;
-            case 'z':
-              compiler::COMPILER_OPTIONS.profile_optimization = common::Compiler_Options::EOptimization::Oz;
-              return;
-            }
-          },
-          "Set optimization level or mode")
-      ->type_name("0..3sz");
+  // clang
+  new_opt("--libc", clang.libc, "e.g. glibc, musl, libsystem, ucrt, msvcrt, mingw_libc, bionic, bsd_libc, custom");
+  new_opt("--libc-version", clang.libc_version, "major.minor, e.g. 1.20")->type_name("<version>");
 
-  auto opt_l_all          = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-all", "all", "Log all passes");
-  auto opt_l_filesystem   = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-filesystem", "filesystem", "");
-  auto opt_l_lexer        = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-lexer", "lexer", "");
-  auto opt_l_preprocessor = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-preprocessor", "preprocessor", "");
-  auto opt_l_parser       = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-parser", "parser", "");
-  auto opt_l_binder       = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-binder", "binder", "");
-  auto opt_l_exporter     = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-exporter", "exporter", "");
-  auto opt_l_resolver_symbol =
-      insert_set(compiler::COMPILER_OPTIONS.logs, "--log-resolver_symbol", "resolver_symbol", "");
-  auto opt_l_resolver_type =
-      insert_set(compiler::COMPILER_OPTIONS.logs, "--log-resolver_inference", "resolver_type", "");
-  auto opt_l_resolver_semantic =
-      insert_set(compiler::COMPILER_OPTIONS.logs, "--log-resolver_semantic", "resolver_semantic", "");
-  auto opt_l_codegen      = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-codegen", "codegen", "");
-  auto opt_l_optimization = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-optimization", "optimization", "");
-  auto opt_l_emit         = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-emit", "emit", "");
-  auto opt_l_linker       = insert_set(compiler::COMPILER_OPTIONS.logs, "--log-linker", "linker", "");
-  opt_l_all->excludes(opt_l_filesystem, opt_l_lexer, opt_l_preprocessor, opt_l_parser, opt_l_binder, opt_l_exporter,
-                      opt_l_resolver_symbol, opt_l_resolver_type, opt_l_resolver_semantic, opt_l_codegen,
-                      opt_l_optimization, opt_l_emit, opt_l_linker);
 
-  auto opt_w_all   = insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-all", "all", "Warn all cases (override all)");
-  auto opt_w_extra = insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-extra", "extra", "Warn more specific cases");
-  auto opt_w_pedantic =
-      insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-pedantic", "pedantic", "Warn standard derivation");
-  auto opt_w_unused = insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-unused", "unused", "Warn unused var, fn...");
-  auto opt_w_dead =
-      insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-dead-code", "dead_code", "Warn dead code, never used...");
-  auto opt_w_as =
-      insert_set(compiler::COMPILER_OPTIONS.warns, "--warn-as-error", "as_error", "All warnings treated as errors");
-  opt_w_all->excludes(opt_w_extra, opt_w_pedantic, opt_w_unused, opt_w_dead, opt_w_as);
+  new_opt("--logs", log.logs,
+          "e.g. "
+          "\"all,filesystem,lexer,preprocessor,parser,binder,exporter,resolver_symbol,resolver_type,"
+          "resolver_semantic,codegen,optimization,emit,linker\"");
 
-  build
-      ->add_option_function<int>(
-          "-W",
-          [&](int level) {
-            if (level < 0 && level > -1)
-              compiler::COMPILER_OPTIONS.warn_level = static_cast<common::Compiler_Options::EWarnLevel>(level);
-          },
-          "Warn level")
-      ->type_name("0..3");
+  new_opt("--warns", warn.warns, "e.g. \"all, extra, pedantic, unused, dead_code, as_error\"");
+  new_opt("--warning,-W", warn.level, "Warn level 0..3");
 
-  insert_set(compiler::COMPILER_OPTIONS.debugs, "--debug-ast", "ast", "Generate a file view of scripts ast");
+  new_opt("--debugs", debug.debugs, "e.g. \"ast\"");
 
   build
       ->add_option_function<std::string>("-D",
                                          [&](std::string_view text) {
                                            auto pos = text.find('=');
                                            if (pos == std::string::npos) {
-                                             compiler::COMPILER_OPTIONS.defines[std::string(text)] = "true";
+                                             compiler::OPTIONS.preprocessor.defines[std::string(text)] = "true";
                                            } else {
-                                             compiler::COMPILER_OPTIONS.defines[std::string(text.substr(0, pos))] =
+                                             compiler::OPTIONS.preprocessor.defines[std::string(text.substr(0, pos))] =
                                                  text.substr(pos + 1);
                                            }
                                          })
@@ -215,78 +136,79 @@ void Command::init_command_build()
 
   build
       ->add_option_function<std::string>(
-          "-U", [&](std::string_view text) { compiler::COMPILER_OPTIONS.undefines.push_back(std::string(text)); })
+          "-U", [&](std::string_view text) { compiler::OPTIONS.preprocessor.undefines.emplace_back(text.data()); })
       ->type_name("<key>");
 
-  build->add_flag_function("--emit-obj", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::Obj);
-  });
-  build->add_flag_function("--emit-asm", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::ASM);
-  });
-  build->add_flag_function("--emit-bc", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::BC);
-  });
-  build->add_flag_function("--emit-bin", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::Bin);
-  });
-  build->add_flag_function("--emit-llvm", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::LLVM);
-  });
-  build->add_flag_function("--emit-s-lib", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::s_lib);
-  });
-  build->add_flag_function("--emit-d-lib", [&](int count) {
-    compiler::COMPILER_OPTIONS.target_emits.insert(common::Compiler_Options::EEmit::d_lib);
-  });
+  new_opt("--emits", target.emits, "Code emission");
 
-  add_opt_path("--dir-project", compiler::COMPILER_OPTIONS.dir_project, "Set the project directory");
-  add_opt_path("--dir-build", compiler::COMPILER_OPTIONS.dir_build, "Set the build directory");
-  add_opt_path("--dir-src", compiler::COMPILER_OPTIONS.dir_source, "Set the source code directory");
-  add_opt_path("--dir-vendor", compiler::COMPILER_OPTIONS.dir_vendor, "Set the vendor source code directory");
-  add_opt_path("--dir-ffi-json", compiler::COMPILER_OPTIONS.dir_ffi_json, "Set the vendor source code directory");
-  add_opt_path("--dir-binding", compiler::COMPILER_OPTIONS.dir_binding, "Set the binding directory");
-  add_opt_path("--dir-compiler", compiler::COMPILER_OPTIONS.dir_compiler, "Set the compiler directory");
-  add_opt_path("--dir-stdlib", compiler::COMPILER_OPTIONS.dir_stdlib, "Set the stdlib directory");
-  add_opt_path("--dir-packages", compiler::COMPILER_OPTIONS.dir_packages, "Set the packages directory");
+  add_opt_path("--dir-project", compiler::OPTIONS.dir.project, "Set the project directory");
+  add_opt_path("--dir-build", compiler::OPTIONS.dir.build, "Set the build directory");
+  add_opt_path("--dir-src", compiler::OPTIONS.dir.source, "Set the source code directory");
+  add_opt_path("--dir-vendor", compiler::OPTIONS.dir.vendor, "Set the vendor source code directory");
+  add_opt_path("--dir-ffi-json", compiler::OPTIONS.dir.ffi_json, "Set the vendor source code directory");
+  add_opt_path("--dir-binding", compiler::OPTIONS.dir.binding, "Set the binding directory");
+  add_opt_path("--dir-compiler", compiler::OPTIONS.dir.compiler, "Set the compiler directory");
+  add_opt_path("--dir-stdlib", compiler::OPTIONS.dir.stdlib, "Set the stdlib directory");
+  add_opt_path("--dir-packages", compiler::OPTIONS.dir.packages, "Set the packages directory");
 
-  build->add_option("--triple", compiler::COMPILER_OPTIONS.llvm_triple, "Override profile info for the llvm triple")
-      ->type_name("<arch-vendor-sys-env>");
-  build->add_flag("--verify-module", compiler::COMPILER_OPTIONS.llvm_verify_module,
+  build->add_flag("--llvm-verify_module", compiler::OPTIONS.llvm.verify_module,
                   "Enable llvm verification before and after passes");
 
-  std::vector<std::string> llvm_flags;
-  build->add_option("LLVM_FLAGS", llvm_flags, "Pass-through flags to LLVM")
-      ->type_name("LLVM FLAGS")
-      ->allow_extra_args()
-      ->take_all();
+  build->allow_extras();
 
   build->callback([&]() {
-    if (!compiler::COMPILER_OPTIONS.mute) {
-      std::cout << "Command executed: " << std::endl;
-      for (int i = 0; i < argc; i++) std::cout << argv[i] << " ";
-      std::cout << std::endl;
+    if (!compiler::OPTIONS.mute) {
+      OUT_LOG "Command executed: \n";
+      for (const auto& arg : app.remaining()) std::cout << arg << " ";
+      std::cout << "\n";
     }
 
-    if (compiler::COMPILER.start_compilation())
-      exit(0);
-    else
-      exit(1);
+    compiler::COMPILER.run_requested = true;
   });
+
+#undef new_flag
+#undef new_opt
 }
 
-void Command::init_commands()
+void compiler::Commander::init_commands() noexcept
 {
-  app.set_version_flag("--version,-v", "Version: " + common::SOFTWARE_VERSION);
-  app.add_flag_function(
-      "--about,-a",
-      [&](std::size_t count) {
-        std::cout << common::SOFTWARE_ABOUT << std::endl;
-        exit(0);
-      },
-      "Show detailed software info");
-
-  init_command_cogito();
   init_command_build();
-  init_command_ffi_json();
+  init_command_cogito();
+}
+
+
+void compiler::Commander::exec_ffi_command() noexcept
+{
+  to_path   = common::fileutils::resolve_path(to_path);
+  from_path = common::fileutils::resolve_path(from_path);
+
+  if (!fs::exists(from_path)) {
+    OUT_ERR "The source path doesn't exists.\n";
+    exit(1);
+  }
+  if (!fs::exists(to_path)) {
+    OUT_ERR "The destination path doesn't exists.\n";
+    exit(1);
+  }
+
+  if (ffi_json_flag) {
+    auto     ast       = ffi::JSON_Reader::parse_json_compilation_unit(from_path);
+    fs::path dest_file = fs::path(to_path) / ast->bind.lang / ast->bind.lib;
+    dest_file.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+
+    ast->velox_codegen(dest_file.string());
+
+    exit(0);
+  } else if (ffi_c_flag) {
+    auto     ast       = ffi::C_Reader::parse_c_compilation_unit(from_path);
+    fs::path dest_file = fs::path(to_path) / ast->bind.lang / ast->bind.lib;
+    dest_file.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+
+    ast->velox_codegen(dest_file.string());
+
+    exit(0);
+  } else {
+    OUT_ERR "Unspecified ffi mode.\n";
+    exit(1);
+  }
 }

@@ -15,26 +15,25 @@ struct Parser_Declaration_Local final {
   {
   }
 
-  [[nodiscard]] ast::_gnid parse_local(bool silent_error = false);
+  [[nodiscard]] ast::ID parse_local(bool silent_error = false);
 
 
-  [[nodiscard]] ast::_gnid parse_evaluator(ast::_gnid p_comparison_ref = ast::_gnid());
+  [[nodiscard]] ast::ID parse_evaluator(ast::ID comparison_expr = ast::ID::invalid());
 
-  [[nodiscard]] ast::_gnid              variable();
-  [[nodiscard]] ast::_gnid              tuple_destructuring();
-  [[nodiscard]] ast::_gnid              lambda();
-  [[nodiscard]] ast::_gnid              capability();
-  [[nodiscard]] ast::_gnid              parse_codeblock();
-  [[nodiscard]] ast::_gnid              lambda_capture();
-  [[nodiscard]] std::vector<ast::_gnid> parameters();
+  [[nodiscard]] ast::ID              variable();
+  [[nodiscard]] ast::ID              tuple_destructuring();
+  [[nodiscard]] ast::ID              lambda();
+  [[nodiscard]] ast::ID              capability();
+  [[nodiscard]] ast::ID              parse_codeblock_instruction();
+  [[nodiscard]] ast::ID              lambda_capture();
+  [[nodiscard]] std::vector<ast::ID> parameters();
 
-  [[nodiscard]] ast::_gnid parse_pattern(ast::_gnid p_comparison_ref);
-  [[nodiscard]] ast::_gnid pattern_mapping(ast::ECapability p_parent_capa);
-  [[nodiscard]] ast::_gnid component_pattern(ast::ECapability p_capa, ast::_gnid p_comp_id,
-                                             ast::_gnid p_comparison_ref);
-  [[nodiscard]] ast::_gnid entity_pattern(ast::ECapability p_capa, ast::_gnid p_entity_id, ast::_gnid p_comparison_ref);
-  [[nodiscard]] ast::_gnid tuple_pattern(ast::ECapability p_capa, ast::_gnid p_comparison_ref);
-  [[nodiscard]] ast::_gnid enum_pattern(ast::ECapability p_capa, ast::_gnid p_enum_id, ast::_gnid p_comparison_ref);
+  [[nodiscard]] ast::ID parse_pattern(ast::ID comparison_expr);
+  [[nodiscard]] ast::ID pattern_mapping(ast::ECapability p_parent_capa);
+  [[nodiscard]] ast::ID facet_pattern(ast::ECapability p_capa, ast::ID p_facet_id, ast::ID p_comparison_ref);
+  [[nodiscard]] ast::ID form_pattern(ast::ECapability p_capa, ast::ID p_form_id, ast::ID p_comparison_ref);
+  [[nodiscard]] ast::ID tuple_pattern(ast::ECapability p_capa, ast::ID p_comparison_ref);
+  [[nodiscard]] ast::ID enum_pattern(ast::ECapability p_capa, ast::ID p_enum_id, ast::ID p_comparison_ref);
 
   parser::Parser_Context& p;
 };

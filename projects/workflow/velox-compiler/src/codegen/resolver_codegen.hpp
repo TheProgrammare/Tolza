@@ -25,7 +25,7 @@ namespace resolver
 
 
 struct Codegen {
-  Codegen(script::ScriptInfo& _scr_info);
+  Codegen(cu::CU& _CU);
 
 
   llvm::LLVMContext&            ctx;
@@ -34,8 +34,8 @@ struct Codegen {
 
   std::unordered_map<std::string, llvm::Value*> locals;
 
-  script::ScriptInfo& scr_info;
-  Static_Evaluator&   eval;
+  cu::CU&           CU;
+  Static_Evaluator& eval;
 
   LLVM_Tools& tools;
 
@@ -125,7 +125,7 @@ struct Codegen {
   llvm::Type* visit(ast::declaration::Global_Generic& n);
 
   // ============ LOCAL ============
-  void visit(Local_CodeBlock& n);
+  void visit(CodeBlock& n);
 
   llvm::Function* visit(Local_Lambda& n);
   void            visit(Local_Lambda_Capture& n);
@@ -138,9 +138,9 @@ struct Codegen {
   llvm::Value* visit(Local_Pattern& n);
   llvm::Value* visit(Local_Pattern_Enum& n);
   llvm::Value* visit(Local_Pattern_Tuple& n);
-  llvm::Value* visit(Local_Pattern_Entity& n);
-  llvm::Value* visit(Local_Pattern_System_Component& n);
-  llvm::Value* visit(Local_Pattern_Component& n);
+  llvm::Value* visit(Local_Pattern_Form& n);
+  llvm::Value* visit(Local_Pattern_Rule_Facet& n);
+  llvm::Value* visit(Local_Pattern_Facet& n);
 
   llvm::Value* visit(Local_Variable_Binding& n);
   void         visit(Local_Tuple_Destructuring& n);
@@ -148,30 +148,30 @@ struct Codegen {
 
   llvm::Value* visit(Local_Capability& n);
 
-  // ============ COP ============
-  llvm::Type* visit(ast::declaration::cop::Component& n);
-  llvm::Type* visit(ast::declaration::cop::Component_Field& n);
+  // ============ SFM ============
+  llvm::Type* visit(ast::declaration::sfm::Facet& n);
+  llvm::Type* visit(ast::declaration::sfm::Facet_Field& n);
 
-  llvm::Type* visit(ast::declaration::cop::Role& n);
+  llvm::Type* visit(ast::declaration::sfm::View& n);
 
-  llvm::Type*     visit(ast::declaration::cop::Entity& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_New& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_Del& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_Cast& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_Op& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_Access_Op& n);
-  llvm::Function* visit(ast::declaration::cop::Entity_Transfert& n);
+  llvm::Type*     visit(ast::declaration::sfm::Form& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_New& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_Del& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_Cast& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_Op& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_Access_Op& n);
+  llvm::Function* visit(ast::declaration::sfm::Form_Transfert& n);
 
-  llvm::Function* visit(ast::declaration::cop::System& n);
-  void            visit(ast::declaration::cop::System_Case& n);
+  llvm::Function* visit(ast::declaration::sfm::Rule& n);
+  void            visit(ast::declaration::sfm::Rule_Case& n);
 
   // ============ GENERIC ============
   llvm::Value* visit(ast::generic::Is_Type& n);
   llvm::Value* visit(ast::generic::Can_Cast& n);
   llvm::Value* visit(ast::generic::Have_Op& n);
-  llvm::Value* visit(ast::generic::Have_Role& n);
-  llvm::Value* visit(ast::generic::Use_Component& n);
-  llvm::Value* visit(ast::generic::Compatible_System& n);
+  llvm::Value* visit(ast::generic::Have_View& n);
+  llvm::Value* visit(ast::generic::Use_Facet& n);
+  llvm::Value* visit(ast::generic::Compatible_Rule& n);
 
   // ============ TYPE ============
   llvm::Type* visit(ast::type::Ptr& n);
@@ -209,7 +209,7 @@ struct Codegen {
   llvm::Value* visit(ast::literal::Enum& n);
 
   llvm::Value* visit(ast::literal::Structured_Data& n);
-  llvm::Value* visit(ast::literal::Entity& n);
+  llvm::Value* visit(ast::literal::Form& n);
 
   // ============ Expression ============
   llvm::Value* visit(ast::expression::If_Ternary& n);
@@ -221,7 +221,7 @@ struct Codegen {
 
   llvm::Value* visit(ast::expression::Call& n);
   llvm::Value* visit(ast::expression::Call_Argument& n);
-  llvm::Value* visit(ast::expression::Call_System& n);
+  llvm::Value* visit(ast::expression::Call_Rule& n);
   llvm::Value* visit(ast::expression::Call_Pipe& n);
 
   llvm::Value* visit(ast::expression::Table_Access& n);

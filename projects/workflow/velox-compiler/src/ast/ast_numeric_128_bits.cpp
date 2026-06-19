@@ -72,7 +72,7 @@ Int128::Int128(std::string_view s, uint8_t radix)
 {
 }
 
-void Int128::string_to_i128(std::string_view s, int base)
+void Int128::string_to_i128(std::string_view s, int base) const
 {
   llvm::APInt tmp(128, 0,
                   true); // 128 bits signed
@@ -93,9 +93,9 @@ void Int128::string_to_i128(std::string_view s, int base)
   *val = tmp;
 }
 
-std::string Int128::i128_to_string(int radix) const
+std::string Int128::i128_to_string(int radix) const noexcept
 {
   llvm::SmallVector<char, 128> buf;
   val->toString(buf, radix, true);
-  return std::string(buf.begin(), buf.end());
+  return {buf.begin(), buf.end()};
 }

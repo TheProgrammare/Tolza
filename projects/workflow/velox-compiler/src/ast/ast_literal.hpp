@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nexus/ast/ast.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 #include "ast_numeric_128_bits.hpp"
 #include <vector>
 
@@ -47,7 +47,7 @@ AST_NODE(Literal_Rune)
 AST_NODE(Literal_Text_Pure)
 {
   std::string_view  val;
-  ::type::ETextType text_type = ::type::ETextType::str;
+  ::type::ETextType text_type = ::type::ETextType::_str;
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -62,16 +62,16 @@ AST_NODE(Literal_Format_Specifier)
 {
   std::string_view src_Str;
   char             fill = '\0'; // char fill, e.g. '0', '*', ' '
-  enum class EAlign { Right, Left, Center, Justify };
+  enum class EAlign : uint8_t { Right, Left, Center, Justify };
   EAlign align = EAlign::Right; // '>', '<', '^', '~', '='
 
   // Sign
-  enum class ESign { None, Pos, Neg, Space };
+  enum class ESign : uint8_t { None, Pos, Neg, Space };
   ESign sign           = ESign::None; // '+', '-', ' ' (space)
   bool  signBeforeFill = false;
 
   // Numeric
-  enum class EPrefix { None, Hex, HEX, Bin, Oct };
+  enum class EPrefix : uint8_t { None, Hex, HEX, Bin, Oct };
   EPrefix prefix   = EPrefix::None; // '#' for  0x, 0b, 0o
   bool    zero_pad = false;         // '0' fill to left
   SET_NODE(width);
@@ -81,7 +81,7 @@ AST_NODE(Literal_Format_Specifier)
   // and
   // type
   SET_NODE(precision); // decimal number
-  enum class EDisplayFormat {
+  enum class EDisplayFormat : uint8_t {
     String,
     Binary,
     Character,
@@ -141,9 +141,7 @@ AST_NODE(Literal_Map)
 {
   struct Association {
     SET_NODE(key);
-    ;
     SET_NODE(value);
-    ;
   };
 
   std::vector<Association> associations;
@@ -170,7 +168,6 @@ AST_NODE(Literal_Tuple)
   struct Field {
     std::string_view name;
     SET_NODE(value);
-    ;
   };
 
   std::vector<Field> fields;
@@ -186,7 +183,7 @@ AST_NODE(Literal_Range)
 };
 
 // CIdentity{ name: "Zagreus", age: 25 }
-// can be component, union, enum, flag
+// can be facet, union, enum, flag
 AST_NODE(Literal_Structured_Data)
 {
   SET_NODE(name);
@@ -195,10 +192,10 @@ AST_NODE(Literal_Structured_Data)
 
 // Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
 // not the same as Person("Zagreus", 32) it's a call of constructor
-AST_NODE(Literal_Entity)
+AST_NODE(Literal_Form)
 {
   SET_NODE(name);
-  SET_VECTOR_NODE(component_args);
+  SET_VECTOR_NODE(facet_args);
 };
 
 AST_NODE(Literal_Iterator)

@@ -1,0 +1,27 @@
+Checks: >
+  modernize-*,
+  performance-*,
+  clang-analyzer-*,
+  bugprone-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -bugprone-macro-parentheses,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-forward-declaration-namespace,
+  -readability-identifier-length,
+  -readability-braces-around-statements,
+  -readability-magic-numbers,
+  -readability-implicit-bool-conversion,
+  -bugprone-suspicious-stringview-data-usage,
+  -performance-inefficient-string-concatenation,
+  -readability-use-anyofallof,
+  -bugprone-reserved-identifier
+  -readability-convert-member-functions-to-static
+
+WarningsAsErrors: >
+  clang-analyzer-*
+
+FormatStyle: file
+
+HeaderFilterRegex: 'src/.*'
+SystemHeaders: false

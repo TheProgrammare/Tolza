@@ -11,9 +11,9 @@ struct Parser_Memory final {
   }
 
   // special memory expression
-  [[nodiscard]] ast::_gnid del();
-  [[nodiscard]] ast::_gnid align();
-  [[nodiscard]] ast::_gnid drop();
+  [[nodiscard]] ast::ID del();
+  [[nodiscard]] ast::ID align();
+  [[nodiscard]] ast::ID drop();
 
   Parser_Context& p;
 };

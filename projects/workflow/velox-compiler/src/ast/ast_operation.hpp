@@ -11,7 +11,7 @@ AST_NODE(Operation_Cast_As)
   SET_NODE(expression);
   SET_TYPE(type);
 
-  enum class ECastType { AS, AS_REINTERPRET, AS_SAFE };
+  enum class ECastType : uint8_t { AS, AS_REINTERPRET, AS_SAFE };
   ECastType cast_type = ECastType::AS;
 };
 
@@ -39,7 +39,7 @@ AST_NODE(Operation_Binary)
 {
   SET_NODE(left);
   SET_NODE(right);
-  EBinOpType op_ty = EBinOpType::Add;
+  EBinOpType op_ty = EBinOpType::_add;
 };
 
 // !a
@@ -55,8 +55,8 @@ AST_NODE(Operation_Interval)
   SET_NODE(left);
   SET_NODE(center);
   SET_NODE(right);
-  EBinOpType left_comparator  = EBinOpType::Low;
-  EBinOpType right_comparator = EBinOpType::Low;
+  EBinOpType left_comparator  = EBinOpType::_low;
+  EBinOpType right_comparator = EBinOpType::_low;
 };
 
 } // namespace ast

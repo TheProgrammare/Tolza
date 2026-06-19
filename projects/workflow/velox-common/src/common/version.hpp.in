@@ -1,0 +1,3 @@
+#pragma once
+
+#define IN_SOFTWARE_VERSION "@SOFTWARE_VERSION@"

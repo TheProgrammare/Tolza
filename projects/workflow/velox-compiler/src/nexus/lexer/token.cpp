@@ -1,24 +1,36 @@
 #include "token.hpp"
 
-#include <iostream>
 #include <string_view>
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 
-std::string_view token::Arena::Audit::Token_to_str(_id id)
+token::ID token::Arena::add(Token& tok) noexcept
 {
-  auto tok = arena.get(id);
-  assert(arena.scr_info.file_info.data.data());
-  assert(tok.begin + tok.length <= arena.scr_info.file_info.data.size());
-  return std::string_view(arena.scr_info.file_info.data.data() + tok.begin, tok.length);
+  auto id   = token::ID::make(cuid, tokens.size());
+  tok.tokid = id;
+  tokens.emplace_back(std::move(tok));
+  return id;
 }
-size_t token::Arena::Audit::Token_to_line(_id id)
+
+std::string_view token::Arena::Audit::Token_to_str(ID tokid) const noexcept
 {
-  auto tok = arena.get(id);
-  return arena.scr_info.file_info.get_line_from_pos(tok.begin);
+  auto&       tok = arena.get(tokid);
+  const auto& cu  = arena.cuid.get();
+  assert(cu.file_info.data.data());
+  if (tok.begin == cu.file_info.data.size()) {
+    return {cu.file_info.data.data() + tok.begin - 1, 1};
+  }
+  assert(tok.begin + tok.length <= cu.file_info.data.size());
+  return {cu.file_info.data.data() + tok.begin, tok.length};
 }
-std::string_view token::Arena::Audit::Token_to_line_str(_id id)
+size_t token::Arena::Audit::Token_to_line(ID tokid) const noexcept
 {
-  auto   tok  = arena.get(id);
-  size_t line = arena.scr_info.file_info.get_line_from_pos(tok.begin);
-  return arena.scr_info.file_info.get_line(line);
+  auto& tok = arena.get(tokid);
+  return arena.cuid.get().file_info.get_line_from_pos(tok.begin);
+}
+std::string_view token::Arena::Audit::Token_to_line_str(ID tokid) const noexcept
+{
+  auto&       tok  = arena.get(tokid);
+  const auto& cu   = arena.cuid.get();
+  size_t      line = cu.file_info.get_line_from_pos(tok.begin);
+  return cu.file_info.get_line(line);
 }

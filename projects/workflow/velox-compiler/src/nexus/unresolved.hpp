@@ -10,16 +10,16 @@ namespace unresolved
 
 struct Arena final {
 
-  std::unordered_set<ast::_gnid, ast::_gnid_hash> nodes;
-  bool                                            sorted = false;
+  std::unordered_set<ast::ID, ast::ID::Hash> nodes;
+  bool                                       sorted = false;
 
-  void add(ast::_gnid n)
+  void add(ast::ID n) noexcept
   {
     nodes.insert(n);
     sorted = false;
   }
 
-  bool is_unresolved(ast::_gnid n)
+  [[nodiscard]] bool is_unresolved(ast::ID n) const noexcept
   {
     return nodes.contains(n);
   }

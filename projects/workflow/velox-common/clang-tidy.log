@@ -1,0 +1,124 @@
+Running clang-tidy for 3 files out of 3 in compilation database ...
+[1/3][17.8s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-common/build -quiet /media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp
+/media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp:120:3: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+  120 |   char    result[PATH_MAX];
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp:268:5: warning: replace loop by 'std::ranges::all_of()' [readability-use-anyofallof]
+  268 |     for (char c : id) {
+      |     ^
+46553 warnings generated.
+
+[2/3][46.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-common/build -quiet /media/data/Workspace/velox/projects/workflow/velox-common/src/toolchain_options.cpp
+55494 warnings generated.
+
+[3/3][73.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-common/build -quiet /media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:138:10: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
+  138 |   return std::vector(args.begin(), args.end());
+      |          ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:544:56: warning: function 'merge_context' has cognitive complexity of 56 (threshold 25) [readability-function-cognitive-complexity]
+  544 | common::Compiler_Options common::Sub_Compiler_Options::merge_context(const Compiler_Options& base_ctx) const
+      |                                                        ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:546:20: note: nesting level increased to 1
+  546 |   auto apply_str = [&](std::string& _dest, const std::string& _str) {
+      |                    ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:547:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  547 |     if (_str.empty()) return;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:551:21: note: nesting level increased to 1
+  551 |   auto apply_bool = [&](bool& _dest, bool _val, bool _can_apply) {
+      |                     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:552:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  552 |     if (!_can_apply) return;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:556:20: note: nesting level increased to 1
+  556 |   auto apply_int = [&](size_t& _dest, size_t _val, bool _can_apply) {
+      |                    ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:557:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  557 |     if (!_can_apply) return;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:561:21: note: nesting level increased to 1
+  561 |   auto merge_list = [&](std::vector<const char*>& _dest, const std::vector<const char*>& _val, EMergeMode mode) {
+      |                     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:562:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  562 |     switch (mode) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:571:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  571 |       for (const auto& elem : _dest) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:572:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  572 |         if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:581:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  581 |       for (const auto& elem : _dest) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:582:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  582 |         if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:590:20: note: nesting level increased to 1
+  590 |   auto merge_map = [&](std::map<std::string, std::string>& _dest, const std::map<std::string, std::string>& _val,
+      |                    ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:592:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  592 |     switch (mode) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:594:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  594 |       for (const auto& [val_key, val_val] : _val) _dest[val_key] = val_val;
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:600:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  600 |       for (const auto& [key, val] : _dest) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:601:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  601 |         if (_val.find(key) != _val.end()) tmp[key] = val;
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:608:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  608 |       for (const auto& [key, val] : _dest) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:609:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  609 |         if (_val.find(key) == _val.end()) tmp[key] = val;
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:625:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  625 |   if (platform_flavor != EPlatformFlavor::unknown) out.platform_flavor = platform_flavor;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:628:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  628 |   if (target.arch != EArch::unknown) out.target.arch = target.arch;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:629:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  629 |   if (target.os != EOS::unknown) out.target.os = target.os;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:630:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  630 |   if (target.vendor != EVendor::unknown) out.target.vendor = target.vendor;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:631:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  631 |   if (target.abi != EABI::unknown) out.target.abi = target.abi;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:634:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  634 |   if (target.calling_conv != ECallingConv::unknown) out.target.calling_conv = target.calling_conv;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:635:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  635 |   if (target.reloc_model != ERelocModel::NONE) out.target.abi = target.abi;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:636:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  636 |   if (target.code_model != ECodeModel::NONE) out.target.code_model = target.code_model;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:641:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  641 |   if (profile.optimization != EOptimization::NONE) out.profile.optimization = profile.optimization;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:648:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  648 |   if (warn.level != EWarnLevel::NONE) out.warn.level = warn.level;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:673:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  673 |   if (clang.libc != ELibC::unknown) out.clang.libc = clang.libc;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:674:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  674 |   if (clang.libc_version.minor != 0 && clang.libc_version.major != 0) out.clang.libc_version = clang.libc_version;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:674:37: note: +1
+  674 |   if (clang.libc_version.minor != 0 && clang.libc_version.major != 0) out.clang.libc_version = clang.libc_version;
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:675:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  675 |   if (clang.std != ECStandard::unknown) out.clang.std = clang.std;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/compiler_options.cpp:677:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  677 |   if (clang.env != EEnvironment::unknown) out.clang.env = clang.env;
+      |   ^
+53210 warnings generated.
+

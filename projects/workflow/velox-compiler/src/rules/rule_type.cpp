@@ -1,57 +1,55 @@
 #include "rule_type.hpp"
 
+#include <Neargye/magic_enum.hpp>
 #include "nexus/ast/ast.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 
 #include <cerrno>
 #include <cstddef>
-#include <initializer_list>
 
 
 bool rule::type::can_op_primitive(::type::EPrimitiveTypeKind term, ast::EBinOpType op)
 {
-  auto op_handled = [&](const std::initializer_list<ast::EBinOpType>& collection) {
-    return std::find(collection.begin(), collection.end(), op) != collection.end();
-  };
-
   switch (term) {
-  case ::type::EPrimitiveTypeKind::boolean: return ast::EBinOpType_is_boolean(op);
-  case ::type::EPrimitiveTypeKind::cune:
-  case ::type::EPrimitiveTypeKind::rune:    return ast::EBinOpType_is_textual(op);
-  case ::type::EPrimitiveTypeKind::iSize:
-  case ::type::EPrimitiveTypeKind::i8:
-  case ::type::EPrimitiveTypeKind::i16:
-  case ::type::EPrimitiveTypeKind::i32:
-  case ::type::EPrimitiveTypeKind::i64:
-  case ::type::EPrimitiveTypeKind::i128:
-  case ::type::EPrimitiveTypeKind::ptrdiff:
-  case ::type::EPrimitiveTypeKind::uSize:
-  case ::type::EPrimitiveTypeKind::u8:
-  case ::type::EPrimitiveTypeKind::u16:
-  case ::type::EPrimitiveTypeKind::u32:
-  case ::type::EPrimitiveTypeKind::u64:
-  case ::type::EPrimitiveTypeKind::u128:    return ast::EBinOpType_is_integral(op);
-  case ::type::EPrimitiveTypeKind::bSize:
-  case ::type::EPrimitiveTypeKind::b8:
-  case ::type::EPrimitiveTypeKind::b16:
-  case ::type::EPrimitiveTypeKind::b32:
-  case ::type::EPrimitiveTypeKind::b64:
-  case ::type::EPrimitiveTypeKind::b128:    return ast::EBinOpType_is_bitwise(op);
-  case ::type::EPrimitiveTypeKind::dSize:
-  case ::type::EPrimitiveTypeKind::d32:
-  case ::type::EPrimitiveTypeKind::d64:
-  case ::type::EPrimitiveTypeKind::d128:
-  case ::type::EPrimitiveTypeKind::udSize:
-  case ::type::EPrimitiveTypeKind::ud32:
-  case ::type::EPrimitiveTypeKind::ud64:
-  case ::type::EPrimitiveTypeKind::ud128:
-  case ::type::EPrimitiveTypeKind::fSize:
-  case ::type::EPrimitiveTypeKind::f16:
-  case ::type::EPrimitiveTypeKind::f32:
-  case ::type::EPrimitiveTypeKind::f64:
-  case ::type::EPrimitiveTypeKind::f80:
-  case ::type::EPrimitiveTypeKind::f128:    return ast::EBinOpType_is_decimal(op);
-  default:                                  return false;
+  case ::type::EPrimitiveTypeKind::_bool:    return ast::EBinOpType_is_boolean(op);
+  case ::type::EPrimitiveTypeKind::_cune:
+  case ::type::EPrimitiveTypeKind::_rune:    return ast::EBinOpType_is_textual(op);
+  case ::type::EPrimitiveTypeKind::_ssize:
+  case ::type::EPrimitiveTypeKind::_s8:
+  case ::type::EPrimitiveTypeKind::_s16:
+  case ::type::EPrimitiveTypeKind::_s32:
+  case ::type::EPrimitiveTypeKind::_s64:
+  case ::type::EPrimitiveTypeKind::_s128:
+  case ::type::EPrimitiveTypeKind::_ptrdiff:
+  case ::type::EPrimitiveTypeKind::_usize:
+  case ::type::EPrimitiveTypeKind::_u8:
+  case ::type::EPrimitiveTypeKind::_u16:
+  case ::type::EPrimitiveTypeKind::_u32:
+  case ::type::EPrimitiveTypeKind::_u64:
+  case ::type::EPrimitiveTypeKind::_u128:    return ast::EBinOpType_is_integral(op);
+  case ::type::EPrimitiveTypeKind::_bsize:
+  case ::type::EPrimitiveTypeKind::_b8:
+  case ::type::EPrimitiveTypeKind::_b16:
+  case ::type::EPrimitiveTypeKind::_b32:
+  case ::type::EPrimitiveTypeKind::_b64:
+  case ::type::EPrimitiveTypeKind::_b128:    return ast::EBinOpType_is_bitwise(op);
+  case ::type::EPrimitiveTypeKind::_dsize:
+  case ::type::EPrimitiveTypeKind::_d32:
+  case ::type::EPrimitiveTypeKind::_d64:
+  case ::type::EPrimitiveTypeKind::_d128:
+  case ::type::EPrimitiveTypeKind::_udsize:
+  case ::type::EPrimitiveTypeKind::_ud32:
+  case ::type::EPrimitiveTypeKind::_ud64:
+  case ::type::EPrimitiveTypeKind::_ud128:
+  case ::type::EPrimitiveTypeKind::_fsize:
+  case ::type::EPrimitiveTypeKind::_f16:
+  case ::type::EPrimitiveTypeKind::_f32:
+  case ::type::EPrimitiveTypeKind::_f64:
+  case ::type::EPrimitiveTypeKind::_f80:
+  case ::type::EPrimitiveTypeKind::_f128:    return ast::EBinOpType_is_decimal(op);
+  case ::type::EPrimitiveTypeKind::_ptr:     return ast::EBinOpType_is_memory(op);
+  case ::type::EPrimitiveTypeKind::_u0:
+  case ::type::EPrimitiveTypeKind::NONE:     return false;
   }
 }
 
@@ -60,7 +58,7 @@ bool rule::type::can_binary_op_primitive(::type::EPrimitiveTypeKind lhs, ::type:
 {
 }
 
-bool rule::type::can_binary_op_entity(const ast::COP_Entity& lhs, const ast::COP_Entity& rhs)
+bool rule::type::can_binary_op_form(const ast::SFM_Form& lhs, const ast::SFM_Form& rhs)
 {
 }
 
@@ -70,8 +68,8 @@ bool rule::type::can_cast_on_primitive_as_primitve(::type::EPrimitiveTypeKind te
 {
   if (term == target_type) return true;
 
-  static const bool table[static_cast<size_t>(::type::EPrimitiveTypeKind::COUNT)
-                          + 1][static_cast<size_t>(::type::EPrimitiveTypeKind::COUNT) + 1] = {
+  static const bool table[static_cast<size_t>(magic_enum::enum_count<::type::EPrimitiveTypeKind>())
+                          + 1][static_cast<size_t>(magic_enum::enum_count<::type::EPrimitiveTypeKind>()) + 1] = {
       // clang-format off
 	//              NONE	  u0      boolean	cune	  rune	  iSize	  i8	    i16	    i32	    i64	    i128	  uSize	  u8	    u16	    u32	    u64	    u128	  bSize	  b8	    b16	    b32	    b64	    b128	  ptrdiff	fSize	  f16     f32	    f64	    f80     f128	  dSize	  d32     d64     d128    udSize  ud32    ud64    ud128   COUNT
   /*NONE*/      { false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,	false,},
@@ -118,12 +116,12 @@ bool rule::type::can_cast_on_primitive_as_primitve(::type::EPrimitiveTypeKind te
 
   return table[static_cast<size_t>(term)][static_cast<size_t>(target_type)];
 }
-bool rule::type::can_cast_on_primitive_as_entity(::type::EPrimitiveTypeKind term, const ast::COP_Entity& target_type)
+bool rule::type::can_cast_on_primitive_as_form(::type::EPrimitiveTypeKind term, const ast::SFM_Form& target_type)
 {
 }
-bool rule::type::can_cast_on_entity_as_primtive(const ast::COP_Entity& term, ::type::EPrimitiveTypeKind target_type)
+bool rule::type::can_cast_on_form_as_primtive(const ast::SFM_Form& term, ::type::EPrimitiveTypeKind target_type)
 {
 }
-bool rule::type::can_cast_on_entity_as_entity(const ast::COP_Entity& term, const ast::COP_Entity& target_type)
+bool rule::type::can_cast_on_form_as_form(const ast::SFM_Form& term, const ast::SFM_Form& target_type)
 {
 }

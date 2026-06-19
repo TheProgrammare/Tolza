@@ -1,37 +1,38 @@
 #include "data.hpp"
+#include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
 
 
 std::string_view ast::EAccessOpType_to_str(EAccessOpType opTy)
 {
   switch (opTy) {
-  case EAccessOpType::Index:      return "[i]";
-  case EAccessOpType::IndexBound: return "?[i]";
-  case EAccessOpType::Slice:      return "[a..b]";
-  case EAccessOpType::SliceBound: return "?[a..b]";
-  case EAccessOpType::bSlice:     return "~[a..b]";
+  case EAccessOpType::_index:       return "[i]";
+  case EAccessOpType::_index_bound: return "?[i]";
+  case EAccessOpType::_slice:       return "[a..b]";
+  case EAccessOpType::_slice_bound: return "?[a..b]";
+  case EAccessOpType::_b_slice:     return "~[a..b]";
   };
 }
 
 ast::EBinOpType ast::ETokenKind_to_EBinOpType(token::ETokenKind tok)
 {
   switch (tok) {
-  case token::ETokenKind::OP_PLUS:          return EBinOpType::Add;
-  case token::ETokenKind::OP_MINUS:         return EBinOpType::Sub;
-  case token::ETokenKind::OP_ASTERISK:      return EBinOpType::Mul;
-  case token::ETokenKind::OP_DIVIDE:        return EBinOpType::Div;
-  case token::ETokenKind::OP_MODULO:        return EBinOpType::Mod;
-  case token::ETokenKind::OP_QUOTIEN:       return EBinOpType::Quo;
-  case token::ETokenKind::OP_REMAIN:        return EBinOpType::Rem;
-  case token::ETokenKind::OP_POWER:         return EBinOpType::Pow;
+  case token::ETokenKind::OP_PLUS:          return EBinOpType::_add;
+  case token::ETokenKind::OP_MINUS:         return EBinOpType::_sub;
+  case token::ETokenKind::OP_ASTERISK:      return EBinOpType::_mul;
+  case token::ETokenKind::OP_DIVIDE:        return EBinOpType::_div;
+  case token::ETokenKind::OP_MODULO:        return EBinOpType::_mod;
+  case token::ETokenKind::OP_QUOTIEN:       return EBinOpType::_quo;
+  case token::ETokenKind::OP_REMAIN:        return EBinOpType::_rem;
+  case token::ETokenKind::OP_POWER:         return EBinOpType::_pow;
   case token::ETokenKind::IN:               return EBinOpType::_in;
   case token::ETokenKind::NIN:              return EBinOpType::_nin;
   case token::ETokenKind::IS:               return EBinOpType::_is;
   case token::ETokenKind::NIS:              return EBinOpType::_nis;
-  case token::ETokenKind::CLOSE_BRACKETS:   return EBinOpType::Gre;
-  case token::ETokenKind::OPEN_BRACKETS:    return EBinOpType::Low;
-  case token::ETokenKind::OP_GEQ:           return EBinOpType::Gre_eq;
-  case token::ETokenKind::OP_LEQ:           return EBinOpType::Low_eq;
+  case token::ETokenKind::R_ANGLE:          return EBinOpType::_gre;
+  case token::ETokenKind::L_ANGLE:          return EBinOpType::_low;
+  case token::ETokenKind::OP_GEQ:           return EBinOpType::_gre_eq;
+  case token::ETokenKind::OP_LEQ:           return EBinOpType::_low_eq;
   case token::ETokenKind::OP_EQ:            return EBinOpType::_eq;
   case token::ETokenKind::OP_EQS:           return EBinOpType::_eqs;
   case token::ETokenKind::OP_NEQ:           return EBinOpType::_neq;
@@ -65,20 +66,20 @@ std::string_view ast::EBinOpType_to_str(EBinOpType opTy)
   switch (opTy) {
   case EBinOpType::NONE:     return "NO BIN OP TYPE";
 
-  case EBinOpType::Add:      return "+";
-  case EBinOpType::Sub:      return "-";
-  case EBinOpType::Mul:      return "*";
-  case EBinOpType::Div:      return "/";
-  case EBinOpType::Mod:      return "%mod%";
-  case EBinOpType::Quo:      return "%quo%";
-  case EBinOpType::Rem:      return "%rem%";
-  case EBinOpType::Divrem:   return "%divrem%";
-  case EBinOpType::Pow:      return "**";
+  case EBinOpType::_add:     return "+";
+  case EBinOpType::_sub:     return "-";
+  case EBinOpType::_mul:     return "*";
+  case EBinOpType::_div:     return "/";
+  case EBinOpType::_mod:     return "%mod%";
+  case EBinOpType::_quo:     return "%quo%";
+  case EBinOpType::_rem:     return "%rem%";
+  case EBinOpType::_divrem:  return "%divrem%";
+  case EBinOpType::_pow:     return "**";
 
-  case EBinOpType::Gre:      return ">";
-  case EBinOpType::Low:      return "<";
-  case EBinOpType::Gre_eq:   return ">=";
-  case EBinOpType::Low_eq:   return "<=";
+  case EBinOpType::_gre:     return ">";
+  case EBinOpType::_low:     return "<";
+  case EBinOpType::_gre_eq:  return ">=";
+  case EBinOpType::_low_eq:  return "<=";
   case EBinOpType::_eq:      return "==";
   case EBinOpType::_in:      return "in";
   case EBinOpType::_nin:     return "nin";
@@ -115,15 +116,11 @@ std::string_view ast::EBinOpType_to_str(EBinOpType opTy)
 ast::ECapability ast::ETokenKind_to_ECapability(token::ETokenKind tok)
 {
   switch (tok) {
-  case token::ETokenKind::CAPA_MUT:     return ECapability::Mut;
-  case token::ETokenKind::CAPA_REF:     return ECapability::Ref;
-  case token::ETokenKind::CAPA_COPY:    return ECapability::Copy;
-  case token::ETokenKind::CAPA_MOVE:    return ECapability::Move;
-  case token::ETokenKind::CAPA_MUT_OF:  return ECapability::Mut;
-  case token::ETokenKind::CAPA_REF_OF:  return ECapability::Ref;
-  case token::ETokenKind::CAPA_COPY_OF: return ECapability::Copy;
-  case token::ETokenKind::CAPA_MOVE_OF: return ECapability::Move;
-  default:                              return ECapability::NONE;
+  case token::ETokenKind::CAPA_MUT:  return ECapability::Mut;
+  case token::ETokenKind::CAPA_REF:  return ECapability::Ref;
+  case token::ETokenKind::CAPA_COPY: return ECapability::Copy;
+  case token::ETokenKind::CAPA_MOVE: return ECapability::Move;
+  default:                           return ECapability::NONE;
   }
 }
 
@@ -204,11 +201,11 @@ bool ast::EPassMode_Can_Default(EPassMode passMode)
 ast::EExprPassMode ast::ETokenKind_to_EExprPassMode(token::ETokenKind tok)
 {
   switch (tok) {
-  case token::ETokenKind::CAPA_MUT_OF:  return EExprPassMode::Mut;
-  case token::ETokenKind::CAPA_REF_OF:  return EExprPassMode::Ref;
-  case token::ETokenKind::CAPA_COPY_OF: return EExprPassMode::Copy;
-  case token::ETokenKind::CAPA_MOVE_OF: return EExprPassMode::Move;
-  default:                              return EExprPassMode::NONE;
+  case token::ETokenKind::CAPA_MUT:  return EExprPassMode::Mut;
+  case token::ETokenKind::CAPA_REF:  return EExprPassMode::Ref;
+  case token::ETokenKind::CAPA_COPY: return EExprPassMode::Copy;
+  case token::ETokenKind::CAPA_MOVE: return EExprPassMode::Move;
+  default:                           return EExprPassMode::NONE;
   }
 }
 
@@ -249,24 +246,5 @@ std::string_view ast::ETransfertType_to_str(ETransfertType type)
   case ETransfertType::Copy:         return "cppy";
   case ETransfertType::MoveSemantic: return "move";
   case ETransfertType::NONE:         return "NO TRANSFERT TYPE";
-  }
-}
-
-ast::EPathSource ast::ETokenKind_to_EPathSource(token::ETokenKind tok)
-{
-  switch (tok) {
-  case token::ETokenKind::SELF:          return EPathSource::Self;
-  case token::ETokenKind::SUPER_MOD:     return EPathSource::Super;
-  case token::ETokenKind::STATIC_ACCESS: return EPathSource::Root;
-  default:                               return EPathSource::NONE;
-  }
-}
-std::string_view ast::EPathSource_to_str(ast::EPathSource type)
-{
-  switch (type) {
-  case EPathSource::NONE:  return "NONE";
-  case EPathSource::Self:  return "Self";
-  case EPathSource::Super: return "Super";
-  case EPathSource::Root:  return "Root";
   }
 }

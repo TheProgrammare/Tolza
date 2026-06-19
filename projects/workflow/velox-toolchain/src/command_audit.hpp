@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <string>
+#include <string_view>
 
 
 struct CategoryStats {
@@ -55,12 +55,11 @@ struct GlobalStats {
   }
 };
 
-namespace command
+namespace command::audit
 {
-namespace audit
-{
-bool is_blank(const std::string& line);
-void process_file(const std::string& file, CategoryStats& cat_stats, GlobalStats& global_stats);
-void audit_workspace(const std::string& root);
-} // namespace audit
-} // namespace command
+
+[[nodiscard]] bool is_blank(std::string_view line) noexcept;
+void               process_file(std::string_view file, CategoryStats& cat_stats, GlobalStats& global_stats) noexcept;
+void               audit_workspace(std::string_view root) noexcept;
+
+} // namespace command::audit

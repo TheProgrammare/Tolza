@@ -10,19 +10,19 @@ struct Parser_Declaration final {
   {
   }
 
-  [[nodiscard]] ast::_gnid parse_declaration();
-  // declarations
-  [[nodiscard]] ast::_gnid _module();
-  [[nodiscard]] ast::_gnid type_alias();
-  [[nodiscard]] ast::_gnid enumeration();
-  [[nodiscard]] ast::_gnid _union();
-  [[nodiscard]] ast::_gnid flag();
-  [[nodiscard]] ast::_gnid global_variable();
-  [[nodiscard]] ast::_gnid function();
-  [[nodiscard]] ast::_gnid generic();
-  [[nodiscard]] ast::_gnid goto_label_statement();
+  [[nodiscard]] ast::ID parse_declaration();
+  [[nodiscard]] ast::ID parse_codeblock_declaration(bool no_import = false, bool no_export = false);
 
-  std::string extern_abi;
+  // declarations
+  [[nodiscard]] ast::ID _module();
+  [[nodiscard]] ast::ID type_alias();
+  [[nodiscard]] ast::ID enumeration();
+  [[nodiscard]] ast::ID _union();
+  [[nodiscard]] ast::ID flag();
+  [[nodiscard]] ast::ID global_variable();
+  [[nodiscard]] ast::ID function();
+  [[nodiscard]] ast::ID generic();
+  [[nodiscard]] ast::ID goto_label_statement();
 
   parser::Parser_Context& p;
 };

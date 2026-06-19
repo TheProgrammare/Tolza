@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "ast/ast_base.hpp"
+#include "ast/ast_declaration_global.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 
@@ -14,34 +16,26 @@ struct Inference : public Base {
   // keep parent constructor
   using Base::Base;
 
-  ast::Node& get_node(ast::_id n) const;
-  ast::Node& get_node(ast::_gnid n) const;
+  void add_inference(ast::Node& n, type::ID type) const;
 
-  ast::_gnid        make_gnid(ast::Node& n) const;
-  bool              is_inferred(ast::Node& n) const;
-  bool              is_inferred(ast::_gnid n) const;
-  type::_id         get_type_id(ast::Node& n) const;
-  type::_id         get_type_id(ast::_gnid n) const;
-  const type::Type& get_type(ast::Node& n) const;
-  const type::Type& get_type(ast::_gnid n) const;
-  void              add_inference(ast::Node& n, type::_id type) const;
-
-  void resolve_Node(ast::_gnid& n, bool mandatory = true);
+  void resolve_Node(ast::ID n, bool mandatory = true);
   void resolve_Node(ast::Node& n, bool mandatory = true);
 
-  bool start_resolver();
+  [[nodiscard]] bool start_resolver();
 
-  void resolve_ID(ast::ID& n);
+  void resolve_Identifier(ast::Identifier& n);
   void resolve_ID_Qualified(ast::ID_Qualified& n);
   void resolve_ID_Typed(ast::ID_Typed& n);
   void resolve_Global_Variable(ast::Global_Variable& n);
   void resolve_Global_Function(ast::Global_Function& n);
+  void resolve_Global_Alias_Type(ast::Global_Alias_Type& n);
   void resolve_Local_Pattern_Enum(ast::Local_Pattern_Enum& n);
   void resolve_Local_Pattern_Tuple(ast::Local_Pattern_Tuple& n);
-  void resolve_Local_Pattern_Entity(ast::Local_Pattern_Entity& n);
-  void resolve_Local_Pattern_Sys_Comp(ast::Local_Pattern_Sys_Comp& n);
-  void resolve_Local_Pattern_Comp(ast::Local_Pattern_Comp& n);
+  void resolve_Local_Pattern_Form(ast::Local_Pattern_Form& n);
+  void resolve_Local_Pattern_Rule_Facet(ast::Local_Pattern_Rule_Facet& n);
+  void resolve_Local_Pattern_Facet(ast::Local_Pattern_Facet& n);
   void resolve_Local_Variable(ast::Local_Variable& n);
+  void resolve_Local_Parameter(ast::Local_Parameter& n);
   void resolve_Local_Binding(ast::Local_Binding& n);
   void resolve_Statement_Return(ast::Statement_Return& n);
   void resolve_Statement_For(ast::Statement_For& n);
@@ -51,7 +45,7 @@ struct Inference : public Base {
   void resolve_Expression_Other(ast::Expression_Other& n);
   void resolve_Expression_Call(ast::Expression_Call& n);
   void resolve_Expression_Call_Argument(ast::Expression_Call_Argument& n);
-  void resolve_Expression_Call_System(ast::Expression_Call_System& n);
+  void resolve_Expression_Call_Rule(ast::Expression_Call_Rule& n);
   void resolve_Expression_Call_Pipe(ast::Expression_Call_Pipe& n);
   void resolve_Expression_Table_Access(ast::Expression_Table_Access& n);
   void resolve_Expression_Ptr_Val(ast::Expression_Ptr_Val& n);
@@ -80,7 +74,7 @@ struct Inference : public Base {
   void resolve_Literal_Iterator(ast::Literal_Iterator& n);
   void resolve_Literal_Enum(ast::Literal_Enum& n);
   void resolve_Literal_Structured_Data(ast::Literal_Structured_Data& n);
-  void resolve_Literal_Entity(ast::Literal_Entity& n);
+  void resolve_Literal_Form(ast::Literal_Form& n);
   void resolve_Operation_Cast_As(ast::Operation_Cast_As& n);
   void resolve_Operation_Is(ast::Operation_Is& n);
   void resolve_Operation_In(ast::Operation_In& n);
@@ -90,11 +84,11 @@ struct Inference : public Base {
   void resolve_Operation_Interval(ast::Operation_Interval& n);
 
 
-  type::_id resolve_type(ast::Node& n, type::Type& input_type, bool p_is_silent_error = false);
+  [[nodiscard]] type::ID resolve_type(ast::Node& n, type::Type& input_type, bool p_is_silent_error = false);
 
-  bool is_lazy_literal(ast::Node& n) const;
+  [[nodiscard]] bool is_lazy_literal(ast::Node& n) const;
 
-  void ensure_expression_resolution(ast::Node& p_expr, type::_id p_type_inferrance);
+  void ensure_expression_resolution(ast::Node& p_expr, type::ID p_type_inferrance);
 };
 
 

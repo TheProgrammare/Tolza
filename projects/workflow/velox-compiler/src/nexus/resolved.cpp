@@ -1,6 +1,7 @@
 #include "resolved.hpp"
 #include "nexus/ast/ast.hpp"
 #include <algorithm>
+#include <bits/ranges_algo.h>
 
 void resolved::Arena::finalize()
 {
@@ -10,15 +11,13 @@ void resolved::Arena::finalize()
   }
 }
 
-symbol::_id resolved::Arena::get_symbol(ast::_gnid n)
+symbol::ID resolved::Arena::get_symbol(ast::ID n)
 {
   if (!sorted) finalize();
   sorted = true;
 
   // assume finalize() called before
-  auto it = std::lower_bound(bindings.begin(), bindings.end(), n,
-                             [](const Binding& b, ast::_gnid value) { return b.node < value; });
-
+  auto it = std::ranges::lower_bound(bindings, n, std::less{}, &Binding::node);
   if (it != bindings.end() && it->node == n) return it->sym;
 
   return NO_ID;

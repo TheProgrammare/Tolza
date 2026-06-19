@@ -3,28 +3,28 @@
 #include "nexus/lexer/token.hpp"
 #include <cassert>
 
-bool metacode::Word::contains(std::string_view s) const
+bool metacode::Word::contains(std::string_view s) const noexcept
 {
-  for (auto& tok : tokens) {
+  for (const auto& tok : tokens) {
     if (tok == s) return true;
   }
   return false;
 }
-bool metacode::Word::contains(token::ETokenKind kind) const
+bool metacode::Word::contains(token::ETokenKind kind) const noexcept
 {
-  for (auto& tok : tokens) {
+  for (const auto& tok : tokens) {
     if (token::str_to_ETokenKind(tok) == kind) return true;
   }
   return false;
 }
-bool metacode::Word::contains_one(const std::initializer_list<token::ETokenKind>& l) const
+bool metacode::Word::contains_one(const std::initializer_list<token::ETokenKind>& l) const noexcept
 {
   for (const token::ETokenKind& m_elem : l) {
     if (contains(m_elem)) return true;
   }
   return false;
 }
-bool metacode::Word::have_key(const _Key& key) const
+bool metacode::Word::have_key(const _Meta_Key& key) const noexcept
 {
   EPatternKey pattern_key = str_to_EPatternKey(key);
   switch (pattern_key) {
@@ -36,7 +36,7 @@ bool metacode::Word::have_key(const _Key& key) const
   }
 }
 
-metacode::EPatternKey metacode::str_to_EPatternKey(const _Key& key)
+metacode::EPatternKey metacode::str_to_EPatternKey(const _Meta_Key& key) noexcept
 {
   if (key == pattern_constants::wildcard) return EPatternKey::Any;
   if (key == pattern_constants::identifier) return EPatternKey::Identifier;
@@ -45,7 +45,7 @@ metacode::EPatternKey metacode::str_to_EPatternKey(const _Key& key)
   return EPatternKey::None;
 }
 
-bool metacode::Instruction::match_pattern(const _Pattern& pattern) const
+bool metacode::Instruction::match_pattern(const _Meta_Pattern& pattern) const noexcept
 {
   if (pattern.size() == 0) return false;
 
@@ -55,7 +55,7 @@ bool metacode::Instruction::match_pattern(const _Pattern& pattern) const
   if (!explicit_end && pattern.size() != words.size()) return false;
 
   size_t count = 0;
-  for (auto& pat : pattern) {
+  for (const auto& pat : pattern) {
     if (explicit_end && count == pattern.size() - 1) return true;
     if (!words[count].have_key(pat)) return false;
 
@@ -65,7 +65,7 @@ bool metacode::Instruction::match_pattern(const _Pattern& pattern) const
   return false;
 }
 
-std::string_view metacode::Instruction::at_str(size_t pos, size_t alt) const
+std::string_view metacode::Instruction::at_str(size_t pos, size_t alt) const noexcept
 {
   assert(words.size() > pos);
 
@@ -77,36 +77,36 @@ std::string_view metacode::Instruction::at_str(size_t pos, size_t alt) const
 }
 
 
-bool metacode::ScriptGraph::Audit::contains(_id id, _Key s) const
+bool metacode::Graph::Audit::contains(ID id, _Meta_Key s) const noexcept
 {
   auto meta = graph.get(id);
 
-  for (auto& ins : meta.instructions) {
-    for (auto& word : ins.words) {
+  for (const auto& ins : meta.instructions) {
+    for (const auto& word : ins.words) {
       if (word.contains(s)) return true;
     }
   }
 
   return false;
 }
-bool metacode::ScriptGraph::Audit::contains(_id id, token::ETokenKind tok) const
+bool metacode::Graph::Audit::contains(ID id, token::ETokenKind tok) const noexcept
 {
   auto meta = graph.get(id);
 
-  for (auto& ins : meta.instructions) {
-    for (auto& word : ins.words) {
+  for (const auto& ins : meta.instructions) {
+    for (const auto& word : ins.words) {
       if (word.contains(tok)) return true;
     }
   }
 
   return false;
 }
-const metacode::Instruction* metacode::ScriptGraph::Audit::get_instruction(_id start_id, _Pattern pattern) const
+const metacode::Instruction* metacode::Graph::Audit::get_instruction(ID start_id, _Meta_Pattern pattern) const noexcept
 {
-  auto cur_meta = &graph.get(start_id);
+  const auto* cur_meta = &graph.get(start_id);
 
   while (cur_meta) {
-    for (auto& ins : cur_meta->instructions) {
+    for (const auto& ins : cur_meta->instructions) {
       if (ins.match_pattern(pattern)) return &ins;
     }
 
@@ -118,12 +118,12 @@ const metacode::Instruction* metacode::ScriptGraph::Audit::get_instruction(_id s
   }
   return nullptr;
 }
-const metacode::Metacode* metacode::ScriptGraph::Audit::get_metacode(_id start_id, _Pattern pattern) const
+const metacode::Metacode* metacode::Graph::Audit::get_metacode(ID start_id, _Meta_Pattern pattern) const noexcept
 {
-  auto cur_meta = &graph.get(start_id);
+  const auto* cur_meta = &graph.get(start_id);
 
   while (cur_meta) {
-    for (auto& ins : cur_meta->instructions) {
+    for (const auto& ins : cur_meta->instructions) {
       if (ins.match_pattern(pattern)) return cur_meta;
     }
 
@@ -137,10 +137,12 @@ const metacode::Metacode* metacode::ScriptGraph::Audit::get_metacode(_id start_i
 }
 
 
-const metacode::Metacode* metacode::ScriptGraph::Audit::get_metacode_from_pos(size_t file_pos) const
+const metacode::Metacode* metacode::Graph::Audit::get_metacode_from_pos(size_t file_pos) const noexcept
 {
-  auto last = &graph.get(graph.root);
-  for (auto& meta : graph.metacodes) {
+  // root
+  auto* last = &graph.get(ID::make(0));
+
+  for (auto* meta : graph.metacodes) {
     if (meta->start_toks > file_pos) continue;
     if (meta->end_toks < file_pos) continue;
 

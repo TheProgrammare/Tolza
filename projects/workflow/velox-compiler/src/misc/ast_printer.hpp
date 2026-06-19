@@ -1,193 +1,157 @@
 #pragma once
 
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_cop.hpp"
+#include "ast/ast_literal.hpp"
+#include "nexus/ast/forward.hpp"
+#include "nexus/type/forward.hpp"
+
 #include <string_view>
 
 struct AST_Printer final {
   std::string out_print;
+
   /*
-    // ============ AST ============
-    void visit(ast::Node& n) override;
+  // identifiers
+  void print_ID(const ast::ID& n);
+  void print_ID_Qualified(const ast::ID_Qualified& n);
+  void print_ID_Typed(const ast::ID_Typed& n);
 
-    void visit(ast::AType& n) override;
-    void visit(ast::ALiteral& n) override;
-    void visit(ast::ADeclaration& n) override;
-    void visit(ast::ALocal& n) override;
-    void visit(ast::AExpression& n) override;
-    void visit(ast::AIdentifier& n) override;
-    void visit(ast::Expr_ID& n) override;
-    void visit(ast::Expr_ID_Qualified& n) override;
-    void visit(ast::Expr_ID_Type& n) override;
+  void print_Path_Regex(const ast::Path_Regex& n);
 
-    void visit(ast::Root& n) override;
+  void print_Root(const ast::Root& n);
 
-    // ============ DECLARATION ============
-    void visit(ast::declaration::Global_Variable& n) override;
-    void visit(ast::declaration::Function& n) override;
+  void print_Import(const ast::Import& n);
 
-    void visit(ast::declaration::Mod& n) override;
-    void visit(ast::declaration::Export& n) override;
-    void visit(ast::declaration::Extern& n) override;
+  // declarations
+  // globals
+  void print_Global_Variable(const ast::Global_Variable& n);
+  void print_Global_Function(const ast::Global_Function& n);
+  void print_Global_Module(const ast::Global_Module& n);
+  void print_Global_Extern(const ast::Global_Extern& n);
+  void print_Global_Export(const ast::Global_Export& n);
+  void print_Global_Reexport(const ast::Global_Reexport& n);
+  void print_Global_Enum(const ast::Global_Enum& n);
+  void print_Global_Flag(const ast::Global_Flag& n);
+  void print_Global_Union(const ast::Global_Union& n);
+  void print_Global_Alias_Type(const ast::Global_Alias_Type& n);
+  void print_Global_Alias_Module(const ast::Global_Alias_Module& n);
+  void print_Global_Generic(const ast::Global_Generic& n);
 
-    void visit(ast::declaration::Enum& n) override;
-    void visit(ast::declaration::Enum_Element& n) override;
+  void print_Enum_Field(const ast::Enum_Field& n);
+  void print_Flag_Field(const ast::Flag_Field& n);
+  void print_Union_Field(const ast::Union_Field& n);
 
-    void visit(ast::declaration::Flag& n) override;
-    void visit(ast::declaration::Union& n) override;
+  // declarations
+  // locals
+  void print_CodeBlock(const ast::CodeBlock& n);
+  void print_Local_Lambda(const ast::Local_Lambda& n);
+  void print_Local_Lambda_Capture(const ast::Local_Lambda_Capture& n);
+  void print_Local_Parameter(const ast::Local_Parameter& n);
+  void print_Local_Gen_Param_Elem(const ast::Local_Gen_Param_Elem& n);
+  void print_Local_Gen_Params(const ast::Local_Gen_Params& n);
+  void print_Local_Pattern_Element(const ast::Local_Pattern_Element& n);
+  void print_Local_Pattern_Enum(const ast::Local_Pattern_Enum& n);
+  void print_Local_Pattern_Tuple(const ast::Local_Pattern_Tuple& n);
+  void print_Local_Pattern_Form(const ast::Local_Pattern_Form& n);
+  void print_Local_Pattern_Rule_Facet(const ast::Local_Pattern_Rule_Facet& n);
+  void print_Local_Pattern_Facet(const ast::Local_Pattern_Facet& n);
+  void print_Local_Binding(const ast::Local_Binding& n);
+  void print_Local_Tuple_Destructuring(const ast::Local_Tuple_Destructuring& n);
+  void print_Local_Variable(const ast::Local_Variable& n);
+  void print_Local_Capability(const ast::Local_Capability& n);
 
-    void visit(ast::declaration::Module_Alias& n) override;
-    void visit(ast::declaration::Type_Alias& n) override;
+  // compositional oriented paradigm
+  void print_SFM_Facet(const ast::SFM_Facet& n);
+  void print_SFM_View(const ast::SFM_View& n);
+  void print_SFM_Form(const ast::SFM_Form& n);
+  void print_SFM_Form_New(const ast::SFM_Form_New& n);
+  void print_SFM_Form_Del(const ast::SFM_Form_Del& n);
+  void print_SFM_Form_Cast(const ast::SFM_Form_Cast& n);
+  void print_SFM_Form_Op(const ast::SFM_Form_Op& n);
+  void print_SFM_Form_Access_Op(const ast::SFM_Form_Access_Op& n);
+  void print_SFM_Form_Transfert(const ast::SFM_Form_Transfert& n);
+  void print_SFM_Rule(const ast::SFM_Rule& n);
+  void print_SFM_Facet_Field(const ast::SFM_Facet_Field& n);
+  void print_SFM_Rule_Case(const ast::SFM_Rule_Case& n);
 
-    void visit(ast::declaration::Global_Generic& n) override;
+  // generics
+  void print_Generic_Type(const ast::Generic_Type& n);
+  void print_Generic_Can_Cast(const ast::Generic_Can_Cast& n);
+  void print_Generic_Have_Op(const ast::Generic_Have_Op& n);
+  void print_Generic_View(const ast::Generic_View& n);
+  void print_Generic_Facet(const ast::Generic_Facet& n);
+  void print_Generic_Rule(const ast::Generic_Rule& n);
 
-    // ============ LOCAL ============
-    void visit(Local_CodeBlock& n) override;
+  // literals
+  void print_Literal_Boolean(const ast::Literal_Boolean& n);
+  void print_Literal_Integral(const ast::Literal_Integral& n);
+  void print_Literal_Fixed_Point(const ast::Literal_Fixed_Point& n);
+  void print_Literal_Floating_Point(const ast::Literal_Floating_Point& n);
+  void print_Literal_Cune(const ast::Literal_Cune& n);
+  void print_Literal_Rune(const ast::Literal_Rune& n);
+  void print_Literal_Text_Pure(const ast::Literal_Text_Pure& n);
+  void print_Literal_Text_Interpolation(const ast::Literal_Text_Interpolation& n);
+  void print_Literal_Textual_Format(const ast::Literal_Textual_Format& n);
+  void print_Literal_Format_Specifier(const ast::Literal_Format_Specifier& n);
+  void print_Literal_Table(const ast::Literal_Table& n);
+  void print_Literal_Table_Population(const ast::Literal_Table_Population& n);
+  void print_Literal_Map(const ast::Literal_Map& n);
+  void print_Literal_Tuple(const ast::Literal_Tuple& n);
+  void print_Literal_Range(const ast::Literal_Range& n);
+  void print_Literal_Iterator(const ast::Literal_Iterator& n);
+  void print_Literal_Enum(const ast::Literal_Enum& n);
+  void print_Literal_Structured_Data(const ast::Literal_Structured_Data& n);
+  void print_Literal_Form(const ast::Literal_Form& n);
 
-    void visit(Local_Lambda& n) override;
-    void visit(Local_Lambda_Capture& n) override;
-    void visit(Local_Capture_Member& n) override;
+  // expressions
+  void print_Expression_If_Ternary(const ast::Expression_If_Ternary& n);
+  void print_Expression_Member_Access(const ast::Expression_Member_Access& n);
+  void print_Expression_Self(const ast::Expression_Self& n);
+  void print_Expression_Other(const ast::Expression_Other& n);
+  void print_Expression_Call(const ast::Expression_Call& n);
+  void print_Expression_Call_Argument(const ast::Expression_Call_Argument& n);
+  void print_Expression_Call_Rule(const ast::Expression_Call_Rule& n);
+  void print_Expression_Call_Pipe(const ast::Expression_Call_Pipe& n);
+  void print_Expression_Table_Access(const ast::Expression_Table_Access& n);
+  void print_Expression_Ptr_Val(const ast::Expression_Ptr_Val& n);
+  void print_Expression_Mut_Of(const ast::Expression_Mut_Of& n);
+  void print_Expression_Ref_Of(const ast::Expression_Ref_Of& n);
+  void print_Expression_Move_Of(const ast::Expression_Move_Of& n);
+  void print_Expression_Copy_Of(const ast::Expression_Copy_Of& n);
+  void print_Expression_Addr_Of(const ast::Expression_Addr_Of& n);
+  void print_Expression_Size_Of(const ast::Expression_Size_Of& n);
+  void print_Expression_GetBits(const ast::Expression_GetBits& n);
+  void print_Expression_New_Ptr(const ast::Expression_New_Ptr& n);
+  void print_Expression_Get_Type(const ast::Expression_Get_Type& n);
 
-    void visit(Local_Parameter& n) override;
-    void visit(Local_Generic_Parameter_Element& n) override;
-    void visit(Local_Generic_Parameters& n) override;
+  // statements
+  void print_Statement_If(const ast::Statement_If& n);
+  void print_Statement_For(const ast::Statement_For& n);
+  void print_Statement_Loop(const ast::Statement_Loop& n);
+  void print_Statement_While(const ast::Statement_While& n);
+  void print_Statement_GoTo(const ast::Statement_GoTo& n);
+  void print_Statement_GoTo_Label(const ast::Statement_GoTo_Label& n);
+  void print_Statement_Return(const ast::Statement_Return& n);
+  void print_Statement_Break(const ast::Statement_Break& n);
+  void print_Statement_Continue(const ast::Statement_Continue& n);
+  void print_Statement_Match(const ast::Statement_Match& n);
+  void print_Statement_Match_Case(const ast::Statement_Match_Case& n);
 
-    void visit(Local_Pattern& n) override;
-    void visit(Local_Pattern_Enum& n) override;
-    void visit(Local_Pattern_Tuple& n) override;
-    void visit(Local_Pattern_Entity& n) override;
-    void visit(Local_Pattern_System_Component& n) override;
-    void visit(Local_Pattern_Component& n) override;
+  // operations
+  void print_Operation_Cast_As(const ast::Operation_Cast_As& n);
+  void print_Operation_Is(const ast::Operation_Is& n);
+  void print_Operation_In(const ast::Operation_In& n);
+  void print_Operation_Assignment(const ast::Operation_Assignment& n);
+  void print_Operation_Binary(const ast::Operation_Binary& n);
+  void print_Operation_Unary(const ast::Operation_Unary& n);
+  void print_Operation_Interval(const ast::Operation_Interval& n);
 
-    void visit(Local_Variable_Binding& n) override;
-    void visit(Local_Tuple_Destructuring& n) override;
-    void visit(Local_Variable& n) override;
+  // memory
+  void print_Memory_Del(const ast::Memory_Del& n);
+  void print_Memory_Align(const ast::Memory_Align& n);
+  void print_Memory_Drop(const ast::Memory_Drop& n);
 
-    void visit(Local_Capability& n) override;
-
-    // ============ COP ============
-    void visit(ast::declaration::cop::Component& n) override;
-    void visit(ast::declaration::cop::Component_Field& n) override;
-
-    void visit(ast::declaration::cop::Role& n) override;
-
-    void visit(ast::declaration::cop::Entity& n) override;
-    void visit(ast::declaration::cop::Entity_New& n) override;
-    void visit(ast::declaration::cop::Entity_Del& n) override;
-    void visit(ast::declaration::cop::Entity_Cast& n) override;
-    void visit(ast::declaration::cop::Entity_Op& n) override;
-    void visit(ast::declaration::cop::Entity_Access_Op& n) override;
-    void visit(ast::declaration::cop::Entity_Transfert& n) override;
-
-    void visit(ast::declaration::cop::System& n) override;
-    void visit(ast::declaration::cop::System_Case& n) override;
-
-    // ============ GENERIC ============
-    void visit(ast::generic::Is_Type& n) override;
-    void visit(ast::generic::Can_Cast& n) override;
-    void visit(ast::generic::Have_Op& n) override;
-    void visit(ast::generic::Have_Role& n) override;
-    void visit(ast::generic::Use_Component& n) override;
-    void visit(ast::generic::Compatible_System& n) override;
-
-    // ============ TYPE ============
-    void visit(ast::type::Ptr& n) override;
-    void visit(ast::type::Table& n) override;
-    void visit(ast::type::Primitive& n) override;
-    void visit(ast::type::Tuple& n) override;
-    void visit(ast::type::Function_Proto& n) override;
-
-    void visit(ast::type::Get_Expr_Type& n) override;
-
-    // ============ LITERAL ============
-    void visit(ast::literal::Boolean& n) override;
-    void visit(ast::literal::Integral& n) override;
-    void visit(ast::literal::Fixed_Point& n) override;
-    void visit(ast::literal::Floating_Point& n) override;
-
-    void visit(ast::literal::CUNE& n) override;
-    void visit(ast::literal::RUNE& n) override;
-
-    void visit(ast::literal::Text_Pure& n) override;
-    void visit(ast::literal::Text_Interpolation& n) override;
-    void visit(ast::literal::Textual_Format& n) override;
-    void visit(ast::literal::Format_Specifier& n) override;
-
-    void visit(ast::literal::Table& n) override;
-    void visit(ast::literal::Table_Population& n) override;
-
-    void visit(ast::literal::Map& n) override;
-
-    void visit(ast::literal::Tuple& n) override;
-
-    void visit(ast::literal::Range& n) override;
-    void visit(ast::literal::Iterator& n) override;
-
-    void visit(ast::literal::Enum& n) override;
-
-    void visit(ast::literal::Structured_Data& n) override;
-    void visit(ast::literal::Entity& n) override;
-
-    // ============ Expression ============
-    void visit(ast::expression::If_Ternary& n) override;
-
-    void visit(ast::expression::Member_Access& n) override;
-
-    void visit(ast::expression::Self& n) override;
-    void visit(ast::expression::Other& n) override;
-
-    void visit(ast::expression::Call& n) override;
-    void visit(ast::expression::Call_Argument& n) override;
-    void visit(ast::expression::Call_System& n) override;
-    void visit(ast::expression::Call_Pipe& n) override;
-
-    void visit(ast::expression::Table_Access& n) override;
-
-    void visit(ast::expression::Ptr_At& n) override;
-    void visit(ast::expression::Ptr_Offset& n) override;
-    void visit(ast::expression::Ptr_Val& n) override;
-    void visit(ast::expression::Mut_Of& n) override;
-    void visit(ast::expression::Ref_Of& n) override;
-    void visit(ast::expression::Addr_Of& n) override;
-    void visit(ast::expression::Size_Of& n) override;
-    void visit(ast::expression::GetBits& n) override;
-
-    void visit(ast::expression::Move& n) override;
-    void visit(ast::expression::New_Ptr& n) override;
-
-    // ============ STATEMENT ============
-    void visit(ast::statement::If& n) override;
-
-    void visit(ast::statement::For& n) override;
-    void visit(ast::statement::Loop& n) override;
-    void visit(ast::statement::While& n) override;
-    void visit(ast::statement::GoTo& n) override;
-    void visit(ast::statement::GoTo_Label& n) override;
-
-    void visit(ast::statement::Return& n) override;
-    void visit(ast::statement::Break& n) override;
-    void visit(ast::statement::Continue& n) override;
-
-    void visit(ast::statement::Match& n) override;
-    void visit(ast::statement::Match_Case& n) override;
-
-    // ============ OPERATION ============
-    void visit(ast::operation::Cast_As& n) override;
-    void visit(ast::operation::Is& n) override;
-    void visit(ast::operation::In& n) override;
-    void visit(ast::operation::Assignment& n) override;
-    void visit(ast::operation::Binary& n) override;
-    void visit(ast::operation::Unary& n) override;
-    void visit(ast::operation::Interval& n) override;
-    void visit(ast::operation::Ptr_Dist& n) override;
-
-    // ============ MEMORY ============
-    void visit(ast::memory::Del& n) override;
-    void visit(ast::memory::Align& n) override;
-    void visit(ast::memory::Drop& n) override;
-
-    std::string get_file_path() const;
-    */
+  std::string get_file_path() const;
+  */
 };
 
 // %0 velox-compiler version

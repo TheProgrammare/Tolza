@@ -6,26 +6,35 @@
 namespace resolved
 {
 struct Binding final {
-  ast::_gnid  node;
-  symbol::_id sym;
+  ast::ID    node;
+  symbol::ID sym;
+
+  auto operator<=>(const Binding& other) const noexcept
+  {
+    return sym <=> other.sym;
+  }
 };
 
 struct Arena final {
 
+  bool freeze = false;
+
   std::vector<Binding> bindings;
   bool                 sorted = false;
 
-  void add(ast::_gnid n, symbol::_id sym)
+  void add(ast::ID n, symbol::ID sym)
   {
-    bindings.push_back({n, sym});
+    assert(!freeze && "Pool is immutable after symbol resolution");
+
+    bindings.emplace_back(Binding{.node = n, .sym = sym});
     sorted = false;
   }
 
   void finalize();
 
-  symbol::_id get_symbol(ast::_gnid n);
+  [[nodiscard]] symbol::ID get_symbol(ast::ID n);
 
-  bool is_resolved(ast::_gnid n)
+  [[nodiscard]] bool is_resolved(ast::ID n)
   {
     return bool(get_symbol(n));
   }

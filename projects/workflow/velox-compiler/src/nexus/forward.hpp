@@ -1,16 +1,59 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "ids.hpp"
 
 
 using ErrorCode = short;
+enum class EVisibility : uint8_t { Lexical_Scope, File_Scope, Cross_File_Scope };
+
+struct StringHash {
+  using is_transparent = void;
+
+  size_t operator()(std::string_view s) const noexcept
+  {
+    return std::hash<std::string_view>{}(s);
+  }
+
+  size_t operator()(const std::string& s) const noexcept
+  {
+    return (*this)(std::string_view{s});
+  }
+
+  size_t operator()(const char* s) const noexcept
+  {
+    return (*this)(s);
+  }
+};
+
+template <typename T>
+using StringMap = std::unordered_map<std::string, T, StringHash, std::equal_to<>>;
+
+
+enum class EPathAnchor : uint8_t {
+  src,            // user scripts
+  vendor_lib,     // 3rd party scripts
+  stdlib,         // standard library
+  pkg_lib,        // package library
+  binding,        // binding library
+  relative_self,  // relative current module
+  relative_super, // relative parent module
+  relative_root,  // relative script root module
+};
+
+namespace common::compiler
+{
+enum class ECallingConv : uint8_t;
+
+// velox compiler invariant violation : Internal Compiler Error
+[[noreturn]] void DEBUG_VELOX_ICE(std::string_view msg);
+
+} // namespace common::compiler
 
 
 namespace scope
@@ -36,14 +79,15 @@ constexpr std::string_view alternative = "<_>";
 
 namespace compiler
 {
-enum class EPhase;
+enum class EPhase : uint8_t;
 }
 
 namespace token
 {
-enum class ETokenKind;
+
+enum class ETokenKind : uint8_t;
+
 struct Arena;
-struct FileArena;
 struct Viewer;
 struct Token;
 
@@ -51,36 +95,42 @@ struct Token;
 
 namespace ast
 {
-enum class ECapability;
-enum class EPassMode;
-enum class EBinOpType;
-enum class EUnaryOpType;
-enum class EExprPassMode;
-enum class EVariableKind;
-enum class ETransfertType;
-enum class EPathSource;
+enum class ECapability : uint8_t;
+enum class EPassMode : uint8_t;
+enum class EBinOpType : uint8_t;
+enum class EUnaryOpType : uint8_t;
+enum class EExprPassMode : uint8_t;
+enum class EVariableKind : uint8_t;
+enum class ETransfertType : uint8_t;
 
-struct ScriptArena;
 struct Arena;
 struct Node;
 
 enum class ENodeKind : uint8_t;
 
 
-struct COP_Entity;
+struct SFM_Form;
 } // namespace ast
 
 namespace type
 {
-enum class EPrimitiveTypeKind;
+enum class EPrimitiveTypeKind : uint8_t;
+enum class ETypeKind : uint8_t;
 struct Arena;
-struct Decorator;
+struct Dispatcher;
+struct Qualifier;
 struct Type;
 
-struct Decorator final {
+struct Qualifier final {
   bool is_optional = false;
   bool is_volatile = false;
   bool is_constant = false;
+  bool is_opaque   = false;
+
+  [[nodiscard]] bool is_pure() const noexcept
+  {
+    return !is_optional && !is_volatile && !is_constant && !is_opaque;
+  }
 };
 
 } // namespace type
@@ -96,17 +146,17 @@ struct Arena;
 struct Symbol;
 } // namespace symbol
 
-namespace script
+namespace cu
 {
-enum class EFileSource;
-struct ScriptInfo;
-} // namespace script
+enum class EFileSource : uint8_t;
+struct CU;
+} // namespace cu
 
 namespace module
 {
+struct Dispatcher;
 struct Module;
 struct Graph;
-enum class EVisibility;
 } // namespace module
 
 namespace common
@@ -132,7 +182,7 @@ struct Arena;
 
 namespace metacode
 {
-struct ScriptGraph;
+struct Graph;
 struct Preprocessor;
 struct Metacode;
 struct Root;
@@ -142,7 +192,7 @@ struct Instruction;
 struct Metablock;
 struct Binary_Cond;
 struct Unary_Not_Cond;
-using Env = std::vector<token::_id>;
+using Env = std::vector<token::ID>;
 
 } // namespace metacode
 
@@ -156,7 +206,7 @@ struct Parser_Declaration_Local;
 struct Parser_Operator;
 struct Parser_Memory;
 struct Parser_Declaration;
-struct Parser_Declaration_COP;
+struct Parser_Declaration_SFM;
 struct Parser_Statement;
 struct Parser_Context;
 } // namespace parser

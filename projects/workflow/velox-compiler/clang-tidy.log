@@ -1,0 +1,1796 @@
+Running clang-tidy for 48 files out of 48 in compilation database ...
+[ 1/48][12.7s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/symbol.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/symbol.cpp:40:37: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+   40 | symbol::Symbol& symbol::Dispatcher::get(ID symid) noexcept
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/symbol.cpp:46:43: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+   46 | const symbol::Symbol& symbol::Dispatcher::get(ID symid) const noexcept
+      |                                           ^             ~~~~~
+45390 warnings generated.
+
+[ 2/48][17.0s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp
+/media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp:120:3: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+  120 |   char    result[PATH_MAX];
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-common/src/common.cpp:268:5: warning: replace loop by 'std::ranges::all_of()' [readability-use-anyofallof]
+  268 |     for (char c : id) {
+      |     ^
+46553 warnings generated.
+
+[ 3/48][17.4s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_symbol.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_symbol.cpp:8:1: warning: duplicate include [readability-duplicate-include]
+    7 | #include <string>
+      |                  
+    8 | #include <span>
+      | ^~~~~~~~~~~~~~~
+45262 warnings generated.
+
+[ 4/48][19.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:25:38: warning: method 'add_inference' can be made static [readability-convert-member-functions-to-static]
+   25 | void resolver::Inference::Inference::add_inference(ast::Node& n, type::ID type) const
+      |                                      ^                                          ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:106:27: warning: function 'ensure_expression_resolution' has cognitive complexity of 30 (threshold 25) [readability-function-cognitive-complexity]
+  106 | void resolver::Inference::ensure_expression_resolution(ast::Node& p_expr, type::ID p_type_inference)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:109:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  109 |   if (!p_type_inference) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:114:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  114 |   if (ast::ENodeKind_is_literal(p_expr.kind()) && is_lazy_literal(p_expr)) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:114:48: note: +1
+  114 |   if (ast::ENodeKind_is_literal(p_expr.kind()) && is_lazy_literal(p_expr)) {
+      |                                                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:116:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  116 |     if (const auto* ty = p_type_inference.as<type::Primitive>()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:117:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  117 |       if (p_expr.kind() == ast::ENodeKind::Literal_Integral && !type::EPrimitiveTypeKind_is_integral(ty->primitive))
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:117:61: note: +1
+  117 |       if (p_expr.kind() == ast::ENodeKind::Literal_Integral && !type::EPrimitiveTypeKind_is_integral(ty->primitive))
+      |                                                             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:119:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  119 |       if (p_expr.kind() == ast::ENodeKind::Literal_Floating_Point
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:120:11: note: +1
+  120 |           && !type::EPrimitiveTypeKind_is_floating(ty->primitive))
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:123:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  123 |       if (p_expr.kind() == ast::ENodeKind::Literal_Fixed_Point && !type::EPrimitiveTypeKind_is_fixed(ty->primitive))
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:123:64: note: +1
+  123 |       if (p_expr.kind() == ast::ENodeKind::Literal_Fixed_Point && !type::EPrimitiveTypeKind_is_fixed(ty->primitive))
+      |                                                                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:125:12: note: +1, nesting level increased to 2
+  125 |     } else if (auto* ty = p_type_inference.as<type::String>()) {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:126:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  126 |       if (p_expr.kind() != ast::ENodeKind::Literal_Text_Pure) goto bad_inference;
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:127:7: note: +1, nesting level increased to 2
+  127 |     } else
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:131:5: note: +1, nesting level increased to 1
+  131 |   } else {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:136:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  136 |   if (!p_type_inference) return;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:138:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  138 |   if (!p_expr.nodeid.is_inferred()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:144:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  144 |   if (!p_type_inference) return;
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:147:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  147 |   if (p_expr.nodeid.type() != p_type_inference) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:148:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  148 |     if (type::ETypeKind_is_user_defined(p_type_inference.get().kind())) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:151:7: note: +1, nesting level increased to 2
+  151 |     } else {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:157:27: warning: method 'is_lazy_literal' can be made static [readability-convert-member-functions-to-static]
+  157 | bool resolver::Inference::is_lazy_literal(ast::Node& n) const
+      |                           ^                             ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:512:27: warning: method 'resolve_Expression_Other' can be made static [readability-convert-member-functions-to-static]
+  512 | void resolver::Inference::resolve_Expression_Other(ast::Expression_Other& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:516:27: warning: method 'resolve_Expression_Call_Argument' can be made static [readability-convert-member-functions-to-static]
+  516 | void resolver::Inference::resolve_Expression_Call_Argument(ast::Expression_Call_Argument& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:528:27: warning: method 'resolve_Expression_Call_Pipe' can be made static [readability-convert-member-functions-to-static]
+  528 | void resolver::Inference::resolve_Expression_Call_Pipe(ast::Expression_Call_Pipe& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:532:27: warning: method 'resolve_Expression_Call_System' can be made static [readability-convert-member-functions-to-static]
+  532 | void resolver::Inference::resolve_Expression_Call_System(ast::Expression_Call_System& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:536:27: warning: method 'resolve_Expression_Table_Access' can be made static [readability-convert-member-functions-to-static]
+  536 | void resolver::Inference::resolve_Expression_Table_Access(ast::Expression_Table_Access& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:540:27: warning: method 'resolve_Expression_Ptr_Val' can be made static [readability-convert-member-functions-to-static]
+  540 | void resolver::Inference::resolve_Expression_Ptr_Val(ast::Expression_Ptr_Val& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:600:27: warning: method 'resolve_Expression_New_Ptr' can be made static [readability-convert-member-functions-to-static]
+  600 | void resolver::Inference::resolve_Expression_New_Ptr(ast::Expression_New_Ptr& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:604:27: warning: method 'resolve_Literal_Boolean' can be made const [readability-make-member-function-const]
+  604 | void resolver::Inference::resolve_Literal_Boolean(ast::Literal_Boolean& n)
+      |                           ^                                               
+      |                                                                            const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:664:27: warning: method 'resolve_Literal_Cune' can be made const [readability-make-member-function-const]
+  664 | void resolver::Inference::resolve_Literal_Cune(ast::Literal_Cune& n)
+      |                           ^                                         
+      |                                                                      const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:670:27: warning: method 'resolve_Literal_Rune' can be made const [readability-make-member-function-const]
+  670 | void resolver::Inference::resolve_Literal_Rune(ast::Literal_Rune& n)
+      |                           ^                                         
+      |                                                                      const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:677:27: warning: method 'resolve_Literal_Table' can be made static [readability-convert-member-functions-to-static]
+  677 | void resolver::Inference::resolve_Literal_Table(ast::Literal_Table& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:681:27: warning: method 'resolve_Literal_Map' can be made static [readability-convert-member-functions-to-static]
+  681 | void resolver::Inference::resolve_Literal_Map(ast::Literal_Map& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:685:27: warning: method 'resolve_Literal_Text_Interpolation' can be made static [readability-convert-member-functions-to-static]
+  685 | void resolver::Inference::resolve_Literal_Text_Interpolation(ast::Literal_Text_Interpolation& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:700:27: warning: method 'resolve_Literal_Textual_Format' can be made static [readability-convert-member-functions-to-static]
+  700 | void resolver::Inference::resolve_Literal_Textual_Format(ast::Literal_Textual_Format& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:704:27: warning: method 'resolve_Literal_Enum' can be made static [readability-convert-member-functions-to-static]
+  704 | void resolver::Inference::resolve_Literal_Enum(ast::Literal_Enum& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:708:27: warning: method 'resolve_Literal_Tuple' can be made static [readability-convert-member-functions-to-static]
+  708 | void resolver::Inference::resolve_Literal_Tuple(ast::Literal_Tuple& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:719:27: warning: method 'resolve_Literal_Structured_Data' can be made static [readability-convert-member-functions-to-static]
+  719 | void resolver::Inference::resolve_Literal_Structured_Data(ast::Literal_Structured_Data& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:723:27: warning: method 'resolve_Literal_Entity' can be made static [readability-convert-member-functions-to-static]
+  723 | void resolver::Inference::resolve_Literal_Entity(ast::Literal_Entity& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:727:27: warning: method 'resolve_Literal_Iterator' can be made static [readability-convert-member-functions-to-static]
+  727 | void resolver::Inference::resolve_Literal_Iterator(ast::Literal_Iterator& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:752:27: warning: method 'resolve_Operation_Is' can be made static [readability-convert-member-functions-to-static]
+  752 | void resolver::Inference::resolve_Operation_Is(ast::Operation_Is& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:756:27: warning: method 'resolve_Operation_In' can be made static [readability-convert-member-functions-to-static]
+  756 | void resolver::Inference::resolve_Operation_In(ast::Operation_In& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:813:27: warning: method 'resolve_Operation_Interval' can be made static [readability-convert-member-functions-to-static]
+  813 | void resolver::Inference::resolve_Operation_Interval(ast::Operation_Interval& n)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.hpp:88:8: warning: function 'resolver::Inference::ensure_expression_resolution' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+   88 |   void ensure_expression_resolution(ast::Node& p_expr, type::ID p_type_inferrance);
+      |        ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.cpp:106:27: note: the definition seen here
+  106 | void resolver::Inference::ensure_expression_resolution(ast::Node& p_expr, type::ID p_type_inference)
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_inference.hpp:88:8: note: differing parameters are named here: ('p_type_inferrance'), in definition: ('p_type_inference')
+   88 |   void ensure_expression_resolution(ast::Node& p_expr, type::ID p_type_inferrance);
+      |        ^                                                        ~~~~~~~~~~~~~~~~~
+      |                                                                 p_type_inference
+42810 warnings generated.
+
+[ 5/48][12.7s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/inference.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+42865 warnings generated.
+
+[ 6/48][11.8s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:59:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+   59 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:63:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+   63 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:71:16: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   71 |   static const bool table[static_cast<size_t>(magic_enum::enum_count<::type::EPrimitiveTypeKind>())
+      |                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:121:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+  121 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:124:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+  124 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/rules/rule_type.cpp:127:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+  127 | }
+      | ^
+40324 warnings generated.
+
+[ 7/48][21.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_expression.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_expression.cpp:47:18: warning: std::move of the variable 'op' of the trivially-copyable type 'ast::ID' has no effect; remove std::move() [performance-move-const-arg]
+   47 |     node.left  = std::move(op);
+      |                  ^~~~~~~~~~  ~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_expression.cpp:84:5: warning: do not use 'else' after 'return' [readability-else-after-return]
+   84 |   } else if (p.check_any(token::k_start_identifier)) {
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   85 |     return p.p_base->identifier();
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   86 |   }
+      |   ~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_expression.cpp:98:3: warning: 'auto node' can be declared as 'auto *node' [readability-qualified-auto]
+   98 |   auto node = p_base_expr.get();
+      |   ^~~~
+      |   auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_expression.cpp:186:24: warning: std::move of the variable 'p_expr' of the trivially-copyable type 'ast::ID' has no effect; remove std::move() [performance-move-const-arg]
+  186 |   cast_as.expression = std::move(p_expr);
+      |                        ^~~~~~~~~~      ~
+42824 warnings generated.
+
+[ 8/48][27.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:31:16: warning: function 'velox_codegen' has cognitive complexity of 34 (threshold 25) [readability-function-cognitive-complexity]
+   31 | void ffi::AST::velox_codegen(std::string_view dest) const
+      |                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:38:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   38 |   if (!os) throw std::runtime_error("Cannot open file: \"" + fs::path(dest).string() + "\"");
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:54:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   54 |   for (const auto& elem : nodes->nodes) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:55:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+   55 |     switch (elem->kind()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:75:5: note: +1, including nesting penalty of 0, nesting level increased to 1
+   75 |     if (!reexports.empty()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:78:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+   78 |       for (const auto& elem : reexports) _imp += ffi::reexport_to_str(*elem);
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:81:5: note: +1, including nesting penalty of 0, nesting level increased to 1
+   81 |     if (!imports.empty()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:84:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+   84 |       for (const auto& elem : imports) _imp += ffi::import_to_str(*elem);
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:94:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   94 |   if (!enums.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:97:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+   97 |     for (const auto& elem : enums) os << ffi::enum_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:99:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   99 |   if (!comps.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:102:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  102 |     for (const auto& elem : comps) os << ffi::comp_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:104:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  104 |   if (!unions.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:107:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  107 |     for (const auto& elem : unions) os << ffi::union_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:109:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  109 |   if (!globals.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:112:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  112 |     for (const auto& elem : globals) os << ffi::global_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:114:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  114 |   if (!funcs.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:117:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  117 |     for (const auto& elem : funcs) os << ffi::func_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:119:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  119 |   if (!typealiases.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:122:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  122 |     for (const auto& elem : typealiases) os << ffi::typealias_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:124:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  124 |   if (!flags.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:127:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  127 |     for (const auto& elem : flags) os << ffi::flag_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:129:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  129 |   if (!entities.empty()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:132:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  132 |     for (const auto& elem : entities) os << ffi::entity_to_str(*elem);
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:277:9: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  277 |     if (proto->params.size() > 0) params += ", ";
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~
+      |         !proto->params.empty()
+/usr/bin/../lib/gcc/x86_64-linux-gnu/14/../../../../include/c++/14/bits/stl_vector.h:1090:7: note: method 'vector'::empty() defined here
+ 1090 |       empty() const _GLIBCXX_NOEXCEPT
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/binder_ffi.cpp:303:11: warning: an exception may be thrown in function 'write_barrel' which should not throw exceptions [bugprone-exception-escape]
+  303 | void ffi::write_barrel(AST& barrel_ast, const std::map<std::string, AST>& compilation_units) noexcept
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+46441 warnings generated.
+
+[ 9/48][16.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/ast_printer.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+45241 warnings generated.
+
+[10/48][32.3s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:11:1: warning: duplicate include [readability-duplicate-include]
+   10 | #include "nexus/lexer/token.hpp"
+      |                                 
+   11 | #include "ast/ast_declaration_cop.hpp"
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:57:18: warning: parameter 'elems' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+   17 |   t->elems     = elems;
+      |                  ^    
+      |                  std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:65:20: warning: parameter 'params' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+   65 |   t->params      = params;
+      |                    ^     
+      |                    std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:74:18: warning: parameter 'variants' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+   74 |   t->variants  = variants;
+      |                  ^       
+      |                  std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:90:18: warning: parameter 'variants' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+   90 |   t->variants  = variants;
+      |                  ^       
+      |                  std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:98:18: warning: parameter 'fields' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+   98 |   t->fields    = fields;
+      |                  ^     
+      |                  std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:106:19: warning: parameter 'components' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+  106 |   t->components = components;
+      |                   ^         
+      |                   std::move()
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:114:19: warning: parameter 'components' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+  114 |   t->components = components;
+      |                   ^         
+      |                   std::move()
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:149:21: warning: method 'hash_type' can be made static [readability-convert-member-functions-to-static]
+  149 | size_t type::Arena::hash_type(Type const& t) const noexcept
+      |                     ^                        ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:155:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  155 |     auto d = static_cast<const type::Primitive*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:161:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  161 |     auto d = static_cast<const type::Ptr*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:167:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  167 |     auto d = static_cast<const type::StaticArray*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:174:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  174 |     auto d = static_cast<const type::DynamicArray*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:180:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  180 |     auto d = static_cast<const type::Tuple*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:186:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  186 |     auto d = static_cast<const type::Prototype*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:196:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  196 |     auto d = static_cast<const type::Enum*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:202:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  202 |     auto d = static_cast<const type::Flag*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:208:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  208 |     auto d = static_cast<const type::Union*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:214:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  214 |     auto d = static_cast<const type::Component*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:220:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  220 |     auto d = static_cast<const type::Entity*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:226:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  226 |     auto d = static_cast<const type::Role*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:242:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
+  242 |     auto d = static_cast<const type::String*>(&t);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:291:5: warning: 'auto tu' can be declared as 'const auto *tu' [readability-qualified-auto]
+  291 |     auto        tu = static_cast<const type::Tuple*>(this);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:301:5: warning: 'auto ptr' can be declared as 'const auto *ptr' [readability-qualified-auto]
+  301 |     auto ptr = static_cast<const type::Ptr*>(this);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:307:5: warning: 'auto proto' can be declared as 'const auto *proto' [readability-qualified-auto]
+  307 |     auto        proto = static_cast<const type::Prototype*>(this);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:317:5: warning: 'auto comp' can be declared as 'const auto *comp' [readability-qualified-auto]
+  317 |     auto comp = static_cast<const type::Component*>(this);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:318:5: warning: 'auto node' can be declared as 'auto *node' [readability-qualified-auto]
+  318 |     auto node = comp->sym.node().as<ast::COP_Component>();
+      |     ^~~~
+      |     auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:323:7: warning: 'auto f_node' can be declared as 'const auto *f_node' [readability-qualified-auto]
+  323 |       auto f_node = field.as<ast::COP_Component_Field>();
+      |       ^~~~
+      |       const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:332:5: warning: 'auto role' can be declared as 'const auto *role' [readability-qualified-auto]
+  332 |     auto role = static_cast<const type::Role*>(this);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:352:5: warning: 'auto pa' can be declared as 'const auto *pa' [readability-qualified-auto]
+  352 |     auto pa = static_cast<const type::Primitive*>(&a);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:353:5: warning: 'auto pb' can be declared as 'const auto *pb' [readability-qualified-auto]
+  353 |     auto pb = static_cast<const type::Primitive*>(&b);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:408:5: warning: 'auto a_id' can be declared as 'const auto *a_id' [readability-qualified-auto]
+  408 |     auto a_id = static_cast<const type::Identifier*>(&a);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:409:5: warning: 'auto b_id' can be declared as 'const auto *b_id' [readability-qualified-auto]
+  409 |     auto b_id = static_cast<const type::Identifier*>(&b);
+      |     ^~~~
+      |     const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:609:31: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+  609 | type::Type& type::Dispatcher::get(ID id) noexcept
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:614:37: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+  614 | const type::Type& type::Dispatcher::get(ID id) const noexcept
+      |                                     ^          ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:623:3: warning: 'auto ty' can be declared as 'auto *ty' [readability-qualified-auto]
+  623 |   auto ty = &get(id);
+      |   ^~~~
+      |   auto *
+43524 warnings generated.
+
+[11/48][31.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/static_evaluation.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:28:19: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   28 |   Codegen(cu::CU& _CU);
+      |                   ^~~
+      |                   CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:32:33: warning: declaration uses identifier '__module', which is a reserved identifier [bugprone-reserved-identifier]
+   32 |   std::unique_ptr<llvm::Module> __module;
+      |                                 ^~~~~~~~
+      |                                 _module
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+55535 warnings generated.
+
+[12/48][19.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ids.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ids.cpp:16:17: warning: method 'get' can be made const [readability-make-member-function-const]
+   16 | cu::CU& cu::ID::get() noexcept
+      |                 ^
+      |                       const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+43003 warnings generated.
+
+[13/48][20.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.cpp:51:26: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
+   51 |   if (isprint(c)) return std::string(1, c); // visible char
+      |                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.cpp:106:41: warning: narrowing conversion from 'unsigned long' to signed type 'int' is implementation-defined [bugprone-narrowing-conversions]
+  106 |   const int         dist              = int(end_pos) - cu.file_info.get_line_start(line) - cursor.size();
+      |                                         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.cpp:164:5: warning: use a ranges version of this algorithm [modernize-use-ranges]
+  164 |     std::replace(top_cursor.begin(), top_cursor.end(), '^', 'v');
+      |     ^~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~
+      |     std::ranges::replace top_cursor
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+46074 warnings generated.
+
+[14/48][12.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_memory.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+41613 warnings generated.
+
+[15/48][26.9s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compiler.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/unresolved.hpp:22:22: warning: method 'is_unresolved' can be made const [readability-make-member-function-const]
+   22 |   [[nodiscard]] bool is_unresolved(ast::ID n)
+      |                      ^                       
+      |                                               const
+55948 warnings generated.
+
+[16/48][26.2s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.cpp:58:36: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   58 | resolver::Codegen::Codegen(cu::CU& _CU)
+      |                                    ^~~
+      |                                    CU
+   59 |   : CU(_CU)
+      |        ~~~
+      |        CU
+   60 |   , ctx(compiler::LLVM_CTX)
+   61 |   , __module(std::make_unique<llvm::Module>(_CU.file_info.get_module_name(), ctx))
+      |                                             ~~~
+      |                                             CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.cpp:80:15: warning: conditional operator is used as sub-expression of parent conditional operator, refrain from using nested conditional operators [readability-avoid-nested-conditional-operator]
+   80 |             : compiler::OPTIONS.target.get_arch_size() == 64 ? f64Ty
+      |               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.cpp:79:13: note: parent conditional operator here
+   79 |   , fSizeTy(compiler::OPTIONS.target.get_arch_size() == 32   ? f32Ty
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.cpp:92:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+   92 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:28:19: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   28 |   Codegen(cu::CU& _CU);
+      |                   ^~~
+      |                   CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:32:33: warning: declaration uses identifier '__module', which is a reserved identifier [bugprone-reserved-identifier]
+   32 |   std::unique_ptr<llvm::Module> __module;
+      |                                 ^~~~~~~~
+      |                                 _module
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+55042 warnings generated.
+
+[17/48][22.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.cpp:34:41: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+   34 |   case EPatternKey::Alternative: return tokens.size() > 0;
+      |                                         ^~~~~~~~~~~~~~~~~
+      |                                         !tokens.empty()
+/usr/bin/../lib/gcc/x86_64-linux-gnu/14/../../../../include/c++/14/bits/stl_vector.h:1090:7: note: method 'vector'::empty() defined here
+ 1090 |       empty() const _GLIBCXX_NOEXCEPT
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+40320 warnings generated.
+
+[18/48][20.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/token_generator.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/token_generator.cpp:21:28: warning: narrowing conversion from 'double' to 'size_type' (aka 'unsigned long') [bugprone-narrowing-conversions]
+   21 |   tokens_generated.reserve(CU.file_info.tokens->tokens.size() * 1.33);
+      |                            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/token_generator.cpp:21:28: warning: narrowing conversion from 'size_type' (aka 'unsigned long') to 'double' [bugprone-narrowing-conversions]
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/token_generator.cpp:41:58: warning: method 'scan_token' can be made static [readability-convert-member-functions-to-static]
+   41 | metacode::Generator::EPostTokenKind metacode::Generator::scan_token(token::ID tok)
+      |                                                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+43340 warnings generated.
+
+[19/48][35.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:61:25: warning: use '= default' to define a trivial destructor [modernize-use-equals-default]
+   61 | parser::Parser_Context::~Parser_Context()
+      |                         ^
+   62 | {
+      | ~
+      | = default;
+   63 | }
+      | ~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:105:14: warning: function 'is_gen_args' has cognitive complexity of 27 (threshold 25) [readability-function-cognitive-complexity]
+  105 | bool parser::is_gen_args(token::Viewer& tok_v) noexcept
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:116:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  116 |   while (!tok_v.is_end()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:120:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  120 |     for (const auto tok_valid : ::token::k_args_generic_valid) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:121:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  121 |       if (tok.kind == tok_valid) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:122:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  122 |         if (tok.kind == ::token::ETokenKind::L_ANGLE) ++nestedBrackets;
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:123:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  123 |         if (tok.kind == ::token::ETokenKind::R_ANGLE) --nestedBrackets;
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:129:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  129 |     if (!tokValid) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:135:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  135 |     if (nestedBrackets == 0) break;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:143:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  143 |   if (isGenArgsValid && nestedBrackets == 0) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:143:22: note: +1
+  143 |   if (isGenArgsValid && nestedBrackets == 0) {
+      |                      ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:146:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  146 |     if (tokAfterGenArgs.kind == token::ETokenKind::L_PAREN)
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:148:5: note: +1, nesting level increased to 2
+  148 |     else {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:150:31: note: +1
+  150 |                               || tok_v.check_any(token::k_op_comparison));
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:154:38: note: +1
+  154 |   const bool result = isGenArgsValid && isAfterGenArgsValid;
+      |                                      ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:155:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  155 |   if (result)
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:157:3: note: +1, nesting level increased to 1
+  157 |   else
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:411:1: warning: duplicate include [readability-duplicate-include]
+  410 | 
+  411 | #include "ast/ast_base.hpp"
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_context.cpp:413:1: warning: duplicate include [readability-duplicate-include]
+  412 | #include "ast/ast_declaration_cop.hpp"
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  413 | #include "ast/ast_declaration_global.hpp"
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+45218 warnings generated.
+
+[20/48][23.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_type.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_type.cpp:48:27: warning: method 'get_decorator' can be made const [readability-make-member-function-const]
+   48 | void parser::Parser_Type::get_decorator(type::Qualifier& decorator)
+      |                           ^                                        
+      |                                                                     const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_type.cpp:191:44: warning: method 'explicit_tuple' can be made const [readability-make-member-function-const]
+  191 | std::vector<type::ID> parser::Parser_Type::explicit_tuple()
+      |                                            ^               
+      |                                                             const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_type.cpp:292:50: warning: method 'parameters' can be made const [readability-make-member-function-const]
+  292 | parser::Parser_Type::Params parser::Parser_Type::parameters()
+      |                                                  ^           
+      |                                                               const
+44697 warnings generated.
+
+[21/48][13.7s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_statement.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_statement.cpp:256:7: error: Value stored to 'otherDefine' is never read [clang-analyzer-deadcode.DeadStores,-warnings-as-errors]
+  256 |       otherDefine      = true;
+      |       ^                  ~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_statement.cpp:256:7: note: Value stored to 'otherDefine' is never read
+  256 |       otherDefine      = true;
+      |       ^                  ~~~~
+42877 warnings generated.
+
+[22/48][6.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/token.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+25228 warnings generated.
+
+[23/48][17.9s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/unresolved.hpp:22:22: warning: method 'is_unresolved' can be made const [readability-make-member-function-const]
+   22 |   [[nodiscard]] bool is_unresolved(ast::ID n)
+      |                      ^                       
+      |                                               const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:36:22: warning: use '= default' to define a trivial destructor [modernize-use-equals-default]
+   36 | parser::Parser_Base::~Parser_Base()
+      |                      ^
+   37 | {
+      | ~
+      | = default;
+   38 | }
+      | ~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:195:30: warning: method 'parse_instruction' can be made const [readability-make-member-function-const]
+  195 | ast::ID parser::Parser_Base::parse_instruction()
+      |                              ^                  
+      |                                                  const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:343:16: warning: conditional operator is used as sub-expression of parent conditional operator, refrain from using nested conditional operators [readability-avoid-nested-conditional-operator]
+  343 |              : parent_scope  ? ast::EPathSource::Super
+      |                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:342:14: note: parent conditional operator here
+  342 |   id.src   = root_scope      ? ast::EPathSource::Root
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:344:16: warning: conditional operator is used as sub-expression of parent conditional operator, refrain from using nested conditional operators [readability-avoid-nested-conditional-operator]
+  344 |              : current_scope ? ast::EPathSource::Self
+      |                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:343:16: note: parent conditional operator here
+  343 |              : parent_scope  ? ast::EPathSource::Super
+      |                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_base.cpp:349:26: warning: unnecessary temporary object created while calling emplace_back [modernize-use-emplace]
+  349 |     id.path.emplace_back(std::string(p.tok_to_str(p.next().tokid)));
+      |                          ^~~~~~~~~~~~                            ~
+42932 warnings generated.
+
+[24/48][46.3s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/main.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/main.cpp:23:31: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   23 | int run_velox(int argc, const char* argv[])
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/parser_command.hpp:39:44: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   39 |   Command(CLI::App& _app, int _argc, const char* _argv[])
+      |                                            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+54565 warnings generated.
+
+[25/48][27.8s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:24:1: warning: duplicate include [readability-duplicate-include]
+   23 | #include "nexus/resolved.hpp"
+      |                              
+   24 | #include "nexus/inference.hpp"
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:28:62: warning: pass by value and use std::move [modernize-pass-by-value]
+   20 | #include <common/common.hpp>
+   21 | #include <common/compiler_options.hpp>
+   22 | #include "nexus/pipeline.hpp"
+   23 | #include "nexus/resolved.hpp"
+   24 | #include "nexus/inference.hpp"
+   25 | 
+   26 | namespace fs = std::filesystem;
+   27 | 
+   28 | cu::FileInfo::FileInfo(cu::ID _cuid, std::string_view _path, const std::string& _data,
+      |                                                              ^~~~~~~~~~~~~~~~~~
+      |                                                              std::string 
+   29 |                        const std::vector<size_t>& _last_offset_line)
+   30 |   : cuid(_cuid)
+   31 |   , data(_data)
+      |               
+      |          std::move( )
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:36:16: warning: redundant explicit casting to the same type 'bool' as the sub-expression, remove this casting [readability-redundant-casting]
+   36 |   , is_mod_dir(bool(fs::path(_path).stem() == "mod"))
+      |                ^~~~~                               ~
+      |                (                                   )
+/usr/bin/../lib/gcc/x86_64-linux-gnu/14/../../../../include/c++/14/bits/fs_path.h:560:17: note: source type originates from the invocation of this function
+  560 |     friend bool operator==(const path& __lhs, const path& __rhs) noexcept
+      |            ~~~~ ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:64:3: warning: 'auto root_node' can be declared as 'auto *root_node' [readability-qualified-auto]
+   64 |   auto  root_node = nodes->get_file_root();
+      |   ^~~~
+      |   auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:91:3: warning: 'auto root_node' can be declared as 'auto *root_node' [readability-qualified-auto]
+   91 |   auto  root_node = nodes->get_file_root();
+      |   ^~~~
+      |   auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:116:10: warning: use a ranges version of this algorithm [modernize-use-ranges]
+    3 |   return std::lower_bound(last_offset_line.begin(), last_offset_line.end(), pos) - last_offset_line.begin();
+      |          ^~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~
+      |          std::ranges::lower_bound last_offset_line
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/compiler/compilation_unit.cpp:125:10: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
+  125 |   return std::string_view(data.data() + get_line_start(p_line), line_size);
+      |          ^~~~~~~~~~~~~~~~~                                               ~
+      |          {                                                               }
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+53195 warnings generated.
+
+[26/48][25.4s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:185:37: warning: conditional operator is used as sub-expression of parent conditional operator, refrain from using nested conditional operators [readability-avoid-nested-conditional-operator]
+  185 |                                   : p_tok.kind == token::ETokenKind::L_OCT ? 8
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:184:35: note: parent conditional operator here
+  184 |                                  (p_tok.kind == token::ETokenKind::L_BIN   ? 2
+      |                                   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:186:37: warning: conditional operator is used as sub-expression of parent conditional operator, refrain from using nested conditional operators [readability-avoid-nested-conditional-operator]
+  186 |                                   : p_tok.kind == token::ETokenKind::L_HEX ? 16
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:185:37: note: parent conditional operator here
+  185 |                                   : p_tok.kind == token::ETokenKind::L_OCT ? 8
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:217:33: warning: function 'literal_textual' has cognitive complexity of 26 (threshold 25) [readability-function-cognitive-complexity]
+  217 | ast::ID parser::Parser_Literal::literal_textual()
+      |                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:222:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  222 |   while (!p.is_end()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:224:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  224 |     if (p.check(token::ETokenKind::L_TEXTUAL)) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:229:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  229 |       if (p.match(token::ETokenKind::T_TEXT) || p.match_val("t")) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:229:46: note: +1
+  229 |       if (p.match(token::ETokenKind::T_TEXT) || p.match_val("t")) {
+      |                                              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:231:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  231 |         if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:231:50: note: +1
+  231 |         if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+      |                                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:234:14: note: +1, nesting level increased to 3
+  234 |       } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:234:57: note: +1
+  234 |       } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
+      |                                                         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:236:14: note: +1, nesting level increased to 3
+  236 |       } else if (p.match(token::ETokenKind::T_CUNE) || p.match_val("cu")) {
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:236:53: note: +1
+  236 |       } else if (p.match(token::ETokenKind::T_CUNE) || p.match_val("cu")) {
+      |                                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:238:14: note: +1, nesting level increased to 3
+  238 |       } else if (p.match(token::ETokenKind::T_RUNE) || p.match_val("r")) {
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:238:53: note: +1
+  238 |       } else if (p.match(token::ETokenKind::T_RUNE) || p.match_val("r")) {
+      |                                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:247:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  247 |     if (p.match(token::ETokenKind::S_INTERPOLATION_START)) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:251:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  251 |       if (p.match(token::ETokenKind::COLON)) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:266:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  266 |   if (values.size() == 1) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:267:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  267 |     if (const auto* node = values[0].as<ast::Literal_Text_Pure>()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:293:7: warning: use a ranges version of this algorithm [modernize-use-ranges]
+    6 |   if (std::find(token::k_op_format.begin(), token::k_op_format.end(), p.peek(1).kind) != token::k_op_format.end()) {
+      |       ^~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~~~~~~~~~~~
+      |       std::ranges::find token::k_op_format
+48191 warnings generated.
+
+[27/48][44.0s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:31:28: warning: function 'to_type' has cognitive complexity of 32 (threshold 25) [readability-function-cognitive-complexity]
+   31 | type::ID ffi::JSON_Reader::to_type(const json& j)
+      |                            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:34:50: note: +1
+   34 |   const bool is_forward_id = !j.contains("kind") && j.contains("name");
+      |                                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:37:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   37 |   if (j.contains("decorator")) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:43:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+   43 |     while (std::getline(ss, elem, ',')) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:47:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+   47 |     for (const auto& s : elems) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:48:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+   48 |       if (s == "const")
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:50:12: note: +1, nesting level increased to 3
+   50 |       else if (s == "volatile")
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:52:12: note: +1, nesting level increased to 3
+   52 |       else if (s == "optional")
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:57:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   57 |   if (is_forward_id) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:60:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+   60 |     if (!common::is_valid_identifier(name))
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:72:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+   72 |   if (kind == type::ETypeKind::NONE) switch (kind) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:84:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+   84 |       if (primty == type::EPrimitiveTypeKind::NONE)
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:94:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+   94 |       if (strty == type::ETextType::NONE)
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:103:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  103 |       for (const auto& elem : elems) types.emplace_back(to_type(elem));
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:113:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  113 |       if (size <= 0) throw std::runtime_error("Illegal size specified (" + std::to_string(size) + ") <= 0");
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:133:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  133 |       if (data.contains("ret_type")) ret_type = to_type(data.value("ret_type", json::object()));
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:138:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  138 |       if (data.contains("params")) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:142:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  142 |         for (const auto& param : data_params) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:162:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  162 |       if (!common::is_valid_identifier(name, true))
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:175:24: warning: method 'expect_field' can be made static [readability-convert-member-functions-to-static]
+  175 | void ffi::JSON_Reader::expect_field(const json& j, std::string_view field_name) const
+      |                        ^                                                        ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:235:28: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  235 |   for (const auto& field : fields.array()) {
+      |                            ^~~~~~~
+      |                            nlohmann::basic_json<std::map, std::vector, std::basic_string<char, std::char_traits<char>, std::allocator<char>>, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char>>, void>::
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_json_reader.cpp:340:27: warning: static member accessed through instance [readability-static-accessed-through-instance]
+  340 |   for (const auto& comp : components.array()) {
+      |                           ^~~~~~~~~~~
+      |                           nlohmann::basic_json<std::map, std::vector, std::basic_string<char, std::char_traits<char>, std::allocator<char>>, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::vector<unsigned char, std::allocator<unsigned char>>, void>::
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+58790 warnings generated.
+
+[28/48][21.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/preprocessor.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/preprocessor.cpp:77:30: warning: method 'add_generated_token' can be made const [readability-make-member-function-const]
+   77 | void metacode::Preprocessor::add_generated_token(token::ID id)
+      |                              ^                                
+      |                                                                const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/preprocessor.cpp:84:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+   84 | }
+      | ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/preprocessor.cpp:133:36: warning: unnecessary temporary object created while calling emplace_back [modernize-use-emplace]
+  133 |           word.tokens.emplace_back(std::string(tok_to_str(tok_v->next().tokid)));
+      |                                    ^~~~~~~~~~~~                               ~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/preprocessor.cpp:464:30: warning: method 'check_metacode' can be made const [readability-make-member-function-const]
+  464 | bool metacode::Preprocessor::check_metacode(std::initializer_list<std::string_view> pattern)
+      |                              ^                                                              
+      |                                                                                              const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+43088 warnings generated.
+
+[29/48][26.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/codegen_tools.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/codegen_tools.cpp:25:1: warning: duplicate include [readability-duplicate-include]
+   24 | #include "ast/ast_expression.hpp"
+      |                                  
+   25 | #include "nexus/ast/ast.hpp"
+      | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:28:19: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   28 |   Codegen(cu::CU& _CU);
+      |                   ^~~
+      |                   CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/codegen/resolver_codegen.hpp:32:33: warning: declaration uses identifier '__module', which is a reserved identifier [bugprone-reserved-identifier]
+   32 |   std::unique_ptr<llvm::Module> __module;
+      |                                 ^~~~~~~~
+      |                                 _module
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+52208 warnings generated.
+
+[30/48][15.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_declaration_global.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:21:7: warning: declaration uses identifier '_Meta_Key', which is a reserved identifier [bugprone-reserved-identifier]
+   21 | using _Meta_Key     = std::string_view;
+      |       ^~~~~~~~~
+      |       Meta_Key
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/metacode/metacode.hpp:22:7: warning: declaration uses identifier '_Meta_Pattern', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Meta_Pattern = std::initializer_list<std::string_view>;
+      |       ^~~~~~~~~~~~~
+      |       Meta_Pattern
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+43012 warnings generated.
+
+[31/48][13.0s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/ast/ast_numeric_128_bits.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/ast/ast_numeric_128_bits.cpp:34:16: warning: method 'string_to_f128' can be made const [readability-make-member-function-const]
+   34 | void Float128::string_to_f128(std::string_view s)
+      |                ^                                 
+      |                                                   const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/ast/ast_numeric_128_bits.cpp:45:10: warning: avoid repeating the return type from the declaration; use a braced initializer list instead [modernize-return-braced-init-list]
+   45 |   return std::string(buf.begin(), buf.end());
+      |          ^
+42283 warnings generated.
+
+[32/48][22.6s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:76:22: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   76 | Lexer::Lexer(cu::CU& _CU)
+      |                      ^~~
+      |                      CU
+   77 |   : CU(_CU)
+      |        ~~~
+      |        CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:100:13: warning: function 'tokenize' has cognitive complexity of 52 (threshold 25) [readability-function-cognitive-complexity]
+  100 | bool Lexer::tokenize(const std::set<char>& exit_char) noexcept
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:102:21: note: nesting level increased to 1
+  102 |   auto stop_guard = [&]() -> bool {
+      |                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:103:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  103 |     while ((common::is_ctrl(stream.peek()) || common::is_space(stream.peek()))
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:104:12: note: +1
+  104 |            && exit_char.find(stream.peek()) == exit_char.end()) {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:103:44: note: +1
+  103 |     while ((common::is_ctrl(stream.peek()) || common::is_space(stream.peek()))
+      |                                            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:105:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  105 |       if (!stream.next()) return false;
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:107:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  107 |     if (stream.is_end()) return true;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:108:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  108 |     if (exit_char.find(stream.peek()) != exit_char.end()) return true;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:112:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  112 |   while (!stream.is_end()) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:114:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  114 |     if (stop_guard()) break;
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:117:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  117 |     while ((common::is_ctrl(stream.peek()) || common::is_space(stream.peek())) && stream.next()) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:117:80: note: +1
+  117 |     while ((common::is_ctrl(stream.peek()) || common::is_space(stream.peek())) && stream.next()) {
+      |                                                                                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:117:44: note: +1
+  117 |     while ((common::is_ctrl(stream.peek()) || common::is_space(stream.peek())) && stream.next()) {
+      |                                            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:124:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  124 |     assert(last_op != stream.position());
+      |     ^
+/usr/include/assert.h:104:7: note: expanded from macro 'assert'
+  104 |       ? void (0)                                                        \
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:128:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  128 |     if (stream.check('"') || (stream.check('r') && (stream.peek(1) == '"'))
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:129:9: note: +1
+  129 |         || (stream.check('r') && stream.peek(1) == '#' && stream.peek(2) == '"')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:128:49: note: +1
+  128 |     if (stream.check('"') || (stream.check('r') && (stream.peek(1) == '"'))
+      |                                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:129:56: note: +1
+  129 |         || (stream.check('r') && stream.peek(1) == '#' && stream.peek(2) == '"')) {
+      |                                                        ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:136:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  136 |     if (stream.check('/') && (stream.peek(1) == '/' || stream.peek(1) == '*')) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:136:27: note: +1
+  136 |     if (stream.check('/') && (stream.peek(1) == '/' || stream.peek(1) == '*')) {
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:136:53: note: +1
+  136 |     if (stream.check('/') && (stream.peek(1) == '/' || stream.peek(1) == '*')) {
+      |                                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:142:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  142 |     if (stream.check('#')) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:144:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  144 |       while (!stream.is_end()) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:146:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  146 |         if (!stream.check('#')) break;
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:153:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  153 |     if (stream.check('[') && stream.peek(1) == '[') {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:153:27: note: +1
+  153 |     if (stream.check('[') && stream.peek(1) == '[') {
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:161:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  161 |       if (stream.peek(1) == ']') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:163:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  163 |         if (stream.peek(1) == ']') {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:172:12: note: +1, nesting level increased to 2
+  172 |     } else if (tokenize_DFA()) {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:177:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  177 |     if (common::is_digit(stream.peek())) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:187:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  187 |   if (exit_char.empty()) add_token(token::ETokenKind::S_END_OF_FILE, true);
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:280:13: warning: function 'tokenize_textual' has cognitive complexity of 85 (threshold 25) [readability-function-cognitive-complexity]
+  280 | void Lexer::tokenize_textual() noexcept
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:282:19: note: nesting level increased to 1
+  282 |   auto tok_text = [&](bool with_escape, bool with_interpolation, std::vector<char> end_tokens) {
+      |                   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:283:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  283 |     do {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:284:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  284 |       if (with_interpolation) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:286:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  286 |         if (stream.check('{')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:287:11: note: +5, including nesting penalty of 4, nesting level increased to 5
+  287 |           if (!is_buffer_empty()) add_token(token::ETokenKind::L_TEXTUAL);
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:294:11: note: +5, including nesting penalty of 4, nesting level increased to 5
+  294 |           if (stream.check(':')) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:297:13: note: +6, including nesting penalty of 5, nesting level increased to 6
+  297 |             while (tokenize_spec()) {
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:302:11: note: +5, including nesting penalty of 4, nesting level increased to 5
+  302 |           if (stream.check('}')) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:304:13: note: +6, including nesting penalty of 5, nesting level increased to 6
+  304 |             if (stream.check('"')) {
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:311:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  311 |       if (with_escape) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:312:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  312 |         if (stream.check('\\')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:318:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  318 |       if (end_tokens.empty()) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:319:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  319 |         if (stream.check('"')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:323:14: note: +1, nesting level increased to 3
+  323 |       } else if (end_tokens.size() == 1) {
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:324:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  324 |         if (stream.check(end_tokens[0])) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:328:9: note: +1, nesting level increased to 3
+  328 |       } else {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:330:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  330 |         for (size_t i = 0; i < end_tokens.size(); i++) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:332:11: note: +5, including nesting penalty of 4, nesting level increased to 5
+  332 |           if (stream.peek(i) != elem) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:337:9: note: +4, including nesting penalty of 3, nesting level increased to 4
+  337 |         if (is_ended) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:338:11: note: +5, including nesting penalty of 4, nesting level increased to 5
+  338 |           for (size_t i = 0; i < end_tokens.size(); i++) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:349:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  349 |   if (stream.peek(0) == '"' && stream.peek(1) == '"' && stream.peek(2) == '"') {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:349:54: note: +1
+  349 |   if (stream.peek(0) == '"' && stream.peek(1) == '"' && stream.peek(2) == '"') {
+      |                                                      ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:353:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  353 |     if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:357:10: note: +1, nesting level increased to 1
+  357 |   } else if (stream.peek(0) == 'r' && stream.peek(1) == '"' && stream.peek(2) == '"' && stream.peek(3) == '"') {
+      |          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:357:86: note: +1
+  357 |   } else if (stream.peek(0) == 'r' && stream.peek(1) == '"' && stream.peek(2) == '"' && stream.peek(3) == '"') {
+      |                                                                                      ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:362:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  362 |     if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:365:10: note: +1, nesting level increased to 1
+  365 |   } else if (stream.peek(0) == 'r' && stream.peek(1) == '#' && stream.peek(2) == '"') {
+      |          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:365:61: note: +1
+  365 |   } else if (stream.peek(0) == 'r' && stream.peek(1) == '#' && stream.peek(2) == '"') {
+      |                                                             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:371:5: note: +1, nesting level increased to 1
+  371 |   } else {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:282:19: warning: lambda has cognitive complexity of 57 (threshold 25) [readability-function-cognitive-complexity]
+  282 |   auto tok_text = [&](bool with_escape, bool with_interpolation, std::vector<char> end_tokens) {
+      |                   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:283:5: note: +1, including nesting penalty of 0, nesting level increased to 1
+  283 |     do {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:284:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  284 |       if (with_interpolation) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:286:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  286 |         if (stream.check('{')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:287:11: note: +4, including nesting penalty of 3, nesting level increased to 4
+  287 |           if (!is_buffer_empty()) add_token(token::ETokenKind::L_TEXTUAL);
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:294:11: note: +4, including nesting penalty of 3, nesting level increased to 4
+  294 |           if (stream.check(':')) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:297:13: note: +5, including nesting penalty of 4, nesting level increased to 5
+  297 |             while (tokenize_spec()) {
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:302:11: note: +4, including nesting penalty of 3, nesting level increased to 4
+  302 |           if (stream.check('}')) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:304:13: note: +5, including nesting penalty of 4, nesting level increased to 5
+  304 |             if (stream.check('"')) {
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:311:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  311 |       if (with_escape) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:312:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  312 |         if (stream.check('\\')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:318:7: note: +2, including nesting penalty of 1, nesting level increased to 2
+  318 |       if (end_tokens.empty()) {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:319:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  319 |         if (stream.check('"')) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:323:14: note: +1, nesting level increased to 2
+  323 |       } else if (end_tokens.size() == 1) {
+      |              ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:324:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  324 |         if (stream.check(end_tokens[0])) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:328:9: note: +1, nesting level increased to 2
+  328 |       } else {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:330:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  330 |         for (size_t i = 0; i < end_tokens.size(); i++) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:332:11: note: +4, including nesting penalty of 3, nesting level increased to 4
+  332 |           if (stream.peek(i) != elem) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:337:9: note: +3, including nesting penalty of 2, nesting level increased to 3
+  337 |         if (is_ended) {
+      |         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:338:11: note: +4, including nesting penalty of 3, nesting level increased to 4
+  338 |           for (size_t i = 0; i < end_tokens.size(); i++) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:456:13: warning: function 'tokenize_numeric' has cognitive complexity of 80 (threshold 25) [readability-function-cognitive-complexity]
+  456 | void Lexer::tokenize_numeric() noexcept
+      |             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:463:27: note: nesting level increased to 1
+  463 |   auto check_range_case = [&]() -> bool {
+      |                           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:464:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  464 |     if (!is_buffer_empty()) add_token(token::ETokenKind::L_I, true); // create literal integral
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:466:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  466 |     if (stream.peek(1) == '.' && stream.peek(2) == '.') {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:466:31: note: +1
+  466 |     if (stream.peek(1) == '.' && stream.peek(2) == '.') {
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:472:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  472 |       if (stream.peek(1) == '=') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:477:12: note: +1, nesting level increased to 3
+  477 |       else if (stream.peek(1) == '.') {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:482:7: note: +1, nesting level increased to 3
+  482 |       else {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:490:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  490 |   if (stream.check('0') && stream.peek(1) != EOF) {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:490:25: note: +1
+  490 |   if (stream.check('0') && stream.peek(1) != EOF) {
+      |                         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:492:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  492 |     if (nt == 'b' || nt == 'B') {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:492:19: note: +1
+  492 |     if (nt == 'b' || nt == 'B') {
+      |                   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:496:12: note: +1, nesting level increased to 2
+  496 |     } else if (nt == 'o' || nt == 'O') {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:496:26: note: +1
+  496 |     } else if (nt == 'o' || nt == 'O') {
+      |                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:500:12: note: +1, nesting level increased to 2
+  500 |     } else if (nt == 'x' || nt == 'X') {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:500:26: note: +1
+  500 |     } else if (nt == 'x' || nt == 'X') {
+      |                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:508:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  508 |   do {
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:510:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  510 |     if (is_bin) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:511:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  511 |       if (stream.peek(1) == '0' || stream.peek(1) == '1') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:511:33: note: +1
+  511 |       if (stream.peek(1) == '0' || stream.peek(1) == '1') {
+      |                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:515:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  515 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:515:34: note: +1
+  515 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:523:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  523 |     if (is_oct) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:524:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  524 |       if (stream.peek(1) >= '0' && stream.peek(1) <= '7') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:524:33: note: +1
+  524 |       if (stream.peek(1) >= '0' && stream.peek(1) <= '7') {
+      |                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:528:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  528 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:528:34: note: +1
+  528 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:536:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  536 |     if (is_hex) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:537:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  537 |       if (common::is_digit(stream.peek(1)) || (stream.peek(1) >= 'a' && stream.peek(1) <= 'f')
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:538:11: note: +1
+  538 |           || (stream.peek(1) >= 'A' && stream.peek(1) <= 'F')) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:537:70: note: +1
+  537 |       if (common::is_digit(stream.peek(1)) || (stream.peek(1) >= 'a' && stream.peek(1) <= 'f')
+      |                                                                      ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:538:37: note: +1
+  538 |           || (stream.peek(1) >= 'A' && stream.peek(1) <= 'F')) {
+      |                                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:541:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  541 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:541:34: note: +1
+  541 |       if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+      |                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:551:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  551 |     if (common::is_digit(stream.peek(1))) {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:556:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  556 |     if (stream.peek(1) == '.' && stream.peek(2) == '.') {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:556:31: note: +1
+  556 |     if (stream.peek(1) == '.' && stream.peek(2) == '.') {
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:561:5: note: +2, including nesting penalty of 1, nesting level increased to 2
+  561 |     if (stream.peek(1) == '.') {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:565:10: note: +1, nesting level increased to 2
+  565 |     else if (stream.peek(1) == 'e' || stream.peek(1) == 'E') {
+      |          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:565:36: note: +1
+  565 |     else if (stream.peek(1) == 'e' || stream.peek(1) == 'E') {
+      |                                    ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:568:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  568 |       if (stream.peek(2) == '+' || stream.peek(2) == '-') {
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:568:33: note: +1
+  568 |       if (stream.peek(2) == '+' || stream.peek(2) == '-') {
+      |                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:571:12: note: +1, nesting level increased to 2
+  571 |     } else if (stream.peek(1) == '.') {
+      |            ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:574:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  574 |       if (!CU.file_info.tokens->tokens.empty()
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:576:11: note: +1
+  576 |           && common::is_alpha(stream.peek(1))) {
+      |           ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:583:7: note: +3, including nesting penalty of 2, nesting level increased to 3
+  583 |       if (stream.peek(2) == 'f' || stream.peek(2) == 'F') (void)stream.next(); // consume .
+      |       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:583:33: note: +1
+  583 |       if (stream.peek(2) == 'f' || stream.peek(2) == 'F') (void)stream.next(); // consume .
+      |                                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:586:5: note: +1, nesting level increased to 2
+  586 |     else {
+      |     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:592:3: note: +1, including nesting penalty of 0, nesting level increased to 1
+  592 |   if (is_bin)
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:594:8: note: +1, nesting level increased to 1
+  594 |   else if (is_oct)
+      |        ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:596:8: note: +1, nesting level increased to 1
+  596 |   else if (is_hex)
+      |        ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:598:8: note: +1, nesting level increased to 1
+  598 |   else if (id_decimal)
+      |        ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.cpp:600:3: note: +1, nesting level increased to 1
+  600 |   else
+      |   ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.hpp:44:40: warning: use default member initializer for 'kind' [modernize-use-default-member-init]
+   44 |     token::ETokenKind                  kind;
+      |                                        ^   
+      |                                            {token::ETokenKind::UNKNOWN}
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/lexer.hpp:49:17: warning: declaration uses identifier '_CU', which is a reserved identifier [bugprone-reserved-identifier]
+   49 |   Lexer(cu::CU& _CU);
+      |                 ^~~
+      |                 CU
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/lexer/stream_tracker.hpp:20:7: warning: member initializer for 'cur' is redundant [modernize-use-default-member-init]
+   20 |     , cur(0)
+      |       ^~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+43529 warnings generated.
+
+[33/48][20.2s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/resolved.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/resolved.cpp:8:5: warning: use a ranges version of this algorithm [modernize-use-ranges]
+    8 |     std::sort(bindings.begin(), bindings.end(), [](const Binding& a, const Binding& b) { return a.node < b.node; });
+      |     ^~~~~~~~~ ~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~
+      |     std::ranges::sort bindings
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/resolved.cpp:19:13: warning: use a ranges version of this algorithm [modernize-use-ranges]
+   19 |   auto it = std::lower_bound(bindings.begin(), bindings.end(), n,
+      |             ^~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~  ~~~~~~~~~~~~~~
+      |             std::ranges::lower_bound bindings
+41096 warnings generated.
+
+[34/48][51.1s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-common/src/toolchain_options.cpp
+55476 warnings generated.
+
+[35/48][23.8s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_declaration_cop.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+42938 warnings generated.
+
+[36/48][19.0s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ast/ast.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ast/ast.cpp:20:3: warning: 'auto n' can be declared as 'auto *n' [readability-qualified-auto]
+   20 |   auto n = nodeid.get();
+      |   ^~~~
+      |   auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ast/ast.cpp:112:29: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+  112 | ast::Node& ast::Dispatcher::get(ID id) noexcept
+      |                             ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/ast/ast.cpp:121:35: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+  121 | const ast::Node& ast::Dispatcher::get(ID id) const noexcept
+      |                                   ^          ~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+42983 warnings generated.
+
+[37/48][14.3s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/scope.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/scope.cpp:65:34: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+   65 | scope::Scope& scope::Dispatcher::get(ID id) noexcept
+      |                                  ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/scope.cpp:70:40: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
+   70 | const scope::Scope& scope::Dispatcher::get(ID id) const noexcept
+      |                                        ^          ~~~~~
+40942 warnings generated.
+
+[38/48][54.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:36:21: warning: method 'generate_wrappers' can be made static [readability-convert-member-functions-to-static]
+   36 | void ffi::C_Reader::generate_wrappers()
+      |                     ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:90:47: error: Called C++ object pointer is uninitialized [clang-analyzer-core.CallAndMessage,-warnings-as-errors]
+   90 |     parse_translation_unit(tmp_path.string(), ctx.clang.generate_preprocessor_args());
+      |                                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:75:33: note: Assuming field 'abi' is equal to gnu
+   75 |   m.features_gnu_source       = ctx.target.abi == common::env::EABI::gnu;
+      |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:75:3: note: Uninitialized value stored to 'ctx'
+   75 |   m.features_gnu_source       = ctx.target.abi == common::env::EABI::gnu;
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:101:17: note: Assuming '__begin1' is not equal to '__end1'
+  101 |   for (auto iso : HEADERS_C_ISO) wrap_header(iso);
+      |                 ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:101:34: note: Calling 'operator()'
+  101 |   for (auto iso : HEADERS_C_ISO) wrap_header(iso);
+      |                                  ^~~~~~~~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:90:47: note: Called C++ object pointer is uninitialized
+   90 |     parse_translation_unit(tmp_path.string(), ctx.clang.generate_preprocessor_args());
+      |                                               ^~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:108:3: warning: use auto when initializing with a cast to avoid duplicating the type name [modernize-use-auto]
+  108 |   ffi::C_Reader* reader = static_cast<ffi::C_Reader*>(p_client_data);
+      |   ^~~~~~~~~~~~~
+      |   auto
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:116:3: warning: 'auto name' can be declared as 'const auto *name' [readability-qualified-auto]
+  116 |   auto name = clang_getCString(clang_getCursorDisplayName(p_cursor));
+      |   ^~~~
+      |   const auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:128:5: warning: ignoring return value of function declared with 'nodiscard' attribute [clang-diagnostic-unused-result]
+  128 |     reader->c_struct_to_comp(p_cursor);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:134:5: warning: ignoring return value of function declared with 'nodiscard' attribute [clang-diagnostic-unused-result]
+  134 |     reader->c_union_to_union(p_cursor);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:140:5: warning: ignoring return value of function declared with 'nodiscard' attribute [clang-diagnostic-unused-result]
+  140 |     reader->c_enum_to_flag(p_cursor);
+      |     ^~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:145:5: warning: ignoring return value of function declared with 'nodiscard' attribute [clang-diagnostic-unused-result]
+  145 |     reader->c_function_to_func(p_cursor);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:150:5: warning: ignoring return value of function declared with 'nodiscard' attribute [clang-diagnostic-unused-result]
+  150 |     reader->c_global_to_global(p_cursor);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:163:21: warning: unnecessary temporary object created while calling emplace_back [modernize-use-emplace]
+  163 |   asts.emplace_back(ffi::AST());
+      |                     ^~~~~~~~~~
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:167:32: warning: 'emplace_back' is called inside a loop; consider pre-allocating the container capacity before the loop [performance-inefficient-vector-operation]
+  167 |   for (const auto& s : p_args) cargs.emplace_back(s.data());
+      |                                ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:183:23: warning: method 'c_type_normalize' can be made static [readability-convert-member-functions-to-static]
+  183 | CXType ffi::C_Reader::c_type_normalize(CXType t)
+      |                       ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:278:31: warning: method 'c_type_to_pass_mode' can be made static [readability-convert-member-functions-to-static]
+  278 | ast::EPassMode ffi::C_Reader::c_type_to_pass_mode(CXType input)
+      |                               ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:354:9: warning: 'auto ptr' can be declared as 'auto *ptr' [readability-qualified-auto]
+  354 |         auto ptr   = static_cast<type::Ptr*>(final_ty);
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:361:5: warning: 'auto final_ptr' can be declared as 'auto *final_ptr' [readability-qualified-auto]
+  361 |     auto final_ptr   = static_cast<type::Ptr*>(final_ty);
+      |     ^~~~
+      |     auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:464:24: warning: method 'c_nodecl_to_opaque_comp' can be made const [readability-make-member-function-const]
+  464 | ast::ID ffi::C_Reader::c_nodecl_to_opaque_comp(CXCursor cur)
+      |                        ^                                    
+      |                                                              const
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:495:9: warning: 'auto inject' can be declared as 'auto *inject' [readability-qualified-auto]
+  495 |         auto inject = static_cast<Visit_Injector*>(client_data);
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:496:9: warning: 'auto n_ptr' can be declared as 'auto *n_ptr' [readability-qualified-auto]
+  496 |         auto n_ptr  = inject->nodeid.as<ast::COP_Component>();
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:533:9: warning: 'auto inject' can be declared as 'auto *inject' [readability-qualified-auto]
+  533 |         auto inject = static_cast<Visit_Injector*>(client_data);
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:534:9: warning: 'auto n_ptr' can be declared as 'auto *n_ptr' [readability-qualified-auto]
+  534 |         auto n_ptr  = inject->nodeid.as<ast::Global_Union>();
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:570:9: warning: 'auto inject' can be declared as 'auto *inject' [readability-qualified-auto]
+  570 |         auto inject = static_cast<Visit_Injector*>(client_data);
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:571:9: warning: 'auto n_ptr' can be declared as 'auto *n_ptr' [readability-qualified-auto]
+  571 |         auto n_ptr  = inject->nodeid.as<ast::Global_Union>();
+      |         ^~~~
+      |         auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:618:3: warning: 'auto proto_ty' can be declared as 'auto *proto_ty' [readability-qualified-auto]
+  618 |   auto proto_ty  = node.prototype.as<type::Prototype>();
+      |   ^~~~
+      |   auto *
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.hpp:52:42: warning: function 'ffi::C_Reader::c_type_base_to_primitive' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+   52 |   [[nodiscard]] type::EPrimitiveTypeKind c_type_base_to_primitive(CXType p_cType);
+      |                                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:196:41: note: the definition seen here
+  196 | type::EPrimitiveTypeKind ffi::C_Reader::c_type_base_to_primitive(CXType t)
+      |                                         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.hpp:52:42: note: differing parameters are named here: ('p_cType'), in definition: ('t')
+   52 |   [[nodiscard]] type::EPrimitiveTypeKind c_type_base_to_primitive(CXType p_cType);
+      |                                          ^                               ~~~~~~~
+      |                                                                          t
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.hpp:54:42: warning: function 'ffi::C_Reader::c_type_to_type' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+   54 |   [[nodiscard]] type::ID                 c_type_to_type(CXType p_cType);
+      |                                          ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.cpp:319:25: note: the definition seen here
+  319 | type::ID ffi::C_Reader::c_type_to_type(CXType input)
+      |                         ^
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/binder/ffi_c_reader.hpp:54:42: note: differing parameters are named here: ('p_cType'), in definition: ('input')
+   54 |   [[nodiscard]] type::ID                 c_type_to_type(CXType p_cType);
+      |                                          ^                     ~~~~~~~
+      |                                                                input
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/misc/error_output.hpp:80:29: warning: method 'print_link_error' can be made static [readability-convert-member-functions-to-static]
+   80 |   [[nodiscard]] std::string print_link_error() const
+      |                             ^                  ~~~~~
+      |                 static 
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+53114 warnings generated.
+
+[39/48][13.5s] clang-tidy-19 -p=/media/data/Workspace/velox/projects/workflow/velox-compiler/build -quiet /media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_semantic.cpp
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/module.hpp:22:7: warning: declaration uses identifier '_Mod_Path', which is a reserved identifier [bugprone-reserved-identifier]
+   22 | using _Mod_Path = std::vector<std::string>;
+      |       ^~~~~~~~~
+      |       Mod_Path
+/media/data/Workspace/velox/projects/workflow/velox-compiler/src/resolver/resolver_semantic.cpp:17:1: warning: non-void function does not return a value [clang-diagnostic-return-type]
+   17 | }
+      | ^
+42066 warnings generated.
+
+
+Ctrl-C detected, goodbye.

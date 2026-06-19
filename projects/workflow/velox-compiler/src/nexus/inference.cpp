@@ -1,7 +1,7 @@
 #include "inference.hpp"
 
 #include "nexus/forward.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/pipeline.hpp"
 #include "nexus/resolved.hpp"
 

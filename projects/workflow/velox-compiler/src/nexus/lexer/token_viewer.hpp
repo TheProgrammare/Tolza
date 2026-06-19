@@ -11,48 +11,52 @@ namespace token
 class Viewer
 {
 public:
-  Viewer(script::ScriptInfo& p_scr_info);
-
-  token::Token& next() noexcept;
-  void          jump(size_t newPosition) noexcept;
-  token::Token& peek(int offset = 0) const noexcept;
-  token::Token& prev() noexcept;
-
-  bool is_end() const noexcept;
-
-  bool look_ahead(token::ETokenKind check, token::ETokenKind terminaison) const noexcept;
+  Viewer(cu::CU& p_CU);
 
 
-  bool        match(token::ETokenKind expected) noexcept;
-  bool        match_val(std::string_view val) noexcept;
-  bool        match_id_val(std::string_view val) noexcept;
-  std::string match_any_val(const std::initializer_list<std::string>& val) noexcept;
-  bool        match_any(const std::initializer_list<token::ETokenKind>& types) noexcept;
+  [[nodiscard]] token::Token& next() noexcept;
+  void                        jump(size_t newPosition) noexcept;
+  [[nodiscard]] token::Token& peek(size_t offset = 0) const noexcept;
+  [[nodiscard]] token::Token& prev() noexcept;
 
-  bool check(token::ETokenKind expected) const noexcept;
-  bool check_val(std::string_view val) const noexcept;
-  bool check_id_val(std::string_view val) const noexcept;
-  bool check_any(const std::initializer_list<token::ETokenKind>& types) const noexcept;
+  [[nodiscard]] bool is_end() const noexcept;
 
-  token::Token& expect(ErrorCode code, token::ETokenKind type, std::string_view msg, std::string_view hint) noexcept;
-  token::Token& expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& types, std::string_view msg,
-                           std::string_view hint) noexcept;
+  [[nodiscard]] bool look_ahead(token::ETokenKind check, token::ETokenKind terminaison) const noexcept;
 
-  size_t size() const noexcept;
-  size_t position() const noexcept;
-  size_t line() const noexcept;
-  void   rewind(size_t pos) noexcept;
 
-  void add_error(ErrorCode code, std::string_view msg, std::string_view hint);
+  [[nodiscard]] bool        match(token::ETokenKind kind) noexcept;
+  [[nodiscard]] bool        match_val(std::string_view val) noexcept;
+  [[nodiscard]] bool        match_id_val(std::string_view val) noexcept;
+  [[nodiscard]] std::string match_any_val(const std::initializer_list<std::string>& val) noexcept;
+  [[nodiscard]] bool        match_any(const std::initializer_list<token::ETokenKind>& kinds) noexcept;
+  [[nodiscard]] bool        match_chain(const std::initializer_list<token::ETokenKind>& l) noexcept;
 
-  void add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg, std::string_view hint);
+  [[nodiscard]] bool check(token::ETokenKind kind) const noexcept;
+  [[nodiscard]] bool check_val(std::string_view val) const noexcept;
+  [[nodiscard]] bool check_id_val(std::string_view val) const noexcept;
+  [[nodiscard]] bool check_any(const std::initializer_list<token::ETokenKind>& kinds) const noexcept;
+  [[nodiscard]] bool check_chain(const std::initializer_list<token::ETokenKind>& l) const noexcept;
+
+  [[nodiscard]] token::Token& expect(ErrorCode code, token::ETokenKind kind, std::string_view msg,
+                                     std::string_view hint) noexcept;
+  [[nodiscard]] token::Token& expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& kinds,
+                                         std::string_view msg, std::string_view hint) noexcept;
+
+  [[nodiscard]] size_t size() const noexcept;
+  [[nodiscard]] size_t position() const noexcept;
+  [[nodiscard]] size_t line() const noexcept;
+  void                 rewind(size_t pos) noexcept;
+
+  void add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept;
+
+  void add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg, std::string_view hint) noexcept;
 
   void synchronize() noexcept;
 
-  const token::Token& get(size_t position);
+  [[nodiscard]] const token::Token& get(size_t pos) const noexcept;
 
-  script::ScriptInfo& scr_info;
-  compiler::EPhase    phase;
+  cu::CU&          CU;
+  compiler::EPhase phase;
 
 private:
   size_t            current = 0;

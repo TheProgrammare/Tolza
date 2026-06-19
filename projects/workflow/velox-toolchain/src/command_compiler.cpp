@@ -1,65 +1,45 @@
 #include "command_compiler.hpp"
 
 #include <filesystem>
-#include <vector>
 #include <iostream>
 
-#include "common.hpp"
-#include "toolchain_context.hpp"
+#include <common/common.hpp>
+#include <common/environment.hpp>
+#include <common/toolchain_options.hpp>
 
 namespace fs = std::filesystem;
 
-void command::compiler::err(const std::string& msg)
+#define OUT_LOG std::cout << "[compiler] "
+#define OUT_ERR std::cerr << "[compiler:ERROR] "
+
+void command::compiler::apply_compiler(std::string_view file) noexcept
 {
-  std::cerr << "[compiler:ERROR] " << msg << std::endl;
-}
-
-void command::compiler::log(const std::string& msg, bool sub_log)
-{
-  if (sub_log)
-    std::cerr << "  " << msg << std::endl;
-  else
-    std::cerr << "[compiler] " << msg << std::endl;
-}
-
-
-std::string command::compiler::find_compiler_version(const std::string& dir_search, const std::string& version)
-{
-  std::vector<std::string> compilers = find_all_compilers(dir_search);
-
-  if (compilers.empty()) return "";
-
-
-  for (auto& compiler : compilers) {
-    if (fs::path(compiler).stem().string().rfind("velox-compiler-" + version, 0) == 0) {
-      std::cout << compiler << std::endl;
-      return compiler;
-    }
-  }
-
-  err("No velox-compiler found for the version " + version);
-  return "";
-}
-
-void command::compiler::apply_compiler(const std::string& file)
-{
-  if (!fs::exists(file)) {
-    err("The file at \"" + file + "\" dosen't exists.");
+  const fs::path f(file);
+  if (!fs::exists(f)) {
+    OUT_ERR "The file at " << f << " dosen't exists.";
     return;
   }
 
-  common::TOOL_CTX.compiler_used = file;
-  common::TOOL_CTX.apply_context();
+  auto conf = common::env::get_config_dir();
+
+  fs::path path_t(conf);
+  path_t /= "toolchain";
+  path_t.replace_extension("toml");
+
+  common::toolchain::OPTIONS.compiler_used = file;
+  common::toolchain::OPTIONS.write_config(path_t.string());
 }
 
-void command::compiler::cogito_compiler(const std::string& file)
+void command::compiler::cogito_compiler(std::string_view file) noexcept
 {
-  if (!fs::exists(file)) {
-    err("The file at \"" + file + "\" dosen't exists.");
-    log("Please, set a valid path in config at \"" + common::get_config_dir() + "\"");
+  const fs::path f(file);
+
+  if (!fs::exists(f)) {
+    OUT_ERR "The file at " << f << " dosen't exists.";
+    OUT_LOG "Please, set a valid path in config at " << fs::path(common::env::get_config_dir());
     return;
   }
 
-  std::string cmd = file + " velox-toolchain cogito";
+  std::string cmd = std::string(file) + " velox-toolchain cogito";
   std::system(cmd.c_str());
 }

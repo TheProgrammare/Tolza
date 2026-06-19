@@ -1,49 +1,32 @@
 #include "parser_statement.hpp"
 
-#include "compiler/compiler.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/lexer.hpp"
 #include "nexus/lexer/token.hpp"
 
 #include "ast/ast_statement.hpp"
 
-#include "nexus/module.hpp"
-#include "nexus/script.hpp"
-#include "nexus/symbol.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 #include "parser_context.hpp"
 
 
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_declaration_local.hpp"
 
-#include "ast/ast_statement.hpp"
-#include "nexus/type.hpp"
 
-#include "nexus/lexer/token.hpp"
-
-#include "parser_declaration_global.hpp"
-#include "parser_declaration_cop.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
-#include "parser_literal.hpp"
-#include "parser_memory.hpp"
 #include "parser_operation.hpp"
-#include "parser_statement.hpp"
-#include "parser_type.hpp"
-#include <string_view>
 
 
-ast::_gnid parser::Parser_Statement::parse_statement(bool p_is_silent_error)
+ast::ID parser::Parser_Statement::parse_statement(bool p_is_silent_error)
 {
   constexpr std::string_view hint =
-      "you can define in functions: variable, entity, enum, safe cast, if, "
+      "you can define in functions: variable, form, enum, safe cast, if, "
       "else, do, while, match, break, continue, return";
 
-  p.match(token::ETokenKind::SEMICOLON); // consume because the parser use only for explicit end instruction
+  (void)p.match(token::ETokenKind::SEMICOLON); // consume because the parser use only for explicit end instruction
 
   switch (p.peek().kind) {
   case token::ETokenKind::IF:       return if_statement();
@@ -53,19 +36,19 @@ ast::_gnid parser::Parser_Statement::parse_statement(bool p_is_silent_error)
   case token::ETokenKind::LOOP:     return loop_statement();
   case token::ETokenKind::MATCH:    return match_statement();
   case token::ETokenKind::BREAK:    {
-    p.match(token::ETokenKind::BREAK);
-    parser_add_node(node, Statement_Break, p.peek(-1).id);
-    return node->node_id;
+    (void)p.match(token::ETokenKind::BREAK);
+    auto& node = p.add_get_node<ast::Statement_Break>(p.peek(-1).tokid);
+    return node.nodeid;
   }
   case token::ETokenKind::END: {
-    p.match(token::ETokenKind::END);
-    parser_add_node(node, Statement_Return, p.peek(-1).id);
-    return node->node_id;
+    (void)p.match(token::ETokenKind::END);
+    auto& node = p.add_get_node<ast::Statement_Return>(p.peek(-1).tokid);
+    return node.nodeid;
   }
   case token::ETokenKind::CONTINUE: {
-    p.match(token::ETokenKind::CONTINUE);
-    parser_add_node(node, Statement_Continue, p.peek(-1).id);
-    return node->node_id;
+    (void)p.match(token::ETokenKind::CONTINUE);
+    auto& node = p.add_get_node<ast::Statement_Continue>(p.peek(-1).tokid);
+    return node.nodeid;
   }
   case token::ETokenKind::RETURN:     return return_flow();
   case token::ETokenKind::GOTO:       return goto_statement();
@@ -73,47 +56,52 @@ ast::_gnid parser::Parser_Statement::parse_statement(bool p_is_silent_error)
   default:                            break;
   }
 
-  if (!p_is_silent_error)
-    p.add_error(
-        116, "Unexpected '" + std::string(p.tok_to_str(p.peek().id)) + "' keyword not allowed in function statement.",
-        hint);
+  if (!p_is_silent_error) {
+    p.add_error(116,
+                "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid))
+                    + "' keyword not allowed in function statement.",
+                hint);
+    THROW_BAD_NODE;
+  }
   return BAD_NODE_ID;
 }
 
-ast::_gnid parser::Parser_Statement::if_statement()
+ast::ID parser::Parser_Statement::if_statement()
 {
-  parser_add_node(node, Statement_If, p.peek().id);
+  auto& node = p.add_get_node<ast::Statement_If>(p.peek().tokid);
 
-  p.match(token::ETokenKind::IF);
-  p.match(token::ETokenKind::ELIF);
+  (void)p.match(token::ETokenKind::IF);
+  (void)p.match(token::ETokenKind::ELIF);
 
-  p.enter_scope(*node, p.peek(-1).kind == token::ETokenKind::IF ? "if" : "elif");
+  p.enter_scope(node, p.peek(-1).kind == token::ETokenKind::IF ? "if" : "elif");
 
-  node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
+  node.evaluator = p.p_loc->parse_evaluator(ast::ID::invalid());
 
-  node->codeblock = p.p_loc->parse_codeblock();
+  node.codeblock = p.p_loc->parse_codeblock_instruction();
+
+  p.exit_scope(); // exit if scope
 
   // else or else if case
   if (p.match(token::ETokenKind::ELIF)) {
-    auto node_elif_id  = if_statement(); // recursive call
-    auto node_elif     = p.scr_info.nodes->get_as<ast::Statement_If>(node_elif_id.get_node_id());
+    auto  node_elif_id = if_statement(); // recursive call
+    auto* node_elif    = node_elif_id.as<ast::Statement_If>();
     node_elif->is_elif = true;
 
-    node->alternative_statement = node_elif->node_id;
+    node.alternative_statement = node_elif->nodeid;
   } else if (p.match(token::ETokenKind::ELSE)) {
-    parser_add_node(node_else, Statement_If, p.peek(-1).id);
-    node_else->codeblock = p.p_loc->parse_codeblock();
-    node_else->is_else   = true;
+    auto& node_else = p.add_get_node<ast::Statement_If>(p.peek(-1).tokid);
+    p.enter_scope(node_else, "else");
+    node_else.codeblock = p.p_loc->parse_codeblock_instruction();
+    node_else.is_else   = true;
 
-    node->alternative_statement = node_else->node_id;
+    node.alternative_statement = node_else.nodeid;
+    p.exit_scope(); // exit else scope
   }
 
-  p.exit_scope();
-
-  return node->node_id;
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::for_statement()
+ast::ID parser::Parser_Statement::for_statement()
 {
   constexpr std::string_view hint =
       R"(define for state like:
@@ -125,76 +113,87 @@ ast::_gnid parser::Parser_Statement::for_statement()
   - for unpack : `for mut/ref/copy (a, b, ...) in array_tuple { ... }`
   - for unpack with index : `for i, mut/ref/copy (a, b, ...) in array_tuple { ... }`)";
 
-  parser_add_node(node, Statement_For, p.peek().id);
+  auto& node = p.add_get_node<ast::Statement_For>(p.peek().tokid);
 
-  p.match(token::ETokenKind::FOR);
+  (void)p.match(token::ETokenKind::FOR);
 
-  p.enter_scope(*node, "for");
+  p.enter_scope(node, "for");
 
   // index
   if (p.check(token::ETokenKind::IDENTIFIER)) {
-    parser_add_node(index, Local_Binding, p.peek().id);
-    index->name       = p.parse_name("", hint);
-    index->capability = ast::ECapability::Mut;
+    auto& index = p.add_get_node<ast::Local_Variable>(p.peek().tokid);
+    index.name  = p.parse_name("", hint);
+    index.kind  = ast::EVariableKind::Let;
 
-    index->inferred_type = type::TYPEID_iSize;
+    index.type = type::TYPEID_ssize;
 
-    p.add_symbol(index->node_id.get_node_id());
-    node->index = index->node_id;
+    (void)p.add_symbol(index.nodeid);
+    node.index = index.nodeid;
   }
   // items
-  if (p.check_any({token::k_capability})) {
+  if (p.check_any(token::k_capability)) {
     ast::ECapability capa = ast::ETokenKind_to_ECapability(p.next().kind);
 
-    if (p.match(token::ETokenKind::OPEN_PAREN)) {
+    if (p.match(token::ETokenKind::L_PAREN)) {
       while (!p.is_end()) {
-        parser_add_node(item, Local_Binding, p.peek().id);
-        item->capability = capa;
-        item->name       = p.parse_name("", hint);
+        auto& item = p.add_get_node<ast::Local_Capability>(p.peek().tokid);
+        item.kind  = capa;
+        item.name  = p.parse_name("", hint);
 
-        p.add_symbol(item->node_id.get_node_id());
-        node->items.push_back(item->node_id);
+        (void)p.add_symbol(item.nodeid);
+        node.items.emplace_back(item.nodeid);
 
-        if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_PAREN)) break;
+        if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_PAREN)) break;
       }
     } else {
-      parser_add_node(item, Local_Binding, p.peek().id);
-      item->capability = capa;
-      item->name       = p.parse_name("", hint);
+      auto& item = p.add_get_node<ast::Local_Capability>(p.peek().tokid);
+      item.kind  = capa;
+      item.name  = p.parse_name("", hint);
 
-      p.add_symbol(item->node_id.get_node_id());
-      node->items.push_back(item->node_id);
+      (void)p.add_symbol(item.nodeid);
+      node.items.emplace_back(item.nodeid);
     }
   }
 
-  p.expect(117, token::ETokenKind::IN, "Expected in keyword 'in' after for identifier.", hint);
+  (void)p.expect(117, token::ETokenKind::IN, "Expected in keyword 'in' after for identifier.", hint);
 
-  node->expression = p.p_expr->parse_expression();
+  {
+    node.expression = p.p_expr->parse_expression();
 
-  node->codeblock = p.p_loc->parse_codeblock();
+    auto* n_index = node.index.as<ast::Local_Variable>();
+    assert(n_index && "Invalid node kind");
+    n_index->expression = node.expression;
+
+    for (auto item : node.items) {
+      auto* n_item       = item.as<ast::Local_Capability>();
+      n_item->expression = node.expression;
+    }
+  }
+
+  node.codeblock = p.p_loc->parse_codeblock_instruction();
 
   p.exit_scope();
 
-  return node->node_id;
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::loop_statement()
+ast::ID parser::Parser_Statement::loop_statement()
 {
   constexpr std::string_view hint = "define loop statement like: `loop { ... }`";
 
-  parser_add_node(node, Statement_Loop, p.peek().id);
+  auto& node = p.add_get_node<ast::Statement_Loop>(p.peek().tokid);
 
-  p.match(token::ETokenKind::LOOP);
-  p.enter_scope(*node, "loop");
+  (void)p.match(token::ETokenKind::LOOP);
+  p.enter_scope(node, "loop");
 
-  node->codeblock = p.p_loc->parse_codeblock();
+  node.codeblock = p.p_loc->parse_codeblock_instruction();
 
   p.exit_scope();
 
-  return node->node_id;
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::while_statement()
+ast::ID parser::Parser_Statement::while_statement()
 {
   constexpr std::string_view while_hint =
       R"(define while statement like:
@@ -205,34 +204,34 @@ ast::_gnid parser::Parser_Statement::while_statement()
   - `do { ... } while condition;`
   - `do => ... while confition;`)";
 
-  parser_add_node(node, Statement_While, p.peek().id);
-  p.enter_scope(*node, "while");
+  auto& node = p.add_get_node<ast::Statement_While>(p.peek().tokid);
+  p.enter_scope(node, "while");
 
   if (p.match(token::ETokenKind::WHILE)) {
-    node->is_do = false;
+    node.is_do = false;
 
-    node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
+    node.evaluator = p.p_loc->parse_evaluator(ast::ID::invalid());
 
-    node->codeblock = p.p_loc->parse_codeblock();
+    node.codeblock = p.p_loc->parse_codeblock_instruction();
   } else if (p.match(token::ETokenKind::DO_WHILE)) {
-    node->is_do = true;
+    node.is_do = true;
 
-    node->codeblock = p.p_loc->parse_codeblock();
+    node.codeblock = p.p_loc->parse_codeblock_instruction();
 
-    p.expect(118, token::ETokenKind::WHILE, "Expected while keyword after do statement.", do_while_hint);
+    (void)p.expect(118, token::ETokenKind::WHILE, "Expected while keyword after do statement.", do_while_hint);
 
-    node->evaluator = p.p_loc->parse_evaluator(ast::_gnid());
+    node.evaluator = p.p_loc->parse_evaluator(ast::ID::invalid());
 
-    p.match(token::ETokenKind::SEMICOLON);
+    (void)p.match(token::ETokenKind::SEMICOLON);
   } else
     p.add_error(119, "Expected do or while keyword!", do_while_hint);
 
   p.exit_scope();
 
-  return node->node_id;
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::match_statement()
+ast::ID parser::Parser_Statement::match_statement()
 {
   constexpr std::string_view hint =
       R"(define match like:
@@ -243,85 +242,85 @@ ast::_gnid parser::Parser_Statement::match_statement()
      _ => { ... }
    }`)";
 
-  parser_add_node(node, Statement_Match, p.peek().id);
+  auto& node = p.add_get_node<ast::Statement_Match>(p.peek().tokid);
 
-  p.match(token::ETokenKind::MATCH);
-  p.enter_scope(*node, "match");
+  (void)p.match(token::ETokenKind::MATCH);
+  p.enter_scope(node, "match");
 
-  node->base = p.p_expr->parse_expression();
+  node.base = p.p_expr->parse_expression();
 
-  p.expect(120, token::ETokenKind::OPEN_BRACE, "Expected start code block '{' after match defintion.", hint);
+  (void)p.expect(120, token::ETokenKind::L_CURLY, "Expected start code block '{' after match defintion.", hint);
   bool otherDefine = false;
 
   // check all cases
   while (!p.is_end()) {
     if (otherDefine) p.add_error(121, "Expected end match '}' after the other '_ =>' case definition.", hint);
 
-    if (p.match(token::ETokenKind::CLOSE_BRACE)) {
-      if (node->cases.empty()) {
+    if (p.match(token::ETokenKind::R_CURLY)) {
+      if (node.cases.empty()) {
         p.add_error(122, "Match case without any case defined", hint);
       }
       break;
     }
 
     if (p.match(token::ETokenKind::UNDERSCORE)) {
-      parser_add_node(n_case, Statement_Match_Case, p.peek().id);
-      n_case->codeblock = p.p_loc->parse_codeblock();
-      otherDefine       = true;
+      auto& n_case     = p.add_get_node<ast::Statement_Match_Case>(p.peek().tokid);
+      n_case.codeblock = p.p_loc->parse_codeblock_instruction();
+      otherDefine      = true;
       break;
     }
 
-    parser_add_node(n_case, Statement_Match_Case, p.peek().id);
+    auto& n_case = p.add_get_node<ast::Statement_Match_Case>(p.peek().tokid);
 
     if (p.match_any({token::ETokenKind::CAPA_MUT, token::ETokenKind::CAPA_REF})) {
-      n_case->evaluator = p.p_loc->parse_pattern(node->base);
+      n_case.evaluator = p.p_loc->parse_pattern(node.base);
     } else {
-      n_case->evaluator = p.p_expr->parse_expression();
+      n_case.evaluator = p.p_expr->parse_expression();
     }
 
-    n_case->codeblock = p.p_loc->parse_codeblock();
+    n_case.codeblock = p.p_loc->parse_codeblock_instruction();
 
-    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::R_CURLY)) break;
   }
 
   p.exit_scope();
 
-  return node->node_id;
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::goto_statement()
+ast::ID parser::Parser_Statement::goto_statement()
 {
-  p.match(token::ETokenKind::GOTO);
-  parser_add_node(node, Statement_GoTo, p.peek().id);
-  node->label = p.parse_name("", "define goto statement like: `goto name`.");
-  return node->node_id;
+  (void)p.match(token::ETokenKind::GOTO);
+  auto& node = p.add_get_node<ast::Statement_GoTo>(p.peek().tokid);
+  node.label = p.parse_name("", "define goto statement like: `goto name`.");
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::return_flow()
+ast::ID parser::Parser_Statement::return_flow()
 {
-  parser_add_node(node, Statement_Return, p.peek().id);
-  p.match(token::ETokenKind::RETURN);
+  auto& node = p.add_get_node<ast::Statement_Return>(p.peek().tokid);
+  (void)p.match(token::ETokenKind::RETURN);
 
-  if (p.match(token::ETokenKind::SEMICOLON)) return node->node_id;
-  if (p.check(token::ETokenKind::CLOSE_BRACE)) return node->node_id;
+  if (p.match(token::ETokenKind::SEMICOLON)) return node.nodeid;
+  if (p.check(token::ETokenKind::R_CURLY)) return node.nodeid;
 
   // return with value
-  node->value = p.p_expr->parse_expression();
-  return node->node_id;
+  node.value = p.p_expr->parse_expression();
+  return node.nodeid;
 }
 
-ast::_gnid parser::Parser_Statement::goto_label_statement()
+ast::ID parser::Parser_Statement::goto_label_statement()
 {
   constexpr std::string_view hint = "define goto label like: `label my_label:`";
 
-  p.match(token::ETokenKind::GOTO_LABEL);
+  (void)p.match(token::ETokenKind::GOTO_LABEL);
 
-  parser_add_node(node, Statement_GoTo_Label, p.peek().id);
-  node->label = p.parse_name("", hint);
+  auto& node = p.add_get_node<ast::Statement_GoTo_Label>(p.peek().tokid);
+  node.label = p.parse_name("", hint);
 
-  p.add_symbol(node->node_id.get_node_id());
+  (void)p.add_symbol(node.nodeid);
 
-  node->codeblock = p.p_loc->parse_codeblock();
+  node.codeblock = p.p_loc->parse_codeblock_instruction();
 
-  return node->node_id;
+  return node.nodeid;
 }

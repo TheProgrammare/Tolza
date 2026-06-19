@@ -1,26 +1,23 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
-namespace common
+namespace common::compiler
 {
-struct CompCtx;
+struct Compiler_Options;
 }
 
-namespace command
-{
-namespace workspace
+namespace command::workspace
 {
 
-void err(const std::string& msg);
-void log(const std::string& msg);
+[[nodiscard]] std::string generate_velox_workspace(std::string_view project_name, std::string_view path,
+                                                   bool force = false) noexcept;
+[[nodiscard]] std::string write_file(std::string_view path, std::string_view text, bool verbose = true) noexcept;
+void                      ask_new_workspace(std::string_view ws_path, std::string_view name) noexcept;
+// will generate all necessary barrels, indexing subdir scripts inside,
+// moving any user script with the same barrel name into subdir/mod.vlx or disable the user script
+void                      synchronize(std::string_view path) noexcept;
+[[nodiscard]] std::string new_velox_workspace() noexcept;
 
-std::string generate_velox_workspace(const std::string& project_name, const std::string& path, bool force = false);
-std::string write_file(const std::string& path, const std::string& text, bool verbose = true);
-std::string write_config_file(const std::string& path, const std::string& name, bool file_debug_mode);
-void        ask_new_workspace(const std::string& ws_path, const std::string& name);
-std::string new_velox_workspace();
-std::string compiler_context_to_config(const common::CompCtx& ctx);
-
-} // namespace workspace
-} // namespace command
+} // namespace command::workspace

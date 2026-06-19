@@ -1,6 +1,7 @@
 #include "command_audit.hpp"
 
-#include "common.hpp"
+#include <common/utils.hpp>
+#include <common/common.hpp>
 
 #include <filesystem>
 #include <initializer_list>
@@ -12,6 +13,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -19,7 +21,7 @@
 namespace fs = std::filesystem;
 
 
-bool command::audit::is_blank(const std::string& line)
+bool command::audit::is_blank(std::string_view line) noexcept
 {
   for (char c : line)
     if (!isspace(c)) return false;
@@ -27,9 +29,11 @@ bool command::audit::is_blank(const std::string& line)
 }
 
 
-void command::audit::process_file(const std::string& file, CategoryStats& cat_stats, GlobalStats& global_stats)
+void command::audit::process_file(std::string_view file, CategoryStats& cat_stats, GlobalStats& global_stats) noexcept
 {
-  auto contains_word = [](const std::string& line, const std::string& word) {
+  const fs::path f(file);
+
+  auto contains_word = [](std::string_view line, std::string_view word) {
     size_t pos = line.find(word);
     while (pos != std::string::npos) {
       bool left_ok  = (pos == 0 || !std::isalnum(line[pos - 1]));
@@ -42,7 +46,7 @@ void command::audit::process_file(const std::string& file, CategoryStats& cat_st
     return false;
   };
 
-  std::ifstream in(file);
+  std::ifstream in(f);
   if (!in.is_open()) return;
 
   cat_stats.files++;
@@ -69,13 +73,13 @@ void command::audit::process_file(const std::string& file, CategoryStats& cat_st
     }
 
     // commentaire sur une ligne
-    if (trimmed.find("//") == 0) {
+    if (trimmed.starts_with("//")) {
       cat_stats.comment_lines++;
       continue;
     }
 
     // début d'un bloc de commentaire
-    if (trimmed.find("/*") == 0) {
+    if (trimmed.starts_with("/*")) {
       cat_stats.comment_lines++;
       if (trimmed.find("*/") == std::string::npos) in_block_comment = true;
       continue;
@@ -98,12 +102,12 @@ void command::audit::process_file(const std::string& file, CategoryStats& cat_st
     if (contains_word(trimmed, "sys")) global_stats.sys++;
   }
 
-  global_stats.byte_size += fs::file_size(file);
+  global_stats.byte_size += fs::file_size(f);
 }
 
-void command::audit::audit_workspace(const std::string& root)
+void command::audit::audit_workspace(std::string_view root) noexcept
 {
-  static const char* out_str = R"(
+  constexpr std::string_view str_template = R"(
 =============================================================================== 
  [Audit]             Files        Lines         Code     Comments       Blanks
  Source Code     %0    %1    %2    %3    %4
@@ -141,13 +145,14 @@ void command::audit::audit_workspace(const std::string& root)
 
   // Collect files
   struct Task {
-    fs::path path;
-    enum { SRC, VENDOR, BIND } category;
+    std::string path;
+    enum class ECat : uint8_t { SRC, VENDOR, BIND };
+    ECat category;
   };
 
   std::vector<Task> tasks;
 
-  for (auto& entry : fs::recursive_directory_iterator(root)) {
+  for (const auto& entry : fs::recursive_directory_iterator(root)) {
     if (!entry.is_regular_file()) continue;
 
     auto ext = entry.path().extension().string();
@@ -156,11 +161,11 @@ void command::audit::audit_workspace(const std::string& root)
     std::string relative_path = entry.path().lexically_relative(root).string();
 
     if (relative_path.find("src/") == 0)
-      tasks.push_back({entry.path(), Task::SRC});
+      tasks.push_back({entry.path(), Task::ECat::SRC});
     else if (relative_path.find("vendor/") == 0)
-      tasks.push_back({entry.path(), Task::VENDOR});
+      tasks.push_back({entry.path(), Task::ECat::VENDOR});
     else if (relative_path.find("bind/") == 0)
-      tasks.push_back({entry.path(), Task::BIND});
+      tasks.push_back({entry.path(), Task::ECat::BIND});
   }
 
   const size_t        total_files = tasks.size();
@@ -187,6 +192,7 @@ void command::audit::audit_workspace(const std::string& root)
   std::atomic<size_t>      index{0};
   std::vector<std::thread> workers;
 
+  workers.reserve(thread_count);
   for (size_t t = 0; t < thread_count; ++t) {
     workers.emplace_back([&]() {
       CategoryStats local_src{};
@@ -201,9 +207,9 @@ void command::audit::audit_workspace(const std::string& root)
         const auto& task = tasks[i];
 
         switch (task.category) {
-        case Task::SRC:    process_file(task.path, local_src, local_global); break;
-        case Task::VENDOR: process_file(task.path, local_vendor, local_global); break;
-        case Task::BIND:   process_file(task.path, local_bind, local_global); break;
+        case Task::ECat::SRC:    process_file(task.path, local_src, local_global); break;
+        case Task::ECat::VENDOR: process_file(task.path, local_vendor, local_global); break;
+        case Task::ECat::BIND:   process_file(task.path, local_bind, local_global); break;
         }
 
         processed++;
@@ -238,7 +244,7 @@ void command::audit::audit_workspace(const std::string& root)
                       + global.generics + global.imports + global.roles + global.sys + global.unions;
 
 
-  std::string out = out_str;
+  std::string out(str_template);
 
   std::initializer_list<std::string> vars = {
 
@@ -283,7 +289,7 @@ void command::audit::audit_workspace(const std::string& root)
   };
 
 
-  common::fmt_template(out, vars);
+  common::utils::fmt_template(out, vars);
 
-  std::cout << out << std::endl;
+  std::cout << out;
 }

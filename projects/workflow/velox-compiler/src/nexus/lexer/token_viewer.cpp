@@ -1,66 +1,66 @@
 #include "token_viewer.hpp"
 
 #include <cstddef>
-#include <iostream>
 
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
 
 
-token::Viewer::Viewer(script::ScriptInfo& p_scr_info)
-  : scr_info(p_scr_info)
+token::Viewer::Viewer(cu::CU& p_CU)
+  : CU(p_CU)
 {
   phase         = compiler::EPhase::parser;
   current_token = token::ETokenKind::S_END_OF_FILE;
 }
 
 
-token::Token& token::Viewer::expect(ErrorCode code, token::ETokenKind type, std::string_view msg,
+token::Token& token::Viewer::expect(ErrorCode code, token::ETokenKind kind, std::string_view msg,
                                     std::string_view hint) noexcept
 {
-  if (!check(type)) {
+  if (!check(kind)) {
     add_error(code, msg, hint);
   }
   return next();
 }
 
-token::Token& token::Viewer::expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& types,
+token::Token& token::Viewer::expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& kinds,
                                         std::string_view msg, std::string_view hint) noexcept
 {
-  for (auto type : types) {
-    if (check(type)) {
+  for (auto kind : kinds) {
+    if (check(kind)) {
       return next();
     }
   }
   add_error(code, msg, hint);
-  return *scr_info.file_info.tokens->tokens.end();
+  return *CU.file_info.tokens->tokens.end();
 }
 
-void token::Viewer::add_error(ErrorCode code, std::string_view msg, std::string_view hint)
+void token::Viewer::add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept
 {
-  auto   tok        = peek();
+  auto&  tok        = peek();
   size_t start      = tok.begin;
   size_t end        = start + tok.length;
-  auto   error_diag = Error_Diagnostic(scr_info.id, code, start, end, phase, msg, hint);
+  auto   error_diag = Error_Diagnostic(CU.cuid, code, start, end, phase, msg, hint);
 
-  compiler::COMPILER.add_error(std::move(error_diag));
+  compiler::COMPILER.add_error(error_diag);
 }
 
-void token::Viewer::add_error_tok(ErrorCode code, const Token& tok, std::string_view msg, std::string_view hint)
+void token::Viewer::add_error_tok(ErrorCode code, const Token& tok, std::string_view msg,
+                                  std::string_view hint) noexcept
 {
   size_t start      = tok.begin;
   size_t end        = start + tok.length;
-  auto   error_diag = Error_Diagnostic(scr_info.id, code, start, end, phase, msg, hint);
+  auto   error_diag = Error_Diagnostic(CU.cuid, code, start, end, phase, msg, hint);
 
-  compiler::COMPILER.add_error(std::move(error_diag));
+  compiler::COMPILER.add_error(error_diag);
 }
 
 void token::Viewer::jump(size_t newPosition) noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   if (newPosition < tokens.size()) {
     current = newPosition;
@@ -76,7 +76,7 @@ void token::Viewer::jump(size_t newPosition) noexcept
 
 token::Token& token::Viewer::next() noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   if (!is_end()) {
     auto& pre_tok = tokens[current];
@@ -91,9 +91,9 @@ token::Token& token::Viewer::next() noexcept
   return tokens.back();
 }
 
-token::Token& token::Viewer::peek(int offset) const noexcept
+token::Token& token::Viewer::peek(size_t offset) const noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   size_t index = current + offset;
   if (index < tokens.size()) return tokens[index];
@@ -102,7 +102,7 @@ token::Token& token::Viewer::peek(int offset) const noexcept
 
 token::Token& token::Viewer::prev() noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   if (current == 0) {
     return tokens[0];
@@ -113,10 +113,10 @@ token::Token& token::Viewer::prev() noexcept
 
 bool token::Viewer::is_end() const noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   return current == tokens.size() - 1
-         || scr_info.file_info.tokens->get(token::_id(current)).kind == token::ETokenKind::S_END_OF_FILE;
+         || CU.file_info.tokens->get(token::ID::make(CU.cuid, current)).kind == token::ETokenKind::S_END_OF_FILE;
 }
 
 bool token::Viewer::look_ahead(token::ETokenKind check, token::ETokenKind terminaison) const noexcept
@@ -150,7 +150,7 @@ bool token::Viewer::check_any(const std::initializer_list<token::ETokenKind>& ki
 bool token::Viewer::match(token::ETokenKind kind) noexcept
 {
   if (check(kind)) {
-    next();
+    (void)next();
     return true;
   }
   return false;
@@ -158,8 +158,8 @@ bool token::Viewer::match(token::ETokenKind kind) noexcept
 
 bool token::Viewer::check_id_val(std::string_view val) const noexcept
 {
-  auto tok = peek();
-  auto str = scr_info.file_info.tokens->audit.Token_to_str(tok.id);
+  auto& tok = peek();
+  auto  str = CU.file_info.tokens->audit.Token_to_str(tok.tokid);
 
   if (check(token::ETokenKind::IDENTIFIER)) {
     return str == val;
@@ -169,20 +169,41 @@ bool token::Viewer::check_id_val(std::string_view val) const noexcept
 
 bool token::Viewer::check_val(std::string_view val) const noexcept
 {
-  auto tok = peek();
-  auto str = scr_info.file_info.tokens->audit.Token_to_str(tok.id);
+  auto& tok = peek();
+  auto  str = CU.file_info.tokens->audit.Token_to_str(tok.tokid);
 
   return str == val;
 }
 
+bool token::Viewer::check_chain(const std::initializer_list<token::ETokenKind>& l) const noexcept
+{
+  for (size_t i = 0; i < l.size(); i++) {
+    const auto& t  = *(l.begin() + i);
+    const auto& tk = peek(i);
+    if (tk.kind != t) return false;
+  }
+
+  return false;
+}
+
+bool token::Viewer::match_chain(const std::initializer_list<token::ETokenKind>& l) noexcept
+{
+  const bool result = check_chain(l);
+
+  if (result) jump(position() + l.size());
+
+  return result;
+}
+
+
 std::string token::Viewer::match_any_val(const std::initializer_list<std::string>& val) noexcept
 {
-  auto tok = peek();
-  auto str = scr_info.file_info.tokens->audit.Token_to_str(tok.id);
+  auto& tok = peek();
+  auto  str = CU.file_info.tokens->audit.Token_to_str(tok.tokid);
 
-  for (auto& elem : val) {
+  for (const auto& elem : val) {
     if (str == elem) {
-      next();
+      (void)next();
       return elem;
     }
   }
@@ -192,11 +213,11 @@ std::string token::Viewer::match_any_val(const std::initializer_list<std::string
 
 bool token::Viewer::match_val(std::string_view val) noexcept
 {
-  auto tok = peek();
-  auto str = scr_info.file_info.tokens->audit.Token_to_str(tok.id);
+  auto& tok = peek();
+  auto  str = tok.tokid.str();
 
   if (str == val) {
-    next();
+    (void)next();
     return true;
   }
   return false;
@@ -205,17 +226,17 @@ bool token::Viewer::match_val(std::string_view val) noexcept
 bool token::Viewer::match_id_val(std::string_view val) noexcept
 {
   if (check_id_val(val)) {
-    next();
+    (void)next();
     return true;
   }
   return false;
 }
 
-bool token::Viewer::match_any(const std::initializer_list<token::ETokenKind>& types) noexcept
+bool token::Viewer::match_any(const std::initializer_list<token::ETokenKind>& kinds) noexcept
 {
-  for (ETokenKind type : types) {
-    if (check(type)) {
-      next();
+  for (auto kind : kinds) {
+    if (check(kind)) {
+      (void)next();
       return true;
     }
   }
@@ -224,7 +245,7 @@ bool token::Viewer::match_any(const std::initializer_list<token::ETokenKind>& ty
 
 size_t token::Viewer::size() const noexcept
 {
-  return scr_info.file_info.tokens->tokens.size();
+  return CU.file_info.tokens->tokens.size();
 }
 
 size_t token::Viewer::position() const noexcept
@@ -234,7 +255,7 @@ size_t token::Viewer::position() const noexcept
 
 size_t token::Viewer::line() const noexcept
 {
-  auto line = scr_info.file_info.get_line_from_pos(peek().begin);
+  auto line = CU.file_info.get_line_from_pos(peek().begin);
 
   return line;
 }
@@ -242,7 +263,7 @@ size_t token::Viewer::line() const noexcept
 // Go back to a know position
 void token::Viewer::rewind(size_t pos) noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
   if (pos >= tokens.size()) pos = tokens.size() - 1;
   current = pos;
@@ -260,7 +281,7 @@ void token::Viewer::synchronize() noexcept
     switch (peek().kind) {
     case token::ETokenKind::LET:
     case token::ETokenKind::VAR:
-    case token::ETokenKind::ENTITY:
+    case token::ETokenKind::FORM:
     case token::ETokenKind::METACODE:
     case token::ETokenKind::ENUM:
     case token::ETokenKind::IF:
@@ -274,21 +295,21 @@ void token::Viewer::synchronize() noexcept
     case token::ETokenKind::MATCH:
     case token::ETokenKind::CAST:
     case token::ETokenKind::FUNCTION:
-    case token::ETokenKind::SYSTEM:
+    case token::ETokenKind::RULE:
     case token::ETokenKind::OP:
-    case token::ETokenKind::COMPONENT:
+    case token::ETokenKind::FACET:
     case token::ETokenKind::IDENTIFIER: return; // end the function
     default:                            break;                             // continue
     }
 
-    next(); // consume token and continue
+    (void)next(); // consume token and continue
   }
 }
 
-const token::Token& token::Viewer::get(size_t position)
+const token::Token& token::Viewer::get(size_t pos) const noexcept
 {
-  auto& tokens = scr_info.file_info.tokens->tokens;
+  auto& tokens = CU.file_info.tokens->tokens;
 
-  if (tokens.size() < position) auto val = tokens.back();
-  return tokens[position];
+  if (tokens.size() < pos) return tokens.back();
+  return tokens[pos];
 }

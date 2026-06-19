@@ -13,30 +13,32 @@ struct Parser_Expression final {
   {
   }
 
-  [[nodiscard]] ast::_gnid parse_expression();
-  [[nodiscard]] ast::_gnid parse_expression_term();
-  [[nodiscard]] ast::_gnid base_expression();
-  [[nodiscard]] ast::_gnid suffix_expression(ast::_gnid& p_base_expr);
-  [[nodiscard]] ast::_gnid cast_as(ast::_gnid& p_expr);
+  [[nodiscard]] ast::ID parse_expression();
+  [[nodiscard]] ast::ID parse_expression_term();
+  [[nodiscard]] ast::ID base_expression();
+  [[nodiscard]] ast::ID suffix_expression(ast::ID p_base_expr);
+  [[nodiscard]] ast::ID cast_as(ast::ID p_expr);
+  [[nodiscard]] ast::ID assign(ast::ID left);
 
 
-  [[nodiscard]] ast::_gnid              member_access(ast::_gnid& p_left);
-  [[nodiscard]] ast::_gnid              table_access(ast::_gnid& p_target);
-  [[nodiscard]] ast::_gnid              function_call(ast::_gnid& p_callee);
-  [[nodiscard]] ast::_gnid              system_call(ast::_gnid& p_target_entity);
-  [[nodiscard]] std::vector<ast::_gnid> call_arguments();
-  [[nodiscard]] ast::_gnid              if_ternary();
+  [[nodiscard]] ast::ID              member_access(ast::ID p_left);
+  [[nodiscard]] ast::ID              table_access(ast::ID p_target);
+  [[nodiscard]] ast::ID              function_call(ast::ID p_callee);
+  [[nodiscard]] ast::ID              rule_call(ast::ID p_target_form);
+  [[nodiscard]] std::vector<ast::ID> call_arguments();
+  [[nodiscard]] ast::ID              if_ternary();
+
 
   // special memory expression
-  [[nodiscard]] ast::_gnid new_ptr();
-  [[nodiscard]] ast::_gnid ptr_val();
-  [[nodiscard]] ast::_gnid ref_of();
-  [[nodiscard]] ast::_gnid mut_of();
-  [[nodiscard]] ast::_gnid copy_of();
-  [[nodiscard]] ast::_gnid addr_of();
-  [[nodiscard]] ast::_gnid size_of();
-  [[nodiscard]] ast::_gnid move();
-  [[nodiscard]] ast::_gnid getbits(ast::_gnid& p_expr);
+  [[nodiscard]] ast::ID new_ptr();
+  [[nodiscard]] ast::ID ptr_val();
+  [[nodiscard]] ast::ID ref_of();
+  [[nodiscard]] ast::ID mut_of();
+  [[nodiscard]] ast::ID copy_of();
+  [[nodiscard]] ast::ID addr_of();
+  [[nodiscard]] ast::ID size_of();
+  [[nodiscard]] ast::ID move();
+  [[nodiscard]] ast::ID getbits(ast::ID p_expr);
 
   Parser_Context& p;
 };

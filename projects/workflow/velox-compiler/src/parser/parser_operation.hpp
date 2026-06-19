@@ -14,28 +14,29 @@ struct Parser_Operator final {
 
   bool no_literal_cop_mode = false;
 
-  [[nodiscard]] ast::_gnid try_operation();
-  [[nodiscard]] ast::_gnid assignment(ast::_gnid p_left);
+  [[nodiscard]] ast::ID try_operation();
+  [[nodiscard]] ast::ID assignment(ast::ID p_left);
 
 private:
-  [[nodiscard]] ast::_gnid _15_power();
-  [[nodiscard]] ast::_gnid _14_scalar();
-  [[nodiscard]] ast::_gnid _13_cumulate();
-  [[nodiscard]] ast::_gnid _12_shift();
-  [[nodiscard]] ast::_gnid _11_comparison();
-  [[nodiscard]] ast::_gnid _10_equality();
-  [[nodiscard]] ast::_gnid _9_bitwise_not();
-  [[nodiscard]] ast::_gnid _8_bitwise_and_nand();
-  [[nodiscard]] ast::_gnid _7_bitwise_xor_xnor();
-  [[nodiscard]] ast::_gnid _6_bitwise_or_nor();
-  [[nodiscard]] ast::_gnid _5_logical_not();
-  [[nodiscard]] ast::_gnid _4_logical_and_nand();
-  [[nodiscard]] ast::_gnid _3_logicial_xor_xnor();
-  [[nodiscard]] ast::_gnid _2_logicial_or_nor();
-  [[nodiscard]] ast::_gnid _1_memory();
+  [[nodiscard]] ast::ID _15_power();
+  [[nodiscard]] ast::ID _14_scalar();
+  [[nodiscard]] ast::ID _13_cumulate();
+  [[nodiscard]] ast::ID _12_shift();
+  [[nodiscard]] ast::ID _11_comparison();
+  [[nodiscard]] ast::ID _10_equality();
+  [[nodiscard]] ast::ID _9_bitwise_not();
+  [[nodiscard]] ast::ID _8_bitwise_and_nand();
+  [[nodiscard]] ast::ID _7_bitwise_xor_xnor();
+  [[nodiscard]] ast::ID _6_bitwise_or_nor();
+  [[nodiscard]] ast::ID _5_logical_not();
+  [[nodiscard]] ast::ID _4_logical_and_nand();
+  [[nodiscard]] ast::ID _3_logicial_xor_xnor();
+  [[nodiscard]] ast::ID _2_logicial_or_nor();
+  [[nodiscard]] ast::ID _1_memory();
+  [[nodiscard]] ast::ID _0_unary();
 
-  [[nodiscard]] ast::_gnid Create_BinOp(ast::_gnid p_left, ast::EBinOpType p_op, ast::_gnid p_right);
-  [[nodiscard]] ast::_gnid Create_UnOp(ast::EUnaryOpType p_op, ast::_gnid p_base);
+  [[nodiscard]] ast::ID Create_BinOp(ast::ID p_left, ast::EBinOpType p_op, ast::ID p_right);
+  [[nodiscard]] ast::ID Create_UnOp(ast::EUnaryOpType p_op, ast::ID p_base);
 
   Parser_Context& p;
 };

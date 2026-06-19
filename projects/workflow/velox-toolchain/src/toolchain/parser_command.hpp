@@ -2,41 +2,42 @@
 
 #include <string>
 
+#include <common/commands.hpp>
+
+
 namespace CLI
 {
 class App;
 }
 
-class Command
+namespace toolchain
+{
+
+class Commander final : common::Commander
 {
 public:
-  Command() = delete;
-  Command(CLI::App& _app)
-    : app(_app)
+  Commander() = delete;
+  Commander(CLI::App& _app)
+    : common::Commander(_app)
   {
-    init_command_toolchain();
+    init_commands();
   }
 
 private:
-  CLI::App& app;
-
-  std::string regex_name;
   std::string name;
-  std::string dir_path;
-  std::string file_path;
-  std::string version;
-  bool        all        = false;
-  bool        latest     = false;
+  std::string regex_name;
   bool        installed  = false;
   bool        upgradable = false;
   bool        full       = false;
   bool        force      = false;
 
+  void init_commands() noexcept;
 
-  void init_command_toolchain();
-  void init_command_package();
-  void init_command_compiler();
-  void init_command_workspace();
-  void init_command_build();
-  void init_command_ffi_json();
+  void init_command_package() noexcept;
+  void init_command_workspace() noexcept;
+  void init_command_build() noexcept override;
+
+  void exec_ffi_command() noexcept override;
 };
+
+} // namespace toolchain

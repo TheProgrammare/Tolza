@@ -5,10 +5,7 @@
 #include "nexus/module.hpp"
 
 #include <cassert>
-#include <set>
 #include <string>
-#include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace symbol
@@ -24,50 +21,68 @@ public:
   {
   }
 
-  auto operator<=>(const DEF_SYMBOL_ID&) const = default;
-  auto operator<=>(size_t other) const
+  [[nodiscard]] auto operator<=>(const DEF_SYMBOL_ID&) const = default;
+  [[nodiscard]] auto operator<=>(size_t other) const
   {
     return id <=> other;
   }
 };
 
 struct Symbol final {
-  _id id;
+  ID symid;
 
-  ast::_gnid  gnid;
-  module::_id module_id; // module source
+  ast::ID nodeid;
 
-  type::_id           type;       // resolved
-  module::EVisibility visibility; // resolved
+  EVisibility visibility; // resolved
 
-  std::string      mangle_name() const;
-  std::string_view get_name() const;
+  [[nodiscard]] std::string mangle_name() const;
+  [[nodiscard]] std::string get_name() const;
 };
 
+[[nodiscard]] Symbol& get(ID symid) noexcept;
 
 struct Arena final {
+  Arena() = delete;
+
+  Arena(cu::ID _cuid)
+    : cuid(_cuid)
+  {
+  }
+  bool freeze = false;
+
+  const cu::ID cuid;
+
   std::vector<Symbol> symbols;
 
-  _id add(Symbol sym)
+  [[nodiscard]] ID add(Symbol sym) noexcept
   {
-    sym.id = _id(symbols.size());
-    symbols.push_back(std::move(sym));
-    return _id(symbols.size() - 1);
+    assert(!freeze && "Pool is immutable after parsing pass");
+
+    auto new_id = ID::make(cuid, symbols.size());
+    sym.symid   = new_id;
+
+    symbols.emplace_back(sym);
+    return new_id;
   }
 
-  const Symbol& get(_id id) const
+  // if nullptr : node is not a declaration or not declared
+  [[nodiscard]] Symbol* from_node(ast::ID nodeid) noexcept;
+
+  [[nodiscard]] const Symbol& get(ID symid) const noexcept
   {
-    assert(id < symbols.size());
-    return symbols[id.value()];
+    assert(symid.cu() == cuid && "Must be the same script");
+    assert(symid.offset() < symbols.size());
+    return symbols[symid.offset()];
   }
 
-  Symbol& get_mut(_id id)
+  [[nodiscard]] Symbol& get(ID symid) noexcept
   {
-    assert(id < symbols.size());
-    return symbols[id.value()];
+    assert(symid.cu() == cuid && "Must be the same script");
+    assert(symid.offset() < symbols.size());
+    return symbols[symid.offset()];
   }
 
-  std::string_view get_sym_name(_id sym_id) const;
+  [[nodiscard]] std::string get_sym_name(ID symid) const;
 };
 
 

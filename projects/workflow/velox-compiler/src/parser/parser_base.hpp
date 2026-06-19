@@ -30,16 +30,16 @@ struct Parser_Base final {
   ~Parser_Base();
 
 
-  [[nodiscard]] ast::_gnid parse_import();
-  [[nodiscard]] ast::_gnid parse_export();
-  [[nodiscard]] ast::_gnid parse_reexport();
-  [[nodiscard]] ast::_gnid parse_extern();
+  [[nodiscard]] ast::ID parse_import();
+  [[nodiscard]] ast::ID parse_export();
+  [[nodiscard]] ast::ID parse_reexport();
+  [[nodiscard]] ast::ID parse_extern();
 
-  [[nodiscard]] ast::_gnid regex_path();
-  [[nodiscard]] ast::_gnid identifier(bool p_no_qualified_id = false, bool p_keyword_allowed = false);
-  [[nodiscard]] std::tuple<ast::_gnid, type::_id> identifier_typed();
+  [[nodiscard]] ast::ID regex_path();
+  [[nodiscard]] ast::ID identifier(bool p_no_qualified_id = false, bool p_keyword_allowed = false);
+  [[nodiscard]] std::tuple<ast::ID, type::ID> identifier_typed();
 
-  [[nodiscard]] ast::_gnid parse_instruction();
+  [[nodiscard]] ast::ID parse_instruction();
 
   Parser_Context& p;
 };

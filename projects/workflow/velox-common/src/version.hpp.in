@@ -1,3 +1,0 @@
-#pragma once
-
-#define __SOFTWARE_VERSION__ "@SOFTWARE_VERSION@"

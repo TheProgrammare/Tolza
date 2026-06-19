@@ -1,63 +1,54 @@
 #include "command_package.hpp"
-#include "toolchain/toolchain.hpp"
 
 #include <iostream>
 
-void command::package::err(const std::string& msg)
-{
-  std::cerr << "[pkg:ERROR] " << msg << std::endl;
-}
+#define OUT_LOG std::cout << "[pkg] "
+#define OUT_ERR std::cerr << "[pkg:ERROR] "
 
-void command::package::log(const std::string& msg)
+bool command::package::install(std::string_view pkg_name) noexcept
 {
-  std::cout << "[pkg] " << msg << std::endl;
-}
-
-bool command::package::install(const std::string& pkg_name)
-{
-  log("Installing " + pkg_name + " ...");
+  OUT_LOG "Installing " << pkg_name << " ...";
   return true;
 }
-bool command::package::remove(const std::string& pkg_name)
+bool command::package::remove(std::string_view pkg_name) noexcept
 {
-  log("Removing " + pkg_name + " ...");
+  OUT_LOG "Removing " << pkg_name << " ...";
   return true;
 }
-bool command::package::info(const std::string& pkg_name)
+bool command::package::info(std::string_view pkg_name) noexcept
 {
-  log("Info of " + pkg_name + " ...");
+  OUT_LOG "Info of " << pkg_name << " ...";
   return true;
 }
-bool command::package::purge(const std::string& pkg_name)
+bool command::package::purge(std::string_view pkg_name) noexcept
 {
-  log("Purging " + pkg_name + " ...");
+  OUT_LOG "Purging " << pkg_name << " ...";
   return true;
 }
-bool command::package::check(const std::string& pkg_name)
+bool command::package::check(std::string_view pkg_name) noexcept
 {
-  log("Checking " + pkg_name + " ...");
+  OUT_LOG "Checking " << pkg_name << " ...";
   return true;
 }
-bool command::package::list(const std::string& regex, bool only_installed, bool only_upgradable)
+bool command::package::list(std::string_view regex, bool only_installed, bool only_upgradable) noexcept
 {
   std::cout << "Listing";
   if (only_installed) std::cout << " (installed)";
   if (only_upgradable) std::cout << " (upgradable)";
-  std::cout << std::endl;
   return true;
 }
-bool command::package::update()
+bool command::package::update() noexcept
 {
-  log("Updating the package cache list ...");
+  OUT_LOG "Updating the package cache list ...";
   return true;
 }
-bool command::package::upgrade()
+bool command::package::upgrade() noexcept
 {
-  log("Check for upgrades ...");
+  OUT_LOG "Check for upgrades ...";
   return true;
 }
-bool command::package::clean()
+bool command::package::clean() noexcept
 {
-  log("Cleaning the package cache list ...");
+  OUT_LOG "Cleaning the package cache list ...";
   return true;
 }

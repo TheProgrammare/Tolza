@@ -2,7 +2,7 @@
 
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/type.hpp"
+#include "nexus/type/type.hpp"
 
 namespace ast
 {
@@ -29,7 +29,7 @@ AST_NODE(Expression_Other){};
 // (10, a, param3 = b, param5 = c)
 AST_NODE(Expression_Call_Argument)
 {
-  [[maybe_unused]] std::string_view explicit_name;
+  [[maybe_unused]] std::string explicit_name;
   SET_NODE(expression);
 };
 
@@ -39,9 +39,9 @@ AST_NODE(Expression_Call)
   SET_VECTOR_NODE(arguments);
 };
 
-AST_NODE(Expression_Call_System)
+AST_NODE(Expression_Call_Rule)
 {
-  SET_NODE(target_entity);
+  SET_NODE(target_form);
 
   SET_NODE(callee);
   SET_VECTOR_NODE(arguments);
@@ -54,8 +54,8 @@ AST_NODE(Expression_Call_Pipe)
   SET_VECTOR_NODE(arguments);
   SET_VECTOR_TYPE(arguments_types)
 
-  std::vector<std::vector<_id>>         next_arguments;
-  std::vector<std::vector<::type::_id>> next_arguments_types;
+  std::vector<std::vector<ID>>         next_arguments;
+  std::vector<std::vector<::type::ID>> next_arguments_types;
 
   std::vector<EBinOpType> mutable_ops;
 
@@ -119,8 +119,8 @@ AST_NODE(Expression_GetBits)
   SET_NODE(target);
   SET_NODE(range);
   // 8, 16, 32, 64, 128
-  enum EBitSize { _8, _16, _32, _64, _128 };
-  EBitSize bit_size = _8;
+  enum class EBitSize : uint8_t { _8, _16, _32, _64, _128 };
+  EBitSize bit_size = EBitSize::_8;
 };
 
 // new ptr'T(val)

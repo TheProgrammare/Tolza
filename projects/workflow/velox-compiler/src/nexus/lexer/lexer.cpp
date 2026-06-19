@@ -1,13 +1,14 @@
 #include "lexer.hpp"
 
 
-#include <iostream>
-#include <algorithm>
 #include <initializer_list>
 #include <queue>
 
+#include <common/common.hpp>
+#include <common/utils.hpp>
+
 #include "nexus/ids.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "token.hpp"
 
@@ -19,12 +20,12 @@ Lexer::DFANode::DFANode()
 }
 
 
-Lexer::DFA Lexer::build_DFA()
+constexpr Lexer::DFA Lexer::build_DFA()
 {
-  DFANode* root = new DFANode();
+  auto* root = new DFANode();
 
   // 1. Build trie
-  for (auto& [txt, kind] : token::k_DFA) {
+  for (const auto& [txt, kind] : token::k_DFA) {
     DFANode* n = root;
     for (char c : txt) {
       if (!n->next[c]) n->next[c] = new DFANode();
@@ -39,16 +40,16 @@ Lexer::DFA Lexer::build_DFA()
 
   root->id = 0;
   q.push(root);
-  nodes.push_back(root);
+  nodes.emplace_back(root);
 
   while (!q.empty()) {
     DFANode* n = q.front();
     q.pop();
 
-    for (auto& [c, nxt] : n->next) {
+    for (const auto& [c, nxt] : n->next) {
       if (nxt->id == DFA_INVALID) {
         nxt->id = nodes.size();
-        nodes.push_back(nxt);
+        nodes.emplace_back(nxt);
         q.push(nxt);
       }
     }
@@ -63,7 +64,7 @@ Lexer::DFA Lexer::build_DFA()
     auto& row = dfa.transition[n->id];
     row.fill(DFA_INVALID);
 
-    for (auto& [c, nxt] : n->next) {
+    for (const auto& [c, nxt] : n->next) {
       row[(unsigned char)c] = nxt->id;
     }
 
@@ -74,34 +75,35 @@ Lexer::DFA Lexer::build_DFA()
 }
 
 
-Lexer::Lexer(script::ScriptInfo& _scr_info)
-  : scr_info(_scr_info)
-  , stream(scr_info.file_info.data)
+Lexer::Lexer(cu::CU& _CU)
+  : CU(_CU)
+  , stream(CU.file_info.data)
 {
 }
 
-void Lexer::start_buffer()
+void Lexer::start_buffer() noexcept
 {
   buffer_start_pos = stream.position();
 }
 
-std::string_view Lexer::get_buffer_str() const
+std::string_view Lexer::get_buffer_str() const noexcept
 {
   assert(buffer_start_pos <= stream.position());
   size_t length = stream.position() - buffer_start_pos + 1;
   return stream.data().substr(buffer_start_pos, length);
 }
 
-bool Lexer::is_buffer_empty() const
+bool Lexer::is_buffer_empty() const noexcept
 {
   return buffer_start_pos > stream.position();
 }
 
 
-bool Lexer::tokenize(const std::set<char>& exit_char)
+bool Lexer::tokenize(const std::set<char>& exit_char) noexcept
 {
   auto stop_guard = [&]() -> bool {
-    while ((is_ctrl(stream.peek()) || is_space(stream.peek())) && exit_char.find(stream.peek()) == exit_char.end()) {
+    while ((common::utils::is_ctrl(stream.peek()) || common::utils::is_space(stream.peek()))
+           && exit_char.find(stream.peek()) == exit_char.end()) {
       if (!stream.next()) return false;
     }
     if (stream.is_end()) return true;
@@ -114,7 +116,7 @@ bool Lexer::tokenize(const std::set<char>& exit_char)
     if (stop_guard()) break;
 
     // no char before keyword : clear all char control and spaces
-    while ((is_ctrl(stream.peek()) || is_space(stream.peek())) && stream.next()) {
+    while ((common::utils::is_ctrl(stream.peek()) || common::utils::is_space(stream.peek())) && stream.next()) {
     }
 
     start_buffer();
@@ -131,13 +133,15 @@ bool Lexer::tokenize(const std::set<char>& exit_char)
       tokenize_textual();
       continue;
     }
+
     // it's a comment
-    else if (stream.check('/') && (stream.peek(1) == '/' || stream.peek(1) == '*')) {
+    if (stream.check('/') && (stream.peek(1) == '/' || stream.peek(1) == '*')) {
       tokenize_comment();
       continue;
     }
+
     // it's a metacode instruction
-    else if (stream.check('#')) {
+    if (stream.check('#')) {
       // handle multiple metacode in one line # static # const
       while (!stream.is_end()) {
         tokenize_metacode();
@@ -146,19 +150,20 @@ bool Lexer::tokenize(const std::set<char>& exit_char)
 
       continue;
     }
+
     // it's a placeholder: [[Identifier]]
-    else if (stream.check('[') && stream.peek(1) == '[') {
+    if (stream.check('[') && stream.peek(1) == '[') {
       start_buffer();
 
-      stream.next(); // consume [
-      stream.next(); // consume [
+      (void)stream.next(); // consume [
+      (void)stream.next(); // consume [
       read_identifier();
       auto a = 0;
 
       if (stream.peek(1) == ']') {
-        stream.next(); // consume ]
+        (void)stream.next(); // consume ]
         if (stream.peek(1) == ']') {
-          stream.next(); // consume ]
+          (void)stream.next(); // consume ]
           add_token(token::ETokenKind::S_METACODE_PLACEHOLDER);
           continue;
         }
@@ -167,17 +172,18 @@ bool Lexer::tokenize(const std::set<char>& exit_char)
       add_error(0, "Expected end of placeholder end ']]' after placeholder start '[['",
                 "define placeholders in code like: `[[_U]]`");
     } else if (tokenize_DFA()) {
-
-    } else if (tokenize_keyword_identifier()) {
-
+      continue;
     }
     // can be a numeric value or a range token (.. or ..=) or a variadic (...)
-    else if (is_digit(stream.peek())) {
+
+    if (common::utils::is_digit(stream.peek())) {
       start_buffer();
 
       tokenize_numeric();
       continue;
     }
+
+    (void)tokenize_keyword_identifier();
   }
 
   if (exit_char.empty()) add_token(token::ETokenKind::S_END_OF_FILE, true);
@@ -186,7 +192,7 @@ bool Lexer::tokenize(const std::set<char>& exit_char)
 }
 
 
-bool Lexer::tokenize_DFA()
+bool Lexer::tokenize_DFA() noexcept
 {
   start_buffer();
   static DFA dfa = build_DFA();
@@ -214,39 +220,48 @@ bool Lexer::tokenize_DFA()
   }
 
   if (last_accept_state == DFA_INVALID) {
-    stream.jump(start);
+    (void)stream.jump(start);
     return false;
   }
 
-  stream.jump(last_accept_pos);
+  // if is underscore but it's the first character of identifier
+  if (dfa.accept[last_accept_state] == token::ETokenKind::UNDERSCORE) {
+    const char next_c = stream.at(last_accept_pos);
+    if (common::utils::is_alnum(next_c) || next_c == '_') {
+      (void)stream.jump(start);
+      return false;
+    }
+  }
+
+  (void)stream.jump(last_accept_pos);
   add_token(dfa.accept[last_accept_state]);
   return true;
 }
 
-void Lexer::process_escape()
+void Lexer::process_escape() noexcept
 {
   // read next chracter after backslash
-  stream.match('\\');
+  (void)stream.match('\\');
 
   on_escape = true;
 
   switch (stream.peek()) {
-  case 'n':  break;
-  case 't':  break;
-  case 'r':  break;
-  case '\\': break;
-  case '\'': break;
-  case '"':  break;
-  case '0':  break;
-  case 'a':  break;
-  case 'b':  break;
-  case 'f':  break;
+  case 'n':
+  case 't':
+  case 'r':
+  case '\\':
+  case '\'':
+  case '"':
+  case '0':
+  case 'a':
+  case 'b':
+  case 'f':
   case 'v':  break;
 
   // hex sequence \xHH
   case 'x':  {
     for (int i = 0; i < 2; ++i) { // read 1 or 2 hex
-      if (!stream.next() || !is_hex(stream.peek())) {
+      if (!stream.next() || !common::utils::is_hex(stream.peek())) {
         add_error(2, "Invalid hex escape sequence", "define hex escape like: `\\xHH`");
         return;
       }
@@ -256,10 +271,9 @@ void Lexer::process_escape()
   // Unicode sequence \uXXXX or \UXXXXXXXX
   case 'u':
   case 'U': {
-    int         num_digits = (stream.check('u')) ? 4 : 8;
-    std::string hex;
+    int num_digits = (stream.check('u')) ? 4 : 8;
     for (int i = 0; i < num_digits; ++i) {
-      if (!stream.next() || !is_hex(stream.peek())) {
+      if (!stream.next() || !common::utils::is_hex(stream.peek())) {
         add_error(3, "Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
         return;
       }
@@ -274,7 +288,7 @@ void Lexer::process_escape()
   }
 }
 
-void Lexer::tokenize_textual()
+void Lexer::tokenize_textual() noexcept
 {
   auto tok_text = [&](bool with_escape, bool with_interpolation, std::vector<char> end_tokens) {
     do {
@@ -286,13 +300,13 @@ void Lexer::tokenize_textual()
           add_token(token::ETokenKind::S_INTERPOLATION_START);
 
           start_buffer();
-          tokenize({'}', ':'});
+          (void)tokenize({'}', ':'});
 
           if (stream.check(':')) {
             start_buffer();
             add_token(token::ETokenKind::COLON);
             while (tokenize_spec()) {
-              stream.next();
+              (void)stream.next();
             }
           }
 
@@ -333,7 +347,7 @@ void Lexer::tokenize_textual()
         }
         if (is_ended) {
           for (size_t i = 0; i < end_tokens.size(); i++) {
-            stream.next(); // consume end token
+            (void)stream.next(); // consume end token
           }
           add_token(token::ETokenKind::L_TEXTUAL, true);
           return;
@@ -343,49 +357,39 @@ void Lexer::tokenize_textual()
     } while (stream.next());
   };
 
-  if (stream.peek(0) == '"' && stream.peek(1) == '"' && stream.peek(2) == '"') {
-    stream.next(); // consume "
-    stream.next(); // consume "
-    stream.next(); // consume "
+  if (stream.match_chain({'"', '"', '"'})) {
     if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
 
 
     tok_text(true, true, {'\n', '"', '"', '"'});
-  } else if (stream.peek(0) == 'r' && stream.peek(1) == '"' && stream.peek(2) == '"' && stream.peek(3) == '"') {
-    stream.next(); // consume r
-    stream.next(); // consume "
-    stream.next(); // consume "
-    stream.next(); // consume "
+  } else if (stream.match_chain({'r', '"', '"', '"'})) {
     if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
 
     tok_text(false, true, {'\n', '"', '"', '"'});
-  } else if (stream.peek(0) == 'r' && stream.peek(1) == '#' && stream.peek(2) == '"') {
-    stream.next(); // consume r
-    stream.next(); // consume #
-    stream.next(); // consume "
-
+  } else if (stream.match_chain({'r', '#', '"'})) {
     tok_text(false, true, {'#', '"'});
   } else {
-    stream.next(); // consume "
+    (void)stream.next(); // consume "
     tok_text(true, true, {});
   }
 }
 
-bool Lexer::tokenize_spec()
+bool Lexer::tokenize_spec() noexcept
 {
   // Unsigned integrals
-  if (is_digit(stream.peek())) {
+  if (common::utils::is_digit(stream.peek())) {
     start_buffer();
 
-    while (is_digit(stream.peek(1))) {
-      stream.next(); // consume current
+    while (common::utils::is_digit(stream.peek(1))) {
+      (void)stream.next(); // consume current
     }
 
     add_token(token::ETokenKind::L_I);
     return true;
   }
+
   // Letters
-  else if (is_alpha(stream.peek())) {
+  if (common::utils::is_alpha(stream.peek())) {
     start_buffer();
 
     add_token(token::ETokenKind::L_CUNE);
@@ -401,8 +405,8 @@ bool Lexer::tokenize_spec()
   case '\'': add_token(token::ETokenKind::TICK); return true;
   case '+':  add_token(token::ETokenKind::OP_PLUS); return true;
   case '-':  add_token(token::ETokenKind::OP_MINUS); return true;
-  case '<':  add_token(token::ETokenKind::OPEN_BRACKETS); return true;
-  case '>':  add_token(token::ETokenKind::CLOSE_BRACKETS); return true;
+  case '<':  add_token(token::ETokenKind::L_ANGLE); return true;
+  case '>':  add_token(token::ETokenKind::R_ANGLE); return true;
   case '^':  add_token(token::ETokenKind::OP_CIRCUMFLEX); return true;
   case '~':  add_token(token::ETokenKind::TILDE); return true;
   case '=':  add_token(token::ETokenKind::ASSIGN); return true;
@@ -411,64 +415,64 @@ bool Lexer::tokenize_spec()
   case '}':  return false;
   default:   {
     auto error =
-        Error_Diagnostic(scr_info.id, 151, buffer_start_pos, stream.position(), compiler::EPhase::lexer,
+        Error_Diagnostic(CU.cuid, 151, buffer_start_pos, stream.position(), compiler::EPhase::lexer,
                          "Unexpected format specifier character",
                          "define format specifier like:"
                          "\n  - right-aligned: `{val:>10}`\n  - 2 decimals `{val:.2f}`\n  - hexadecimal `{val:#x}`");
 
-    compiler::COMPILER.add_error(std::move(error));
+    compiler::COMPILER.add_error(error);
   }
   }
   return false;
 }
 
-void Lexer::tokenize_comment()
+void Lexer::tokenize_comment() noexcept
 {
-  if (stream.check('/') && stream.peek(1) == '/') {
+  if (stream.match_chain({'/', '/'})) {
     while (stream.next() && stream.peek() != '\n') {
     }
     return;
   }
+
   // Ignore block comments /* */
-  else if (stream.check('/') && stream.peek(1) == '*') {
-    stream.next(); // consume '*'
+  if (stream.match_chain({'/', '*'})) {
     while (stream.next()) {
-      if (stream.check('*') && stream.peek(1) == '/') {
-        stream.next(); /* consume '/' */
-        return;
-      }
+      if (stream.match_chain({'*', '/'})) return;
     }
   }
 }
 
-void Lexer::tokenize_metacode()
+void Lexer::tokenize_metacode() noexcept
 {
   add_token(token::ETokenKind::METACODE);
-  tokenize({'\n', '#'});
+  (void)tokenize({'\n', '#'});
+  start_buffer();
   add_token(token::ETokenKind::S_METACODE_END, true);
 }
 
-void Lexer::tokenize_numeric()
+void Lexer::tokenize_numeric() noexcept
 {
-  bool is_bin = false, is_oct = false, is_hex = false;
+  bool is_bin     = false;
+  bool is_oct     = false;
+  bool is_hex     = false;
   bool id_decimal = false;
 
   auto check_range_case = [&]() -> bool {
     if (!is_buffer_empty()) add_token(token::ETokenKind::L_I, true); // create literal integral
 
     if (stream.peek(1) == '.' && stream.peek(2) == '.') {
-      stream.next(); // consume last
+      (void)stream.next(); // consume last
       start_buffer();
-      stream.next(); // consume .
+      (void)stream.next(); // consume .
 
       // case range included
       if (stream.peek(1) == '=') {
-        stream.next(); // consume =
+        (void)stream.next(); // consume =
         add_token(token::ETokenKind::RANGE_INCLUSIVE);
       }
       // case variadic
       else if (stream.peek(1) == '.') {
-        stream.next(); // consume .
+        (void)stream.next(); // consume .
         add_token(token::ETokenKind::VARIADIC);
       }
       // case range excluded
@@ -484,16 +488,16 @@ void Lexer::tokenize_numeric()
     char nt = stream.peek(1);
     if (nt == 'b' || nt == 'B') {
       is_bin = true;
-      stream.next(); // consume 0
-      stream.next(); // consume b B
+      (void)stream.next(); // consume 0
+      (void)stream.next(); // consume b B
     } else if (nt == 'o' || nt == 'O') {
       is_oct = true;
-      stream.next(); // consume 0
-      stream.next(); // consume o O
+      (void)stream.next(); // consume 0
+      (void)stream.next(); // consume o O
     } else if (nt == 'x' || nt == 'X') {
       is_hex = true;
-      stream.next(); // consume 0
-      stream.next(); // consume x X
+      (void)stream.next(); // consume 0
+      (void)stream.next(); // consume x X
     }
   }
 
@@ -503,84 +507,98 @@ void Lexer::tokenize_numeric()
     if (is_bin) {
       if (stream.peek(1) == '0' || stream.peek(1) == '1') {
         continue;
-      } else if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
-        continue;
-      } else {
-        break;
       }
+
+      if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+        continue;
+      }
+
+      break;
     }
+
     // Only allow 0 1 2 3 4 5 6 7 ' _
-    else if (is_oct) {
+    if (is_oct) {
       if (stream.peek(1) >= '0' && stream.peek(1) <= '7') {
         continue;
-      } else if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
-        continue;
-      } else {
-        break;
       }
+
+      if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
+        continue;
+      }
+
+      break;
     }
+
     // Only allow 0 1 2 3 4 5 6 7 8 9 A B C D E F ' _
-    else if (is_hex) {
-      if (is_digit(stream.peek(1)) || (stream.peek(1) >= 'a' && stream.peek(1) <= 'f')
+    if (is_hex) {
+      if (common::utils::is_digit(stream.peek(1)) || (stream.peek(1) >= 'a' && stream.peek(1) <= 'f')
           || (stream.peek(1) >= 'A' && stream.peek(1) <= 'F')) {
         continue;
-      } else if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
-        continue;
-      } else {
-        break;
       }
-    }
-    // numeric
-    else {
-      // classic numeric
-      if (is_digit(stream.peek(1))) {
+      if (stream.peek(1) == '\'' || stream.peek(1) == '_') {
         continue;
       }
-      // prevent range creation : save buffer vals
-      else if (stream.peek(1) == '.' && stream.peek(2) == '.') {
-        check_range_case(); // create range
-        return;             // must stop after range creation
-      } else if (stream.peek(1) == '.') {
-        id_decimal = true;
-      }
-      // floating numeric (scientific notation) 10000e+10 100e-15
-      else if (stream.peek(1) == 'e' || stream.peek(1) == 'E') {
-        id_decimal = true;
-        // exponent sign
-        if (stream.peek(2) == '+' || stream.peek(2) == '-') {
-          stream.next();
-        }
-      } else if (stream.peek(1) == '.') {
-        // member access : a.b
 
-        if (!scr_info.file_info.tokens->tokens.empty()
-            && scr_info.file_info.tokens->tokens.back().kind == token::ETokenKind::IDENTIFIER
-            && is_alpha(stream.peek(1))) {
-          add_token(token::ETokenKind::DOT);
-          return;
-        }
-        // floating value : 8. or 10.f or 3.14
-        else {
-          id_decimal = true;
-          if (stream.peek(2) == 'f' || stream.peek(2) == 'F') stream.next(); // consume .
-        }
-      }
-      // end
-      else {
-        break;
-      }
+      break;
     }
+
+    // numeric vvv
+
+    // classic numeric
+    if (common::utils::is_digit(stream.peek(1))) {
+      continue;
+    }
+    // prevent range creation : save buffer vals
+
+    if (stream.peek(1) == '.' && stream.peek(2) == '.') {
+      check_range_case(); // create range
+      return;             // must stop after range creation
+    }
+
+    if (stream.peek(1) == '.') {
+      id_decimal = true;
+    }
+    // floating numeric (scientific notation) 10000e+10 100e-15
+    else if (stream.peek(1) == 'e' || stream.peek(1) == 'E') {
+      id_decimal = true;
+      // exponent sign
+      if (stream.peek(2) == '+' || stream.peek(2) == '-') {
+        (void)stream.next();
+      }
+    } else if (stream.peek(1) == '.') {
+      // member access : a.b
+
+      if (!CU.file_info.tokens->tokens.empty()
+          && CU.file_info.tokens->tokens.back().kind == token::ETokenKind::IDENTIFIER
+          && common::utils::is_alpha(stream.peek(1))) {
+        add_token(token::ETokenKind::DOT);
+        return;
+      }
+      // floating value : 8. or 10.f or 3.14
+
+      id_decimal = true;
+      if (stream.peek(2) == 'f' || stream.peek(2) == 'F') (void)stream.next(); // consume .
+    }
+    // end
+    else {
+      break;
+    }
+
   } while (stream.next());
 
-  if (is_bin) return add_token(token::ETokenKind::L_BIN);
-  if (is_oct) return add_token(token::ETokenKind::L_OCT);
-  if (is_hex) return add_token(token::ETokenKind::L_HEX);
-  if (id_decimal) return add_token(token::ETokenKind::L_D);
-
-  return add_token(token::ETokenKind::L_I);
+  if (is_bin)
+    add_token(token::ETokenKind::L_BIN);
+  else if (is_oct)
+    add_token(token::ETokenKind::L_OCT);
+  else if (is_hex)
+    add_token(token::ETokenKind::L_HEX);
+  else if (id_decimal)
+    add_token(token::ETokenKind::L_D);
+  else
+    add_token(token::ETokenKind::L_I);
 }
 
-bool Lexer::tokenize_keyword_identifier()
+bool Lexer::tokenize_keyword_identifier() noexcept
 {
   start_buffer();
 
@@ -598,11 +616,13 @@ bool Lexer::tokenize_keyword_identifier()
   return true;
 }
 
-void Lexer::read_identifier()
+void Lexer::read_identifier() noexcept
 {
+  if (!common::utils::is_alpha(stream.peek()) && stream.peek() != '_') return;
+
   while (!stream.is_end()) {
-    if (is_alnum(stream.peek(1)) || stream.peek(1) == '_') {
-      stream.next();
+    if (common::utils::is_alnum(stream.peek(1)) || stream.peek(1) == '_') {
+      (void)stream.next();
       continue;
     }
 
@@ -610,7 +630,7 @@ void Lexer::read_identifier()
   }
 }
 
-void Lexer::add_token(token::ETokenKind kind, bool do_not_move)
+void Lexer::add_token(token::ETokenKind kind, bool do_not_move) noexcept
 {
   token::Token tok;
 
@@ -618,18 +638,19 @@ void Lexer::add_token(token::ETokenKind kind, bool do_not_move)
   tok.length = stream.position() - buffer_start_pos + 1;
   tok.kind   = kind;
 
+  assert(stream.position() >= buffer_start_pos && "Position calculation error");
+
 #ifdef DEBUG
   tok.debug_val = get_buffer_str();
 #endif
 
-  if (!do_not_move) stream.next();
+  if (!do_not_move) (void)stream.next();
 
-  scr_info.file_info.tokens->add(std::move(tok));
+  (void)CU.file_info.tokens->add(tok);
 }
 
-void Lexer::add_error(ErrorCode code, std::string_view msg, std::string_view hint)
+void Lexer::add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept
 {
-  auto out =
-      Error_Diagnostic(scr_info.id, code, buffer_start_pos, stream.position(), compiler::EPhase::lexer, msg, hint);
-  compiler::COMPILER.add_error(std::move(out));
+  auto out = Error_Diagnostic(CU.cuid, code, buffer_start_pos, stream.position(), compiler::EPhase::lexer, msg, hint);
+  compiler::COMPILER.add_error(out);
 }

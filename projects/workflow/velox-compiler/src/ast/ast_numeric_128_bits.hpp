@@ -21,8 +21,8 @@ public:
   explicit Float128(double value);
   explicit Float128(std::string_view s);
 
-  void        string_to_f128(std::string_view s);
-  std::string float128_to_string(int precision = 36) const;
+  void                      string_to_f128(std::string_view s);
+  [[nodiscard]] std::string float128_to_string(int precision = 36) const;
 };
 
 class Int128 final
@@ -36,6 +36,6 @@ public:
   explicit Int128(long long value);
   explicit Int128(std::string_view s, uint8_t radix = 10);
 
-  void        string_to_i128(std::string_view s, int base = 10);
-  std::string i128_to_string(int radix = 10) const;
+  void                      string_to_i128(std::string_view s, int base = 10) const;
+  [[nodiscard]] std::string i128_to_string(int radix = 10) const noexcept;
 };

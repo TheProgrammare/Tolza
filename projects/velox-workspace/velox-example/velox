@@ -1,0 +1,109 @@
+
+# main velox toolchain config
+# it's the default configuration
+# set config field to specify a sub configuration to compile (use his name in sub_configs)
+
+# all fields will be stored as define element also
+
+
+# ======================
+# velox-compiler section 
+# ======================
+
+[target]
+# if empty, the workspace file name will be used
+project_name        = "velox"        
+# x86_64, aarch64, x86, arm, wasm32, wasm64, powerpc64 ...
+arch                = "x86_64"                
+# linux, windows, macos, ...
+os                  = "linux-gnu"                  
+# apple, pc, unknown ...
+vendor              = "pc"              
+# gnu, msvc, ...
+abi                 = "gnu"           
+# musl, glibc, bionic, msvc, ...
+libc                = ""                
+# overrides host cpu detection
+cpu                 = ""                 
+# ex: "+avx2,+bmi2"
+features            = ""            
+# tiny, small, kernel, medium, large
+code_model          = "small"          
+# pic, static, pie, ropi, rwpi, ropi_rwpi
+reloc_model         = "pic"         
+# sub .toml name to apply after this .toml 
+sub_config          = ""          
+# bin, llvm, obj, asm, bc, s_lib, d_lib
+emits               = [                             
+  "bin", "llvm", "obj", "asm", "bc", "s_lib", "d_lib", 
+]                
+
+[profile]
+# the debug profile will override some options
+
+# true = disable optimization, enable debug info
+debug               = false
+# O0,O1,O2,O3,Os,Oz
+optimization        = "O0"       
+
+[log]
+# all, filesystem, lexer, preprocessor, parser, binder, exporter, 
+# resolver_symbol, resolver_type, resolver_semantic, 
+# codegen, optimization, emit, linker
+logs = [
+  
+]                                    
+
+[warning]
+# all, extra, pedantic, unused, dead_code, as_error
+warnings = [
+  
+]
+# 1, 2, 3
+level               = 0  
+
+
+[debug]
+# ast
+debugs = [
+  
+]
+
+[define]
+
+
+[undefine]
+undefines = [
+  
+]
+
+[directory]
+project             = "./"
+build               = "./build"  
+source              = "./src"  
+vendor              = "./vendor"  
+ffi_json            = "./binding/ffi_json"  
+binding             = "./binding"  
+compiler            = "/home/flo/.local/share/velox/compiler"  
+stdlib              = "/home/flo/.local/share/velox/lib/std"  
+packages            = "/home/flo/.local/share/velox/lib/packages"
+
+[config]
+# designed to target a sub configuration parameters
+
+
+# ============
+# LLVM section
+# ============
+# This configuration is strictly for LLVM passes and code generation.
+# It does not affect your Velox preprocessor.
+
+[llvm]
+# override triple, else auto-generated from target
+triple              = ""          
+# verify before AND after passes
+verify_module       = true     
+# custom raw flags passed to LLVM
+args = [                                      
+  
+]

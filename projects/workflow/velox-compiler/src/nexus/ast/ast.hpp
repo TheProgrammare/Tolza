@@ -22,10 +22,10 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
+#include <utility>
 #include <vector>
+#include <iostream>
 
-#include "compiler/compiler.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
@@ -42,151 +42,132 @@ namespace ast
   SET_TYPE(prototype);                                                                                                 \
   SET_NODE(codeblock);                                                                                                 \
                                                                                                                        \
-  bool is_const             = false;                                                                                   \
+  common::compiler::ECallingConv call_convention;                                                                      \
+                                                                                                                       \
   bool is_pure              = false;                                                                                   \
   bool is_explicit_ret_type = false;
 
-#define SET_NODE(name)   ast::_gnid name;
-#define SET_SYMBOL(name) symbol::_id name;
-#define SET_TYPE(name)   type::_id name;
+#define SET_NODE(name)   ast::ID name;
+#define SET_SYMBOL(name) symbol::ID name;
+#define SET_TYPE(name)   type::ID name;
 
-#define SET_INFERRED_TYPE        type::_id inferred_type;
-#define SET_INFERRED_TYPE_(name) type::_id name;
+#define SET_INFERRED_TYPE        type::ID inferred_type;
+#define SET_INFERRED_TYPE_(name) type::ID name;
 
-#define SET_VECTOR_NODE(name)   std::vector<ast::_gnid> name;
-#define SET_VECTOR_SYMBOL(name) std::vector<symbol::_id> name;
-#define SET_VECTOR_TYPE(name)   std::vector<type::_id> name;
+#define SET_VECTOR_NODE(name)   std::vector<ast::ID> name;
+#define SET_VECTOR_SYMBOL(name) std::vector<symbol::ID> name;
+#define SET_VECTOR_TYPE(name)   std::vector<type::ID> name;
 
 using Path = std::vector<std::string>;
 
 
 struct Node {
-  _gnid      node_id;
-  scope::_id scope_id;
-  token::_id node_token_id;
+  ID        nodeid;
+  scope::ID scpid;
+  token::ID node_token_id;
 
-private:
-  ENodeKind node_kind = ENodeKind::Unknown;
+  [[nodiscard]] ENodeKind kind() const noexcept
+  {
+    return _kind;
+  }
 
   Node(const Node&)            = delete;
   Node& operator=(const Node&) = delete;
 
 protected:
-  explicit Node(ENodeKind kind)
-    : node_kind(kind)
+  const ENodeKind _kind = ENodeKind::Unknown;
+  Node(ENodeKind k)
+    : _kind(k)
   {
   }
 
 public:
-  ENodeKind kind() const
-  {
-    return node_kind;
-  }
-
   virtual ~Node() = default;
 };
 
-template <ENodeKind K>
-struct NodeBase : Node {
-  static constexpr ENodeKind static_kind = K;
-
-  NodeBase()
-    : Node(K)
-  {
-  }
-};
-
-struct IDN final : NodeBase<ENodeKind::Unknown> {
-};
-
-AST_NODE(Unknown){
-
-};
 
 template <typename T>
 concept DerivedNode = requires {
   { T::static_kind } -> std::convertible_to<ENodeKind>;
 } && std::is_base_of_v<Node, T> && !std::is_same_v<Node, T>;
 
-
-struct GNID_Factory final {
-  static _gnid make_gnid(script::_id scr, _id n)
+template <ENodeKind K>
+struct NodeBase : Node {
+  static constexpr ENodeKind static_kind = K;
+  NodeBase()
+    : Node(K)
   {
-    return _gnid((size_t(scr.value()) << 32) | n.value());
-  }
-
-  static std::tuple<script::_id, _id> to_literal(_gnid gnid)
-  {
-    script::_id scr(gnid.value() >> 32);
-    _id         n(gnid.value() & 0xFFFFFFFF);
-
-    return {scr, n};
   }
 };
+
+AST_NODE(Unknown){
+
+};
+
+AST_NODE(Root)
+{
+  SET_VECTOR_NODE(global_nodes);
+};
+
+std::vector<ID> get_parameters(ID nodeid) noexcept;
 
 
 struct Arena final {
-  struct Tools final {
-    Arena& arena;
-
-    [[nodiscard]] std::string get_declaration_mangle_name(_gnid gnid) const;
-  };
-  Tools tools{*this};
-
-  Node& get(script::_id scr, _id n)
+  Arena(cu::ID _cuid)
+    : cuid(_cuid)
   {
-    auto id = GNID_Factory::make_gnid(scr, n);
-    return get(id);
+    (void)add_get<ast::Root>();
   }
 
-  Node& get(_gnid gnid);
+  bool freeze = false;
 
-  template <typename T>
-  T* get_as(_gnid gnid)
-  {
-    auto& n = get(gnid);
-
-    if (n.kind() != T::static_kind) return nullptr;
-
-    return static_cast<T*>(&n);
-  }
-};
-
-
-struct ScriptArena final {
-  struct Tools final {
-    ScriptArena& arena;
-
-    [[nodiscard]] std::string_view get_node_declaration_name(_id node_id) const;
-  };
-
-  Tools tools{*this};
-
-  script::ScriptInfo& scr;
+  cu::ID cuid;
 
   std::vector<std::unique_ptr<Node>> nodes;
 
   template <DerivedNode T>
-  _id add()
+  [[nodiscard]] T& add_get() noexcept
   {
+    assert(!freeze && "Pool is immutable after parsing pass");
+
     auto obj = std::make_unique<T>();
+    T*   raw = obj.get();
 
-    auto new_id  = get_next_gnid();
-    obj->node_id = new_id;
-    nodes.push_back(std::move(obj));
-    return new_id.get_node_id();
-  }
-
-  _gnid get_next_gnid() const;
-
-  Node& get(_id id)
-  {
-    assert(id < nodes.size());
-    return *nodes[id.value()];
+    auto new_id = get_next_id();
+    obj->nodeid = new_id;
+    nodes.emplace_back(std::move(obj));
+    return *raw;
   }
 
   template <DerivedNode T>
-  T* get_as(_id id)
+  [[nodiscard]] ID add() noexcept
+  {
+    assert(!freeze && "Pool is immutable after parsing pass");
+
+    auto obj = std::make_unique<T>();
+
+    auto new_id = get_next_id();
+    obj->nodeid = new_id;
+    nodes.emplace_back(std::move(obj));
+    return new_id;
+  }
+
+  [[nodiscard]] ID get_next_id() const noexcept;
+
+  [[nodiscard]] Node& get(ID id) noexcept
+  {
+    assert(id.offset() < nodes.size());
+    return *nodes[id.offset()];
+  }
+
+  [[nodiscard]] const Node& get(ID id) const noexcept
+  {
+    assert(id.offset() < nodes.size());
+    return *nodes[id.offset()];
+  }
+
+  template <DerivedNode T>
+  [[nodiscard]] T* as(ID id)
   {
     auto& n = get(id);
 
@@ -194,6 +175,42 @@ struct ScriptArena final {
 
     return static_cast<T*>(&n);
   }
+
+  template <DerivedNode T>
+  [[nodiscard]] const T* as(ID id) const
+  {
+    const auto& n = get(id);
+
+    if (n.kind() != T::static_kind) return nullptr;
+
+    return static_cast<T*>(&n);
+  }
+
+  [[nodiscard]] Root* get_file_root() noexcept
+  {
+    return as<Root>(ID::make(cuid, 0));
+  }
 };
+
+[[nodiscard]] Node& get(ID id) noexcept;
+
+template <DerivedNode T>
+[[nodiscard]] T* as(ID id)
+{
+  auto& n = get(id);
+
+  if (n.kind() != T::static_kind) return nullptr;
+
+  return static_cast<T*>(&n);
+}
+
+
+[[nodiscard]] std::string get_decl_name(ID nodeid) noexcept;
+
+[[nodiscard]] EVisibility get_decl_visibility(ID nodeid) noexcept;
+
+[[nodiscard]] std::string get_mangled_id(ID id) noexcept;
+
+[[nodiscard]] std::string get_debug_str(ID id) noexcept;
 
 } // namespace ast

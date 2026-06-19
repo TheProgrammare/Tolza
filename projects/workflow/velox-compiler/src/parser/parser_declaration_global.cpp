@@ -3,41 +3,34 @@
 
 #include <string>
 #include <string_view>
-#include <utility>
-#include <iostream>
 
+#include "ast/ast_base.hpp"
+#include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_global.hpp"
-#include "compiler/compiler.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
-#include "nexus/type.hpp"
-#include "nexus/script.hpp"
-#include "nexus/symbol.hpp"
+#include "nexus/type/type.hpp"
 #include "nexus/metacode/metacode.hpp"
 
 #include "parser_context.hpp"
 #include "parser_type.hpp"
 
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_cop.hpp"
 #include "ast/ast_generic.hpp"
 
-#include "ast/ast_declaration_global.hpp"
 #include "parser_expression.hpp"
-#include "parser_type.hpp"
 #include "parser_declaration_local.hpp"
-#include "parser_declaration_cop.hpp"
+#include "parser_declaration_sfm.hpp"
 #include "parser_base.hpp"
 
-#include "nexus/lexer/token.hpp"
 
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/symbol.hpp"
-
-ast::_gnid parser::Parser_Declaration::parse_declaration()
+ast::ID parser::Parser_Declaration::parse_declaration()
 {
-  auto tok = p.peek();
+  (void)p.match(token::ETokenKind::SEMICOLON);
+
+  auto& tok = p.peek();
 
   switch (tok.kind) {
   case token::ETokenKind::MOD:       return _module();
@@ -48,26 +41,62 @@ ast::_gnid parser::Parser_Declaration::parse_declaration()
   case token::ETokenKind::LET:
   case token::ETokenKind::CONST:     return global_variable();
   case token::ETokenKind::FUNCTION:  return function();
+  case token::ETokenKind::EXTENSION: return p.p_extend->parse_extension();
   case token::ETokenKind::GENERIC:   return generic();
   case token::ETokenKind::TYPE:      return type_alias();
-  case token::ETokenKind::COMPONENT: return p.p_cop->component();
-  case token::ETokenKind::SYSTEM:    return p.p_cop->system();
-  case token::ETokenKind::ENTITY:    return p.p_cop->entity();
+  case token::ETokenKind::FACET:     return p.p_sfm->facet();
+  case token::ETokenKind::RULE:      return p.p_sfm->rule();
+  case token::ETokenKind::FORM:      return p.p_sfm->form();
+  case token::ETokenKind::REEXPORT:  return p.p_base->parse_reexport();
   case token::ETokenKind::EXPORT:    return p.p_base->parse_export();
   case token::ETokenKind::EXTERN:    return p.p_base->parse_extern();
   case token::ETokenKind::IMPORT:    return p.p_base->parse_import();
   default:                           break;
   }
 
-  p.add_error(60, "Illegal instruction '" + std::string(p.tok_to_str(tok.id)) + "' in global.",
-              "you can define in global: namespace, variable, function, entity, component, system");
+  p.add_error(60, "Illegal instruction '" + std::string(p.tok_to_str(tok.tokid)) + "' in global.",
+              "you can define in global: namespace, variable, function, form, facet, rule");
 
-  p.next();
+  (void)p.next();
 
-  return BAD_NODE_ID;
+  THROW_BAD_NODE;
 }
 
-ast::_gnid parser::Parser_Declaration::_module()
+
+ast::ID parser::Parser_Declaration::parse_codeblock_declaration(bool no_import, bool no_export)
+{
+  (void)p.expect_any(46, {token::ETokenKind::L_CURLY, token::ETokenKind::INJECT}, "Expected start code block '{'", "");
+
+  bool  inline_code = p.peek(-1).kind == token::ETokenKind::INJECT;
+  auto& cb          = p.add_get_node<ast::CodeBlock>(p.peek().tokid);
+
+  while (!p.is_end()) {
+    (void)p.match(token::ETokenKind::SEMICOLON);
+
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::R_CURLY)) break;
+
+    if (no_export && p.check_any({token::ETokenKind::EXPORT})) {
+      p.add_error_tok(10, p.peek(), "Illegal nested export module instruction.", "");
+    }
+
+    if (no_import && p.check_any({token::ETokenKind::IMPORT})) {
+      p.add_error_tok(10, p.peek(), "Illegal import module instruction.", "");
+    }
+
+    if (auto decl = parse_declaration())
+      cb.elements.emplace_back(decl);
+    else
+      p.add_error(255, "Unexpected token '" + std::string(p.peek().tokid.str()) + "' inside codeblock.",
+                  "A codeblock is ended by '}'");
+
+    // one instruction
+    if (inline_code) break;
+  }
+
+  return cb.nodeid;
+}
+
+ast::ID parser::Parser_Declaration::_module()
 {
   constexpr std::string_view hint =
       R"(define module like:"
@@ -75,144 +104,140 @@ ast::_gnid parser::Parser_Declaration::_module()
   - module alias `mod Vec = core::container::vector`"
   - module to root `mod root = core::container::vector`)";
 
-  p.match(token::ETokenKind::MOD);
+  (void)p.match(token::ETokenKind::MOD);
 
   auto name = p.parse_name("", hint);
 
   if (p.match(token::ETokenKind::ASSIGN)) {
-    parser_add_node(node, Global_Alias_Module, p.peek().id);
-    node->alias = name;
-    node->regex = p.p_base->identifier();
+    auto& node = p.add_get_node<ast::Global_Alias_Module>(p.peek().tokid);
+    node.alias = name;
+    node.regex = p.p_base->identifier();
 
 
-    p.add_symbol(node->node_id.get_node_id());
+    (void)p.add_symbol(node.nodeid);
 
-    return node->node_id;
-  } else if (p.match(token::ETokenKind::OPEN_BRACE)) {
-    parser_add_node(node, Global_Module, p.peek(-2).id);
+    return node.nodeid;
+  }
 
-    p.enter_scope(*node, name);
-    node->name = name;
+  if (p.match(token::ETokenKind::L_CURLY)) {
+    auto& node = p.add_get_node<ast::Global_Module>(p.peek(-2).tokid);
 
-    node->codeblock = p.p_loc->parse_codeblock();
+    p.enter_scope(node, name);
+    node.name = name;
+
+    node.codeblock = p.p_decl->parse_codeblock_declaration();
 
     p.exit_scope();
 
-    return node->node_id;
+    return node.nodeid;
   }
 
   p.add_error_tok(61, p.peek(), "Expected '{' or '=' after module name.", hint);
 
-  return BAD_NODE_ID;
+  THROW_BAD_NODE;
 }
 
-ast::_gnid parser::Parser_Declaration::enumeration()
+ast::ID parser::Parser_Declaration::enumeration()
 {
   constexpr std::string_view hint =
       "define enum like:"
       "\n  - typed enum `enum name { field_name1(T), field_name2 }"
       "\n  - typed enum `enum Option { Valid(T), Invalid }";
-  p.match(token::ETokenKind::ENUM);
+  (void)p.match(token::ETokenKind::ENUM);
 
-  parser_add_node(enu, Global_Enum, p.peek().id);
-  enu->name   = p.parse_name("", hint);
-  auto sym_id = p.add_symbol(enu->node_id.get_node_id());
-  p.enter_scope(*enu, "enum " + std::string(enu->name));
+  auto& enu  = p.add_get_node<ast::Global_Enum>(p.peek().tokid);
+  enu.name   = p.parse_name("", hint);
+  auto symid = p.add_symbol(enu.nodeid);
+  p.enter_scope(enu, "enum " + std::string(enu.name));
 
-  p.expect(63, token::ETokenKind::OPEN_BRACE, "Expected start enum block '{' after enum name declaration.", hint);
-  std::vector<std::vector<type::_id>> factory_variants;
+  (void)p.expect(63, token::ETokenKind::L_CURLY, "Expected start enum block '{' after enum name declaration.", hint);
+  std::vector<type::ID> factory_variants;
 
   size_t count = 0;
   while (!p.is_end()) {
-    ast::Global_Enum::Enum_Field field;
+    auto& field    = p.add_get_node<ast::Enum_Field>(p.peek().tokid);
     field.name     = p.parse_name("", hint);
     field.position = count++;
-    factory_variants.push_back({});
 
-    if (p.match(token::ETokenKind::OPEN_PAREN)) {
-      while (!p.is_end()) {
-        auto ty = p.p_type->parse_type();
-        field.types.push_back(ty);
-        factory_variants.back().push_back(ty);
+    field.type = p.p_type->parse_type();
+    factory_variants.emplace_back(field.type);
 
-        if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_PAREN)) break;
-      }
-    }
-
-    enu->variants.push_back(field);
-    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
+    enu.variants.emplace_back(field.nodeid);
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
 
   p.exit_scope();
 
-  parser_type_factory.make_enum(factory_variants, sym_id);
+  (void)parser_type_factory.make_enum(factory_variants, symid);
 
-  return enu->node_id;
+  return enu.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::_union()
+ast::ID parser::Parser_Declaration::_union()
 {
   constexpr std::string_view hint = "define union like: `union name { field_name1: T, field_name2: U, ... }";
-  p.match(token::ETokenKind::UNION);
+  (void)p.match(token::ETokenKind::UNION);
 
-  parser_add_node(_union, Global_Union, p.peek().id);
-  _union->name = p.parse_name("", hint);
-  auto sym_id  = p.add_symbol(_union->node_id.get_node_id());
-  p.enter_scope(*_union, "union " + std::string(_union->name));
+  auto& _union = p.add_get_node<ast::Global_Union>(p.peek().tokid);
+  _union.name  = p.parse_name("", hint);
+  auto symid   = p.add_symbol(_union.nodeid);
+  p.enter_scope(_union, "union " + std::string(_union.name));
 
-  p.expect(182, token::ETokenKind::OPEN_BRACE, "Expected start union block '{' after union name declaration.", hint);
+  (void)p.expect(182, token::ETokenKind::L_CURLY, "Expected start union block '{' after union name declaration.", hint);
 
-  std::vector<type::_id> factory_types;
+  std::vector<type::ID> factory_types;
 
   while (!p.is_end()) {
-    auto field_name = p.parse_name("", hint);
+    auto& field = p.add_get_node<ast::Union_Field>(p.peek().tokid);
+    field.name  = p.parse_name("", hint);
 
-    p.expect(183, token::ETokenKind::COLON, "Expected colon ':' after union field name declaration.", hint);
+    (void)p.expect(183, token::ETokenKind::COLON, "Expected colon ':' after union field name declaration.", hint);
 
-    auto field_ty = p.p_type->parse_type();
+    field.type = p.p_type->parse_type();
 
-    _union->fields.emplace_back(field_name, field_ty);
-    factory_types.push_back(field_ty);
+    _union.variants.emplace_back(field.nodeid);
+    factory_types.emplace_back(field.type);
 
-    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
 
   p.exit_scope();
 
-  parser_type_factory.make_union(factory_types, sym_id);
+  (void)parser_type_factory.make_union(factory_types, symid);
 
-  return _union->node_id;
+  return _union.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::flag()
+ast::ID parser::Parser_Declaration::flag()
 {
   constexpr std::string_view hint = "define flag like: `flag name { flag1, flag2, ... }";
-  p.match(token::ETokenKind::FLAG);
+  (void)p.match(token::ETokenKind::FLAG);
 
-  parser_add_node(flag, Global_Flag, p.peek().id);
-  flag->name = p.parse_name("", hint);
+  auto& flag = p.add_get_node<ast::Global_Flag>(p.peek().tokid);
+  flag.name  = p.parse_name("", hint);
 
-  auto sym_id = p.add_symbol(flag->node_id.get_node_id());
-  p.enter_scope(*flag, "flag " + std::string(flag->name));
+  auto symid = p.add_symbol(flag.nodeid);
+  p.enter_scope(flag, "flag " + std::string(flag.name));
 
-  p.expect(184, token::ETokenKind::OPEN_BRACE, "Expected start flag block '{' after flag name declaration.", hint);
+  (void)p.expect(184, token::ETokenKind::L_CURLY, "Expected start flag block '{' after flag name declaration.", hint);
 
   while (!p.is_end()) {
-    auto field_name = p.parse_name("", hint);
+    auto& field = p.add_get_node<ast::Flag_Field>(p.peek().tokid);
+    field.name  = p.parse_name("", hint);
 
-    flag->fields.push_back(field_name);
+    flag.flags.emplace_back(field.nodeid);
 
-    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::CLOSE_BRACE)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
 
   p.exit_scope();
 
-  parser_type_factory.make_flag(flag->fields.size(), sym_id);
+  (void)parser_type_factory.make_flag(flag.flags.size(), symid);
 
-  return flag->node_id;
+  return flag.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::global_variable()
+ast::ID parser::Parser_Declaration::global_variable()
 {
   constexpr std::string_view hint =
       R"(define global variable like:"
@@ -226,188 +251,193 @@ ast::_gnid parser::Parser_Declaration::global_variable()
    `# extern"
     let name: type)";
 
-  auto               tok  = p.expect_any(65, {token::ETokenKind::LET, token::ETokenKind::VAR, token::ETokenKind::CONST},
+  auto&              tok  = p.expect_any(65, {token::ETokenKind::LET, token::ETokenKind::VAR, token::ETokenKind::CONST},
                                          "Expected global variable declaration token", hint);
   ast::EVariableKind kind = ast::ETokenKind_to_EVariableKind(tok.kind);
 
-  parser_add_node(var, Global_Variable, p.peek().id);
-  var->kind = kind;
-  var->name = p.parse_name("", hint);
+  auto& var = p.add_get_node<ast::Global_Variable>(p.peek().tokid);
+  var.kind  = kind;
+  var.name  = p.parse_name("", hint);
 
-  p.add_symbol(var->node_id.get_node_id());
+  (void)p.add_symbol(var.nodeid);
 
-  if (var->name.empty()) {
+  if (var.name.empty()) {
     p.add_error(66, "Invalid Identifier !", "");
   }
 
   bool is_inferred_type = false;
 
   // explicit type case
-  if (p.match(token::ETokenKind::COLON)) var->type = p.p_type->parse_type();
+  if (p.match(token::ETokenKind::COLON)) var.type = p.p_type->parse_type();
   // auto deduce type case
   else
     is_inferred_type = true;
 
   // check affectation
-  auto assign_tok = p.next();
-  var->assignment = ast::ETokenKind_to_ETransfertType(assign_tok.kind);
+  if (p.match(token::ETokenKind::ASSIGN)) {
+    auto& assign_tok = p.peek(-1);
+    var.assignment   = ast::ETokenKind_to_ETransfertType(assign_tok.kind);
+    auto expr        = p.p_expr->parse_expression();
+    var.expression   = expr;
+  }
 
-  if (var->assignment == ast::ETransfertType::NONE && is_inferred_type)
+  if (var.assignment == ast::ETransfertType::NONE && is_inferred_type)
     p.add_error(68, "Expected assignation '=' in auto inferred variable type.",
                 "define auto inferred variable like `let myName = expression;`");
 
-  auto expr       = p.p_expr->parse_expression();
-  var->expression = expr;
-  return var->node_id;
+
+  return var.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::function()
+ast::ID parser::Parser_Declaration::function()
 {
   constexpr std::string_view hint =
       R"(define function like:"
   - definition `fn myName() { ... }`"
   - definition with return `fn myName() -> i32 { ... }`."
-  - extern declaration\n   `# extern"
-    fn myName();`."
-  - extern declaration with return"
-   `# extern"
-    fn myName() -> i32;`.)";
+  - metacode allowed `# pure`)";
 
-  p.match(token::ETokenKind::FUNCTION);
+  (void)p.match(token::ETokenKind::FUNCTION);
 
-  auto tok_pos = p.tok_to_pos(p.peek().id);
+  auto tok_pos = p.tok_to_pos(p.peek().tokid);
 
-  parser_add_node(fn, Global_Function, p.peek().id);
-  fn->name     = p.parse_name("", hint);
-  fn->is_const = p.metablock_contains(tok_pos, "const");
-  fn->is_pure  = p.metablock_contains(tok_pos, "pure");
+  auto& fn   = p.add_get_node<ast::Global_Function>(p.peek().tokid);
+  fn.name    = p.parse_name("", hint);
+  fn.is_pure = p.metablock_contains(tok_pos, "pure");
 
-  if (!extern_abi.empty()) fn->extern_abi = extern_abi;
+  fn.extern_abi = p.extern_abi;
 
-  if (auto pattern = p.get_instruction(tok_pos, {"extern", pattern_constants::wildcard})) {
-    fn->extern_abi = std::string(pattern->at_str(1, 0));
-  }
+  (void)p.add_symbol(fn.nodeid);
+  p.enter_scope(fn, "function " + std::string(fn.name));
 
-  p.add_symbol(fn->node_id.get_node_id());
-  p.enter_scope(*fn, "function " + std::string(fn->name));
-
-  auto proto = p.p_type->parse_and_mount_local_callable(fn->prototype, fn->is_explicit_ret_type);
+  auto proto = p.p_type->parse_and_mount_local_callable(fn.prototype, fn.is_explicit_ret_type);
 
   // if extern : no definition
-  if (!fn->extern_abi.empty() && p.check(token::ETokenKind::OPEN_BRACE))
+  if (!fn.extern_abi.empty() && p.check(token::ETokenKind::L_CURLY))
     p.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
 
-  if (fn->extern_abi.empty()) fn->codeblock = p.p_loc->parse_codeblock();
+  if (fn.extern_abi.empty()) fn.codeblock = p.p_loc->parse_codeblock_instruction();
 
   p.exit_scope();
 
-  return fn->node_id;
+  return fn.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::generic()
+
+ast::ID parser::Parser_Declaration::generic()
 {
   constexpr std::string_view kHint_gen = "define geneneric like `gen name<T, ...> { ... }`.";
   constexpr std::string_view kHint_filter =
       R"(define geneneric filter like:"
-  - alone operator `T use op +;`"
-  - role `T use role Printable;`"
-  - system `T use sys Move;`"
-  - component `T use comp Position;`"
-  - typealias `T use type len;`"
-  - nested filter `T is gen::base_of<Animal>;`)";
+  - operator       `T op +;`"
+  - cast to        `T cast to U;`"
+  - cast from      `T cast from U;`"
+  - view           `T view Printable;`"
+  - extension `T extend name;`"
+  - rule         `T rule Move;`"
+  - facet      `T facet Position;`"
+  - typealias      `T type len;`"
+  - nested filter  `T is gen::base_of<Animal>;`)";
 
-  parser_add_node(gen, Global_Generic, p.peek().id);
-  p.match(token::ETokenKind::GENERIC);
+  auto& gen = p.add_get_node<ast::Global_Generic>(p.peek().tokid);
+  (void)p.match(token::ETokenKind::GENERIC);
 
-  gen->name = p.parse_name("", kHint_gen);
-  p.add_symbol(gen->node_id.get_node_id());
-  p.enter_scope(*gen, "generic " + std::string(gen->name));
-  p.expect(70, token::ETokenKind::OPEN_BRACKETS, "Expected start type '<' after generic name.", kHint_gen);
+  gen.name = p.parse_name("", kHint_gen);
+  (void)p.add_symbol(gen.nodeid);
+  p.enter_scope(gen, "generic " + std::string(gen.name));
+  (void)p.expect(70, token::ETokenKind::L_ANGLE, "Expected start type '<' after generic name.", kHint_gen);
 
   while (!p.is_end()) {
-    gen->typenames.push_back(p.parse_name("", kHint_gen));
-
-    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::CLOSE_BRACKETS)) break;
+    gen.typenames.emplace_back(p.parse_name("", kHint_gen));
+    if (p.match_field_separator(token::ETokenKind::S_END_OF_FILE, token::ETokenKind::R_ANGLE)) break;
   }
 
-  p.expect(72, token::ETokenKind::OPEN_BRACE, "Expected start code block '{' after generic declaration.", kHint_gen);
+  (void)p.expect(72, token::ETokenKind::L_CURLY, "Expected start code block '{' after generic declaration.", kHint_gen);
 
   while (!p.is_end()) {
-    if (p.match(token::ETokenKind::CLOSE_BRACE)) break;
+    if (p.match(token::ETokenKind::R_CURLY)) break;
     auto firstok = p.parse_name("", kHint_filter);
 
     // case: T op ...
     if (p.match(token::ETokenKind::OP)) {
-      parser_add_node(gen_op, Generic_Have_Op, p.peek().id);
-      gen_op->target_gen_sym = firstok;
-      auto tok_op            = p.expect_any(74, token::k_operator,
-                                            "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
-      gen_op->op_ty          = ast::ETokenKind_to_EBinOpType(tok_op.kind);
+      auto& gen_op          = p.add_get_node<ast::Generic_Op>(p.peek().tokid);
+      gen_op.target_gen_sym = firstok;
+      auto& tok_op          = p.expect_any(74, token::k_operator,
+                                           "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
+      gen_op.op_ty          = ast::ETokenKind_to_EBinOpType(tok_op.kind);
 
-      gen->gen_conds.push_back(gen_op->node_id);
-      p.match(token::ETokenKind::SEMICOLON);
+      gen.gen_conds.emplace_back(gen_op.nodeid);
+      (void)p.match(token::ETokenKind::SEMICOLON);
     }
-    // case: T comp ...
-    else if (p.match(token::ETokenKind::COMPONENT)) {
-      parser_add_node(comp, Generic_Use_Component, p.peek().id);
-      comp->target_gen_sym = firstok;
-      comp->component      = p.p_expr->parse_expression();
+    // case: T facet ...
+    else if (p.match(token::ETokenKind::FACET)) {
+      auto& facet          = p.add_get_node<ast::Generic_Facet>(p.peek().tokid);
+      facet.target_gen_sym = firstok;
+      facet.facet          = p.p_expr->parse_expression();
 
-      gen->gen_conds.push_back(comp->node_id);
+      gen.gen_conds.emplace_back(facet.nodeid);
     }
-    // case: T role ...
-    else if (p.match(token::ETokenKind::ROLE)) {
-      parser_add_node(role, Generic_Have_Role, p.peek().id);
-      role->target_gen_sym = firstok;
-      role->role           = p.p_expr->parse_expression();
+    // case: T view ...
+    else if (p.match(token::ETokenKind::VIEW)) {
+      auto& view          = p.add_get_node<ast::Generic_View>(p.peek().tokid);
+      view.target_gen_sym = firstok;
+      view.view           = p.p_expr->parse_expression();
 
-      gen->gen_conds.push_back(role->node_id);
+      gen.gen_conds.emplace_back(view.nodeid);
     }
-    // case: T sys ...
-    else if (p.match(token::ETokenKind::SYSTEM)) {
-      parser_add_node(sys, Generic_Compatible_System, p.peek().id);
-      sys->target_gen_sym = firstok;
-      sys->system         = p.p_expr->parse_expression();
+    // case: T extend ...
+    else if (p.match(token::ETokenKind::EXTENSION)) {
+      auto& extend          = p.add_get_node<ast::Generic_Extension>(p.peek().tokid);
+      extend.target_gen_sym = firstok;
+      extend.extension      = p.p_expr->parse_expression();
 
-      gen->gen_conds.push_back(sys->node_id);
+      gen.gen_conds.emplace_back(extend.nodeid);
+    }
+    // case: T rule ...
+    else if (p.match(token::ETokenKind::RULE)) {
+      auto& rule          = p.add_get_node<ast::Generic_Rule>(p.peek().tokid);
+      rule.target_gen_sym = firstok;
+      rule.rule           = p.p_expr->parse_expression();
+
+      gen.gen_conds.emplace_back(rule.nodeid);
     }
     // case: T is i32 | type::floating | ...
     else if (p.match(token::ETokenKind::IS)) {
-      parser_add_node(nested, Generic_Is_Type, p.peek().id);
-      nested->source_typename = firstok;
+      auto& nested           = p.add_get_node<ast::Generic_Type>(p.peek().tokid);
+      nested.source_typename = firstok;
 
       while (!p.is_end()) {
-        nested->in_type.push_back(p.p_type->parse_type());
+        nested.in_type.emplace_back(p.p_type->parse_type());
 
         if (p.match(token::ETokenKind::PIPE)) continue;
         break;
       }
 
-      gen->gen_conds.push_back(nested->node_id);
+      gen.gen_conds.emplace_back(nested.nodeid);
     }
     // case: T cast to/from ...
     else if (p.match(token::ETokenKind::CAST)) {
-      parser_add_node(castNode, Generic_Can_Cast, p.peek().id);
-      castNode->source_typename = firstok;
+      auto& castNode           = p.add_get_node<ast::Generic_Cast>(p.peek().tokid);
+      castNode.source_typename = firstok;
 
       if (!p.check_val("to") && !p.check_val("from")) {
         p.add_error(75, "Expected cast way 'to' or 'from' in generic filter argument.", kHint_filter);
       }
 
-      castNode->target = p.p_type->parse_type();
+      castNode.target = p.p_type->parse_type();
 
-      gen->gen_conds.push_back(castNode->node_id);
+      gen.gen_conds.emplace_back(castNode.nodeid);
     } else
       p.add_error(76, "Expected generic condition 'use' or 'is' in generic filter argument.", kHint_filter);
 
-    p.match(token::ETokenKind::SEMICOLON);
+    (void)p.match(token::ETokenKind::SEMICOLON);
   }
 
   p.exit_scope();
-  return gen->node_id;
+  return gen.nodeid;
 }
 
-ast::_gnid parser::Parser_Declaration::type_alias()
+ast::ID parser::Parser_Declaration::type_alias()
 {
   constexpr std::string_view hint =
       R"(define type alias like:
@@ -415,16 +445,16 @@ ast::_gnid parser::Parser_Declaration::type_alias()
   - generic `type Vec<T> = core::container::vector<T>`.
   - generic `type StrList = core::container::vector<str>`.)";
 
-  parser_add_node(type_alias, Global_Alias_Type, p.peek().id);
+  auto& type_alias = p.add_get_node<ast::Global_Alias_Type>(p.peek().tokid);
 
-  p.match(token::ETokenKind::TYPE);
+  (void)p.match(token::ETokenKind::TYPE);
 
-  type_alias->alias = p.parse_name();
+  type_alias.alias = p.parse_name();
 
-  p.expect(77, token::ETokenKind::ASSIGN, "Expected '=' after type alias.", hint);
+  // if alias, else it's a opaque type
+  if (p.match(token::ETokenKind::ASSIGN)) type_alias.type = p.p_type->parse_type();
 
-  type_alias->type = p.p_type->parse_type();
 
-  p.add_symbol(type_alias->node_id.get_node_id());
-  return type_alias->node_id;
+  (void)p.add_symbol(type_alias.nodeid);
+  return type_alias.nodeid;
 }

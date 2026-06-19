@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <unordered_map>
 
 #include "nexus/forward.hpp"
@@ -11,22 +12,39 @@ namespace inference
 
 
 struct Arena {
-  std::unordered_map<ast::_gnid, type::_id, ast::_gnid_hash> inference;
+  bool freeze = false;
 
-  void add(ast::_gnid n, type::_id type)
+  std::unordered_map<ast::ID, type::ID, ast::ID::Hash> inference;
+
+  void add(ast::ID n, type::ID type)
   {
-    inference[n] = type;
+    assert(!freeze && "Pool is immutable after type resolution");
+
+    inference.try_emplace(n, type);
   }
 
-  type::_id get_inference(ast::_gnid n) const
+  [[nodiscard]] ast::ID get_declaration(type::ID ty) const
+  {
+    auto result = std::ranges::find_if(inference, [&](std::pair<ast::ID, type::ID> pair) -> bool {
+      auto& nodeid = pair.first;
+      auto& tyid   = pair.second;
+      return tyid == ty;
+    });
+
+    if (result != inference.end()) return result->first;
+
+    return NO_ID;
+  }
+
+  [[nodiscard]] type::ID get_inference(ast::ID n) const
   {
     auto it = inference.find(n);
-    if (it == inference.end()) return NO_ID;
+    if (it != inference.end()) return it->second;
 
-    return it->second;
+    return NO_ID;
   }
 
-  bool is_inferred(ast::_gnid n) const
+  [[nodiscard]] bool is_inferred(ast::ID n) const
   {
     return inference.find(n) != inference.end();
   }

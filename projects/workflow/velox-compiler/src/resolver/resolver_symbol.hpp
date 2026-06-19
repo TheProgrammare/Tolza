@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include "ast/ast_base.hpp"
+#include "nexus/ids.hpp"
 #include "resolver_base.hpp"
 
 #include "nexus/ast/ast.hpp"
@@ -21,30 +23,33 @@ struct Symbol final : Base {
 
   size_t sym_resolved_count = 0;
 
-  ast::_gnid current_entity;
-  ast::_gnid current_component;
-  ast::_gnid current_function;
-  ast::_gnid current_system;
-  ast::_gnid current_lambda;
+  ast::ID current_form;
+  ast::ID current_facet;
+  ast::ID current_function;
+  ast::ID current_rule;
+  ast::ID current_lambda;
+
+  void resolve_node(ast::Node& node);
+  void resolve_node(ast::ID nodeid);
 
   // returns the symbol id definition
-  [[nodiscard]] symbol::_id resolve_id_sym(module::_id current_mod, const ast::Node& n, std::string_view id,
-                                           bool is_silent_error = false);
+  [[nodiscard]] symbol::ID resolve_id_sym(scope::ID ctx, const ast::Node& n, std::string_view id,
+                                          bool is_silent_error = false);
   // returns the symbol id definition
-  [[nodiscard]] symbol::_id resolve_path_sym(module::_id current_mod, const ast::Node& n, std::string_view id,
-                                             const std::vector<std::string_view>& id_quali, ast::EPathSource path_src,
-                                             bool is_silent_error = false);
+  [[nodiscard]] symbol::ID resolve_path_sym(module::ID ctx, const ast::Node& n, std::string_view id,
+                                            const std::vector<std::string>& path, EPathAnchor anchor,
+                                            bool is_silent_error = false);
 
-  size_t start_resolver();
+  [[nodiscard]] size_t start_resolver();
 
-  void resolve_ID(ast::ID& n);
+  void resolve_Identifier(ast::Identifier& n);
   void resolve_ID_Qualified(ast::ID_Qualified& n);
   void resolve_ID_Typed(ast::ID_Typed& n);
   void resolve_Expression_Call(ast::Expression_Call& n);
   void resolve_Statement_GoTo(ast::Statement_GoTo& n);
 };
 
-inline const std::string SYM_HINT =
+constexpr std::string_view SYM_HINT =
     R"(
   - Did you write correctly the identifier?
   - Did you access correctly to the path?

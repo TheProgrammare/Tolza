@@ -1,104 +1,103 @@
 #include "nexus/module.hpp"
 
+#include <llvm-19/llvm/Analysis/ScalarEvolutionExpressions.h>
 #include <llvm/Analysis/LoopNestAnalysis.h>
 
 #include <cassert>
 #include <expected>
 #include <filesystem>
-#include <initializer_list>
-#include <ranges>
 #include <stack>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_global.hpp"
-#include "misc/error_output.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/pipeline.hpp"
 #include "nexus/scope.hpp"
-#include "nexus/script.hpp"
-#include "nexus/symbol.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 
 
 namespace fs = std::filesystem;
 
-module::Module module::Module::new_node_module(ast::_gnid p_gnid, std::string_view p_debug_name)
+module::Graph::Graph(cu::ID _parent_cuid, cu::ID _cuid) :cuid(_cuid)
+{
+  if (_parent_cuid) {
+    auto& parent_mod = _parent_cuid.get().modules->get_file_root();
+    (void)add(parent_mod.modid, Module::from_script());
+  } else {
+    (void)add(module::ID::invalid(), Module::from_script());
+  }
+}
+
+
+module::Module module::Module::new_node_module(ast::ID nodeid, std::string_view p_debug_name) noexcept
 {
   Module mod;
-  mod.scr_id     = p_gnid.get_script_id();
-  mod.gnid       = p_gnid;
+  mod.nodeid     = nodeid;
   mod.debug_name = p_debug_name;
   mod.kind       = EModuleKind::Inline;
   return mod;
 }
 
-module::Module module::Module::from_script(script::_id scr_id)
+module::Module module::Module::from_script()
 {
   Module mod;
-  mod.scr_id = scr_id;
-  mod.kind   = EModuleKind::File;
-
-  auto& scr = compiler::COMPILER.pipeline.get_script(scr_id);
-  mod.gnid  = scr.root_node_id;
+  mod.kind = EModuleKind::File;
 
   return mod;
 }
 
-
-scope::Scope& module::Module::get_scope() const
+void module::Module::Port::export_item(ast::ID n) noexcept
 {
-  assert(kind != EModuleKind::System);
-  return compiler::COMPILER.scopes.get(scp_id);
+  exported_items.try_emplace(ast::get_decl_name(n), n);
+}
+bool module::Module::Port::reexport_item(module::ID m, ast::ID n) noexcept
+{
+  const auto* reexp = n.as<ast::Global_Reexport>();
+  assert(reexp && "Invalid node type");
+
+  auto [it, _] = reexported_module.try_emplace(reexp->alias);
+
+  const auto pair   = std::make_pair(m, n);
+  auto [_, success] = it->second.emplace(pair);
+  return success;
 }
 
-script::ScriptInfo& module::Module::get_script() const
+const std::set<module::Reexp_Ref>& module::Module::Port::find_reexport(std::string_view alias) const noexcept
 {
-  assert(kind != EModuleKind::System);
-  return compiler::COMPILER.pipeline.get_script(scr_id);
-}
+  static const std::set<module::Reexp_Ref> empty;
 
-void module::Module::Port::export_item(ast::_gnid n)
-{
-  exported_items.insert(n);
-}
-void module::Module::Port::reexport_item(ast::_gnid n)
-{
-  auto& scr = mod.get_script();
-  assert(!scr.nodes->get_as<ast::Global_Reexport>(n.get_node_id()));
+  const auto it = reexported_module.find(alias);
+  if (it == reexported_module.end()) return empty;
 
-  reexported_module.insert(n);
+  return it->second;
 }
 
 
-symbol::_id module::Graph::Tools::find_symbol(_id start_module_id, std::string_view name) const
-{
-  auto& cur_mod = graph.get(start_module_id);
-  auto& scp     = cur_mod.get_scope();
-
-  return compiler::COMPILER.scopes.tools.find_symbol(scp.id, name);
-}
-
-std::string module::Graph::Tools::mangle_name(module::_id p_start_module) const
+std::string module::mangle_canonical_module_path(module::ID p_start_module) noexcept
 {
   std::vector<std::string_view> out;
-  auto                          cur_mod = &graph.get(p_start_module);
+  const auto*                   cur_mod = &p_start_module.get();
 
   while (cur_mod) {
-    out.push_back(cur_mod->name);
+    out.emplace_back(cur_mod->name);
 
     if (cur_mod->kind == EModuleKind::File) break;
 
-    auto it = compiler::COMPILER.modules.parent.find(cur_mod->id);
-    if (it != compiler::COMPILER.modules.parent.end())
-      cur_mod = &compiler::COMPILER.modules.get(it->second);
-    else
-      break;
+    auto p = cur_mod->modid.parent();
+    if (!p) break;
+
+    cur_mod = &p.get();
   }
 
   std::string final;
@@ -110,270 +109,223 @@ std::string module::Graph::Tools::mangle_name(module::_id p_start_module) const
 }
 
 
-module::_id module::Graph::Crawler::find_parent_module(module::_id p_mod, std::string_view p_parent_name) const
+module::ID module::build_module_from_path(cu::ID parent_cuid, const std::vector<std::string>& p_path,
+                                          ::cu::EFileSource p_file_source, std::string& str_err) noexcept
 {
-  if (p_parent_name.empty()) return NO_ID;
-
-  auto& cur_mod = graph.get(p_mod);
-
-  auto it = graph.parent.find(cur_mod.id);
-  if (it == graph.parent.end()) return NO_ID;
-
-  return it->second;
-}
-
-module::_id module::Graph::Crawler::find_sibling_module(module::_id p_mod, std::string_view p_sibling_name) const
-{
-  if (p_sibling_name.empty()) return NO_ID;
-
-  auto parent_id = graph.parent.find(p_mod);
-  if (parent_id == graph.parent.end()) return NO_ID;
-
-  auto children_ids = graph.children.find(parent_id->second);
-  if (children_ids == graph.children.end()) return NO_ID;
-
-  for (auto child_id : children_ids->second) {
-    auto& child = graph.get(child_id);
-    if (child.name == p_sibling_name) return child_id;
-  }
-
-  return NO_ID;
-}
-
-
-module::_id module::Graph::Crawler::find_sub_module(module::_id p_mod, std::string_view p_sub_name) const
-{
-  if (p_sub_name.empty()) return NO_ID;
-
-  auto& mod = graph.get(p_mod);
-
-  // scope elements
-  if (auto children = graph.children.find(p_mod); children != graph.children.end()) {
-    for (auto child_id : children->second) {
-      auto& child = graph.get(child_id);
-      if (child.name == p_sub_name) return child_id;
-    }
-  }
-
-
-  // search on imported modules
-  for (auto reexport_node_id : mod.port.reexported_module) {
-    auto n = mod.get_script().nodes->get_as<ast::Global_Reexport>(reexport_node_id.get_node_id());
-    assert(!n);
-
-
-    if (n->alias == p_sub_name) {
-      auto it = graph.owning_module.find(n->node_id);
-      assert(it != graph.owning_module.end());
-
-      return it->second;
-    }
-  }
-
-  return NO_ID;
-}
-
-module::_id module::Graph::Crawler::find_local_module(module::_id p_mod, std::string_view p_local_name) const
-{
-  if (p_local_name.empty()) return NO_ID;
-
-  auto& mod = graph.get(p_mod);
-
-  // parent scope elements
-  if (auto parent = graph.parent.find(p_mod); parent != graph.parent.end()) {
-    return find_sub_module(parent->second, p_local_name);
-  }
-
-  // search on imported modules
-  for (auto exp_mod_id : mod.port.reexported_module) {
-    auto it = graph.owning_module.find(exp_mod_id);
-    assert(it != graph.owning_module.end());
-
-    auto& exp_mod = graph.get(it->second);
-    if (exp_mod.name == p_local_name) return it->second;
-  }
-
-  return NO_ID;
-}
-
-module::_id module::Graph::Crawler::resolve_from_current(module::_id p_start_mod, const _Path& p_path) const
-{
-  if (p_path.empty()) return NO_ID;
-
-  // local search
-  {
-    auto cur_mod = resolve_from_self(p_start_mod, p_path);
-    if (cur_mod) return cur_mod;
-  }
-
-  // recursive ascending parent search
-  {
-    _id cur_parent;
-    do {
-      auto it = graph.parent.find(p_start_mod);
-      if (it == graph.parent.end()) {
-        break;
-      }
-
-      cur_parent = it->second;
-    } while (cur_parent);
-    if (cur_parent) return NO_ID;
-
-    return resolve_from_self(cur_parent, p_path);
-  }
-
-  return NO_ID;
-}
-module::_id module::Graph::Crawler::resolve_from_parent(module::_id p_start_mod, const _Path& p_path) const
-{
-  if (p_path.empty()) return NO_ID;
-
-  _id cur_mod = p_start_mod;
-  for (auto& mod_name : p_path) {
-    cur_mod = find_local_module(cur_mod, mod_name);
-    // no scope found : finding failed
-    if (cur_mod) return NO_ID;
-  }
-  return cur_mod;
-}
-module::_id module::Graph::Crawler::resolve_from_self(module::_id p_start_mod, const _Path& p_path) const
-{
-  if (p_path.empty()) return NO_ID;
-
-  auto cur_mod = p_start_mod;
-  for (auto& mod_name : p_path) {
-    cur_mod = find_local_module(cur_mod, mod_name);
-    // no scope found : finding failed
-    if (cur_mod) return NO_ID;
-  }
-
-  return cur_mod;
-}
-module::_id module::Graph::Crawler::resolve_from_file_root(module::_id p_start_mod, const _Path& p_path) const
-{
-  if (p_path.empty()) return NO_ID;
-
-  auto file_mod = find_file_module(p_start_mod);
-  if (file_mod) return NO_ID;
-
-  auto cur_mod = file_mod;
-  for (auto& mod_name : p_path) {
-    cur_mod = find_local_module(cur_mod, mod_name);
-    // no scope found : finding failed
-    if (cur_mod) return NO_ID;
-  }
-  return cur_mod;
-}
-
-module::_id module::Graph::Tools::build_module_from_path(script::_id                          scr_id,
-                                                         const std::vector<std::string_view>& p_path,
-                                                         ::script::EFileSource p_file_source, std::string& str_err)
-{
-  std::vector<_id> modules;
-  _Path            files;
+  std::vector<ID> modules;
 
   fs::path dir = EFileSource_to_dir(p_file_source);
-  if (p_file_source == ::script::EFileSource::relative) {
-    auto& scr = compiler::COMPILER.pipeline.get_script(scr_id);
-
-    dir = fs::path(scr.file_info.path).stem();
+  if (p_file_source == ::cu::EFileSource::relative) {
+    auto& cu = parent_cuid.get();
+    dir      = fs::path(cu.file_info.path).parent_path() / fs::path(cu.file_info.path).stem();
   }
 
   if (!fs::exists(dir)) {
-    str_err = "Directory at \"" + dir.string() + "\" dosen't exists.";
+    str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
     return NO_ID;
   }
 
-  for (auto elem : p_path) {
-    dir /= elem;
+  for (size_t i = 0; i < p_path.size(); i++) {
+    dir /= p_path[i];
+
+    if (i == p_path.size() - 1) {
+      const std::string old_dir = dir;
+      dir                       = common::fileutils::get_velox_file(dir.string());
+      // is not a velox file : it could be a directory module: mod.vlx
+      if (dir.empty()) {
+        dir /= "mod";
+        dir = common::fileutils::get_velox_file(dir.string());
+        if (!common::fileutils::is_velox_file(dir.string())) {
+          str_err = "File at \"" + old_dir + "\" doesn't exists or isn't a velox file.";
+          return NO_ID;
+        }
+      } else if (!common::fileutils::is_velox_file(dir.string())) {
+        str_err = "Directory at \"" + dir.string() + "\" doesn't exists or isn't a velox file.";
+        return NO_ID;
+      }
+
+      break;
+    }
+
     if (!fs::exists(dir)) {
-      str_err = "Directory at \"" + dir.string() + "\" dosen't exists.";
+      str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
       return NO_ID;
     }
-
-    files.push_back(dir.string());
   }
 
-  auto  __scr_id = compiler::pipeline.query_script_at_path(files.back());
-  auto& scr      = compiler::COMPILER.pipeline.get_script(__scr_id);
+  cu::ID _cuid = compiler::pipeline.query_CU_at_path(parent_cuid, dir.string());
 
-  return scr.module_id;
+  return _cuid.get().modules->get_file_root().modid;
 }
 
-std::vector<module::_id> module::Graph::Crawler::get_file_modules(_id p_file_mod) const
+module::ID module::resolve_anchor(ID ctx, EPathAnchor anchor) noexcept
 {
-  std::vector<_id>                  result;
-  std::unordered_set<_id, _id_hash> visited;
-  std::stack<_id>                   stack;
-
-  stack.push(p_file_mod);
-  visited.insert(p_file_mod);
-
-  while (!stack.empty()) {
-    auto current = stack.top();
-    stack.pop();
-
-    auto it = graph.children.find(current);
-    if (it == graph.children.end()) continue;
-
-    for (const auto& child : it->second) {
-      if (visited.insert(child).second) {
-        result.push_back(child);
-        stack.push(child);
-      }
-    }
+  // anchor resolution = context resolution
+  switch (anchor) {
+  case EPathAnchor::src:            return module::get_src().modid;
+  case EPathAnchor::vendor_lib:     return module::get_vendor().modid;
+  case EPathAnchor::stdlib:         return module::get_std().modid;
+  case EPathAnchor::pkg_lib:        return module::get_pkg().modid;
+  case EPathAnchor::binding:        return module::get_bind().modid;
+  case EPathAnchor::relative_super: {
+    if (auto ctx_parent = ctx.parent()) return ctx_parent;
+    return NO_ID;
   }
-
-  return result;
+  case EPathAnchor::relative_root: return ctx.cu().get().modules->get_file_root().modid;
+  case EPathAnchor::relative_self: return ctx; // already the good context
+  }
 }
-module::_id module::Graph::Crawler::find_file_module(_id p_start_mod) const
+
+module::ID module::resolve_from_children(ID ctx, const Mod_Path& path, size_t index) noexcept
 {
-  auto _it = graph.parent.find(p_start_mod);
-  if (_it == graph.parent.end()) return NO_ID;
+  if (index >= path.size()) return ctx;
+  for (auto child_id : ctx.children()) {
+    const auto& child = child_id.get();
 
-  auto parent_mod_id = _it->second;
-  while (parent_mod_id) {
-    auto& parent_mod = graph.get(parent_mod_id);
-    if (parent_mod.kind == EModuleKind::File) return parent_mod_id;
+    if (child.name != path[index]) continue;
 
-    auto it = graph.parent.find(parent_mod_id);
-    if (it == graph.parent.end()) return NO_ID;
-    parent_mod_id = it->second;
+    if (auto r = resolve_from_children(child_id, path, index + 1)) return r;
   }
+
+  return NO_ID;
 }
 
+module::ID module::resolve_from_import(ID ctx, const Mod_Path& path, size_t index) noexcept
+{
+  if (index >= path.size()) return ctx;
+  const auto& imports = ctx.scope().get().port.find_imports(path[index]);
+  for (const auto& [imported_mod, _] : imports) {
+    if (auto r = resolve_from_import(imported_mod, path, index + 1)) return r;
+  }
 
-module::_id module::Graph::Crawler::find_module(const _Path& path, script::EFileSource src) const
+  return NO_ID;
+}
+
+module::ID module::resolve_from_reexport(ID ctx, const Mod_Path& path, size_t index) noexcept
+{
+  if (index >= path.size()) return ctx;
+  const auto& reexports = ctx.get().port.find_reexport(path[index]);
+  for (const auto& [reexp_mod, _] : reexports) {
+    if (auto r = resolve_from_reexport(reexp_mod, path, index + 1)) return r;
+  }
+
+  return NO_ID;
+}
+
+std::pair<module::ID, symbol::ID> module::resolve_symbol_from_children(ID ctx, const Mod_Path& path, size_t index,
+                                                                       std::string_view sym) noexcept
+{
+  if (index >= path.size()) {
+    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, symid};
+  }
+  for (auto child_id : ctx.children()) {
+    const auto& child = child_id.get();
+
+    if (child.name != path[index]) continue;
+
+    if (auto [r_ctx, r_symid] = resolve_symbol_from_children(child_id, path, index + 1, sym); r_ctx)
+      return {r_ctx, r_symid};
+  }
+
+  return NO_ID;
+}
+std::pair<module::ID, symbol::ID> module::resolve_symbol_from_import(ID ctx, const Mod_Path& path, size_t index,
+                                                                     std::string_view sym) noexcept
+{
+  if (index >= path.size()) {
+    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, symid};
+  }
+  std::cout << ctx.scope().get().debug_name << "\n";
+  const auto& imports = ctx.scope().get().port.find_imports(path[index]);
+  for (const auto& [imported_mod, _] : imports) {
+    if (auto [r_ctx, r_symid] = resolve_symbol_from_import(imported_mod, path, index + 1, sym); r_ctx)
+      return {r_ctx, r_symid};
+  }
+
+  return NO_ID;
+}
+std::pair<module::ID, symbol::ID> module::resolve_symbol_from_reexport(ID ctx, const Mod_Path& path, size_t index,
+                                                                       std::string_view sym) noexcept
+{
+  if (index >= path.size()) {
+    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, symid};
+  }
+  const auto& reexports = ctx.get().port.find_reexport(path[index]);
+  for (const auto& [imported_mod, _] : reexports) {
+    if (auto [r_ctx, r_symid] = resolve_symbol_from_import(imported_mod, path, index + 1, sym); r_ctx)
+      return {r_ctx, r_symid};
+  }
+
+  return NO_ID;
+}
+
+module::ID module::resolve_module_path(ID ctx, const Mod_Path& path, EPathAnchor anchor) noexcept
 {
   assert(!path.empty());
 
-  Module* parent_mod = nullptr;
+  ctx = resolve_anchor(ctx, anchor);
 
-  switch (src) {
-  case script::EFileSource::src:        parent_mod = &graph.src; break;
-  case script::EFileSource::vendor_lib: parent_mod = &graph.vendor; break;
-  case script::EFileSource::stdlib:     parent_mod = &graph.std; break;
-  case script::EFileSource::pkg_lib:    parent_mod = &graph.pkg; break;
-  case script::EFileSource::binding:    parent_mod = &graph.bind; break;
-  case script::EFileSource::relative:   {
-    _Path relative_path(path.begin() + 1, path.end());
-    parent_mod = graph.get_by_name(path[0]);
+  if (auto end = resolve_from_children(ctx, path, 0)) return end;
+  if (auto end = resolve_from_import(ctx, path, 0)) return end;
+  if (auto end = resolve_from_reexport(ctx, path, 0)) return end;
 
-    if (!parent_mod) return NO_ID;
+  return NO_ID;
+}
 
-    return resolve_from_self(parent_mod->id, relative_path);
-  }
-  }
+symbol::ID module::resolve_path_symbol(module::ID ctx, const Mod_Path& path, EPathAnchor anchor,
+                                       std::string_view sym_name) noexcept
+{
+  assert(!path.empty());
 
-  return resolve_from_self(parent_mod->id, path);
+  ctx = resolve_anchor(ctx, anchor);
+
+  if (auto [_, symid] = resolve_symbol_from_children(ctx, path, 0, sym_name); symid) return symid;
+  if (auto [_, symid] = resolve_symbol_from_import(ctx, path, 0, sym_name); symid) return symid;
+  if (auto [_, symid] = resolve_symbol_from_reexport(ctx, path, 0, sym_name); symid) return symid;
+
+  return NO_ID;
 }
 
 
-module::Graph::Graph() :root(get(new_module(_id(-1), Module::from_system("root", "compilation root")))),
-    src(get(new_module(root.id, Module::from_system("src", "user module")))),
-    std(get(new_module(root.id, Module::from_system("std", "standard library module")))),
-    pkg(get(new_module(root.id, Module::from_system("pkg", "packages module")))),
-    bind(get(new_module(root.id, Module::from_system("bind", "bindings module")))),
-    vendor(get(new_module(root.id, Module::from_system("vendor", "vendor module"))))
+void module::initialization()
 {
+  const auto& cu = cu::ID::main().get();
+  (void)cu.modules->add(ID::invalid(), Module::from_system("root", "root"));
+  (void)cu.modules->add(ID::make(cu.cuid, 0), Module::from_system("scr", "source"));
+  (void)cu.modules->add(ID::make(cu.cuid, 0), Module::from_system("std", "standard"));
+  (void)cu.modules->add(ID::make(cu.cuid, 0), Module::from_system("pkg", "package"));
+  (void)cu.modules->add(ID::make(cu.cuid, 0), Module::from_system("bind", "binding"));
+  (void)cu.modules->add(ID::make(cu.cuid, 0), Module::from_system("vendor", "vendor third party"));
+}
+
+module::Module module::Module::from_system(std::string_view p_name, std::string_view p_debug_name) noexcept
+{
+  Module mod;
+  mod.name       = p_name;
+  mod.debug_name = p_debug_name;
+  mod.kind       = EModuleKind::System;
+  return mod;
+}
+
+module::Module& module::get(ID id) noexcept
+{
+  auto cuid = id.cu();
+  if (!cuid) {
+    switch (id.offset()) {
+    case 0:  return get_root();
+    case 1:  return get_src();
+    case 2:  return get_std();
+    case 3:  return get_pkg();
+    case 4:  return get_bind();
+    case 5:  return get_vendor();
+    default: return get_src();
+    }
+  }
+  auto& cu = id.cu().get();
+
+  assert(id.offset() < cu.modules->modules.size());
+  return cu.modules->modules[id.offset()];
 }

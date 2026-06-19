@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
-enum class EBinOpType;
+enum class EBinOpType : uint8_t;
 
 namespace llvm
 {

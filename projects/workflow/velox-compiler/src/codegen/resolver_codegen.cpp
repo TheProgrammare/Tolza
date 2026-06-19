@@ -21,12 +21,9 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/Value.h>
@@ -36,37 +33,32 @@
 #include <llvm/ADT/APInt.h>
 
 
-#include <compiler_options.hpp>
+#include <common/compiler_options.hpp>
 
-#include "nexus/ast/ast.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 
 #include "codegen_tools.hpp"
 #include "static_evaluation.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/script.hpp"
-#include "compiler/compiler.hpp"
-#include "misc/error_output.hpp"
 
 #include "nexus/ast/ast.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_cop.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_generic.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_memory.hpp"
 #include "ast/ast_operation.hpp"
 #include "ast/ast_statement.hpp"
 #include "ast/ast_expression.hpp"
-#include "nexus/type.hpp"
-#include "static_evaluation.hpp"
+#include "nexus/type/type.hpp"
 #include "nexus/symbol.hpp"
 
 
-resolver::Codegen::Codegen(script::ScriptInfo& _scr_info)
-  : scr_info(_scr_info)
+resolver::Codegen::Codegen(cu::CU& _CU)
+  : CU(_CU)
   , ctx(compiler::LLVM_CTX)
-  , __module(std::make_unique<llvm::Module>(_scr_info.file_info.get_module_name(), ctx))
+  , __module(std::make_unique<llvm::Module>(_CU.file_info.get_module_name(), ctx))
   , mod(__module.get())
   , builder(*new llvm::IRBuilder<>(ctx))
   , tools(*new LLVM_Tools(*this))
@@ -78,15 +70,15 @@ resolver::Codegen::Codegen(script::ScriptInfo& _scr_info)
   , i32Ty(llvm::Type::getInt32Ty(ctx))
   , i64Ty(llvm::Type::getInt64Ty(ctx))
   , i128Ty(llvm::Type::getInt128Ty(ctx))
-  , iSizeTy(llvm::Type::getIntNTy(ctx, compiler::COMPILER_OPTIONS.get_arch_size()))
+  , iSizeTy(llvm::Type::getIntNTy(ctx, compiler::OPTIONS.target.get_arch_size()))
   , f16Ty(llvm::Type::getHalfTy(ctx))
   , f32Ty(llvm::Type::getFloatTy(ctx))
   , f64Ty(llvm::Type::getDoubleTy(ctx))
   , f80Ty(llvm::Type::getX86_FP80Ty(ctx))
   , f128Ty(llvm::Type::getFP128Ty(ctx))
-  , fSizeTy(compiler::COMPILER_OPTIONS.get_arch_size() == 32   ? f32Ty
-            : compiler::COMPILER_OPTIONS.get_arch_size() == 64 ? f64Ty
-                                                               : f128Ty)
+  , fSizeTy(compiler::OPTIONS.target.get_arch_size() == 32   ? f32Ty
+            : compiler::OPTIONS.target.get_arch_size() == 64 ? f64Ty
+                                                             : f128Ty)
   , strTy(llvm::StructType::get(ctx, {i8Ty->getPointerTo(), i32Ty}))
   , textTy(llvm::StructType::get(ctx, {i32Ty->getPointerTo(), i32Ty}))
   , cstrTy(llvm::Type::getInt8Ty(ctx)->getPointerTo())
@@ -101,130 +93,131 @@ size_t resolver::Codegen::start_resolver()
 
 
 /*
-void resolver::Codegen::build_init_func()
-{
-  if (init_func) return;
+    void resolver::Codegen::build_init_func()
+    {
+      if (init_func) return;
 
-  auto ty = llvm::FunctionType::get(u0Ty, false);
-  auto fn = llvm::Function::Create(ty, llvm::Function::ExternalLinkage, "init_module_" + mod->getName(), *mod);
+      auto ty = llvm::FunctionType::get(u0Ty, false);
+      auto fn = llvm::Function::Create(ty, llvm::Function::ExternalLinkage, "init_module_" + mod->getName(), *mod);
 
-  auto              bb = llvm::BasicBlock::Create(ctx, "entry", fn);
-  llvm::IRBuilder<> irb(bb);
-  irb.CreateRetVoid();
+      auto              bb = llvm::BasicBlock::Create(ctx, "entry", fn);
+      llvm::IRBuilder<> irb(bb);
+      irb.CreateRetVoid();
 
-  init_func = fn;
-}
+      init_func = fn;
+    }
 
-void resolver::Codegen::error_add(ErrorCode code, const ast::Node& n, std::string_view msg, std::string_view hint) const
-{
-  auto error = Error_Diagnostic(scr_info, code, &scr_info, n.node_token_id, compiler::EPhase::llvmir, msg, hint);
+    void resolver::Codegen::error_add(ErrorCode code, const ast::Node& n, std::string_view msg, std::string_view hint)
+    const
+    {
+      auto error = Error_Diagnostic(CU, code, &CU, n.node_token_id, compiler::EPhase::llvmir, msg, hint);
 
-  errors.push_back(error.print_error());
-}
+      errors.emplace_back(error.print_error());
+    }
 
-void resolver::Codegen::error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second,
-                                      std::string_view msg, std::string_view hint) const
-{
-  auto err = Error_Diagnostic_Two(scr_info, code, first, second, compiler::EPhase::llvmir, msg, hint);
-  errors.push_back(err.print_error());
-}
+    void resolver::Codegen::error_two_lines(ErrorCode code, const ast::Node& first, const ast::Node& second,
+                                          std::string_view msg, std::string_view hint) const
+    {
+      auto err = Error_Diagnostic_Two(CU, code, first, second, compiler::EPhase::llvmir, msg, hint);
+      errors.emplace_back(err.print_error());
+    }
 
-llvm::Value* resolver::Codegen::ensure_rvalue(ast::AExpression& expr, std::string_view name)
-{
-  if (expr.is_rvalue()) return expr.codegen(*this);
+    llvm::Value* resolver::Codegen::ensure_rvalue(ast::AExpression& expr, std::string_view name)
+    {
+      if (expr.is_rvalue()) return expr.codegen(*this);
 
-  auto val = expr.codegen(*this);
-  auto ty  = expr.expression_inferred_type->codegen_ty(*this);
-  // load the value
-  return builder.CreateLoad(ty, val, name);
-}
-
-
-llvm::Value* resolver::Codegen::ensure_lvalue(ast::AExpression& expr, bool is_silent_error)
-{
-  if (expr.is_lvalue()) return expr.codegen(*this);
-
-  if (!is_silent_error) error_add(225, expr, "Expected a lvalue expression.", "a lvalue is frequently a variable.");
-  return nullptr;
-}
+      auto val = expr.codegen(*this);
+      auto ty  = expr.expression_inferred_type->codegen_ty(*this);
+      // load the value
+      return builder.CreateLoad(ty, val, name);
+    }
 
 
-llvm::Function* resolver::Codegen::generate_stub(ast::type::Function_Proto& proto, std::string_view name,
-                                               llvm::Function::LinkageTypes link_ty)
-{
-  if (auto func = mod->getFunction(name)) return func;
+    llvm::Value* resolver::Codegen::ensure_lvalue(ast::AExpression& expr, bool is_silent_error)
+    {
+      if (expr.is_lvalue()) return expr.codegen(*this);
 
-  auto fn_ty = llvm::cast<llvm::FunctionType>(proto.codegen_ty(*this));
-  auto fn    = llvm::Function::Create(fn_ty, link_ty, name, *mod);
-
-  size_t idx = 0;
-  for (auto& arg : fn->args()) {
-    auto& node_param     = proto.parameters[idx++];
-    node_param->llvm_arg = &arg;
-  }
-
-  return fn;
-}
+      if (!is_silent_error) error_add(225, expr, "Expected a lvalue expression.", "a lvalue is frequently a variable.");
+      return nullptr;
+    }
 
 
-// ============ AST ============
-void resolver::Codegen::visit(ast::Node& n)
-{
-}
+    llvm::Function* resolver::Codegen::generate_stub(type::Function_Proto& proto, std::string_view name,
+                                                   llvm::Function::LinkageTypes link_ty)
+    {
+      if (auto func = mod->getFunction(name)) return func;
 
-llvm::Type* resolver::Codegen::visit(ast::AType& n)
-{
-  return n.codegen_ty(*this);
-}
-void resolver::Codegen::visit(ast::ALiteral& n)
-{
-}
-void resolver::Codegen::visit(ast::ADeclaration& n)
-{
-}
-void resolver::Codegen::visit(ast::ALocal& n)
-{
-}
-void resolver::Codegen::visit(ast::AExpression& n)
-{
-}
-void resolver::Codegen::visit(ast::AIdentifier& n)
-{
-}
-llvm::Value* resolver::Codegen::visit(ast::Expr_ID& n)
-{
-  if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
-}
-llvm::Value* resolver::Codegen::visit(ast::Expr_ID_Qualified& n)
-{
-  if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
-}
-llvm::Value* resolver::Codegen::visit(ast::Expr_ID_Type& n)
-{
-  if (n.llvm_value) return n.llvm_value;
-  return n.llvm_value = n.codegen(*this);
-}
-llvm::Type* resolver::Codegen::visit_ty(ast::Expr_ID_Type& n)
-{
-  if (n.llvm_type) return n.llvm_type;
-  if (n.expression_inferred_type) {
-    return n.llvm_type = n.expression_inferred_type->codegen_ty(*this);
-  } else if (n.name->expression_inferred_type) {
-    return n.llvm_type = n.name->expression_inferred_type->codegen_ty(*this);
-  } else if (auto ptr = dynamic_cast<ast::AType*>(n.identifier_symbol.get())) {
-    return n.llvm_type = ptr->codegen_ty(*this);
-  } else {
-    std::cout << "type lost in addr " << &n << std::endl;
+      auto fn_ty = llvm::cast<llvm::FunctionType>(proto.codegen_ty(*this));
+      auto fn    = llvm::Function::Create(fn_ty, link_ty, name, *mod);
+
+      size_t idx = 0;
+      for (const auto& arg : fn->args()) {
+        auto& node_param     = proto.parameters[idx++];
+        node_param->llvm_arg = &arg;
+      }
+
+      return fn;
+    }
+
+
+    // ============ AST ============
+    void resolver::Codegen::visit(ast::Node& n)
+    {
+    }
+
+    llvm::Type* resolver::Codegen::visit(ast::AType& n)
+    {
+      return n.codegen_ty(*this);
+    }
+    void resolver::Codegen::visit(ast::ALiteral& n)
+    {
+    }
+    void resolver::Codegen::visit(ast::ADeclaration& n)
+    {
+    }
+    void resolver::Codegen::visit(ast::ALocal& n)
+    {
+    }
+    void resolver::Codegen::visit(ast::AExpression& n)
+    {
+    }
+    void resolver::Codegen::visit(ast::AIdentifier& n)
+    {
+    }
+    llvm::Value* resolver::Codegen::visit(ast::Expr_ID& n)
+    {
+      if (n.llvm_value) return n.llvm_value;
+      return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
+    }
+    llvm::Value* resolver::Codegen::visit(ast::Expr_ID_Qualified& n)
+    {
+      if (n.llvm_value) return n.llvm_value;
+      return n.llvm_value = n.identifier_symbol->codegen_pass(*this);
+    }
+    llvm::Value* resolver::Codegen::visit(ast::Expr_ID_Type& n)
+    {
+      if (n.llvm_value) return n.llvm_value;
+      return n.llvm_value = n.codegen(*this);
+    }
+    llvm::Type* resolver::Codegen::visit_ty(ast::Expr_ID_Type& n)
+    {
+      if (n.llvm_type) return n.llvm_type;
+      if (n.expression_inferred_type) {
+        return n.llvm_type = n.expression_inferred_type->codegen_ty(*this);
+      } else if (n.name->expression_inferred_type) {
+        return n.llvm_type = n.name->expression_inferred_type->codegen_ty(*this);
+      } else if (auto ptr = dynamic_cast<ast::AType*>(n.identifier_symbol.get())) {
+        return n.llvm_type = ptr->codegen_ty(*this);
+      } else {
+        std::cout << "type lost in addr " << &n << "\n"; // endl
     error_add(194, n, "Inferred type lost", "");
-    return nullptr;
-  }
+return nullptr;
+}
 }
 
 void resolver::Codegen::visit(ast::Root& n)
 {
-  for (auto& elem : n.global_nodes) {
+  for (const auto& elem : n.global_nodes) {
     if (auto ptr = dynamic_cast<ast::AType*>(elem.get())) {
       auto a = ptr->codegen_ty(*this);
     } else if (auto ptr = dynamic_cast<ast::ADeclaration*>(elem.get())) {
@@ -274,12 +267,10 @@ llvm::Value* resolver::Codegen::visit(ast::declaration::Global_Variable& n)
   //  auto&             bb = init_func->getEntryBlock();
   //  llvm::IRBuilder<> irb(&bb);
   //  irb.SetInsertPoint(bb.getTerminator()); // before ret
-//
+  //
   //  irb.CreateStore(n.expression->codegen(*this), glo);
-//
+  //
   //  return n.llvm_value = glo;
-
-
 }
 
 // ============ FUNCTION ============
@@ -304,7 +295,7 @@ llvm::Function* resolver::Codegen::visit(ast::declaration::Function& n)
     if (is_main) {
       linkage = llvm::Function::ExternalLinkage;
       std::vector<llvm::Type*> param_tys;
-      for (auto& param : n.prototype->parameters) param_tys.emplace_back(param->type->codegen_ty(*this));
+      for (const auto& param : n.prototype->parameters) param_tys.emplace_back(param->type->codegen_ty(*this));
       fn_ty = llvm::FunctionType::get(i32Ty, param_tys, false);
     } else {
       fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
@@ -314,7 +305,7 @@ llvm::Function* resolver::Codegen::visit(ast::declaration::Function& n)
 
     // param naming
     size_t count = 0;
-    for (auto& arg : fn->args()) {
+    for (const auto& arg : fn->args()) {
       auto              param = n.prototype->parameters[count++];
       const std::string name  = param->declaration_name;
       arg.setName(name);
@@ -341,15 +332,15 @@ llvm::Function* resolver::Codegen::visit(ast::declaration::Function& n)
 
 void resolver::Codegen::visit(ast::declaration::Mod& n)
 {
-  for (auto& elem : n.declarations) elem->codegen_pass(*this);
+  for (const auto& elem : n.declarations) elem->codegen_pass(*this);
 }
 void resolver::Codegen::visit(ast::declaration::Export& n)
 {
-  for (auto& elem : n.declarations) elem->codegen_pass(*this);
+  for (const auto& elem : n.declarations) elem->codegen_pass(*this);
 }
 void resolver::Codegen::visit(ast::declaration::Extern& n)
 {
-  for (auto& elem : n.declarations) elem->codegen_pass(*this);
+  for (const auto& elem : n.declarations) elem->codegen_pass(*this);
 }
 
 llvm::Type* resolver::Codegen::visit(ast::declaration::Enum& n)
@@ -359,7 +350,7 @@ llvm::Type* resolver::Codegen::visit(ast::declaration::Enum& n)
 
   size_t payload_size  = 1;
   size_t payload_align = 0;
-  for (auto& elem : n.variants) {
+  for (const auto& elem : n.variants) {
     auto   elem_ty    = elem->codegen_ty(*this);
     size_t elem_size  = mod->getDataLayout().getTypeAllocSize(elem_ty);
     size_t elem_align = mod->getDataLayout().getABITypeAlign(elem_ty).value();
@@ -386,7 +377,7 @@ llvm::Type* resolver::Codegen::visit(ast::declaration::Enum_Element& n)
 
 
   std::vector<llvm::Type*> sub_elements;
-  for (auto& elem_sub_type : n.types) sub_elements.push_back(elem_sub_type->codegen_ty(*this));
+  for (const auto& elem_sub_type : n.types) sub_elements.emplace_back(elem_sub_type->codegen_ty(*this));
 
   return n.llvm_type = llvm::StructType::get(ctx, sub_elements);
 }
@@ -407,7 +398,7 @@ llvm::Type* resolver::Codegen::visit(ast::declaration::Union& n)
 
   size_t payload_size  = 1;
   size_t payload_align = 0;
-  for (auto& [_, elem] : n.fields) {
+  for (const auto& [_, elem] : n.fields) {
     auto   elem_ty    = elem->codegen_ty(*this);
     size_t elem_size  = mod->getDataLayout().getTypeAllocSize(elem_ty);
     size_t elem_align = mod->getDataLayout().getABITypeAlign(elem_ty).value();
@@ -435,9 +426,9 @@ llvm::Type* resolver::Codegen::visit(ast::declaration::Global_Generic& n)
 }
 
 // ============ LOCAL ============
-void resolver::Codegen::visit(Local_CodeBlock& n)
+void resolver::Codegen::visit(CodeBlock& n)
 {
-  for (auto& elem : n.elements) {
+  for (const auto& elem : n.elements) {
     switch (elem.kind) {
     case ast::CodeBlock_instruction::EKind::None:         continue;
     case ast::CodeBlock_instruction::EKind::Shared_local: elem.data_local->codegen_pass(*this); break;
@@ -487,13 +478,13 @@ llvm::Value* resolver::Codegen::visit(Local_Pattern_Enum& n)
 llvm::Value* resolver::Codegen::visit(Local_Pattern_Tuple& n)
 {
 }
-llvm::Value* resolver::Codegen::visit(Local_Pattern_Entity& n)
+llvm::Value* resolver::Codegen::visit(Local_Pattern_Form& n)
 {
 }
-llvm::Value* resolver::Codegen::visit(Local_Pattern_System_Component& n)
+llvm::Value* resolver::Codegen::visit(Local_Pattern_Rule_Facet& n)
 {
 }
-llvm::Value* resolver::Codegen::visit(Local_Pattern_Component& n)
+llvm::Value* resolver::Codegen::visit(Local_Pattern_Facet& n)
 {
 }
 
@@ -528,7 +519,7 @@ llvm::Value* resolver::Codegen::visit(Local_Variable& n)
   }
 
   llvm::AllocaInst* alloca;
-  if (auto ptr_ty_table = dynamic_cast<ast::type::Table*>(n.type.get())) {
+  if (auto ptr_ty_table = dynamic_cast<type::Table*>(n.type.get())) {
     if (ptr_ty_table->table_size > 0) {
       auto ty = ptr_ty_table->inner->codegen_ty(*this);
       alloca  = builder.CreateAlloca(ty, builder.getInt32(ptr_ty_table->table_size), n.declaration_name);
@@ -583,57 +574,57 @@ llvm::Value* resolver::Codegen::visit(Local_Capability& n)
   return ptr;
 }
 
-// ============ COP ============
-llvm::Type* resolver::Codegen::visit(ast::declaration::cop::Component& n)
+// ============ SFM ============
+llvm::Type* resolver::Codegen::visit(ast::declaration::sfm::Facet& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
   std::vector<llvm::Type*> tys;
-  for (auto& field : n.fields) tys.emplace_back(field->codegen_ty(*this));
+  for (const auto& field : n.fields) tys.emplace_back(field->codegen_ty(*this));
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
 }
-llvm::Type* resolver::Codegen::visit(ast::declaration::cop::Component_Field& n)
+llvm::Type* resolver::Codegen::visit(ast::declaration::sfm::Facet_Field& n)
 {
   auto ty = n.type->codegen_ty(*this);
 
-  if (n.borrow != ast::declaration::cop::Component_Field::EBorrow::None) n.type->llvm_type = ty->getPointerTo();
+  if (n.borrow != ast::declaration::sfm::Facet_Field::EBorrow::None) n.type->llvm_type = ty->getPointerTo();
   return ty;
 }
 
-llvm::Type* resolver::Codegen::visit(ast::declaration::cop::Role& n)
+llvm::Type* resolver::Codegen::visit(ast::declaration::sfm::View& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
   std::vector<llvm::Type*> tys;
-  for (auto& comp : n.components) {
-    comp->codegen(*this);
-    tys.emplace_back(comp->expression_inferred_type->codegen_ty(*this));
+  for (const auto& facet : n.facets) {
+    facet->codegen(*this);
+    tys.emplace_back(facet->expression_inferred_type->codegen_ty(*this));
   }
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
 }
 
-llvm::Type* resolver::Codegen::visit(ast::declaration::cop::Entity& n)
+llvm::Type* resolver::Codegen::visit(ast::declaration::sfm::Form& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
   std::vector<llvm::Type*> tys;
-  for (auto& comp : n.comps) {
-    comp->codegen(*this);
-    tys.emplace_back(comp->expression_inferred_type->codegen_ty(*this));
+  for (const auto& facet : n.facets) {
+    facet->codegen(*this);
+    tys.emplace_back(facet->expression_inferred_type->codegen_ty(*this));
   }
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_New& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_New& n)
 {
   if (n.llvm_fn) return n.llvm_fn;
 
   auto fn_ty = llvm::cast<llvm::FunctionType>(n.prototype->codegen_ty(*this));
 
   auto fn = llvm::Function::Create(fn_ty,
-                                   n.parent_entity->declaration_is_external || n.parent_entity->declaration_is_exported
+                                   n.parent_form->declaration_is_external || n.parent_form->declaration_is_exported
                                        ? llvm::Function::ExternalLinkage
                                        : llvm::Function::InternalLinkage,
                                    n.mangle_scope() + n.declaration_name);
@@ -649,14 +640,14 @@ llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_New& n)
 
   return n.llvm_fn = fn;
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Del& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_Del& n)
 {
   if (n.llvm_fn) return n.llvm_fn;
 
   auto fn_ty = llvm::FunctionType::get(u0Ty, false);
 
   auto fn = llvm::Function::Create(fn_ty,
-                                   n.parent_entity->declaration_is_external || n.parent_entity->declaration_is_exported
+                                   n.parent_form->declaration_is_external || n.parent_form->declaration_is_exported
                                        ? llvm::Function::ExternalLinkage
                                        : llvm::Function::InternalLinkage,
                                    n.mangle_scope() + n.declaration_name);
@@ -672,28 +663,28 @@ llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Del& n)
 
   return n.llvm_fn = fn;
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Cast& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_Cast& n)
 {
   return nullptr;
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Op& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_Op& n)
 {
   return nullptr;
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Access_Op& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_Access_Op& n)
 {
   return nullptr;
 }
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::Entity_Transfert& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Form_Transfert& n)
 {
   return nullptr;
 }
 
-llvm::Function* resolver::Codegen::visit(ast::declaration::cop::System& n)
+llvm::Function* resolver::Codegen::visit(ast::declaration::sfm::Rule& n)
 {
   return nullptr;
 }
-void resolver::Codegen::visit(ast::declaration::cop::System_Case& n)
+void resolver::Codegen::visit(ast::declaration::sfm::Rule_Case& n)
 {
 }
 
@@ -710,21 +701,21 @@ llvm::Value* resolver::Codegen::visit(ast::generic::Have_Op& n)
 {
   return nullptr;
 }
-llvm::Value* resolver::Codegen::visit(ast::generic::Have_Role& n)
+llvm::Value* resolver::Codegen::visit(ast::generic::Have_View& n)
 {
   return nullptr;
 }
-llvm::Value* resolver::Codegen::visit(ast::generic::Use_Component& n)
+llvm::Value* resolver::Codegen::visit(ast::generic::Use_Facet& n)
 {
   return nullptr;
 }
-llvm::Value* resolver::Codegen::visit(ast::generic::Compatible_System& n)
+llvm::Value* resolver::Codegen::visit(ast::generic::Compatible_Rule& n)
 {
   return nullptr;
 }
 
 // ============ TYPE ============
-llvm::Type* resolver::Codegen::visit(ast::type::Ptr& n)
+llvm::Type* resolver::Codegen::visit(type::Ptr& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
@@ -737,11 +728,11 @@ llvm::Type* resolver::Codegen::visit(ast::type::Ptr& n)
   // provisional
   return n.llvm_type;
 }
-llvm::Type* resolver::Codegen::visit(ast::type::Table& n)
+llvm::Type* resolver::Codegen::visit(type::Table& n)
 {
   return nullptr;
 }
-llvm::Type* resolver::Codegen::visit(ast::type::Primitive& n)
+llvm::Type* resolver::Codegen::visit(type::Primitive& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
@@ -753,34 +744,34 @@ llvm::Type* resolver::Codegen::visit(ast::type::Primitive& n)
 
   return nullptr;
 }
-llvm::Type* resolver::Codegen::visit(ast::type::Tuple& n)
+llvm::Type* resolver::Codegen::visit(type::Tuple& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
   if (n.types.empty()) return n.llvm_type = u0Ty;
 
   std::vector<llvm::Type*> tys;
-  for (auto& ty : n.types) tys.emplace_back(ty->codegen_ty(*this));
+  for (const auto& ty : n.types) tys.emplace_back(ty->codegen_ty(*this));
 
   if (tys.size() == 1) return n.llvm_type = tys[0];
 
   return n.llvm_type = llvm::StructType::get(ctx, tys);
 }
-llvm::Type* resolver::Codegen::visit(ast::type::Function_Proto& n)
+llvm::Type* resolver::Codegen::visit(type::Function_Proto& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
   auto                     ret_ty = n.return_ty ? n.return_ty->codegen_ty(*this) : u0Ty;
   std::vector<llvm::Type*> params;
-  for (auto& param_ty : n.parameters) {
+  for (const auto& param_ty : n.parameters) {
     auto llvm_ty = tools.generate_parameter_type(*param_ty);
-    params.push_back(llvm_ty);
+    params.emplace_back(llvm_ty);
   }
 
   return n.llvm_type = llvm::FunctionType::get(ret_ty, params, n.is_variadic);
 }
 
-llvm::Type* resolver::Codegen::visit(ast::type::Get_Expr_Type& n)
+llvm::Type* resolver::Codegen::visit(type::Get_Expr_Type& n)
 {
   if (n.llvm_type) return n.llvm_type;
 
@@ -872,7 +863,7 @@ llvm::Value* resolver::Codegen::visit(ast::literal::Textual_Format& n)
   if (n.values.size() == 1 && dynamic_cast<ast::literal::Text_Pure*>(n.values[0].get())) {
     return n.values[0]->codegen(*this);
   }
-  for (auto& elem : n.values) {
+  for (const auto& elem : n.values) {
     elem->codegen(*this);
   }
   return nullptr;
@@ -902,7 +893,7 @@ llvm::Value* resolver::Codegen::visit(ast::literal::Tuple& n)
   std::vector<llvm::Type*>  types;
   std::vector<llvm::Value*> vals;
 
-  for (auto& val : n.values) {
+  for (const auto& val : n.values) {
     vals.emplace_back(val->codegen(*this));
     types.emplace_back(val->expression_inferred_type->codegen_ty(*this));
   }
@@ -977,7 +968,7 @@ llvm::Value* resolver::Codegen::visit(ast::literal::Enum& n)
 
   size_t offset = 0;
   // store each enum elem values in payload
-  for (auto& elem : n.member_values) {
+  for (const auto& elem : n.member_values) {
     // get elem value
     auto val = elem->codegen(*this);
 
@@ -1010,7 +1001,7 @@ llvm::Value* resolver::Codegen::visit(ast::literal::Structured_Data& n)
   // allocate structured data
   llvm::Value* v = llvm::UndefValue::get(struct_ty);
 
-  for (auto& field : n.field_args) {
+  for (const auto& field : n.field_args) {
     // get field value
     auto val = field->codegen(*this);
 
@@ -1023,7 +1014,7 @@ llvm::Value* resolver::Codegen::visit(ast::literal::Structured_Data& n)
   return n.llvm_value = v;
 }
 
-llvm::Value* resolver::Codegen::visit(ast::literal::Entity& n)
+llvm::Value* resolver::Codegen::visit(ast::literal::Form& n)
 {
   return nullptr;
 }
@@ -1073,14 +1064,14 @@ llvm::Value* resolver::Codegen::visit(ast::expression::Call& n)
 
   size_t                    count = 0;
   std::vector<llvm::Value*> args;
-  for (auto& arg : n.param_args) {
+  for (const auto& arg : n.param_args) {
     args.emplace_back(arg->codegen(*this));
     count++;
   }
 
   llvm::CallInst* result = nullptr;
 
-  if (!n.function_proto->return_ty || n.function_proto->return_ty->is_same(*ast::type::get_void_type())) {
+  if (!n.function_proto->return_ty || n.function_proto->return_ty->is_same(*type::get_void_type())) {
     result = builder.CreateCall(fn_callee, args);
   } else {
     std::string call_name = n.callee->debug_str();
@@ -1123,7 +1114,7 @@ llvm::Value* resolver::Codegen::visit(ast::expression::Call_Argument& n)
   }
   }
 }
-llvm::Value* resolver::Codegen::visit(ast::expression::Call_System& n)
+llvm::Value* resolver::Codegen::visit(ast::expression::Call_Rule& n)
 {
   return nullptr;
 }
@@ -1431,8 +1422,8 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Cast_As& n)
 
   switch (n.cast_type) {
   case ast::operation::Cast_As::ECastType::AS: {
-    if (dynamic_cast<ast::type::Primitive*>(n.expression->expression_inferred_type.get())
-        && dynamic_cast<ast::type::Primitive*>(n.expression->expression_inferred_type.get())) {
+    if (dynamic_cast<type::Primitive*>(n.expression->expression_inferred_type.get())
+        && dynamic_cast<type::Primitive*>(n.expression->expression_inferred_type.get())) {
       return n.llvm_value = tools.primitive_coerce(expr, expr->getType(), target_ty);
     }
   }
@@ -1478,7 +1469,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Binary& n)
   using Func = std::function<void()>;
 
   auto arith = [&](Func fn_sint, Func fn_uint, Func fn_float) {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(n.left->expression_inferred_type)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(n.left->expression_inferred_type)) {
       if (EPrimType_is_floating(ptr->type)) {
         if (fn_float) fn_float();
       } else if (EPrimType_is_integral(ptr->type)) {
@@ -1495,7 +1486,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Binary& n)
   };
 
   auto byte = [&](Func bin) {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(n.left->expression_inferred_type)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(n.left->expression_inferred_type)) {
       if (ptr->type == EPrimitiveTypeKind::boolean || EPrimType_is_byte(ptr->type)) {
         bin();
       }
@@ -1780,7 +1771,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Unary& n)
   switch (n.unary_op) {
   case EUnaryOpType::NONE: break;
   case EUnaryOpType::_not: {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(op_ty)) {
       if (ptr->type == EPrimitiveTypeKind::boolean || EPrimType_is_byte(ptr->type)) {
         op = builder.CreateNot(base_ptr, "un.not");
       }
@@ -1789,7 +1780,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Unary& n)
     break;
   }
   case EUnaryOpType::_plus: {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(op_ty)) {
       if (EPrimType_is_integral(ptr->type)) {
         unsigned bits = llvm_op_ty->getIntegerBitWidth();
         auto     mask = llvm::APInt(bits, 1);
@@ -1824,7 +1815,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Unary& n)
     break;
   }
   case EUnaryOpType::_minus: {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(op_ty)) {
       if (EPrimType_is_integral(ptr->type)) {
         unsigned bits = llvm_op_ty->getIntegerBitWidth();
         auto     mask = llvm::APInt(bits, 1);
@@ -1859,7 +1850,7 @@ llvm::Value* resolver::Codegen::visit(ast::operation::Unary& n)
     break;
   }
   case EUnaryOpType::_invert_sign: {
-    if (auto ptr = std::dynamic_pointer_cast<ast::type::Primitive>(op_ty)) {
+    if (auto ptr = std::dynamic_pointer_cast<type::Primitive>(op_ty)) {
       if (EPrimType_is_integral(ptr->type)) {
         unsigned bits = llvm_op_ty->getIntegerBitWidth();
         auto     mask = llvm::APInt(bits, 1);
@@ -1920,8 +1911,6 @@ void resolver::Codegen::visit(ast::memory::Del& n)
 void resolver::Codegen::visit(ast::memory::Align& n)
 {
 }
-void resolver::Codegen::visit(ast::memory::Drop& n)
-{
-}
+void resolver::Codegen::visit(ast::memory::Drop& n){}
 
-*/
+    */

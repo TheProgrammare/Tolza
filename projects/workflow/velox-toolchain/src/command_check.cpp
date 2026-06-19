@@ -9,9 +9,15 @@
 
 
 #include "command_check.hpp"
+
+
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
+#include <common/compiler_options.hpp>
+#include <common/utils.hpp>
+
 #include "command_workspace.hpp"
-#include "common.hpp"
-#include "toolchain/toolchain.hpp"
+
 
 #include <expected>
 #include <iostream>
@@ -21,56 +27,51 @@
 
 namespace fs = std::filesystem;
 
+#define OUT_LOG std::cout << "[check] "
+#define OUT_ERR std::cerr << "[check:ERROR] "
 
-void command::check::err(const std::string& msg)
-{
-  std::cerr << "[check:ERROR] " << msg << std::endl;
-}
 
-void command::check::log(const std::string& msg, bool sub_log)
+bool command::check::check_velox_config(std::string_view file, bool full_config, bool verbose) noexcept
 {
-  if (sub_log)
-    std::cerr << "  " << msg << std::endl;
-  else
-    std::cerr << "[check] " << msg << std::endl;
-}
+  const fs::path f(file);
 
-bool command::check::check_velox_config(const std::string& file, bool full_config, bool verbose)
-{
-  if (!fs::exists(file)) {
-    err("The config file at " + file + " dosen't exists.");
+  if (!fs::exists(f)) {
+    OUT_ERR "The config file at " << f << " dosen't exists.";
     return false;
   }
 
-  std::string cache = common::get_cache_dir();
+  fs::path cache(common::env::get_cache_dir());
   try {
     fs::create_directories(cache);
   } catch (const std::runtime_error& e) {
-    std::cerr << e.what() << std::endl;
+    std::cerr << e.what() << "\n";
     return false;
   }
 
-  std::string cache_config = fs::path(cache) / "velox.toml.template";
-  workspace::write_config_file(cache, "velox.toml.template", false);
+  std::string               cache_config = fs::path(cache) / "velox.toml.template";
+  common::compiler::Options c            = common::compiler::Options::read_config(cache_config);
+
+  (void)workspace::write_file(cache.string(), "velox.toml.template");
+  (void)c.write_config(cache.string());
   if (cache_config.empty()) return false;
 
   toml::table eg_tbl;
   try {
     eg_tbl = toml::parse_file(cache_config);
   } catch (const toml::parse_error& e) {
-    std::cerr << e.what() << ", at: " << e.source().begin.line << ":" << e.source().begin.column << std::endl;
+    std::cerr << e.what() << ", at: " << e.source().begin.line << ":" << e.source().begin.column << "\n";
     return false;
   }
   toml::table tbl;
   try {
-    tbl = toml::parse_file(file);
+    tbl = toml::parse_file(f.string());
   } catch (const toml::parse_error& e) {
-    err(e.what());
+    OUT_ERR << e.what();
     return false;
   }
   for (auto& [section, fields] : tbl) {
     if (!eg_tbl.contains(section)) {
-      err("Unexpected section [" + std::string(section.str()) + "]");
+      OUT_ERR "Unexpected section [" << section.str() << "]";
       return false;
     }
   }
@@ -78,35 +79,37 @@ bool command::check::check_velox_config(const std::string& file, bool full_confi
 }
 
 
-bool command::check::check_workspace(const std::string& ws_path, bool verbose)
+bool command::check::check_workspace(std::string_view ws_path, bool verbose) noexcept
 {
-  log("Checking workspace check...");
+  const fs::path p(ws_path);
 
-  if (!fs::exists(ws_path)) {
-    err("The directory at " + ws_path + " dosen't exists.");
+  OUT_LOG "Checking workspace check...";
+
+  if (!fs::exists(p)) {
+    OUT_ERR "The directory at " << p << " dosen't exists.";
     return false;
   }
 
   bool src_found = true;
-  if (!fs::exists(fs::path(ws_path) / "src")) {
-    err("The mandatory file \"src/\" at " + ws_path + "/src dosen't exists.");
+  if (!fs::exists(fs::path(p) / "src")) {
+    OUT_ERR "The mandatory file \"src/\" at " << p << " /src dosen't exists.";
     src_found = false;
   }
 
   bool config_found   = true;
   bool config_healthy = true;
-  if (!fs::exists(fs::path(ws_path) / "velox.toml")) {
-    err("The mandatory \"velox.toml\" at " + ws_path + "/velox.toml dosen't exists.");
+  if (!fs::exists(fs::path(p) / "velox.toml")) {
+    OUT_ERR "The mandatory \"velox.toml\" at " << p << " /velox.toml dosen't exists.";
     config_found = false;
   } else {
-    if (!check_velox_config(fs::path(ws_path) / "velox.toml", true, verbose)) {
-      err("The config at " + ws_path + "/velox.toml is invalid.");
+    if (!check_velox_config(std::string(p / "velox.toml"), true, verbose)) {
+      OUT_ERR "The config at " << p << " /velox.toml is invalid.";
       config_healthy = false;
     }
   }
 
   if (src_found && config_found && config_healthy) {
-    log("The project is healthy and ready for compilation and development.");
+    OUT_LOG "The project is healthy and ready for compilation and development.";
     return true;
   }
 

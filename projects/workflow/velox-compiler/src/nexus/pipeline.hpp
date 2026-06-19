@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string_view>
 #include <vector>
 #include <unordered_set>
@@ -9,7 +10,7 @@
 
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/script.hpp"
+#include "compiler/compilation_unit.hpp"
 
 
 namespace pipeline
@@ -20,7 +21,7 @@ namespace pipeline
 // |└> pass lexer
 // |└> pass preprocessor
 // |└> pass parser
-// └o wait all scripts prepared
+// └o wait all compilation_units prepared
 // └> engage shipowner
 // |└> (if import from binding)
 // ||└> pass binding generation
@@ -35,58 +36,63 @@ namespace pipeline
 // |└> (if llvm emit enabled)
 // ||└> pass llvm emitter (for .ll format)
 // |└> pass llvm optimization
-// |└> pass script emitter (for other format)
+// |└> pass compilation unit emitter (for other format)
 // └> engage module linker (llvm specific)
 // └> engage linker (executable generation)
 struct Pipeline {
-  std::unordered_map<std::string, script::_id>      path_generated;
-  std::vector<std::unique_ptr<script::ScriptInfo>>  compilation_scripts;
-  std::unordered_set<script::_id, script::_id_hash> unprepared_scripts;
-  std::unordered_set<script::_id, script::_id_hash> prepared_scripts;
-  std::unordered_set<script::_id, script::_id_hash> analyzed_scripts;
+  Pipeline();
 
-  // push to prepared_scripts
-  std::vector<script::_id>            query_scripts_at_dir(std::string_view path);
-  // push to prepared_scripts
-  script::_id                         query_script_at_path(std::string_view path);
-  std::unique_ptr<script::ScriptInfo> build_script_from_path(std::string_view path);
+  StringMap<cu::ID>                        path_generated;
+  // paths
+  std::vector<std::unique_ptr<cu::CU>>     compilation_units;
+  std::set<std::string>                    binding_compilation_units_to_prepare;
+  std::unordered_set<cu::ID, cu::ID::Hash> unprepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash> prepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash> analyzed_compilation_units;
+
+  // push to prepared_compilation_units
+  [[nodiscard]] std::vector<cu::ID> query_CUs_at_dir(cu::ID parent_cuid, std::string_view path);
+  // push to prepared_compilation_units
+  [[nodiscard]] cu::ID              query_CU_at_path(cu::ID parent_cuid, std::string_view path);
+
+  [[nodiscard]] static std::unique_ptr<cu::CU> build_CU_from_path(cu::ID parent_cuid, std::string_view path);
 
 
-  double timing(std::function<void()> f);
+  [[nodiscard]] static double timing(const std::function<void()>& f);
 
-  // for each script
-  bool   engage_preparer(script::_id scr_id);
-  // for all prepared_scripts
-  size_t engage_shipowner();
-  // for each script
-  bool   engage_analyzer(script::_id scr_id);
-  // for all analyzed_scripts
-  bool   engage_generator(script::_id scr_id);
+  // for each compilation unit
+  [[nodiscard]] bool        engage_preparer(cu::ID cuid);
+  // for all prepared_compilation_units
+  [[nodiscard]] size_t      engage_shipowner();
+  [[nodiscard]] bool        engage_bindings();
+  // for each compilation unit
+  [[nodiscard]] bool        engage_analyzer(cu::ID cuid);
+  // for all analyzed_compilation_units
+  [[nodiscard]] bool        engage_generator(cu::ID cuid);
   // link and make object
-  bool   engage_module_linker(script::_id scr_id);
-  bool   engage_linker();
+  [[nodiscard]] bool        engage_module_linker(cu::ID cuid) const;
+  [[nodiscard]] static bool engage_linker();
 
-
-  script::ScriptInfo& get_script(script::_id scr_id);
 
 private:
   // preparer
-  bool pass_lexer(script::_id scr_id);
-  bool pass_preprocessor(script::_id scr_id);
-  bool pass_parser(script::_id scr_id);
+  [[nodiscard]] static bool pass_lexer(cu::ID cuid);
+  [[nodiscard]] static bool pass_preprocessor(cu::ID cuid);
+  [[nodiscard]] static bool pass_parser(cu::ID cuid);
 
-  bool pass_binding_generation(std::vector<std::string_view> path, std::string_view alias);
+
+  [[nodiscard]] bool pass_binding_generation(const std::vector<std::string>& path, std::string_view alias);
 
   // analyzer
-  size_t pass_resolution_symbol(script::_id scr_id);
-  size_t pass_resolution_inference(script::_id scr_id);
-  size_t pass_resolution_semantic(script::_id scr_id);
+  [[nodiscard]] static size_t pass_resolution_symbol(cu::ID cuid);
+  [[nodiscard]] static size_t pass_resolution_inference(cu::ID cuid);
+  [[nodiscard]] static size_t pass_resolution_semantic(cu::ID cuid);
 
   // generator
-  bool pass_code_generation(script::_id scr_id);
-  bool pass_llvm_optimization(script::_id scr_id);
-  bool pass_llvm_emitter(script::_id scr_id);
-  bool pass_script_emitter(script::_id scr_id);
+  [[nodiscard]] static bool pass_code_generation(cu::ID cuid);
+  [[nodiscard]] bool        pass_llvm_optimization(cu::ID cuid) const;
+  [[nodiscard]] static bool pass_llvm_emitter(cu::ID cuid);
+  [[nodiscard]] bool        pass_script_emitter(cu::ID cuid) const;
 };
 
 

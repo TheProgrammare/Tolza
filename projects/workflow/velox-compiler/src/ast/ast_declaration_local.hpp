@@ -9,21 +9,16 @@
 namespace ast
 {
 
-AST_NODE(Local_CodeBlock)
-{
-  SET_VECTOR_NODE(elements);
-};
-
 // inside of Enum/Tuple pattern
 // e.g. Some(a) = value
 // e.g. Player { CId.name: name, CId.age: age } = value
 // e.g. Player { CId { name: name, age: age } } = value
 // e.g. (a, b, c) = triple
 // e.g. match val { Some(a) => ... }
-// e.g. sys name() { Component(c) => ... }
+// e.g. rule name() { Facet(c) => ... }
 AST_NODE(Local_Binding)
 {
-  std::string_view name;
+  std::string name;
   SET_TYPE(type);
   SET_NODE(expression);
   ECapability capability = ECapability::NONE;
@@ -33,7 +28,7 @@ AST_NODE(Local_Binding)
 
 AST_NODE(Local_Pattern_Element)
 {
-  enum class Kind { Ignore, Binding, Literal };
+  enum class Kind : uint8_t { Ignore, Binding, Literal };
 
   SET_NODE(bind);
   SET_NODE(literal);
@@ -62,19 +57,18 @@ AST_NODE(Local_Pattern_Tuple)
   SET_NODE(expression);
 };
 
-// e.g. [if/while] let Player{ CId.name: name, CId.id: 10 }
-// e.g. [if/while] let Player{ CId{ name: name, id: 10 } }
-AST_NODE(Local_Pattern_Entity)
+// e.g. [if/while] let Player{ CId{ .name: name, .nodeid: 10 } }
+AST_NODE(Local_Pattern_Form)
 {
   ECapability capability = ECapability::Ref;
 
   SET_NODE(name);
   // mapping
-  SET_VECTOR_NODE(pattern_components);
+  SET_VECTOR_NODE(pattern_facets);
   SET_NODE(expression);
 };
 
-AST_NODE(Local_Pattern_Sys_Comp)
+AST_NODE(Local_Pattern_Rule_Facet)
 {
   ECapability capability = ECapability::Ref;
 
@@ -83,12 +77,12 @@ AST_NODE(Local_Pattern_Sys_Comp)
   SET_NODE(expression);
 };
 
-// e.g. [if/while] let CId{ name: ref'name, id: 10 }
-AST_NODE(Local_Pattern_Comp)
+// e.g. [if/while] let CId{ .name: ref'name, .id: 10 }
+AST_NODE(Local_Pattern_Facet)
 {
   struct Field final {
-    std::string_view name;
-    ast::_gnid       mapping;
+    std::string name;
+    ast::ID     mapping;
   };
 
   ECapability capability = ECapability::Ref;
@@ -109,7 +103,7 @@ AST_NODE(Local_Tuple_Destructuring)
 
 AST_NODE(Local_Lambda)
 {
-  std::string_view name;
+  std::string name;
   SET_NODE(capture);
   SET_CALLABLE
 };
@@ -117,7 +111,7 @@ AST_NODE(Local_Lambda)
 // let/var a: ptr'type?$ = expression;
 AST_NODE(Local_Variable)
 {
-  std::string_view name;
+  std::string name;
 
   SET_TYPE(type);
   SET_NODE(expression);
@@ -130,7 +124,7 @@ AST_NODE(Local_Variable)
 // ref/mut name = expression
 AST_NODE(Local_Capability)
 {
-  std::string_view name;
+  std::string name;
 
   SET_NODE(expression);
 
@@ -148,16 +142,16 @@ AST_NODE(Local_Lambda_Capture)
 // (a: str, copy b: i32 = 10, mut c: f32 = nullptr, args: ...)
 AST_NODE(Local_Parameter)
 {
-  std::string_view name;
+  std::string name;
   SET_TYPE(type);
   SET_NODE(default_value);
   EPassMode passmode    = EPassMode::Copy;
-  bool      is_variadic = false;
+  bool      is_restrict = false;
 };
 
 AST_NODE(Local_Gen_Param_Elem)
 {
-  std::string_view name;
+  std::string name;
 
   SET_VECTOR_TYPE(generic_references)
 };

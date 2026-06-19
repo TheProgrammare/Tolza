@@ -16,13 +16,34 @@
  */
 
 #include <CLIUtils/CLI11.hpp>
+
+#include "compiler.hpp"
+#include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
-#include "common.hpp"
+#include <common/common.hpp>
+
+int run_velox(int argc, const char* argv[])
+{
+  CLI::App            app{"Velox compiler (" + common::SOFTWARE_VERSION + ")", common::SOFTWARE_NAME};
+  compiler::Commander commander(app);
+
+  CLI11_PARSE(app, argc, argv);
+
+
+  if (compiler::COMPILER.run_requested) return compiler::COMPILER.start_compilation();
+
+  return 0;
+}
 
 int main(int argc, const char* argv[])
 {
-  CLI::App app{"Velox compiler (" + common::SOFTWARE_VERSION + ")", common::SOFTWARE_NAME};
-  Command  command(app, argc, argv);
+  try {
+    return run_velox(argc, argv);
+  } catch (const std::exception& e) {
+    std::cerr << "fatal error: " << e.what() << '\n';
+  } catch (...) {
+    std::cerr << "unknown fatal error\n";
+  }
 
-  CLI11_PARSE(app, argc, argv);
+  return 1;
 }
