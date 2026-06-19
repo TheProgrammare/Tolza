@@ -52,7 +52,7 @@ b.print()
 | transfert copy operator | `extend T op copy -> T {...}` | returns a copy | `let my_copy: MyType copy= my_type`
 | transfert move operator | `extend T op move -> T {...}` | move semantic, drop self | `let my_copy: MyType = my_type`
 | delete operator | `extend T op del {...}` | drop self | `del my_type`
-| predicat | `extend T op pred {...}` (self is the origin, returns boolean) | the extension is marked predicat | `if my_type {...}` |
+| predicat | `extend T op predicat {...}` (self is the origin, returns boolean) | the extension is marked predicat | `if my_type {...}` |
 
 ## Generics
 It's possible to set generics on extension parameters, even on `self`.
