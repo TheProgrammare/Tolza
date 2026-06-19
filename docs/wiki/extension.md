@@ -49,8 +49,8 @@ b.print()
 | slice operator | `extend T op [start..end] -> Slice<U> {...}` | returns the slice type | `ref elem = my_type[0..8]`
 | slice bound operator | `extend T op ?[start..end] -> Slice<U>? {...}` | returns the slice type | `ref elem = my_type?[0..8]`
 | slice bits operator | `extend T op ~[start..end] -> U {...}` | returns byte type | `let bits: bsize = my_type~[0..64]`
-| transfert copy operator | `extend T op copy -> T {...}` | returns a copy | `let my_copy: MyType copy= my_type`
-| transfert move operator | `extend T op move -> T {...}` | move semantic, drop self | `let my_copy: MyType = my_type`
+| transfert copy operator | `extend T op copy {...}` | returns a copy | `let my_copy: MyType copy= my_type`
+| transfert move operator | `extend T op move {...}` | move semantic, drop self | `let my_copy: MyType = my_type`
 | delete operator | `extend T op del {...}` | drop self | `del my_type`
 | predicat | `extend T op predicat {...}` (self is the origin, returns boolean) | the extension is marked predicat | `if my_type {...}` |
 
