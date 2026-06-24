@@ -34,8 +34,8 @@ Literal reading mode
 |-|-|-|-|
 | partial raw literal | `r"C:my\windows\path"` | prefix | disable escape, can't read `"` character |
 | total raw literal | `r#"my "particular" string"#` | prefix and suffix | disable escape and can read `"` character, can't read `"#` |
-| multiline literal | `"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | enable escape, can read `"` or `""` chracter, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
-| raw multiline literal | `r"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | dsiable escape, can read `"` or `""` chracter, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
+| multiline literal | `"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | enable escape, can read `"` or `""` character, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
+| raw multiline literal | `r"""`</br>`  my multiline`</br>`  and aligned`</br>`  string`</br>`"""` | prefix and suffix | disable escape, can read `"` or `""` character, not `"""`, read start on the first line after `"""`, read end on the line last line before `"""` |
 
 > Note: Literal type annotation and literal reading mode are cumulative on the same literal
 
