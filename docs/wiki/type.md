@@ -7,8 +7,8 @@
 | integral | `isize` `i8`-`i128` | `0` `-1` `1i` `10i32` default integral | 8-128 bits |
 | unsigned | `usize` `u8`-`u128` | `1u` `10u64` | 8-128 bits |
 | floating (floatting-point) | `fsize` `f32`-`f128` | `0.0` `.0` `-1.0f` `10f64` default point | 32-128 bits |
-| decimal (fixed-point) | `dN` `dN:S` `32dN`-`128dN` | `200.45d2` `10d4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
-| unsigned decimal | `udN` `udN:S` `32udN`-`128udN` | `200.45ud2` `10ud4:32` | 32-128 bits, N is decimal scale (static), S is bits size (32, 64, 128) |
+| decimal (fixed-point) | `d` `dT` `d32`-`d128` | `200.45d` `10d32` | 32-128 bits, rule format : N.N for N = T_size / 2 |
+| unsigned decimal | `udT` `ud32`-`ud128` | `200.45ud` `10ud32` | 32-128 bits, .N for N = T_size / 2 |
 | no type | `u0` |  | 
 | cunei | `cune` | `"a"cune` `"a"cu` default one character | 8 bits textual storage, can be partial codepoint or simple ascii character |
 | string | `str` | `"hello"s` `"hello"str` default literal text | fat pointer `{ data: ptr'cune, size: i32 }` null terminated, i/o encoding dependent  |
