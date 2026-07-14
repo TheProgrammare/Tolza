@@ -7,7 +7,8 @@
 **Static composition, dynamic possibilities.**
 
 ![Toolchain](https://img.shields.io/badge/Toolchain-Done-darkgreen)
-![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)</br>
+![Compiler](https://img.shields.io/badge/Compiler-Work_in_progress-brightgreen)
+![Compiler](https://img.shields.io/badge/VScode_Plugin-Done-darkgreen)</br>
 ![Version](https://img.shields.io/badge/Version-2026.2.0b-blue)
 ![License](https://img.shields.io/badge/License-Apache_2.0-darkblue)
 ![Platform](https://img.shields.io/badge/Current_Platform-UNIX_/_Windows-darkblue)
