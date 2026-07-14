@@ -70,7 +70,7 @@ This project contains several sub-projects:
 - Toolchain
   - Commands
   - Package Manager
-- Visual studio code plugin
+- Visual studio code plugin: [here](https://github.com/TheProgrammare/Velox-VScode-Plugin)
 
 # Governance
 - **Founder**:  
