@@ -57,25 +57,25 @@ module::Module module::Module::from_script()
   return mod;
 }
 
-void module::Module::Port::export_item(ast::ID n) noexcept
+void module::Module::Port::export_item(ast::ID nodeid) noexcept
 {
-  exported_items.try_emplace(ast::get_decl_name(n), n);
+  exported_items.try_emplace(ast::get_decl_name(nodeid), nodeid);
 }
-bool module::Module::Port::reexport_item(module::ID m, ast::ID n) noexcept
+bool module::Module::Port::reexport_item(module::ID modid, ast::ID nodeid) noexcept
 {
-  const auto* reexp = n.as<ast::Global_Reexport>();
+  const auto* reexp = nodeid.as<ast::Global_Reexport>();
   assert(reexp && "Invalid node type");
 
   auto [it, _] = reexported_module.try_emplace(reexp->alias);
 
-  const auto pair   = std::make_pair(m, n);
+  const auto pair   = std::make_pair(modid, nodeid);
   auto [_, success] = it->second.emplace(pair);
   return success;
 }
 
-const std::set<module::Reexp_Ref>& module::Module::Port::find_reexport(std::string_view alias) const noexcept
+const std::set<module::ReexpRef>& module::Module::Port::find_reexport(std::string_view alias) const noexcept
 {
-  static const std::set<module::Reexp_Ref> empty;
+  static const std::set<module::ReexpRef> empty;
 
   const auto it = reexported_module.find(alias);
   if (it == reexported_module.end()) return empty;
@@ -118,11 +118,10 @@ module::ID module::build_module_from_path(cu::ID parent_cuid, const std::vector<
   if (p_file_source == ::cu::EFileSource::relative) {
     auto& cu = parent_cuid.get();
     dir      = fs::path(cu.file_info.path).parent_path() / fs::path(cu.file_info.path).stem();
-  }
-
-  if (!fs::exists(dir)) {
-    str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
-    return NO_ID;
+    if (!fs::exists(dir)) {
+      str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
+      return NO_ID;
+    }
   }
 
   for (size_t i = 0; i < p_path.size(); i++) {
@@ -176,7 +175,7 @@ module::ID module::resolve_anchor(ID ctx, EPathAnchor anchor) noexcept
   }
 }
 
-module::ID module::resolve_from_children(ID ctx, const Mod_Path& path, size_t index) noexcept
+module::ID module::resolve_from_children(ID ctx, const ModPath& path, size_t index) noexcept
 {
   if (index >= path.size()) return ctx;
   for (auto child_id : ctx.children()) {
@@ -190,7 +189,7 @@ module::ID module::resolve_from_children(ID ctx, const Mod_Path& path, size_t in
   return NO_ID;
 }
 
-module::ID module::resolve_from_import(ID ctx, const Mod_Path& path, size_t index) noexcept
+module::ID module::resolve_from_import(ID ctx, const ModPath& path, size_t index) noexcept
 {
   if (index >= path.size()) return ctx;
   const auto& imports = ctx.scope().get().port.find_imports(path[index]);
@@ -201,7 +200,7 @@ module::ID module::resolve_from_import(ID ctx, const Mod_Path& path, size_t inde
   return NO_ID;
 }
 
-module::ID module::resolve_from_reexport(ID ctx, const Mod_Path& path, size_t index) noexcept
+module::ID module::resolve_from_reexport(ID ctx, const ModPath& path, size_t index) noexcept
 {
   if (index >= path.size()) return ctx;
   const auto& reexports = ctx.get().port.find_reexport(path[index]);
@@ -212,57 +211,57 @@ module::ID module::resolve_from_reexport(ID ctx, const Mod_Path& path, size_t in
   return NO_ID;
 }
 
-std::pair<module::ID, symbol::ID> module::resolve_symbol_from_children(ID ctx, const Mod_Path& path, size_t index,
-                                                                       std::string_view sym) noexcept
+std::pair<module::ID, definition::ID>
+module::resolve_definition_from_children(ID ctx, const ModPath& path, size_t index, std::string_view sym) noexcept
 {
   if (index >= path.size()) {
-    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
-    return {ctx, symid};
+    const auto defid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, defid};
   }
   for (auto child_id : ctx.children()) {
     const auto& child = child_id.get();
 
     if (child.name != path[index]) continue;
 
-    if (auto [r_ctx, r_symid] = resolve_symbol_from_children(child_id, path, index + 1, sym); r_ctx)
-      return {r_ctx, r_symid};
+    if (auto [r_ctx, r_defid] = resolve_definition_from_children(child_id, path, index + 1, sym); r_defid)
+      return {r_ctx, r_defid};
   }
 
   return NO_ID;
 }
-std::pair<module::ID, symbol::ID> module::resolve_symbol_from_import(ID ctx, const Mod_Path& path, size_t index,
-                                                                     std::string_view sym) noexcept
+std::pair<module::ID, definition::ID> module::resolve_definition_from_import(ID ctx, const ModPath& path, size_t index,
+                                                                             std::string_view sym) noexcept
 {
   if (index >= path.size()) {
-    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
-    return {ctx, symid};
+    const auto defid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, defid};
   }
-  std::cout << ctx.scope().get().debug_name << "\n";
+
   const auto& imports = ctx.scope().get().port.find_imports(path[index]);
   for (const auto& [imported_mod, _] : imports) {
-    if (auto [r_ctx, r_symid] = resolve_symbol_from_import(imported_mod, path, index + 1, sym); r_ctx)
-      return {r_ctx, r_symid};
+    if (auto [r_ctx, r_defid] = resolve_definition_from_import(imported_mod, path, index + 1, sym); r_defid)
+      return {r_ctx, r_defid};
   }
 
   return NO_ID;
 }
-std::pair<module::ID, symbol::ID> module::resolve_symbol_from_reexport(ID ctx, const Mod_Path& path, size_t index,
-                                                                       std::string_view sym) noexcept
+std::pair<module::ID, definition::ID>
+module::resolve_definition_from_reexport(ID ctx, const ModPath& path, size_t index, std::string_view sym) noexcept
 {
   if (index >= path.size()) {
-    const auto symid = scope::find_lexical_symbol(ctx.scope(), sym);
-    return {ctx, symid};
+    const auto defid = scope::find_lexical_symbol(ctx.scope(), sym);
+    return {ctx, defid};
   }
   const auto& reexports = ctx.get().port.find_reexport(path[index]);
   for (const auto& [imported_mod, _] : reexports) {
-    if (auto [r_ctx, r_symid] = resolve_symbol_from_import(imported_mod, path, index + 1, sym); r_ctx)
-      return {r_ctx, r_symid};
+    if (auto [r_ctx, r_defid] = resolve_definition_from_import(imported_mod, path, index + 1, sym); r_defid)
+      return {r_ctx, r_defid};
   }
 
   return NO_ID;
 }
 
-module::ID module::resolve_module_path(ID ctx, const Mod_Path& path, EPathAnchor anchor) noexcept
+module::ID module::resolve_module_path(ID ctx, const ModPath& path, EPathAnchor anchor) noexcept
 {
   assert(!path.empty());
 
@@ -275,16 +274,16 @@ module::ID module::resolve_module_path(ID ctx, const Mod_Path& path, EPathAnchor
   return NO_ID;
 }
 
-symbol::ID module::resolve_path_symbol(module::ID ctx, const Mod_Path& path, EPathAnchor anchor,
-                                       std::string_view sym_name) noexcept
+definition::ID module::resolve_path_symbol(module::ID ctx, const ModPath& path, EPathAnchor anchor,
+                                           std::string_view sym_name) noexcept
 {
   assert(!path.empty());
 
   ctx = resolve_anchor(ctx, anchor);
 
-  if (auto [_, symid] = resolve_symbol_from_children(ctx, path, 0, sym_name); symid) return symid;
-  if (auto [_, symid] = resolve_symbol_from_import(ctx, path, 0, sym_name); symid) return symid;
-  if (auto [_, symid] = resolve_symbol_from_reexport(ctx, path, 0, sym_name); symid) return symid;
+  if (auto [_, defid] = resolve_definition_from_children(ctx, path, 0, sym_name); defid) return defid;
+  if (auto [_, defid] = resolve_definition_from_import(ctx, path, 0, sym_name); defid) return defid;
+  if (auto [_, defid] = resolve_definition_from_reexport(ctx, path, 0, sym_name); defid) return defid;
 
   return NO_ID;
 }
@@ -310,11 +309,11 @@ module::Module module::Module::from_system(std::string_view p_name, std::string_
   return mod;
 }
 
-module::Module& module::get(ID id) noexcept
+module::Module& module::get(ID nodeid) noexcept
 {
-  auto cuid = id.cu();
+  auto cuid = nodeid.cu();
   if (!cuid) {
-    switch (id.offset()) {
+    switch (nodeid.offset()) {
     case 0:  return get_root();
     case 1:  return get_src();
     case 2:  return get_std();
@@ -324,8 +323,8 @@ module::Module& module::get(ID id) noexcept
     default: return get_src();
     }
   }
-  auto& cu = id.cu().get();
+  auto& cu = nodeid.cu().get();
 
-  assert(id.offset() < cu.modules->modules.size());
-  return cu.modules->modules[id.offset()];
+  assert(nodeid.offset() < cu.modules->modules.size());
+  return cu.modules->modules[nodeid.offset()];
 }

@@ -3,16 +3,19 @@
 #include <cstdint>
 
 #include <Neargye/magic_enum.hpp>
+#include <string>
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/module.hpp"
 #include "compiler/compilation_unit.hpp"
+#include "nexus/type/definition.hpp"
 
 std::vector<ast::ID> ast::get_parameters(ast::ID nodeid) noexcept
 {
@@ -32,10 +35,10 @@ std::string ast::get_decl_name(ast::ID nodeid) noexcept
   case ENodeKind::kind: return nodeid.as<ast::kind>()
 
   switch (n->kind()) {
-    case_n(Identifier)->name;
-    case_n(ID_Qualified)->name;
-  case ENodeKind::ID_Typed:
-    return get_decl_name(nodeid.as<ast::ID_Typed>()->name);
+    case_n(Symbol_Id)->name;
+    case_n(Symbol_Qualified)->name;
+  case ENodeKind::Symbol_Type:
+    return get_decl_name(nodeid.as<ast::Symbol_Type>()->name);
     case_n(Global_Variable)->name;
     case_n(Global_Function)->name;
     case_n(Global_Module)->name;
@@ -79,7 +82,7 @@ EVisibility ast::get_decl_visibility(ast::ID nodeid) noexcept
     case_n(Global_Extend_Cast);
     case_n(Global_Extend_Op_Bin);
     case_n(Global_Extend_Op_Un);
-    case_n(Global_Extend_Op_Access);
+    case_n(Global_Extend_Op_Subscript);
     case_n(Global_Extend_Op_Transfert);
     case_n(Global_Extend_Op_Other);
     case_n(Global_Module);
@@ -108,9 +111,10 @@ std::string ast::get_mangled_id(ast::ID nodeid) noexcept
   case ENodeKind::kind: return mod_mangle + "." + id.as<kind>()
 
   switch (nodeid.get()->kind()) {
-  case ast::ENodeKind::Identifier:        return mod_mangle + "." + std::string(nodeid.as<Identifier>()->name);
-  case ast::ENodeKind::ID_Qualified:      return mod_mangle + "." + std::string(nodeid.as<ID_Qualified>()->name);
-  case ENodeKind::ID_Typed:               return get_mangled_id(ast::ID::make(nodeid.cu(), nodeid.as<ID_Typed>()->name.offset()));
+  case ast::ENodeKind::Symbol_Id:        return mod_mangle + "." + std::string(nodeid.as<Symbol_Id>()->name);
+  case ast::ENodeKind::Symbol_Qualified: return mod_mangle + "." + std::string(nodeid.as<Symbol_Qualified>()->name);
+  case ENodeKind::Symbol_Type:
+    return get_mangled_id(ast::ID::make(nodeid.cu(), nodeid.as<Symbol_Type>()->name.offset()));
   case ast::ENodeKind::Global_Variable:   return mod_mangle + "." + std::string(nodeid.as<Global_Variable>()->name);
   case ast::ENodeKind::Global_Function:   return mod_mangle + "." + std::string(nodeid.as<Global_Function>()->name);
   case ast::ENodeKind::Global_Module:     return mod_mangle + "." + std::string(nodeid.as<Global_Module>()->name);
@@ -159,7 +163,19 @@ ast::Node& ast::get(ID id) noexcept
   return *cu.nodes->nodes[id.offset()];
 }
 
-[[nodiscard]] std::string ast::get_debug_str(ID id) noexcept
+std::string ast::debug_node_on_line(ID id) noexcept
+{
+  assert(id && "Invalid id");
+
+  // e.g. path_to_file:10:30
+  //      | var count = 0
+  return id.cu().get().file_info.path + ":" + std::to_string(id.token().line() + 1) + ":"
+         + std::to_string(id.token().col() + 1) + "\n| token: " + std::string(id.token().str()) + "\n| "
+         + std::to_string(id.token().line() + 1) + ":" + std::to_string(id.token().col() + 1) + ": "
+         + std::string(id.token().line_str());
+}
+
+std::string ast::dump(ID id) noexcept
 {
   assert(id && "Invalid id");
 
@@ -168,7 +184,24 @@ ast::Node& ast::get(ID id) noexcept
   assert(n && "Node not found");
 
   const std::string str_kind(magic_enum::enum_name<ast::ENodeKind>(n->kind()));
-  const std::string str_decl_name(get_decl_name(id));
 
-  return str_kind + ": " + str_decl_name;
+  if (ast::ENodeKind_is_declaration(n->kind())) {
+    const std::string str_decl_name(get_decl_name(id));
+    return str_kind + ": " + str_decl_name;
+  }
+
+  return str_kind;
+}
+
+const type::Prototype* ast::get_prototype(ID id) noexcept
+{
+  assert(id && "Invalid id");
+  if (const auto* ptr = id.as<ast::Global_Function>()) return ptr->prototype.as<type::Prototype>();
+  if (const auto* ptr = id.as<ast::SFM_Rule>()) return ptr->prototype.as<type::Prototype>();
+  if (const auto* ptr = id.as<ast::Global_Extend_Fn>()) return ptr->prototype.as<type::Prototype>();
+  if (const auto* ptr = id.as<ast::Local_Lambda>()) return ptr->prototype.as<type::Prototype>();
+
+  assert(false && "No prototyped node");
+
+  return NO_ID;
 }

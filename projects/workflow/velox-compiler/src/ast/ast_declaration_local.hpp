@@ -39,7 +39,7 @@ AST_NODE(Local_Pattern_Element)
 // e.g. [if/elif/while] let Some(a) = value {...}
 AST_NODE(Local_Pattern_Enum)
 {
-  ECapability capability = ECapability::Ref;
+  ECapability capability = ECapability::ref;
 
   SET_NODE(name);
   // mapping
@@ -50,7 +50,7 @@ AST_NODE(Local_Pattern_Enum)
 // e.g. [if/while/for] let (a, b, 10) in triple_collection {...}
 AST_NODE(Local_Pattern_Tuple)
 {
-  ECapability capability = ECapability::Ref;
+  ECapability capability = ECapability::ref;
 
   // mapping
   SET_VECTOR_NODE(pattern_elements);
@@ -60,7 +60,7 @@ AST_NODE(Local_Pattern_Tuple)
 // e.g. [if/while] let Player{ CId{ .name: name, .nodeid: 10 } }
 AST_NODE(Local_Pattern_Form)
 {
-  ECapability capability = ECapability::Ref;
+  ECapability capability = ECapability::ref;
 
   SET_NODE(name);
   // mapping
@@ -70,7 +70,7 @@ AST_NODE(Local_Pattern_Form)
 
 AST_NODE(Local_Pattern_Rule_Facet)
 {
-  ECapability capability = ECapability::Ref;
+  ECapability capability = ECapability::ref;
 
   SET_NODE(name);
   SET_NODE(bind);
@@ -85,7 +85,7 @@ AST_NODE(Local_Pattern_Facet)
     ast::ID     mapping;
   };
 
-  ECapability capability = ECapability::Ref;
+  ECapability capability = ECapability::ref;
 
   SET_NODE(name);
   // mapping
@@ -116,9 +116,10 @@ AST_NODE(Local_Variable)
   SET_TYPE(type);
   SET_NODE(expression);
 
-  ETransfertType assignment = ETransfertType::Copy; // assign type
-  EVariableKind  kind       = EVariableKind::Const;
-  bool           isStatic   = false;
+  ETransfertType assignment = ETransfertType::move; // assign type
+  EVariableKind  kind       = EVariableKind::_const;
+  bool           is_static  = false;
+  bool           is_uninit  = false;
 };
 
 // ref/mut name = expression
@@ -126,6 +127,7 @@ AST_NODE(Local_Capability)
 {
   std::string name;
 
+  SET_TYPE(type);
   SET_NODE(expression);
 
   ECapability kind = ECapability::NONE;
@@ -143,9 +145,11 @@ AST_NODE(Local_Lambda_Capture)
 AST_NODE(Local_Parameter)
 {
   std::string name;
+  SET_NODE(parent_callable);
+  size_t position = 0;
   SET_TYPE(type);
   SET_NODE(default_value);
-  EPassMode passmode    = EPassMode::Copy;
+  EPassMode passmode    = EPassMode::copy;
   bool      is_restrict = false;
 };
 

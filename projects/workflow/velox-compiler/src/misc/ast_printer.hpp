@@ -12,8 +12,8 @@ struct AST_Printer final {
   /*
   // identifiers
   void print_ID(const ast::ID& n);
-  void print_ID_Qualified(const ast::ID_Qualified& n);
-  void print_ID_Typed(const ast::ID_Typed& n);
+  void print_Symbol_Qualified(const ast::Symbol_Qualified& n);
+  void print_Symbol_Type(const ast::Symbol_Type& n);
 
   void print_Path_Regex(const ast::Path_Regex& n);
 
@@ -99,18 +99,17 @@ struct AST_Printer final {
   void print_Literal_Range(const ast::Literal_Range& n);
   void print_Literal_Iterator(const ast::Literal_Iterator& n);
   void print_Literal_Enum(const ast::Literal_Enum& n);
-  void print_Literal_Structured_Data(const ast::Literal_Structured_Data& n);
-  void print_Literal_Form(const ast::Literal_Form& n);
+  void print_Literal_Record(const ast::Literal_Record& n);
 
   // expressions
   void print_Expression_If_Ternary(const ast::Expression_If_Ternary& n);
   void print_Expression_Member_Access(const ast::Expression_Member_Access& n);
   void print_Expression_Self(const ast::Expression_Self& n);
   void print_Expression_Other(const ast::Expression_Other& n);
-  void print_Expression_Call(const ast::Expression_Call& n);
-  void print_Expression_Call_Argument(const ast::Expression_Call_Argument& n);
-  void print_Expression_Call_Rule(const ast::Expression_Call_Rule& n);
-  void print_Expression_Call_Pipe(const ast::Expression_Call_Pipe& n);
+  void print_Expression_Invocation(const ast::Expression_Invocation& n);
+  void print_Expression_Invocation_Argument(const ast::Expression_Invocation_Argument& n);
+  void print_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n);
+  void print_Expression_Invocation_Pipe(const ast::Expression_Invocation_Pipe& n);
   void print_Expression_Table_Access(const ast::Expression_Table_Access& n);
   void print_Expression_Ptr_Val(const ast::Expression_Ptr_Val& n);
   void print_Expression_Mut_Of(const ast::Expression_Mut_Of& n);
@@ -140,7 +139,7 @@ struct AST_Printer final {
   void print_Operation_Cast_As(const ast::Operation_Cast_As& n);
   void print_Operation_Is(const ast::Operation_Is& n);
   void print_Operation_In(const ast::Operation_In& n);
-  void print_Operation_Assignment(const ast::Operation_Assignment& n);
+  void print_Operation_Transfert(const ast::Operation_Transfert& n);
   void print_Operation_Binary(const ast::Operation_Binary& n);
   void print_Operation_Unary(const ast::Operation_Unary& n);
   void print_Operation_Interval(const ast::Operation_Interval& n);

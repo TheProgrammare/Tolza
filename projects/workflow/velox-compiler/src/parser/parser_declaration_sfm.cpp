@@ -16,7 +16,7 @@
 #include "nexus/lexer/token_viewer.hpp"
 #include "compiler/compilation_unit.hpp"
 
-#include "nexus/symbol.hpp"
+#include "nexus/definition.hpp"
 #include "nexus/type/type.hpp"
 #include "parser/parser_base.hpp"
 #include "parser_context.hpp"
@@ -40,7 +40,7 @@ ast::ID parser::Parser_Declaration_SFM::facet()
   // not handled if (auto where = ctx.p_meta->metacode_where()) facet.gen_where;
 
   facet.name = p.parse_name("", hint);
-  auto symid = p.add_symbol(facet.nodeid);
+  auto defid = p.add_definition(facet.nodeid);
   (void)p.expect(14, token::ETokenKind::L_CURLY, "Expected start code block '{' after facet declaration.", hint);
 
   // is no typed facet
@@ -53,17 +53,17 @@ ast::ID parser::Parser_Declaration_SFM::facet()
     field.is_no_default = p.metablock_contains(p.peek().begin, "nodefault");
 
     if (p.match(token::ETokenKind::CAPA_REF))
-      field.capability = ast::ECapability::Ref;
+      field.capability = ast::ECapability::ref;
     else if (p.match(token::ETokenKind::CAPA_MUT))
-      field.capability = ast::ECapability::Mut;
+      field.capability = ast::ECapability::mut;
 
     field.name = p.parse_name("", hint);
-    (void)p.expect(15, token::ETokenKind::COLON, "Expected type defintion symbol ':' after field name", hint);
+    (void)p.expect(15, token::ETokenKind::COLON, "Expected type definition symbol ':' after field name", hint);
 
     field.type = p.p_type->parse_type();
     factory_types.emplace_back(field.type);
 
-    (void)p.add_symbol(field.nodeid);
+    (void)p.add_definition(field.nodeid);
 
     if (!field.is_no_default) {
       (void)p.expect(16, token::ETokenKind::ASSIGN, "Expected default value assignation '=' after field declaration",
@@ -77,7 +77,7 @@ ast::ID parser::Parser_Declaration_SFM::facet()
     if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
 
-  (void)parser_type_factory.make_facet(factory_types, symid);
+  (void)parser_type_factory.make_facet(factory_types, defid);
 
   return facet.nodeid;
 }
@@ -93,7 +93,7 @@ ast::ID parser::Parser_Declaration_SFM::view()
   auto& view = p.add_get_node<ast::SFM_View>(tok.tokid);
   view.name  = p.parse_name("", hint);
 
-  auto symid = p.add_symbol(view.nodeid);
+  auto defid = p.add_definition(view.nodeid);
   p.enter_scope(view, "view " + std::string(view.name));
 
   (void)p.expect(17, token::ETokenKind::L_CURLY, "Expected start definition '{' after view declaration.", hint);
@@ -104,7 +104,7 @@ ast::ID parser::Parser_Declaration_SFM::view()
     auto [id, tyid] = p.p_base->identifier_typed();
 
     tyid.as<type::Identifier>()->forward_name = ast::get_decl_name(id_id);
-    id.as<ast::ID_Typed>()->name              = id_id;
+    id.as<ast::Symbol_Type>()->name           = id_id;
 
     view.facets.emplace_back(tyid);
 
@@ -113,7 +113,7 @@ ast::ID parser::Parser_Declaration_SFM::view()
 
   p.exit_scope();
 
-  (void)parser_type_factory.make_view(view.facets, symid);
+  (void)parser_type_factory.make_view(view.facets, defid);
 
   return view.nodeid;
 }
@@ -122,8 +122,7 @@ ast::ID parser::Parser_Declaration_SFM::form()
 {
   constexpr std::string_view hint =
       "define form like:"
-      "\n  - `form MyName { ... }`"
-      "\n  - with parent `form MyName : MyParent { ... }`";
+      "\n  - `form MyName { ... }`";
 
   (void)p.match(token::ETokenKind::FORM);
 
@@ -138,7 +137,7 @@ ast::ID parser::Parser_Declaration_SFM::form()
   def_form.isDestructible = !p.metablock_contains(tok_pos, "no_destruct");
   def_form.name           = p.parse_name("", hint);
 
-  (void)p.add_symbol(def_form.nodeid);
+  (void)p.add_definition(def_form.nodeid);
   p.enter_scope(def_form, "form " + std::string(def_form.name));
 
   (void)p.expect(18, token::ETokenKind::L_CURLY, "Expected start code block '{' after form declaration.", hint);
@@ -158,29 +157,27 @@ void parser::Parser_Declaration_SFM::parse_form_declaration(ast::SFM_Form& form)
 {
   constexpr std::string_view hint =
       R"(define facet usage like:
-  - `use name { field1: val1, field2: val2 }`
-  - `use name`)";
-  constexpr std::string_view new_hint = "define new form def like: `new(params) { ... }`";
-  constexpr std::string_view del_hint = "define del form def like: `del { ... }`";
+  - `use MyFacet {.field1= val1, .field2= val2 }`
+  - `use MyFacet`)";
 
   if (p.match(token::ETokenKind::USE)) {
-    ast::ID compid;
-
     auto facet_name = p.p_base->identifier();
 
     if (auto [id, ty] = p.p_base->identifier_typed(); ty) {
       ty.as<type::Identifier>()->forward_name = ast::get_decl_name(facet_name);
-      id.as<ast::ID_Typed>()->name            = facet_name;
-      compid                                  = id;
-    } else {
-      compid = facet_name;
+      id.as<ast::Symbol_Type>()->name         = facet_name;
+      facet_name                              = id;
     }
-    auto facet = p.p_lit->literal_facet(compid);
+
+    ast::ID facet;
+    if (p.check(token::ETokenKind::L_CURLY))
+      facet = p.p_lit->literal_record(facet_name);
+    else
+      facet = facet_name;
 
     form.facets.emplace_back(facet);
 
-    if (!facet.as<ast::Literal_Structured_Data>())
-      p.add_error(19, "Expected Literal facet after 'use' instruction", hint);
+    if (!facet.as<ast::Literal_Record>()) p.add_error(19, "Expected Literal facet after 'use' instruction", hint);
 
     return;
   }
@@ -212,16 +209,20 @@ ast::ID parser::Parser_Declaration_SFM::rule()
 
   auto& tok = p.peek();
 
-  auto& rule = p.add_get_node<ast::SFM_Rule>(p.peek().tokid);
+  auto& n = p.add_get_node<ast::SFM_Rule>(p.peek().tokid);
 
   // not handled if (auto where = ctx.p_meta->metacode_where()) rule->generic = where.value();
 
-  rule.name = p.parse_name("", hint);
+  n.name               = p.parse_name("", hint);
+  const auto old_ret   = p.current_returnable;
+  p.current_returnable = n.nodeid;
 
-  (void)p.add_symbol(rule.nodeid);
-  p.enter_scope(rule, "rule " + std::string(rule.name));
+  (void)p.add_definition(n.nodeid);
+  p.enter_scope(n, "rule " + n.name);
 
-  (void)p.p_type->parse_and_mount_local_callable(rule.prototype, rule.is_explicit_ret_type);
+  auto [protoid, params] = p.p_type->prototype_from_declaration();
+  n.prototype            = protoid;
+  n.parameters           = params;
 
   bool is_no_facet_used = true;
 
@@ -234,7 +235,7 @@ ast::ID parser::Parser_Declaration_SFM::rule()
     const auto* n_rule_case = rule_case.as<ast::SFM_Rule_Case>();
 
     if (!n_rule_case->bindings.empty()) is_no_facet_used = false;
-    rule.cases.emplace_back(rule_case);
+    n.cases.emplace_back(rule_case);
 
     if (p.check(token::ETokenKind::WITH)) continue;
     if (p.match(token::ETokenKind::R_CURLY)) break;
@@ -250,8 +251,9 @@ ast::ID parser::Parser_Declaration_SFM::rule()
   }
 
   p.exit_scope();
+  p.current_returnable = old_ret;
 
-  return rule.nodeid;
+  return n.nodeid;
 }
 
 ast::ID parser::Parser_Declaration_SFM::_rule_case()
@@ -275,7 +277,7 @@ ast::ID parser::Parser_Declaration_SFM::_rule_case()
 
       auto& bind = p.add_get_node<ast::Local_Binding>(p.peek().tokid);
       bind.name  = p.parse_name("", hint);
-      (void)p.add_symbol(bind.nodeid);
+      (void)p.add_definition(bind.nodeid);
       rule_case.bindings.emplace_back(bind.nodeid);
 
       (void)p.expect(39, token::ETokenKind::L_PAREN, "Expected end binding ')' after facet name pattern.", hint);

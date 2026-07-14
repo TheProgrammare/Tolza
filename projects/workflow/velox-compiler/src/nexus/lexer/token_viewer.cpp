@@ -183,7 +183,7 @@ bool token::Viewer::check_chain(const std::initializer_list<token::ETokenKind>& 
     if (tk.kind != t) return false;
   }
 
-  return false;
+  return true;
 }
 
 bool token::Viewer::match_chain(const std::initializer_list<token::ETokenKind>& l) noexcept
@@ -293,7 +293,7 @@ void token::Viewer::synchronize() noexcept
     case token::ETokenKind::BREAK:
     case token::ETokenKind::CONTINUE:
     case token::ETokenKind::MATCH:
-    case token::ETokenKind::CAST:
+    case token::ETokenKind::AS:
     case token::ETokenKind::FUNCTION:
     case token::ETokenKind::RULE:
     case token::ETokenKind::OP:

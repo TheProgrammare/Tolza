@@ -6,7 +6,16 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["create", "workspace", "--path", "/media/data/Workspace/velox/projects/velox-workspace", "--name", "velox-example", "-f"],
+            "args": ["create", "workspace", "${workspaceFolder}/../../velox-workspace", "--name", "velox-example", "-f"],
+            "env": [],
+            "cwd": "${workspaceFolder}"
+        },
+           {
+            "name": "Debug config creation",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox",
+            "args": ["create", "config", "${workspaceFolder}/../../velox-workspace", "--name", "template"],
             "env": [],
             "cwd": "${workspaceFolder}"
         },
@@ -42,7 +51,7 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["build", "${workspaceFolder}/../../velox-workspace/velox-example/velox.toml"],
+            "args": ["build", "--path", "${workspaceFolder}/../../velox-workspace/velox-example/velox.toml"],
             "env": [],
             "cwd": "${workspaceFolder}",
             

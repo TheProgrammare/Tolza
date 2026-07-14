@@ -21,7 +21,7 @@
 #include "nexus/metacode/metacode.hpp"
 #include "nexus/scope.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/symbol.hpp"
+#include "nexus/definition.hpp"
 #include "compiler/compiler.hpp"
 
 #include "nexus/type/type.hpp"
@@ -71,6 +71,8 @@ parser::Parser_Context::~Parser_Context()
 template <typename T>
 T& parser::Parser_Context::add_get_node(token::ID tokid) noexcept
 {
+  assert(tokid && "Invalid token id");
+  assert(tokid.pos() < CU.file_info.data.size() && "Invalid token position");
   static_assert(std::is_base_of_v<ast::Node, T>, "The node type must inherit from ast::Node");
   T& n            = CU.nodes->add_get<T>();
   n.node_token_id = tokid;
@@ -95,17 +97,17 @@ bool parser::Parser_Context::start_parsing()
       if (tok_v->match(token::ETokenKind::S_END_OF_FILE)) break;
     }
   } catch (const std::runtime_error& e) {
-    // std::cerr << e.what() << "\n"; /*endl*/ context.tokView.synchronize(); attempt_recovery();
+    // std::cerr << e.what() << "\n"; context.tokView.synchronize(); attempt_recovery();
     return false;
   }
 
   return errs == compiler::COMPILER.errors.size();
 
-  CU.nodes->freeze   = true;
-  CU.types->freeze   = true;
-  CU.symbols->freeze = true;
-  CU.modules->freeze = true;
-  CU.scopes->freeze  = true;
+  CU.nodes->freeze       = true;
+  CU.types->freeze       = true;
+  CU.definitions->freeze = true;
+  CU.modules->freeze     = true;
+  CU.scopes->freeze      = true;
 }
 
 bool parser::is_gen_args(token::Viewer& tok_v) noexcept
@@ -386,14 +388,14 @@ void parser::Parser_Context::rewind(size_t pos) const noexcept
 {
   tok_v->rewind(pos);
 }
-symbol::ID parser::Parser_Context::add_symbol(ast::ID nodeid)
+definition::ID parser::Parser_Context::add_definition(ast::ID nodeid)
 {
-  symbol::Symbol sym{
+  definition::Definition def{
       .nodeid     = nodeid,
       .visibility = current_modid.get().visibility,
   };
 
-  const auto symid = CU.symbols->add(sym);
+  const auto defid = CU.definitions->add(def);
 
 #ifdef DEBUG
   for (size_t i = 0; i < scope_depth; ++i) std::cout << "│ ";
@@ -401,10 +403,10 @@ symbol::ID parser::Parser_Context::add_symbol(ast::ID nodeid)
 #endif
   assert(current_scpid && "Invalid scope");
 
-  const bool result = get_current_scope().items.add_symbol(symid);
+  const bool result = get_current_scope().items.add_definition(defid);
   assert(result && "Symbol integration failed");
 
-  return symid;
+  return defid;
 }
 
 void parser::Parser_Context::add_error(ErrorCode code, std::string_view msg, std::string_view hint) const
@@ -462,9 +464,9 @@ scope::Scope& parser::Parser_Context::get_current_scope()
 
 
 AST_ADD_NODE_INSTANCE(ast::Unknown)
-AST_ADD_NODE_INSTANCE(ast::Identifier)
-AST_ADD_NODE_INSTANCE(ast::ID_Qualified)
-AST_ADD_NODE_INSTANCE(ast::ID_Typed)
+AST_ADD_NODE_INSTANCE(ast::Symbol_Id)
+AST_ADD_NODE_INSTANCE(ast::Symbol_Qualified)
+AST_ADD_NODE_INSTANCE(ast::Symbol_Type)
 AST_ADD_NODE_INSTANCE(ast::Path_Regex)
 AST_ADD_NODE_INSTANCE(ast::Root)
 AST_ADD_NODE_INSTANCE(ast::Import)
@@ -474,7 +476,7 @@ AST_ADD_NODE_INSTANCE(ast::Global_Extend_Fn)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Cast)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Bin)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Un)
-AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Access)
+AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Subscript)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Transfert)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Other)
 AST_ADD_NODE_INSTANCE(ast::Global_Module)
@@ -520,6 +522,7 @@ AST_ADD_NODE_INSTANCE(ast::Generic_Facet)
 AST_ADD_NODE_INSTANCE(ast::Generic_Extension)
 AST_ADD_NODE_INSTANCE(ast::Generic_Rule)
 AST_ADD_NODE_INSTANCE(ast::Literal_Boolean)
+AST_ADD_NODE_INSTANCE(ast::Literal_NullPtr)
 AST_ADD_NODE_INSTANCE(ast::Literal_Integral)
 AST_ADD_NODE_INSTANCE(ast::Literal_Fixed_Point)
 AST_ADD_NODE_INSTANCE(ast::Literal_Floating_Point)
@@ -534,18 +537,15 @@ AST_ADD_NODE_INSTANCE(ast::Literal_Table_Population)
 AST_ADD_NODE_INSTANCE(ast::Literal_Map)
 AST_ADD_NODE_INSTANCE(ast::Literal_Tuple)
 AST_ADD_NODE_INSTANCE(ast::Literal_Range)
-AST_ADD_NODE_INSTANCE(ast::Literal_Iterator)
-AST_ADD_NODE_INSTANCE(ast::Literal_Enum)
-AST_ADD_NODE_INSTANCE(ast::Literal_Structured_Data)
-AST_ADD_NODE_INSTANCE(ast::Literal_Form)
+AST_ADD_NODE_INSTANCE(ast::Literal_Record)
 AST_ADD_NODE_INSTANCE(ast::Expression_If_Ternary)
 AST_ADD_NODE_INSTANCE(ast::Expression_Member_Access)
 AST_ADD_NODE_INSTANCE(ast::Expression_Self)
 AST_ADD_NODE_INSTANCE(ast::Expression_Other)
-AST_ADD_NODE_INSTANCE(ast::Expression_Call)
-AST_ADD_NODE_INSTANCE(ast::Expression_Call_Argument)
-AST_ADD_NODE_INSTANCE(ast::Expression_Call_Rule)
-AST_ADD_NODE_INSTANCE(ast::Expression_Call_Pipe)
+AST_ADD_NODE_INSTANCE(ast::Expression_Invocation)
+AST_ADD_NODE_INSTANCE(ast::Expression_Invocation_Arg)
+AST_ADD_NODE_INSTANCE(ast::Expression_Invocation_Rule)
+AST_ADD_NODE_INSTANCE(ast::Expression_Invocation_Extend)
 AST_ADD_NODE_INSTANCE(ast::Expression_Table_Access)
 AST_ADD_NODE_INSTANCE(ast::Expression_Ptr_Val)
 AST_ADD_NODE_INSTANCE(ast::Expression_Mut_Of)
@@ -571,7 +571,7 @@ AST_ADD_NODE_INSTANCE(ast::Statement_Match_Case)
 AST_ADD_NODE_INSTANCE(ast::Operation_Cast_As)
 AST_ADD_NODE_INSTANCE(ast::Operation_Is)
 AST_ADD_NODE_INSTANCE(ast::Operation_In)
-AST_ADD_NODE_INSTANCE(ast::Operation_Assignment)
+AST_ADD_NODE_INSTANCE(ast::Operation_Transfert)
 AST_ADD_NODE_INSTANCE(ast::Operation_Binary)
 AST_ADD_NODE_INSTANCE(ast::Operation_Unary)
 AST_ADD_NODE_INSTANCE(ast::Operation_Interval)

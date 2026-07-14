@@ -1,0 +1,26 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-13 20:37:54
+ * 
+ * Source Language         : C
+ * Source Library          : stdarg
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+} // extern
+
+} // export

@@ -1,0 +1,120 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-14 02:31:47
+ * 
+ * Source Language         : C
+ * Source Library          : wchar
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type wchar_t = s32
+type size_t = u64
+type locale_t = opaque
+type wint_t = u32
+type mbstate_t = opaque
+type __FILE = opaque
+type __gnuc_va_list = opaque
+type tm = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn wcscpy(mut __dest: wchar_t, ref __src: wchar_t) -> ptr'wchar_t;
+fn wcsncpy(mut __dest: wchar_t, ref __src: wchar_t, copy __n: size_t) -> ptr'wchar_t;
+fn wcslcpy(mut __dest: wchar_t, ref __src: wchar_t, copy __n: size_t) -> size_t;
+fn wcslcat(mut __dest: wchar_t, ref __src: wchar_t, copy __n: size_t) -> size_t;
+fn wcscat(mut __dest: wchar_t, ref __src: wchar_t) -> ptr'wchar_t;
+fn wcsncat(mut __dest: wchar_t, ref __src: wchar_t, copy __n: size_t) -> ptr'wchar_t;
+fn wcscmp(ref __s1: s32, ref __s2: s32) -> s32;
+fn wcsncmp(ref __s1: s32, ref __s2: s32, copy __n: u64) -> s32;
+fn wcscasecmp(ref __s1: wchar_t, ref __s2: wchar_t) -> s32;
+fn wcsncasecmp(ref __s1: wchar_t, ref __s2: wchar_t, copy __n: size_t) -> s32;
+fn wcscasecmp_l(ref __s1: wchar_t, ref __s2: wchar_t, copy __loc: locale_t) -> s32;
+fn wcsncasecmp_l(ref __s1: wchar_t, ref __s2: wchar_t, copy __n: size_t, copy __loc: locale_t) -> s32;
+fn wcscoll(ref __s1: wchar_t, ref __s2: wchar_t) -> s32;
+fn wcsxfrm(mut __s1: wchar_t, ref __s2: wchar_t, copy __n: size_t) -> size_t;
+fn wcscoll_l(ref __s1: wchar_t, ref __s2: wchar_t, copy __loc: locale_t) -> s32;
+fn wcsxfrm_l(mut __s1: wchar_t, ref __s2: wchar_t, copy __n: size_t, copy __loc: locale_t) -> size_t;
+fn wcsdup(ref __s: wchar_t) -> ptr'wchar_t;
+fn wcschr(ref __wcs: s32, copy __wc: s32) -> ptr's32;
+fn wcsrchr(ref __wcs: wchar_t, copy __wc: wchar_t) -> ptr'wchar_t;
+fn wcscspn(ref __wcs: wchar_t, ref __reject: wchar_t) -> size_t;
+fn wcsspn(ref __wcs: wchar_t, ref __accept: wchar_t) -> size_t;
+fn wcspbrk(ref __wcs: wchar_t, ref __accept: wchar_t) -> ptr'wchar_t;
+fn wcsstr(ref __haystack: wchar_t, ref __needle: wchar_t) -> ptr'wchar_t;
+fn wcstok(mut __s: wchar_t, ref __delim: wchar_t, addr __ptr: ptr'wchar_t) -> ptr'wchar_t;
+fn wcslen(ref __s: s32) -> u64;
+fn wcsnlen(ref __s: wchar_t, copy __maxlen: size_t) -> size_t;
+fn wmemchr(ref __s: s32, copy __c: s32, copy __n: u64) -> ptr's32;
+fn wmemcmp(ref __s1: s32, ref __s2: s32, copy __n: u64) -> s32;
+fn wmemcpy(mut __s1: s32, ref __s2: s32, copy __n: u64) -> ptr's32;
+fn wmemmove(mut __s1: s32, ref __s2: s32, copy __n: u64) -> ptr's32;
+fn wmemset(mut __s: wchar_t, copy __c: wchar_t, copy __n: size_t) -> ptr'wchar_t;
+fn btowc(copy __c: s32) -> wint_t;
+fn wctob(copy __c: wint_t) -> s32;
+fn mbsinit(ref __ps: mbstate_t) -> s32;
+fn mbrtowc(mut __pwc: wchar_t, ref __s: cstr, copy __n: size_t, mut __p: mbstate_t) -> size_t;
+fn wcrtomb(mut __s: cune, copy __wc: wchar_t, mut __ps: mbstate_t) -> size_t;
+fn mbrlen(ref __s: cstr, copy __n: size_t, mut __ps: mbstate_t) -> size_t;
+fn mbsrtowcs(mut __dst: wchar_t, addr __src: ptr'cune, copy __len: size_t, mut __ps: mbstate_t) -> size_t;
+fn wcsrtombs(mut __dst: cune, addr __src: ptr'wchar_t, copy __len: size_t, mut __ps: mbstate_t) -> size_t;
+fn mbsnrtowcs(mut __dst: wchar_t, addr __src: ptr'cune, copy __nmc: size_t, copy __len: size_t, mut __ps: mbstate_t) -> size_t;
+fn wcsnrtombs(mut __dst: cune, addr __src: ptr'wchar_t, copy __nwc: size_t, copy __len: size_t, mut __ps: mbstate_t) -> size_t;
+fn wcstod(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t) -> f64;
+fn wcstof(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t) -> f32;
+fn wcstold(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t) -> f128;
+fn wcstol(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t, copy __base: s32) -> s64;
+fn wcstoul(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t, copy __base: s32) -> u64;
+fn wcstoll(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t, copy __base: s32) -> s64;
+fn wcstoull(ref __nptr: wchar_t, addr __endptr: ptr'wchar_t, copy __base: s32) -> u64;
+fn wcpcpy(mut __dest: wchar_t, ref __src: wchar_t) -> ptr'wchar_t;
+fn wcpncpy(mut __dest: wchar_t, ref __src: wchar_t, copy __n: size_t) -> ptr'wchar_t;
+fn open_wmemstream(addr __bufloc: ptr'wchar_t, mut __sizeloc: size_t) -> ptr'__FILE;
+fn fwide(mut __fp: __FILE, copy __mode: s32) -> s32;
+fn fwprintf(mut __stream: __FILE, ref __format: wchar_t, ...) -> s32;
+fn wprintf(ref __format: wchar_t, ...) -> s32;
+fn swprintf(mut __s: wchar_t, copy __n: size_t, ref __format: wchar_t, ...) -> s32;
+fn vfwprintf(mut __s: __FILE, ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn vwprintf(ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn vswprintf(mut __s: wchar_t, copy __n: size_t, ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn fwscanf(mut __stream: __FILE, ref __format: wchar_t, ...) -> s32;
+fn wscanf(ref __format: wchar_t, ...) -> s32;
+fn swscanf(ref __s: wchar_t, ref __format: wchar_t, ...) -> s32;
+fn vfwscanf(mut __s: __FILE, ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn vwscanf(ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn vswscanf(ref __s: wchar_t, ref __format: wchar_t, copy __arg: __gnuc_va_list) -> s32;
+fn fgetwc(mut __stream: __FILE) -> wint_t;
+fn getwc(mut __stream: __FILE) -> wint_t;
+fn getwchar() -> wint_t;
+fn fputwc(copy __wc: wchar_t, mut __stream: __FILE) -> wint_t;
+fn putwc(copy __wc: wchar_t, mut __stream: __FILE) -> wint_t;
+fn putwchar(copy __wc: wchar_t) -> wint_t;
+fn fgetws(mut __ws: wchar_t, copy __n: s32, mut __stream: __FILE) -> ptr'wchar_t;
+fn fputws(ref __ws: wchar_t, mut __stream: __FILE) -> s32;
+fn ungetwc(copy __wc: wint_t, mut __stream: __FILE) -> wint_t;
+fn wcsftime(mut __s: wchar_t, copy __maxsize: size_t, ref __format: wchar_t, ref __tp: tm) -> size_t;
+
+} // extern
+
+} // export

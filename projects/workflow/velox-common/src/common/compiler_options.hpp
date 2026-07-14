@@ -32,103 +32,19 @@
 namespace common::compiler
 {
 
-
-enum class ECStandard : uint8_t { c89, c99, c11, c17, c23, gnu89, gnu99, gnu11, gnu17, gnu23, unknown };
-
-
-enum class FCSource : uint16_t {
-  NONE                   = 0,
-  gnu                    = 1ULL << 0,
-  bsd                    = 1ULL << 1,
-  darwin                 = 1ULL << 2,
-  posix                  = 1ULL << 3,
-  xopen                  = 1ULL << 4,
-  linux                  = 1ULL << 5,
-  android                = 1ULL << 6,
-  crt_secure_no_warnings = 1ULL << 7,
-  custom                 = 1ULL << 8
+enum class ERelocModel : uint8_t { DEFAULT, STATIC, PIC, PIE, ROPI, RWPI, ROPI_RWPI };
+enum class ECodeModel : uint8_t { DEFAULT, tiny, small, kernel, medium, large };
+enum class EOptimization : uint8_t { DEFAULT, O0, O1, O2, O3, Os, Oz };
+enum class EWarnLevel : uint8_t { DEFAULT, W0, W1, W2, W3 };
+enum class FWarnMode : uint8_t {
+  NONE      = 0,
+  all       = 1ULL << 0,
+  extra     = 1ULL << 1,
+  pedantic  = 1ULL << 2,
+  unused    = 1ULL << 3,
+  dead_code = 1ULL << 4,
+  as_error  = 1ULL << 5
 };
-
-
-enum class EEnvironment : uint8_t { gnu, musl, msvc, gnuabi, mingw, darwin, baremetal, wasi, custom, unknown };
-
-enum class ELibC : uint8_t { glibc, musl, libsystem, ucrt, msvcrt, mingw_libc, bionic, bsd_libc, custom, unknown };
-
-[[nodiscard]] constexpr size_t file_offset_bits(ELibC libc, env::EArch arch)
-{
-  // Windows / MSVC ecosystem does not use POSIX LFS model
-  switch (libc) {
-
-  case ELibC::ucrt:
-  case ELibC::msvcrt:
-  case ELibC::mingw_libc: return 0;
-
-  default:                break;
-  }
-
-  // 64-bit architectures already have 64-bit off_t
-  if (!is_32bit(arch)) return 0;
-
-  // Unix-like libc where LFS macro is meaningful
-  switch (libc) {
-
-  case ELibC::glibc:
-  case ELibC::musl:
-  case ELibC::bionic:
-  case ELibC::bsd_libc:
-  case ELibC::libsystem: return 64;
-
-  default:               return 0;
-  }
-}
-
-constexpr size_t time_bits(ELibC libc, env::EArch arch)
-{
-  // Windows does not use POSIX time ABI
-  switch (libc) {
-
-  case ELibC::ucrt:
-  case ELibC::msvcrt:
-  case ELibC::mingw_libc: return 0;
-
-  default:                break;
-  }
-
-  // 64-bit arch already safe
-  if (!is_32bit(arch)) return 0;
-
-  switch (libc) {
-
-  case ELibC::glibc:
-  case ELibC::musl:
-  case ELibC::bionic:    return 64;
-
-  // BSD + Darwin already have 64-bit time_t
-  case ELibC::bsd_libc:
-  case ELibC::libsystem:
-
-  default:               return 0;
-  }
-}
-
-enum class ECallingConv : uint8_t {
-  cdecl,
-  stdcall,
-  fastcall,
-  thiscall,
-  sysv,
-  win64,
-  aapcs,
-  aapcs_vfp,
-  vectorcall,
-  custom,
-  unknown
-};
-
-enum class ERelocModel : uint8_t { NONE, STATIC, PIC, PIE, ROPI, RWPI, ROPI_RWPI };
-enum class ECodeModel : uint8_t { NONE, tiny, small, kernel, medium, large };
-enum class EOptimization : uint8_t { NONE, O0, O1, O2, O3, Os, Oz };
-enum class EWarnLevel : uint8_t { NONE, W0, W1, W2, W3 };
 enum class FEmit : uint8_t {
   NONE        = 0,
   bin         = 1ULL << 0,
@@ -157,26 +73,9 @@ enum class FPass : uint16_t {
   all               = 1ULL << 13,
 };
 
-enum class FDebugPrinter : uint8_t { NONE = 0, AST = 1ULL << 0 };
-
-enum class EPlatformFlavor : uint8_t {
-  linux_glibc,
-  linux_musl,
-
-  apple_macos,
-  apple_ios,
-
-  windows_msvc,
-  windows_mingw,
-
-  bsd_generic,
-
-  wasi,
-
-  baremetal,
-
-  custom,
-  unknown,
+enum class FDebugPrinter : uint8_t {
+  NONE = 0,
+  AST  = 1ULL << 0,
 };
 
 enum class FCPUFeature : uint16_t {
@@ -202,29 +101,43 @@ enum class FCPUFeature : uint16_t {
   custom = 1ULL << 13,
 };
 
-
-struct Target {
-  env::EArch     arch     = env::EArch::unknown;
-  env::EPlatform platform = env::EPlatform::unknown;
-  env::EVendor   vendor   = env::EVendor::unknown;
-  env::EABI      abi      = env::EABI::unknown;
-  std::string    cpu;
-  FCPUFeature    features     = FCPUFeature::NONE;
-  ECallingConv   calling_conv = ECallingConv::unknown;
-  ERelocModel    reloc_model  = ERelocModel::PIC;
-  ECodeModel     code_model   = ECodeModel::small;
-  FEmit          emits        = FEmit::bin;
-
-  [[nodiscard]] std::string get_target_triple() const noexcept;
-  [[nodiscard]] size_t      get_arch_size() const noexcept;
+enum class EDiagnosticFormat : uint8_t {
+  DEFAULT,
+  userfriendly,
+  json,
+  github,
 };
 
-struct LLVM {
+
+struct TargetTriple final {
+  env::EArch     arch     = env::EArch::unknown;
+  env::EVendor   vendor   = env::EVendor::unknown;
+  env::EPlatform platform = env::EPlatform::unknown;
+  env::EABI      abi      = env::EABI::unknown;
+
+  [[nodiscard]] static TargetTriple parse(std::string_view s) noexcept;
+  [[nodiscard]] std::string         dump() const noexcept;
+};
+
+struct Target final {
+  TargetTriple         triple;
+  env::ECallConvention call_convention = env::ECallConvention::unknown;
+
+  std::string cpu;
+  FCPUFeature features    = FCPUFeature::NONE;
+  ERelocModel reloc_model = ERelocModel::PIE;
+  ECodeModel  code_model  = ECodeModel::small;
+  FEmit       emits       = FEmit::bin;
+
+  [[nodiscard]] size_t get_arch_size() const noexcept;
+};
+
+struct LLVM final {
   bool                     verify_module = true;
   std::vector<const char*> args;
 };
 
-struct Clang {
+struct Cffi final {
   // e.g. 10.20
   struct LibCVersion {
     int major = 0;
@@ -234,14 +147,14 @@ struct Clang {
     [[nodiscard]] std::string        print() const noexcept;
   };
 
-  ELibC        libc         = ELibC::unknown;
-  LibCVersion  libc_version = {.major = 0, .minor = 0};
-  ECStandard   std          = ECStandard::unknown;
-  FCSource     c_source;
-  EEnvironment env              = EEnvironment::unknown;
-  bool         disable_builtins = false;
-  bool         strict_aliasing  = false;
-  std::string  sysroot;
+  env::ELibC        libc         = env::ELibC::unknown;
+  LibCVersion       libc_version = {.major = 0, .minor = 0};
+  env::ECStandard   std          = env::ECStandard::unknown;
+  env::FCSource     c_source;
+  env::EEnvironment env              = env::EEnvironment::unknown;
+  bool              disable_builtins = false;
+  bool              strict_aliasing  = false;
+  std::string       sysroot;
 
   std::vector<const char*> args;
 
@@ -249,7 +162,7 @@ struct Clang {
 };
 
 
-struct Dir {
+struct Dir final {
   // directories
   std::string current_config_file;
   std::string project  = "./";
@@ -276,32 +189,38 @@ struct Dir {
   [[nodiscard]] std::string get_llvmir_dir() const noexcept;
 };
 
-struct Profile {
+struct Profile final {
   bool          debug        = false;
   EOptimization optimization = EOptimization::O0;
 };
 
-struct Log {
+struct Log final {
   FPass logs = FPass::NONE;
 };
 
-struct Warn {
-  FPass      warns = FPass::NONE;
+struct Warn final {
+  FWarnMode  warns = FWarnMode::NONE;
   EWarnLevel level = EWarnLevel::W0;
 };
 
-struct Debug {
+struct Debug final {
   FDebugPrinter debugs = FDebugPrinter::NONE;
 };
 
-struct Preprocessor {
+struct Preprocessor final {
   std::map<std::string, std::string> defines;
   std::vector<const char*>           undefines;
 };
 
 enum class EErrorMode : uint8_t {
+  DEFAULT,
   fail_fatal,   // stop on first error
   fail_recover, // try recovering, accumulate errors
+};
+
+struct Diagnostic final {
+  EErrorMode        error_mode = EErrorMode::fail_fatal;
+  EDiagnosticFormat out_format = EDiagnosticFormat::userfriendly;
 };
 
 
@@ -312,26 +231,25 @@ struct Options {
   std::string project_name;
   std::string sub_config;
 
-  EPlatformFlavor platform_flavor = EPlatformFlavor::unknown;
-
   std::map<std::string, std::string> PREPROCESSOR_ARGS;
 
   bool mute = false;
 
-  EErrorMode error_mode = EErrorMode::fail_fatal;
+  bool is_check_mode = false;
 
-  Target  target;
-  Profile profile;
-  Log     log;
-  Warn    warn;
-  Debug   debug;
+  Target     target;
+  Profile    profile;
+  Log        log;
+  Warn       warn;
+  Debug      debug;
+  Diagnostic diagnostic;
 
   Dir dir;
 
   Preprocessor preprocessor;
 
-  LLVM  llvm;
-  Clang clang;
+  LLVM llvm;
+  Cffi c_ffi;
 
 
   // sub_configs
@@ -355,7 +273,7 @@ struct Options {
 
   [[nodiscard]] const std::vector<std::string>& to_args() const noexcept;
 
-  [[nodiscard]] static Options get_preset(EPlatformFlavor platform) noexcept;
+  [[nodiscard]] static Options get_preset(const TargetTriple& triple) noexcept;
   [[nodiscard]] static Options get_current(std::string_view project_name) noexcept;
 
   [[nodiscard]] static Options invalid() noexcept
@@ -431,15 +349,15 @@ struct Sub_Compiler_Options : Options {
 
 
 template <>
-struct magic_enum::customize::enum_range<common::compiler::FCSource> {
-  static constexpr bool is_flags = true;
-};
-template <>
 struct magic_enum::customize::enum_range<common::compiler::FCPUFeature> {
   static constexpr bool is_flags = true;
 };
 template <>
 struct magic_enum::customize::enum_range<common::compiler::FEmit> {
+  static constexpr bool is_flags = true;
+};
+template <>
+struct magic_enum::customize::enum_range<common::compiler::FWarnMode> {
   static constexpr bool is_flags = true;
 };
 template <>
@@ -452,218 +370,166 @@ struct magic_enum::customize::enum_range<common::compiler::FDebugPrinter> {
 };
 
 
+namespace common::compiler
+{
+
+#define GET_ENUM_NAMES_TO_STRING(_enum_type)                                                                           \
+  ([]() -> std::string {                                                                                               \
+    std::string out;                                                                                                   \
+    bool        first = true;                                                                                          \
+    for (auto name : magic_enum::enum_names<_enum_type>()) {                                                           \
+      if (!first) out += ", ";                                                                                         \
+      out += name;                                                                                                     \
+      first = false;                                                                                                   \
+    }                                                                                                                  \
+    return out;                                                                                                        \
+  }())
+#define GET_FLAGS_NAMES_TO_STRING(_flag_type)                                                                          \
+  ([]() -> std::string {                                                                                               \
+    std::string out;                                                                                                   \
+    bool        first = true;                                                                                          \
+    for (auto name : magic_enum::enum_names<_flag_type>()) {                                                           \
+      if (!first) out += "|";                                                                                          \
+      out += name;                                                                                                     \
+      first = false;                                                                                                   \
+    }                                                                                                                  \
+    return out;                                                                                                        \
+  }())
+
+
+constexpr std::string& ERelocModel_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::ERelocModel);
+  return s;
+}
+constexpr std::string& ECodeModel_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::ECodeModel);
+  return s;
+}
+constexpr std::string& EOptimization_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EOptimization);
+  return s;
+}
+constexpr std::string& EWarnLevel_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EWarnLevel);
+  return s;
+}
+constexpr std::string& FWarnMode_names()
+{
+  static auto s = GET_FLAGS_NAMES_TO_STRING(common::compiler::FWarnMode);
+  return s;
+}
+constexpr std::string& FEmit_names()
+{
+  static auto s = GET_FLAGS_NAMES_TO_STRING(common::compiler::FEmit);
+  return s;
+}
+constexpr std::string& FPass_names()
+{
+  static auto s = GET_FLAGS_NAMES_TO_STRING(common::compiler::FPass);
+  return s;
+}
+constexpr std::string& FCPUFeature_names()
+{
+  static auto s = GET_FLAGS_NAMES_TO_STRING(common::compiler::FCPUFeature);
+  return s;
+}
+constexpr std::string& FDebugPrinter_names()
+{
+  static auto s = GET_FLAGS_NAMES_TO_STRING(common::compiler::FDebugPrinter);
+  return s;
+}
+constexpr std::string& EErrorMode_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EErrorMode);
+  return s;
+}
+constexpr std::string& EDiagnosticFormat_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EDiagnosticFormat);
+  return s;
+}
+
+
+#undef GET_ENUM_NAMES_TO_STRING
+#undef GET_FLAGS_NAMES_TO_STRING
+
+} // namespace common::compiler
+
+
 namespace common
 {
-[[nodiscard]] inline std::string_view ECStandard_to_clang_flag(common::compiler::ECStandard v) noexcept
+[[nodiscard]] inline std::string_view ECStandard_to_clang_flag(common::env::ECStandard v) noexcept
 {
   switch (v) {
-  case common::compiler::ECStandard::c89:   return "-std=c89";
-  case common::compiler::ECStandard::c99:   return "-std=c99";
-  case common::compiler::ECStandard::c11:   return "-std=c11";
-  case common::compiler::ECStandard::c17:   return "-std=c17";
-  case common::compiler::ECStandard::c23:   return "-std=c23";
-  case common::compiler::ECStandard::gnu89: return "-std=gnu89";
-  case common::compiler::ECStandard::gnu99: return "-std=gnu99";
-  case common::compiler::ECStandard::gnu11: return "-std=gnu11";
-  case common::compiler::ECStandard::gnu17: return "-std=gnu17";
-  case common::compiler::ECStandard::gnu23: return "-std=gnu23";
+  case common::env::ECStandard::c89:   return "-std=c89";
+  case common::env::ECStandard::c99:   return "-std=c99";
+  case common::env::ECStandard::c11:   return "-std=c11";
+  case common::env::ECStandard::c17:   return "-std=c17";
+  case common::env::ECStandard::c23:   return "-std=c23";
+  case common::env::ECStandard::gnu89: return "-std=gnu89";
+  case common::env::ECStandard::gnu99: return "-std=gnu99";
+  case common::env::ECStandard::gnu11: return "-std=gnu11";
+  case common::env::ECStandard::gnu17: return "-std=gnu17";
+  case common::env::ECStandard::gnu23: return "-std=gnu23";
 
-  default:                                  return "";
+  default:                             return "";
   }
 }
 
-[[nodiscard]] inline std::string_view EEnvironment_to_clang_flag(common::compiler::EEnvironment v) noexcept
+[[nodiscard]] inline std::string_view EEnvironment_to_clang_flag(common::env::EEnvironment v) noexcept
 {
   switch (v) {
-  case common::compiler::EEnvironment::gnu:       return "-D_GNU_SOURCE";
-  case common::compiler::EEnvironment::musl:      return "-D_MUSL_SOURCE";
-  case common::compiler::EEnvironment::msvc:      return "-fms-compatibility";
-  case common::compiler::EEnvironment::gnuabi:    return "";
-  case common::compiler::EEnvironment::mingw:     return "-D__MINGW32__";
-  case common::compiler::EEnvironment::darwin:    return "-D_DARWIN_C_SOURCE";
-  case common::compiler::EEnvironment::baremetal: return "-ffreestanding";
-  case common::compiler::EEnvironment::wasi:      return "-D__wasi__";
-  default:                                        return "";
+  case common::env::EEnvironment::gnu:       return "-D_GNU_SOURCE";
+  case common::env::EEnvironment::musl:      return "-D_MUSL_SOURCE";
+  case common::env::EEnvironment::msvc:      return "-fms-compatibility";
+  case common::env::EEnvironment::gnuabi:    return "";
+  case common::env::EEnvironment::mingw:     return "-D__MINGW32__";
+  case common::env::EEnvironment::darwin:    return "-D_DARWIN_C_SOURCE";
+  case common::env::EEnvironment::baremetal: return "-ffreestanding";
+  case common::env::EEnvironment::wasi:      return "-D__wasi__";
+  default:                                   return "";
   }
 }
 
-[[nodiscard]] inline std::string_view ELibC_to_clang_flag(common::compiler::ELibC v) noexcept
+[[nodiscard]] inline std::string_view ELibC_to_clang_flag(common::env::ELibC v) noexcept
 {
   switch (v) {
-  case common::compiler::ELibC::glibc:      return "-D__GLIBC__";
-  case common::compiler::ELibC::musl:       return "-D__MUSL__";
-  case common::compiler::ELibC::libsystem:  return "-D__APPLE__";
-  case common::compiler::ELibC::ucrt:       return "-D_UCRT";
-  case common::compiler::ELibC::msvcrt:     return "-D_MSVCRT";
-  case common::compiler::ELibC::mingw_libc: return "-D__MINGW32__";
-  case common::compiler::ELibC::bionic:     return "-D__ANDROID_API__";
-  case common::compiler::ELibC::bsd_libc:   return "-D__BSD_VISIBLE";
-  default:                                  return "";
+  case common::env::ELibC::glibc:      return "-D__GLIBC__";
+  case common::env::ELibC::musl:       return "-D__MUSL__";
+  case common::env::ELibC::libsystem:  return "-D__APPLE__";
+  case common::env::ELibC::ucrt:       return "-D_UCRT";
+  case common::env::ELibC::msvcrt:     return "-D_MSVCRT";
+  case common::env::ELibC::mingw_libc: return "-D__MINGW32__";
+  case common::env::ELibC::bionic:     return "-D__ANDROID_API__";
+  case common::env::ELibC::bsd_libc:   return "-D__BSD_VISIBLE";
+  default:                             return "";
   }
 }
 
 
-[[nodiscard]] inline std::vector<std::string> ECSource_to_clang_flag(common::compiler::FCSource v) noexcept
+[[nodiscard]] inline std::vector<std::string> ECSource_to_clang_flag(common::env::FCSource v) noexcept
 {
   using namespace magic_enum::bitwise_operators;
 
   std::vector<std::string> out;
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::gnu)) out.emplace_back("-D_GNU_SOURCE");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::bsd)) out.emplace_back("-D_BSD_SOURCE");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::darwin)) out.emplace_back("-D_DARWIN_C_SOURCE");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::posix)) out.emplace_back("-D_POSIX_C_SOURCE=200809L");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::xopen)) out.emplace_back("-D_XOPEN_SOURCE=700");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::linux)) out.emplace_back("-D__linux__");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::android)) out.emplace_back("-D__ANDROID__");
-  if (magic_enum::enum_flags_test(v, common::compiler::FCSource::crt_secure_no_warnings))
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::gnu)) out.emplace_back("-D_GNU_SOURCE");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::bsd)) out.emplace_back("-D_BSD_SOURCE");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::darwin)) out.emplace_back("-D_DARWIN_C_SOURCE");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::posix)) out.emplace_back("-D_POSIX_C_SOURCE=200809L");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::xopen)) out.emplace_back("-D_XOPEN_SOURCE=700");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::linux)) out.emplace_back("-D__linux__");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::android)) out.emplace_back("-D__ANDROID__");
+  if (magic_enum::enum_flags_test(v, common::env::FCSource::crt_secure_no_warnings))
     out.emplace_back("-D_CRT_SECURE_NO_WARNINGS");
   return out;
 }
 
 
-constexpr std::string_view OPTIONS_TEMPLATE =
-    R"(
-# main velox toolchain config
-# it's the default configuration
-# set config field to specify a sub configuration to compile (use his name in sub_configs)
-
-# all fields will be stored as define element also
-
-
-# ======================
-# velox-compiler section 
-# ======================
-
-# if empty, the workspace file name will be used
-project_name        = "%project_name"
-# linux_glibc, linux_musl, apple_macos, apple_ios, windows_msvc, windows_mingw, bsd_generic, wasi, baremetal, custom
-preset              = "%preset"    
-# sub .toml name to apply after this .toml 
-sub_config          = "%sub_config"  
-    
-[target]
-# x86_64, x86_32, arm64, arm32, ppc64, ppc32, mips64, mips32, wasm64, wasm32, sparc64, custom ...
-arch                = "%target.arch"                
-# linux, macos, windows, freebsd, openbsd, netbsd, dragonflybsd, android, ios, solaris, custom ...
-os                  = "%target.os"                  
-# apple, pc, w64 ...
-vendor              = "%target.vendor"              
-# sysv, win64, gnu, aapcs, aapcs64, darwin_arm64, msvc_x86, msvc_x64, riscv_ilp32, riscv_lp64, wasm64, wasm32, custom ...
-abi                 = "%target.abi"           
-# overrides host cpu detection
-cpu                 = "%target.cpu"                 
-# e.g. "sse,sse2,sse3,ssse3,avx,avx2,avx512,neon,sve,rvc,rvv,custom"
-features            = [ 
-  %target.features
-]
-# e.g. sysv, cdecl, stdcall, fastcall, thiscall, win64, aapcs, aapcs_vfp, vectorcall, custom
-call_convention     = %target.call_convention
-# tiny, small, kernel, medium, large
-code_model          = "%target.code_model"          
-# pic, static, pie, ropi, rwpi, ropi_rwpi
-reloc_model         = "%target.reloc_model"         
-# bin, llvm, obj, asm, bc, s_lib, d_lib
-emits               = [                             
-  %target_emit
-]                
-
-[profile]
-# the debug profile will override some options
-
-# true = disable optimization, enable debug info
-debug               = %profile_debug
-# O0,O1,O2,O3,Os,Oz
-optimization        = "%profile_optimization"       
-
-[log]
-# all, filesystem, lexer, preprocessor, parser, binder, exporter, 
-# resolver_symbol, resolver_type, resolver_semantic, 
-# codegen, optimization, emit, linker
-logs = [
-  %logs
-]                                    
-
-[warning]
-# all, extra, pedantic, unused, dead_code, as_error
-warnings = [
-  %warn.warnings
-]
-# 1, 2, 3
-level               = %warn.level  
-
-
-[debug]
-# ast
-debugs = [
-  %debug.debugs
-]
-
-[preprocessor]
-undefines = [
-  %preprocessor.undefines
-]
-[preprocessor.defines]
-%preprocessor.defines
-
-[directory]
-# all path
-project             = "%dir.project"
-build               = "%dir.build"  
-source              = "%dir.source"  
-vendor              = "%dir.vendor"  
-ffi_json            = "%dir.ffi_json"  
-binding             = "%dir.binding"  
-compiler            = "%dir.compiler"  
-stdlib              = "%dir.stdlib"  
-packages            = "%dir.packages"
-
-[config]
-# designed to target a sub configuration parameters
-%sub_configs
-
-# ============
-# LLVM section
-# ============
-# This configuration is strictly for LLVM passes and code generation.
-# It does not affect your Velox preprocessor.
-
-[llvm]
-# verify before AND after passes
-verify_module       = %llvm.verify_module     
-# custom raw flags passed to LLVM
-args = [                                      
-  %llvm.args
-]
-
-# =============
-# Clang section
-# =============
-# This configuration is strictly for clang passes on C std lib
-
-[clang]
-# one: GLIBC, MUSL, LIBSYSTEM, UCRT, MSVCRT, MINGW_LIBC, BIONIC, BSD_LIBC, CUSTOM
-libc                = "%clang.libc"
-# major.minor format: e.g. 10.2
-libc_version        = "%clang.libc_version"
-# one: C89, C99, C11, C17, C23, GNU89, GNU99, GNU11, GNU17, GNU23 
-std                 = "%clang.std"
-# multiple: GNU, BSD, DARWIN, POSIX, XOPEN, LINUX, ANDROID, CRT_SECURE_NO_WARNINGS, CUSTOM
-c_source            = [
-  %clang.c_source
-]
-# one: GNU, MUSL, MSVC, GNUABI, MINGW, DARWIN, BAREMETAL, WASI, CUSTOM 
-environment         = "%clang.env"
-# true, false
-disable_builtins    = "%clang.disable_builtins"
-# true, false
-strict_aliasing     = "%clang.strict_aliasing"
-# path
-sysroot             = "%clang.sysroot"
-# custom raw flags passed to clang
-args = [
-  %clang.args
-]
-)";
+extern std::string OPTIONS_TEMPLATE;
 
 constexpr std::string_view VELOX_MAIN_TEMPLATE =
     R"(

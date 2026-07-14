@@ -48,7 +48,6 @@ enum class EPathAnchor : uint8_t {
 
 namespace common::compiler
 {
-enum class ECallingConv : uint8_t;
 
 // velox compiler invariant violation : Internal Compiler Error
 [[noreturn]] void DEBUG_VELOX_ICE(std::string_view msg);
@@ -95,10 +94,13 @@ struct Token;
 
 namespace ast
 {
+enum class EInvocationKind : uint8_t;
 enum class ECapability : uint8_t;
 enum class EPassMode : uint8_t;
-enum class EBinOpType : uint8_t;
-enum class EUnaryOpType : uint8_t;
+enum class EOp_Bin : uint8_t;
+enum class EOp_Unary : uint8_t;
+enum class EOp_Subscript : uint8_t;
+enum class EOp_Other : uint8_t;
 enum class EExprPassMode : uint8_t;
 enum class EVariableKind : uint8_t;
 enum class ETransfertType : uint8_t;
@@ -114,12 +116,25 @@ struct SFM_Form;
 
 namespace type
 {
+
+enum class ETextType : uint8_t;
 enum class EPrimitiveTypeKind : uint8_t;
 enum class ETypeKind : uint8_t;
 struct Arena;
 struct Dispatcher;
 struct Qualifier;
 struct Type;
+
+
+struct Prototype_Param final {
+  ast::EPassMode passmode;
+  ID             type;
+  ast::ID        nodeid;
+  bool           is_restrict = false;
+
+  auto operator<=>(const Prototype_Param&) const = default;
+};
+
 
 struct Qualifier final {
   bool is_optional = false;
@@ -135,16 +150,21 @@ struct Qualifier final {
 
 } // namespace type
 
+namespace extension
+{
+struct Arena;
+}
+
 namespace inference
 {
 struct Arena;
 }
 
-namespace symbol
+namespace definition
 {
 struct Arena;
 struct Symbol;
-} // namespace symbol
+} // namespace definition
 
 namespace cu
 {
@@ -162,6 +182,11 @@ struct Graph;
 namespace common
 {
 struct FastRNG;
+}
+
+namespace common::env
+{
+enum class ECallConvention : uint8_t;
 }
 
 namespace pipeline

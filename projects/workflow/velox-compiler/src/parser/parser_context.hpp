@@ -43,6 +43,8 @@ struct Parser_Context final {
 
   std::string extern_abi;
   EVisibility current_visibility = EVisibility::File_Scope;
+  ast::ID     current_returnable;
+  ast::ID     current_breakable;
 
   [[nodiscard]] bool start_parsing();
 
@@ -97,7 +99,7 @@ struct Parser_Context final {
   template <typename T>
   [[nodiscard]] T& add_get_node(token::ID tokid) noexcept;
 
-  [[nodiscard]] symbol::ID add_symbol(ast::ID nodeid);
+  [[nodiscard]] definition::ID add_definition(ast::ID nodeid);
 
   void add_error(ErrorCode code, std::string_view msg, std::string_view hint) const;
   void add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg, std::string_view hint) const;

@@ -11,6 +11,7 @@
 
 
 #include <common/common.hpp>
+#include <common/environment.hpp>
 #include <common/utils.hpp>
 #include <common/compiler_options.hpp>
 
@@ -109,7 +110,7 @@ type::ID ffi::JSON_Reader::to_type(const json& j) noexcept
 
       return current_ast->types->factory.make_tuple(types, dec);
     }
-    case type::ETypeKind::StaticArray: {
+    case type::ETypeKind::Array: {
       expect_field(data, "inner");
       auto inner = to_type(data.value("inner", json::object()));
 
@@ -117,7 +118,19 @@ type::ID ffi::JSON_Reader::to_type(const json& j) noexcept
       size_t size = data.value("size", 0);
       if (size <= 0) common::FATAL_ERROR("Illegal size specified (" + std::to_string(size) + ") <= 0");
 
-      return current_ast->types->factory.make_static_array(inner, size, dec);
+      return current_ast->types->factory.make_static_array(inner, size, NO_ID, dec);
+    }
+    case type::ETypeKind::Buffer: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      return current_ast->types->factory.make_dynamic_array(inner, dec);
+    }
+    case type::ETypeKind::Slice: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      return current_ast->types->factory.make_slice(inner, dec);
     }
     case type::ETypeKind::Ptr: {
       expect_field(data, "inner");
@@ -125,14 +138,9 @@ type::ID ffi::JSON_Reader::to_type(const json& j) noexcept
 
       return current_ast->types->factory.make_ptr(inner, dec);
     }
-    case type::ETypeKind::DynamicArray: {
-      expect_field(data, "inner");
-      auto inner = to_type(data.value("inner", json::object()));
 
-      return current_ast->types->factory.make_dynamic_array(inner, dec);
-    }
     case type::ETypeKind::Prototype: {
-      using Param = type::Prototype::Param;
+      using Param = type::Prototype_Param;
 
       type::ID ret_type = type::TYPEID_u0;
       if (data.contains("ret_type")) ret_type = to_type(data.value("ret_type", json::object()));
@@ -195,8 +203,8 @@ ast::ID ffi::JSON_Reader::to_func(const json& j, std::string_view j_name) noexce
 
   if (common::utils::is_valid_identifier(n.name))
     common::FATAL_ERROR("Expected valid identifier (" + std::string(n.name) + ")");
-  n.call_convention = magic_enum::enum_cast<common::compiler::ECallingConv>(j.value("call_convention", ""))
-                          .value_or(common::compiler::ECallingConv::unknown);
+  n.call_convention = magic_enum::enum_cast<common::env::ECallConvention>(j.value("call_convention", ""))
+                          .value_or(common::env::ECallConvention::unknown);
   n.prototype = to_type(j.value("prototype", json::object()));
 
   auto        j_param_names = j.value("param_names", json::array());
@@ -343,8 +351,8 @@ ast::ID ffi::JSON_Reader::to_form(const json& j, std::string_view j_name) noexce
 
   auto facets = j.value("facets", json::object());
   for (const auto& facet : decltype(facets)::array()) {
-    const auto& f    = current_ast->add_get_node<ast::Literal_Structured_Data>();
-    auto&       name = current_ast->add_get_node<ast::Identifier>();
+    const auto& f    = current_ast->add_get_node<ast::Literal_Record>();
+    auto&       name = current_ast->add_get_node<ast::Symbol_Id>();
     name.name        = facet.get<std::string>();
 
     n.facets.emplace_back(f.nodeid);
@@ -362,7 +370,7 @@ ast::ID ffi::JSON_Reader::to_global(const json& j, std::string_view j_name) noex
   n.name  = j_name;
 
   n.type = to_type(j.value("type", json::object()));
-  n.kind = j.value("is_const", false) ? ast::EVariableKind::Let : ast::EVariableKind::Var;
+  n.kind = j.value("is_const", false) ? ast::EVariableKind::_let : ast::EVariableKind::_var;
 
   return n.nodeid;
 }

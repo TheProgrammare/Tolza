@@ -1,0 +1,71 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-14 02:31:47
+ * 
+ * Source Language         : C
+ * Source Library          : ctype
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type locale_t = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn isalnum(copy __param_a: s32) -> s32;
+fn isalpha(copy __param_a: s32) -> s32;
+fn iscntrl(copy __param_a: s32) -> s32;
+fn isdigit(copy __param_a: s32) -> s32;
+fn islower(copy __param_a: s32) -> s32;
+fn isgraph(copy __param_a: s32) -> s32;
+fn isprint(copy __param_a: s32) -> s32;
+fn ispunct(copy __param_a: s32) -> s32;
+fn isspace(copy __param_a: s32) -> s32;
+fn isupper(copy __param_a: s32) -> s32;
+fn isxdigit(copy __param_a: s32) -> s32;
+fn tolower(copy __c: s32) -> s32;
+fn toupper(copy __c: s32) -> s32;
+fn isblank(copy __param_a: s32) -> s32;
+fn isascii(copy __c: s32) -> s32;
+fn toascii(copy __c: s32) -> s32;
+fn _toupper(copy __param_a: s32) -> s32;
+fn _tolower(copy __param_a: s32) -> s32;
+fn isalnum_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isalpha_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn iscntrl_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isdigit_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn islower_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isgraph_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isprint_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn ispunct_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isspace_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isupper_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isxdigit_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn isblank_l(copy __param_a: s32, copy __param_b: locale_t) -> s32;
+fn tolower_l(copy __c: s32, copy __l: locale_t) -> s32;
+fn toupper_l(copy __c: s32, copy __l: locale_t) -> s32;
+
+} // extern
+
+} // export

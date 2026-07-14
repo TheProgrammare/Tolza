@@ -37,12 +37,12 @@ AST_NODE(CodeBlock)
   SET_VECTOR_NODE(elements);
 };
 
-AST_NODE(Identifier)
+AST_NODE(Symbol_Id)
 {
   std::string name;
 };
 
-AST_NODE(ID_Qualified)
+AST_NODE(Symbol_Qualified)
 {
   std::string              name;
   std::vector<std::string> path;
@@ -51,7 +51,7 @@ AST_NODE(ID_Qualified)
 };
 
 // for every node who need a type resolution
-AST_NODE(ID_Typed)
+AST_NODE(Symbol_Type)
 {
   SET_NODE(name);
   SET_VECTOR_TYPE(generic_args)

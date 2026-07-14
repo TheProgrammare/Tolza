@@ -1,0 +1,52 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-14 02:31:47
+ * 
+ * Source Language         : C
+ * Source Library          : sys/epoll
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type fd_set = opaque
+type timeval = opaque
+type timespec = opaque
+type __sigset_t = opaque
+type epoll_event = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn ioctl(copy __fd: s32, copy __request: u64, ...) -> s32;
+fn select(copy __nfds: s32, mut __readfds: fd_set, mut __writefds: fd_set, mut __exceptfds: fd_set, mut __timeout: timeval) -> s32;
+fn pselect(copy __nfds: s32, mut __readfds: fd_set, mut __writefds: fd_set, mut __exceptfds: fd_set, ref __timeout: timespec, ref __sigmask: __sigset_t) -> s32;
+fn epoll_create(copy __size: s32) -> s32;
+fn epoll_create1(copy __flags: s32) -> s32;
+fn epoll_ctl(copy __epfd: s32, copy __op: s32, copy __fd: s32, mut __event: epoll_event) -> s32;
+fn epoll_wait(copy __epfd: s32, mut __events: epoll_event, copy __maxevents: s32, copy __timeout: s32) -> s32;
+fn epoll_pwait(copy __epfd: s32, mut __events: epoll_event, copy __maxevents: s32, copy __timeout: s32, ref __ss: __sigset_t) -> s32;
+fn epoll_pwait2(copy __epfd: s32, mut __events: epoll_event, copy __maxevents: s32, ref __timeout: timespec, ref __ss: __sigset_t) -> s32;
+
+} // extern
+
+} // export

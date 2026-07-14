@@ -20,6 +20,8 @@
 #include "common.hpp"
 #include "toolchain_options.hpp"
 
+#include <Neargye/magic_enum.hpp>
+#include <Neargye/magic_enum_flags.hpp>
 
 namespace fs = std::filesystem;
 

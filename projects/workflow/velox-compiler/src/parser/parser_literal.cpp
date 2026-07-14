@@ -23,6 +23,7 @@
 ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
 {
   switch (p.peek().kind) {
+  case token::ETokenKind::L_NULLPTR: return literal_nullptr();
   case token::ETokenKind::TRUE:
   case token::ETokenKind::FALSE:
     return literal_boolean();
@@ -71,9 +72,18 @@ ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
 ast::ID parser::Parser_Literal::literal_boolean()
 {
   auto& literal = p.add_get_node<ast::Literal_Boolean>(p.peek().tokid);
-  literal.val   = p.match(token::ETokenKind::TRUE);
+  if (!p.match(token::ETokenKind::TRUE)) (void)p.match(token::ETokenKind::FALSE);
+  literal.val = p.check_at(-1, token::ETokenKind::TRUE);
   return literal.nodeid;
 }
+
+ast::ID parser::Parser_Literal::literal_nullptr()
+{
+  auto& literal = p.add_get_node<ast::Literal_NullPtr>(p.peek().tokid);
+  (void)p.match(token::ETokenKind::L_NULLPTR);
+  return literal.nodeid;
+}
+
 
 ast::ID parser::Parser_Literal::literal_numeric()
 {
@@ -214,25 +224,99 @@ ast::ID parser::Parser_Literal::literal_cune()
   return literal.nodeid;
 }
 
+
+inline int hex_value(char c) noexcept
+{
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1;
+}
+
+std::string unescape(std::string_view text)
+{
+  std::string result;
+  result.reserve(text.size());
+
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+
+    if (c != '\\') {
+      result.push_back(c);
+      continue;
+    }
+
+    // '\' final
+    if (++i >= text.size()) {
+      result.push_back('\\');
+      break;
+    }
+
+    switch (text[i]) {
+    case 'n':  result.push_back('\n'); break;
+    case 't':  result.push_back('\t'); break;
+    case 'r':  result.push_back('\r'); break;
+    case '\\': result.push_back('\\'); break;
+    case '\'': result.push_back('\''); break;
+    case '"':  result.push_back('"'); break;
+    case '0':  result.push_back('\0'); break;
+    case 'a':  result.push_back('\a'); break;
+    case 'b':  result.push_back('\b'); break;
+    case 'f':  result.push_back('\f'); break;
+    case 'v':  result.push_back('\v'); break;
+
+    case 'x':  {
+      if (i + 2 >= text.size()) {
+        result.push_back('\\');
+        result.push_back('x');
+        break;
+      }
+
+      int h1 = hex_value(text[i + 1]);
+      int h2 = hex_value(text[i + 2]);
+
+      if (h1 < 0 || h2 < 0) {
+        result.push_back('\\');
+        result.push_back('x');
+        break;
+      }
+
+      result.push_back(static_cast<char>((h1 << 4) | h2));
+
+      i += 2;
+      break;
+    }
+
+    default:
+      // conserve le caractère après '\'
+      result.push_back(text[i]);
+      break;
+    }
+  }
+
+  return result;
+}
+
+
 ast::ID parser::Parser_Literal::literal_textual()
 {
-
   std::vector<ast::ID> values;
 
   while (!p.is_end()) {
 
     if (p.check(token::ETokenKind::L_TEXTUAL)) {
-      auto& text = p.add_get_node<ast::Literal_Text_Pure>(p.peek().tokid);
-      text.val   = p.tok_to_str(p.next().tokid);
+      auto&      text = p.add_get_node<ast::Literal_Text_Pure>(p.peek().tokid);
+      const auto val  = unescape(p.tok_to_str(p.next().tokid));
+      text.val        = val;
 
       // type inference
       if (p.match(token::ETokenKind::T_TEXT) || p.match_val("t")) {
         text.text_type = type::ETextType::_text;
-        if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+        if (p.match(token::ETokenKind::T_STR) || p.match_val("s")) {
           text.text_type = type::ETextType::_str;
         }
-      } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
-        text.text_type = type::ETextType::_c_str;
+      } else if (p.match(token::ETokenKind::T_CSTR) || p.match_val("c")) {
+        text.text_type = type::ETextType::_cstr;
       } else if (p.match(token::ETokenKind::T_CUNE) || p.match_val("cu")) {
         text.text_type = type::ETextType::_cune;
       } else if (p.match(token::ETokenKind::T_RUNE) || p.match_val("r")) {
@@ -545,26 +629,46 @@ ast::ID parser::Parser_Literal::literal_table_population()
   return pop.nodeid;
 }
 
-ast::ID parser::Parser_Literal::literal_form(ast::ID nodeid)
+ast::ID parser::Parser_Literal::literal_record(ast::ID name)
 {
-  auto& lit_form = p.add_get_node<ast::Literal_Form>(p.peek().tokid);
-  lit_form.name  = nodeid;
+  constexpr std::string_view hint =
+      R"(define literal structured data like:
+  - facet `FacetName{.field1= val1, ...}`
+  - form `FormName{@FacetName{.field1= val1, ...}, ...}`)";
+
 
   (void)p.match(token::ETokenKind::L_CURLY);
-  if (p.match(token::ETokenKind::R_CURLY)) return lit_form.nodeid;
+
+  // it's a literal facet
+  if (p.check(token::ETokenKind::DOT)) {
+    return literal_facet(name);
+  }
+
+  // it's a literal form/view
+  if (p.check(token::ETokenKind::AT)) {
+    return literal_form(name);
+  }
+}
+
+ast::ID parser::Parser_Literal::literal_form(ast::ID name)
+{
+  constexpr std::string_view hint = R"(define literal form like:
+  - no fields:   `MyForm{@}`
+  - with fields: `MyForm{@MyFacet{.my_field= val1}, @MyFacet2{.x= v2, .y= v3}}`)";
+
+  auto& lit_form = p.add_get_node<ast::Literal_Record>(p.peek().tokid);
+  lit_form.name  = name;
+
+  (void)p.match(token::ETokenKind::L_CURLY);
 
   while (!p.is_end()) {
-    auto facet_name = p.p_base->identifier(true);
+    (void)p.expect(91, token::ETokenKind::AT, "Expected facet selector '@' inside literal form", hint);
 
-    if (p.check(token::ETokenKind::L_CURLY)) {
-      lit_form.facet_args.emplace_back(literal_facet(facet_name));
-    } else if (p.match(token::ETokenKind::DOT)) {
-      auto& lit_facet = p.add_get_node<ast::Literal_Structured_Data>(p.peek(-2).tokid);
-      lit_facet.fields_args.emplace_back(literal_field());
-      lit_form.facet_args.emplace_back(lit_facet.nodeid);
-    } else {
-      p.add_error_tok(91, p.peek(-1), "Unexpected literal reference", "define literal facets only in literal form");
-    }
+    if (p.match(token::ETokenKind::R_CURLY)) return lit_form.nodeid;
+
+    auto facet_name = p.p_base->identifier();
+    auto facet      = literal_facet(facet_name);
+    lit_form.fields_args.emplace_back(facet);
 
     if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
@@ -572,48 +676,32 @@ ast::ID parser::Parser_Literal::literal_form(ast::ID nodeid)
   return lit_form.nodeid;
 }
 
-ast::ID parser::Parser_Literal::literal_facet(ast::ID nodeid)
+ast::ID parser::Parser_Literal::literal_facet(ast::ID name)
 {
-  constexpr std::string_view hint =
-      R"(define literal facet like:
-  - no fields `name{.}`
-  - normal `name{ .field1= val1, .field2= val2 }`
-  - generic `name<gen_args>{ .field1= val1, .field2= val2 }`)";
+  constexpr std::string_view hint = R"(define literal facet like:
+  - no fields:   `MyFacet{.}`
+  - with fields: `MyFacet{.x= v1, .y= v2}`)";
 
-  auto& facet = p.add_get_node<ast::Literal_Structured_Data>(p.peek().tokid);
-  facet.name  = nodeid;
+  auto& lit_facet = p.add_get_node<ast::Literal_Record>(p.peek().tokid);
+  lit_facet.name  = name;
 
   (void)p.match(token::ETokenKind::L_CURLY);
-  if (!p.match(token::ETokenKind::R_CURLY)) return facet.nodeid;
 
   while (!p.is_end()) {
-    if (p.match(token::ETokenKind::R_CURLY)) break;
+    (void)p.expect(92, token::ETokenKind::DOT, "Expected field selector '.' inside literal facet", hint);
 
-    facet.fields_args.emplace_back(literal_field());
+    if (p.match(token::ETokenKind::R_CURLY)) return lit_facet.nodeid;
+
+    lit_facet.fields_names.emplace_back(p.parse_name("Expected field name.", hint));
+
+    (void)p.expect(93, token::ETokenKind::ASSIGN, "Expected assignation '=' after field name.", hint);
+
+    lit_facet.fields_args.emplace_back(p.p_expr->parse_expression());
 
     if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_CURLY)) break;
   }
 
-  return facet.nodeid;
-}
-
-ast::ID parser::Parser_Literal::literal_field()
-{
-  constexpr std::string_view hint =
-      "define literal filed like:"
-      "\n  - scoped field `name{ .field1= val1, .field2= val2 }`"
-      "\n  - direct field `name.field1= val1`";
-
-  (void)p.match(token::ETokenKind::DOT);
-
-  auto& field_arg         = p.add_get_node<ast::Expression_Call_Argument>(p.peek().tokid);
-  field_arg.explicit_name = p.parse_name("", hint);
-
-  (void)p.expect(94, token::ETokenKind::ASSIGN, "Expected field assignation '=' after field name", hint);
-
-  field_arg.expression = p.p_expr->parse_expression();
-
-  return field_arg.nodeid;
+  return lit_facet.nodeid;
 }
 
 ast::ID parser::Parser_Literal::literal_tuple()

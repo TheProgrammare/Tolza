@@ -1,15 +1,17 @@
 #pragma once
 
 
+#include "ast/ast_literal.hpp"
 namespace ast
 {
+struct ID;
 
 struct Node;
 
 // identifiers
-struct ID;
-struct ID_Qualified;
-struct ID_Typed;
+struct Symbol_Id;
+struct Symbol_Qualified;
+struct Symbol_Type;
 
 struct Path_Regex;
 
@@ -25,7 +27,7 @@ struct Global_Extend_Fn;
 struct Global_Extend_Cast;
 struct Global_Extend_Op_Bin;
 struct Global_Extend_Op_Un;
-struct Global_Extend_Op_Access;
+struct Global_Extend_Op_Subscript;
 struct Global_Extend_Op_Transfert;
 struct Global_Extend_Op_Other;
 struct Global_Module;
@@ -81,6 +83,7 @@ struct Generic_Rule;
 
 // literals
 struct Literal_Boolean;
+struct Literal_NullPtr;
 struct Literal_Integral;
 struct Literal_Fixed_Point;
 struct Literal_Floating_Point;
@@ -95,20 +98,17 @@ struct Literal_Table_Population;
 struct Literal_Map;
 struct Literal_Tuple;
 struct Literal_Range;
-struct Literal_Iterator;
-struct Literal_Enum;
-struct Literal_Structured_Data;
-struct Literal_Form;
+struct Literal_Record;
 
 // expressions
 struct Expression_If_Ternary;
 struct Expression_Member_Access;
 struct Expression_Self;
 struct Expression_Other;
-struct Expression_Call;
-struct Expression_Call_Argument;
-struct Expression_Call_Rule;
-struct Expression_Call_Pipe;
+struct Expression_Invocation;
+struct Expression_Invocation_Arg;
+struct Expression_Invocation_Extend;
+struct Expression_Invocation_Rule;
 struct Expression_Table_Access;
 struct Expression_Ptr_Val;
 struct Expression_Mut_Of;
@@ -138,7 +138,7 @@ struct Statement_Match_Case;
 struct Operation_Cast_As;
 struct Operation_Is;
 struct Operation_In;
-struct Operation_Assignment;
+struct Operation_Transfert;
 struct Operation_Binary;
 struct Operation_Unary;
 struct Operation_Interval;

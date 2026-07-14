@@ -1,0 +1,21 @@
+import bind::C::stdio as C
+
+fn fibonacci(copy n: ssize) -> ssize {
+  var a = 0
+  var b = 1
+  
+  for i in 0..=n {
+    let c = a + b
+    a = b
+    b = c
+  }
+
+  return a
+}
+
+fn main() {
+  let n = 10000
+
+  for i in 0..n => C::printf("%d "c, fibonacci(i))
+}
+

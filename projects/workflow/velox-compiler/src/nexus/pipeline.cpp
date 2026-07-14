@@ -6,8 +6,13 @@
 #include <filesystem>
 #include <functional>
 #include <fstream>
+#include <initializer_list>
+#include <ios>
 #include <iostream>
+
 #include <memory>
+#include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -22,6 +27,9 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/IR/LLVMContext.h>
 
 // Passes / pipeline
 #include <llvm/Passes/PassBuilder.h>
@@ -38,6 +46,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Program.h>
 
 // Analysis managers
 #include <llvm/Analysis/LoopAnalysisManager.h>
@@ -51,13 +60,16 @@
 #include "binder/ffi_json_reader.hpp"
 #include "binder/binder_ffi.hpp"
 
-#include "codegen/resolver_codegen.hpp"
+#include "codegen/codegen.hpp"
+#include "codegen/codegen_type.hpp"
 #include "compiler/compiler.hpp"
 #include <common/compiler_options.hpp>
 
 #include "ast/ast_base.hpp"
+
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+#include "nexus/definition.hpp"
 #include "nexus/metacode/token_generator.hpp"
 #include "nexus/module.hpp"
 #include "nexus/unresolved.hpp"
@@ -87,7 +99,7 @@ pipeline::Pipeline::Pipeline()
 }
 
 
-std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path)
+std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept
 {
   assert(common::fileutils::is_velox_file(path));
 
@@ -110,10 +122,12 @@ std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cui
 
   auto ptr = std::make_unique<cu::CU>(parent_cuid, cuid, path, data, last_offset_line);
 
+  f.close();
+
   return ptr;
 }
 
-std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path)
+std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept
 {
   auto f_founds = common::fileutils::find_velox_files(path, true);
 
@@ -136,7 +150,7 @@ std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std
 
   return compilation_units_ids;
 }
-cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view path)
+cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view path) noexcept
 {
   if (auto it = path_generated.find(path); it != path_generated.end()) return it->second;
 
@@ -149,7 +163,7 @@ cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view
   return new_id;
 }
 
-double pipeline::Pipeline::timing(const std::function<void()>& f)
+double pipeline::Pipeline::timing(const std::function<void()>& f) noexcept
 {
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -162,44 +176,69 @@ double pipeline::Pipeline::timing(const std::function<void()>& f)
   return milli;
 }
 
+bool pipeline::Pipeline::generate_libc_wrappers() noexcept
+{
+  auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C";
+  fs::remove_all(p);
+  p = common::fileutils::get_velox_file(p.string());
+  fs::remove(p);
 
-bool pipeline::Pipeline::engage_preparer(cu::ID cuid)
+  static bool log = can_log(binder);
+
+  // native C language lib handler
+  auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });
+
+  if (log) {
+    std::cout << "[binder:C] C wrappers generation completed  | " color_YELLOW << duration << " ms" color_RESET << "\n";
+  }
+
+  return true;
+}
+
+bool pipeline::Pipeline::engage_preparer(cu::ID cuid) noexcept
 {
   const bool lexer_success        = pass_lexer(cuid);
   const bool preprocessor_success = pass_preprocessor(cuid);
   const bool parser_success       = pass_parser(cuid);
 
-  prepared_compilation_units.insert(cuid);
+  auto [_, success] = prepared_compilation_units.insert(cuid);
+  assert(success);
 
   return lexer_success && preprocessor_success && parser_success;
 }
 
-bool pipeline::Pipeline::pass_lexer(cu::ID cuid)
+bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
 {
   static bool log = can_log(lexer);
 
   auto& cu = cuid.get();
+
+  static size_t count = 1;
+  if (cu.file_info.data.empty()) {
+    std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "the file \"" << cu.file_info.path
+              << "\" is empty.\n";
+    return false;
+  }
 
   bool  success = false;
   Lexer lex(cu);
 
   auto duration = timing([&]() { success = lex.tokenize(); });
 
-  static size_t count = 1;
   if (log && success) {
     std::cout << "[lexer:" << count << "] \"" << cu.file_info.path << "\" | " << lex.stream.data().size()
-              << " characters | " color_YELLOW << duration << " ms" color_RESET << "\n"; /*endl*/
+              << " characters | " color_YELLOW << duration << " ms" color_RESET << "\n";
   }
   if (!success) {
     std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
-              << duration << " ms" color_RESET << "\n"; /*endl*/
+              << duration << " ms" color_RESET << "\n";
   }
 
   count++;
 
   return success;
 }
-bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid)
+bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid) noexcept
 {
   static bool log = can_log(preprocessor);
 
@@ -219,48 +258,51 @@ bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid)
   static size_t count = 1;
   if (log && pre_success && gen_success) {
     std::cout << "[preprocessor:" << count << "] \"" << cu.file_info.path << "\" | " << gen.tokens_generated.size()
-              << " tokens | " color_YELLOW << pre_duration + gen_duration << " ms" color_RESET << "\n"; /*endl*/
+              << " tokens | " color_YELLOW << pre_duration + gen_duration << " ms" color_RESET << "\n";
   }
   if (!pre_success) {
     std::cerr << color_RED "[preprocessor:" << count << ":error] " color_RESET "\"" << cu.file_info.path
-              << "\" " color_YELLOW << pre_duration << " ms" color_RESET << "\n"; /*endl*/
+              << "\" " color_YELLOW << pre_duration << " ms" color_RESET << "\n";
   }
   if (!gen_success) {
     std::cerr << color_RED "[preprocessor:generator:" << count << ":error] " color_RESET "\"" << cu.file_info.path
-              << "\" " color_YELLOW << gen_duration << " ms" color_RESET << "\n"; /*endl*/
+              << "\" " color_YELLOW << gen_duration << " ms" color_RESET << "\n";
   }
 
   count++;
 
   return pre_success && gen_success;
 }
-bool pipeline::Pipeline::pass_parser(cu::ID cuid)
+bool pipeline::Pipeline::pass_parser(cu::ID cuid) noexcept
 {
   static bool log = can_log(parser);
 
   bool                   success = false;
   parser::Parser_Context parser(cuid);
 
-  auto duration = timing([&]() { success = parser.start_parsing(); });
+  auto duration = timing([&]() {
+    success = parser.start_parsing();
+    parser.CU.definitions->inject_to_resolved_def();
+  });
 
   auto& cu = cuid.get();
 
   static size_t count = 1;
   if (log && success) {
     std::cout << "[parser:" << count << "] \"" << cu.file_info.path << "\" | " << parser.node_count
-              << " nodes | " color_YELLOW << duration << " ms" color_RESET << "\n"; /*endl*/
+              << " nodes | " color_YELLOW << duration << " ms" color_RESET << "\n";
   }
 
   if (!success) {
     std::cerr << color_RED "[parser:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
-              << duration << " ms" color_RESET << "\n"; /*endl*/
+              << duration << " ms" color_RESET << "\n";
   }
 
   count++;
 
   return success;
 }
-bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>& path, std::string_view alias)
+bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>& path, std::string_view alias) noexcept
 {
   static bool log = can_log(binder);
 
@@ -278,7 +320,7 @@ bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>&
 
 
   for (auto id : compiler::unresolved.nodes) {
-    const auto* n = id.as<ast::ID_Qualified>();
+    const auto* n = id.as<ast::Symbol_Qualified>();
     if (!n) continue;
 
     if (n->path[0] != alias) continue;
@@ -288,40 +330,18 @@ bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>&
   }
 
   fs::path bind_path = compiler::OPTIONS.dir.get_dir_binding();
+  for (const auto& i : path) bind_path /= i;
+  bind_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+  fs::create_directories(bind_path.parent_path());
 
-  if (path[0] == "C") {
-    static bool once = false;
-    if (!once) {
-      once = true;
+  std::fstream f(bind_path);
 
-      // native C language lib handler
-      auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });
+  auto cu = build_CU_from_path(cu::ID::main(), bind_path.string());
 
-      if (log) {
-        std::cout << "[binder:C] C wrappers generation completed  | " color_YELLOW << duration << " ms" color_RESET
-                  << "\n"; /*endl*/
-      }
+  // // universal ffi json
+  //  auto ast = ffi::JSON_Reader::parse_json_compilation_unit(ffi_path.string());
+  //  ast->velox_codegen(ast->bind.get_file_path());
 
-      fs::path c_path = bind_path / "C";
-      c_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
-      compiler::pipeline.binding_compilation_units_to_prepare.insert(c_path);
-    }
-
-    for (const auto& i : path) bind_path /= i;
-  } else {
-    fs::path ffi_path = compiler::OPTIONS.dir.get_dir_ffi_json();
-    for (const auto& i : path) ffi_path /= i;
-    ffi_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
-    fs::create_directories(ffi_path);
-
-    std::ofstream f(ffi_path);
-
-    auto cu = build_CU_from_path(cu::ID::main(), ffi_path.string());
-
-    // universal ffi json
-    auto ast = ffi::JSON_Reader::parse_json_compilation_unit(ffi_path.string());
-    ast->velox_codegen(ast->bind.get_file_path());
-  }
 
   bind_path = common::fileutils::get_velox_file(bind_path.string());
 
@@ -332,7 +352,7 @@ bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>&
 }
 
 
-size_t pipeline::Pipeline::engage_shipowner()
+size_t pipeline::Pipeline::engage_shipowner() noexcept
 {
   std::unordered_set<cu::ID, cu::ID::Hash>   imported_nodes;
   std::unordered_set<ast::ID, ast::ID::Hash> exported_nodes;
@@ -384,7 +404,7 @@ size_t pipeline::Pipeline::engage_shipowner()
   return true;
 }
 
-bool pipeline::Pipeline::engage_bindings()
+bool pipeline::Pipeline::engage_bindings() noexcept
 {
   for (const auto& bind_path : binding_compilation_units_to_prepare) {
     auto cu = query_CU_at_path(cu::ID::main(), bind_path);
@@ -395,7 +415,7 @@ bool pipeline::Pipeline::engage_bindings()
 }
 
 
-bool pipeline::Pipeline::engage_analyzer(cu::ID cuid)
+bool pipeline::Pipeline::engage_analyzer(cu::ID cuid) noexcept
 {
   static bool log_sym = can_log(resolver_symbol);
   static bool log_ty  = can_log(resolver_type);
@@ -415,98 +435,145 @@ bool pipeline::Pipeline::engage_analyzer(cu::ID cuid)
   auto sym_duration = timing([&]() { sym = pass_resolution_symbol(cuid); });
   if (log_sym) {
     std::cout << "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" | " << sym
-              << " references resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << "\n"; /*endl*/
+              << " references resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << "\n";
   } else if (have_error()) {
     std::cerr << color_RED "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << sym_duration << " ms" color_RESET << "\n"; /*endl*/
+              << sym_duration << " ms" color_RESET << "\n";
     compiler::COMPILER.print_errors();
     return false;
   }
   auto ty_duration = timing([&]() { ty = pass_resolution_inference(cuid); });
   if (log_ty) {
     std::cout << "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" | " << ty
-              << " inferences resolved | " << color_YELLOW << ty_duration << " ms" color_RESET << "\n"; /*endl*/
+              << " inferences resolved | " << color_YELLOW << ty_duration << " ms" color_RESET << "\n";
   } else if (have_error()) {
     std::cerr << color_RED "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << ty_duration << " ms" color_RESET << "\n"; /*endl*/
+              << ty_duration << " ms" color_RESET << "\n";
     compiler::COMPILER.print_errors();
     return false;
   }
   auto sem_duration = timing([&]() { sem = pass_resolution_semantic(cuid); });
   if (log_sem) {
     std::cout << "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" | " << color_YELLOW
-              << sem_duration << " ms" color_RESET << "\n"; /*endl*/
+              << sem_duration << " ms" color_RESET << "\n";
   } else if (have_error()) {
     std::cerr << color_RED "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << sem_duration << " ms" color_RESET << "\n"; /*endl*/
+              << sem_duration << " ms" color_RESET << "\n";
     compiler::COMPILER.print_errors();
     return false;
   }
 
   count++;
 
-  if (sym && ty && sem) analyzed_compilation_units.insert(cuid);
-  return sym && ty && sem;
+  if (!have_error()) analyzed_compilation_units.insert(cuid);
+  return !have_error();
 }
-size_t pipeline::Pipeline::pass_resolution_symbol(cu::ID cuid)
+size_t pipeline::Pipeline::pass_resolution_symbol(cu::ID cuid) noexcept
 {
   resolver::Symbol sym(cuid.get());
   return sym.start_resolver();
 }
-size_t pipeline::Pipeline::pass_resolution_inference(cu::ID cuid)
+size_t pipeline::Pipeline::pass_resolution_inference(cu::ID cuid) noexcept
 {
   resolver::Inference inf(cuid.get());
   return inf.start_resolver();
 }
-size_t pipeline::Pipeline::pass_resolution_semantic(cu::ID cuid)
+size_t pipeline::Pipeline::pass_resolution_semantic(cu::ID cuid) noexcept
 {
   resolver::Semantic sem(cuid.get());
   return sem.start_resolver();
 }
-bool pipeline::Pipeline::engage_generator(cu::ID cuid)
+bool pipeline::Pipeline::engage_generator(cu::ID cuid) noexcept
 {
   bool codegen_success = pass_code_generation(cuid);
 
-  if (codegen_success) {
-    // llvm .ll file emission is before llvm optimization
-    if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::llvm))
-      (void)pass_llvm_emitter(cuid);
-
-    (void)pass_llvm_optimization(cuid);
-
-    // other kind of emission maked after optimization
-    (void)pass_script_emitter(cuid);
+  static bool once = true;
+  if (once) {
+    once = false;
+    generate_target();
   }
+
+  if (!codegen_success) return false;
+
+  // llvm .ll file emission is before llvm optimization
+  if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::llvm))
+    (void)pass_llvm_emitter(cuid);
+
+  if (!pass_llvm_optimization(cuid)) return false;
 
   return true;
 }
 
-bool pipeline::Pipeline::pass_code_generation(cu::ID cuid)
+void pipeline::Pipeline::generate_target() noexcept
 {
-  static bool log = can_log(codegen);
+  // Init backends
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  llvm::InitializeNativeTargetAsmParser();
 
+  std::string target_triple = compiler::OPTIONS.target.triple.dump();
 
-  auto& cu = cuid.get();
+  std::string         err;
+  const llvm::Target* target = llvm::TargetRegistry::lookupTarget(target_triple, err);
+
+  if (!target) {
+    llvm::errs() << err;
+    return;
+  }
+
+  llvm::Reloc::Model reloc;
+  switch (compiler::OPTIONS.target.reloc_model) {
+  case common::compiler::ERelocModel::STATIC:    reloc = llvm::Reloc::Static; break;
+  case common::compiler::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
+  case common::compiler::ERelocModel::PIE:       reloc = llvm::Reloc::DynamicNoPIC; break;
+  case common::compiler::ERelocModel::ROPI:      reloc = llvm::Reloc::ROPI; break;
+  case common::compiler::ERelocModel::RWPI:      reloc = llvm::Reloc::RWPI; break;
+  case common::compiler::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
+  case common::compiler::ERelocModel::DEFAULT:   reloc = llvm::Reloc::PIC_; break;
+  }
+
+  // Init target machine
+  llvm::TargetOptions opt;
+  compiler::TM =
+      target->createTargetMachine(target_triple, compiler::OPTIONS.target.cpu,
+                                  magic_enum::enum_flags_name(compiler::OPTIONS.target.features), opt, reloc);
+}
+
+bool pipeline::Pipeline::pass_code_generation(cu::ID cuid) noexcept
+{
+  static bool              log = can_log(codegen);
+  static llvm::LLVMContext ctx = llvm::LLVMContext();
+
+  static bool once = true;
+  if (once) {
+    once           = false;
+    auto& cu       = cu::ID::main().get();
+    cu.llvm_module = new llvm::Module(compiler::OPTIONS.get_project_name(), ctx);
+  }
+
+  auto& cu       = cuid.get();
+  cu.llvm_module = new llvm::Module(cu.file_info.get_module_path(), ctx);
+
 
   if (compiler::OPTIONS.llvm.args.size() > 0) {
     llvm::cl::ParseCommandLineOptions(int(compiler::OPTIONS.llvm.args.size()), compiler::OPTIONS.llvm.args.data());
   }
 
   auto duration = timing([&]() {
-    resolver::Codegen cg(cu);
-    cg.start_resolver();
+    codegen::Codegen_AST cg(cu, ctx);
+    (void)cg.start_codegen();
   });
 
   static size_t count = 1;
   if (log)
-    std::cout << "[codegen:" << count << "/" << cuid.raw() << "] \"" << cu.file_info.path << "\"" << color_YELLOW
-              << duration << " ms" color_RESET << "\n"; /*endl*/
+    std::cout << "[codegen:" << count << "/" << compiler::pipeline.analyzed_compilation_units.size() << "] \""
+              << cu.file_info.path << "\" | " << color_YELLOW << duration << " ms" color_RESET << "\n";
 
   count++;
 
   return true;
 }
-bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid)
+bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
 {
   static bool log = can_log(emit);
 
@@ -516,14 +583,14 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid)
   try {
     fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
   } catch (const std::runtime_error& e) {
-    std::cerr << "[emit:ERROR] Directory creation failed: " << e.what() << "\n"; /*endl*/
+    std::cerr << "[emit:ERROR] Directory creation failed: " << e.what() << "\n";
     return false;
   }
 
 
   fs::path out_llvm_file(compiler::OPTIONS.dir.get_llvmir_dir());
   fs::create_directories(out_llvm_file);
-  out_llvm_file /= cu.llvm_module->getName().str();
+  out_llvm_file /= cu.file_info.get_file_name();
   out_llvm_file.replace_extension("ll");
 
   std::error_code EC;
@@ -538,68 +605,49 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid)
   }
 
   cu.llvm_module->print(out_f, nullptr);
-  if (log) std::cout << "[emit:llvm:" << count << "] emission of the llvm-ir to " << out_llvm_file << "\n"; /*endl*/
+
+  if (log) std::cout << "[emit:llvm:" << count << "] emission of the llvm-ir to " << out_llvm_file << "\n";
   count++;
 
   return true;
 }
 
-bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const
+bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
 {
   static bool log = can_log(optimization);
-
 
   if (analyzed_compilation_units.empty()) return true;
 
   llvm::Module* mod = cuid.get().llvm_module;
   assert(mod);
 
+  bool success = false;
+
   auto duration = timing([&]() {
-    // Init backends
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-    llvm::InitializeNativeTargetAsmParser();
-
     // Init target
-    std::string target_triple = compiler::OPTIONS.target.get_target_triple();
+    std::string target_triple = compiler::OPTIONS.target.triple.dump();
     mod->setTargetTriple(target_triple);
-
-    std::string         err;
-    const llvm::Target* target = llvm::TargetRegistry::lookupTarget(target_triple, err);
-
-    if (!target) {
-      llvm::errs() << err;
-      return false;
-    }
-
-    llvm::Reloc::Model reloc;
-    switch (compiler::OPTIONS.target.reloc_model) {
-    case common::compiler::ERelocModel::STATIC:    reloc = llvm::Reloc::Static; break;
-    case common::compiler::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
-    case common::compiler::ERelocModel::PIE:       reloc = llvm::Reloc::DynamicNoPIC; break;
-    case common::compiler::ERelocModel::ROPI:      reloc = llvm::Reloc::ROPI; break;
-    case common::compiler::ERelocModel::RWPI:      reloc = llvm::Reloc::RWPI; break;
-    case common::compiler::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
-    case common::compiler::ERelocModel::NONE:      reloc = llvm::Reloc::PIC_; break;
-    }
-
-    // Init target machine
-    llvm::TargetOptions opt;
-    compiler::TM =
-        target->createTargetMachine(target_triple, compiler::OPTIONS.target.cpu,
-                                    magic_enum::enum_flags_name(compiler::OPTIONS.target.features), opt, reloc);
 
     mod->setDataLayout(compiler::TM->createDataLayout());
 
     if (!mod) {
       std::cerr << "[llvm-opti:ERROR] module is nullptr!"
-                << "\n"; /*endl*/
-      return false;
+                << "\n";
+      success = false;
+      return;
     }
 
-    if (compiler::OPTIONS.llvm.verify_module && llvm::verifyModule(*mod, &llvm::errs())) {
-      llvm::errs() << "[llvm-opti:ERROR] Module verification failed";
-      return false;
+    std::string verif_errs;
+    {
+      llvm::raw_string_ostream os(verif_errs);
+      llvm::verifyModule(*mod, &os);
+    } // auto flush
+
+    if (!verif_errs.empty()) {
+      llvm::errs() << "[llvm:ERROR] Module verification failed\n";
+      llvm::errs() << verif_errs << "\n";
+      success = false;
+      return;
     }
 
     llvm::LoopAnalysisManager     LAM;
@@ -618,42 +666,37 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const
     llvm::OptimizationLevel opt_level = llvm::OptimizationLevel::O0;
 
     switch (compiler::OPTIONS.profile.optimization) {
-    case common::compiler::EOptimization::O0:   opt_level = llvm::OptimizationLevel::O0; break;
-    case common::compiler::EOptimization::O1:   opt_level = llvm::OptimizationLevel::O1; break;
-    case common::compiler::EOptimization::O2:   opt_level = llvm::OptimizationLevel::O2; break;
-    case common::compiler::EOptimization::O3:   opt_level = llvm::OptimizationLevel::O3; break;
-    case common::compiler::EOptimization::Os:   opt_level = llvm::OptimizationLevel::Os; break;
-    case common::compiler::EOptimization::Oz:   opt_level = llvm::OptimizationLevel::Oz; break;
-    case common::compiler::EOptimization::NONE: opt_level = llvm::OptimizationLevel::O0; break;
+    case common::compiler::EOptimization::O0:      opt_level = llvm::OptimizationLevel::O0; break;
+    case common::compiler::EOptimization::O1:      opt_level = llvm::OptimizationLevel::O1; break;
+    case common::compiler::EOptimization::O2:      opt_level = llvm::OptimizationLevel::O2; break;
+    case common::compiler::EOptimization::O3:      opt_level = llvm::OptimizationLevel::O3; break;
+    case common::compiler::EOptimization::Os:      opt_level = llvm::OptimizationLevel::Os; break;
+    case common::compiler::EOptimization::Oz:      opt_level = llvm::OptimizationLevel::Oz; break;
+    case common::compiler::EOptimization::DEFAULT: opt_level = llvm::OptimizationLevel::O0; break;
     }
 
     if (mod->empty()) {
       std::cout << "[llvm-opti] Module is empty, stop generation";
-      return true;
+      success = true;
+      return;
     }
 
     llvm::ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(opt_level);
     MPM.addPass(llvm::VerifierPass());
     MPM.run(*mod, MAM);
 
-    if (llvm::verifyModule(*mod, &llvm::errs())) {
-      llvm::errs() << "[llvm-opti:ERROR] Module verification failed!\n";
-      return false;
-    }
-
-    return true;
+    success = true;
+    return;
   });
 
   if (log)
-    std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << duration << " ms\n"
-              << "\n"; /*endl*/
+    std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << duration << " ms\n";
 
-  return true;
+  return success;
 }
-bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const
+bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
 {
   static bool log = can_log(emit);
-
 
   if (compilation_units.empty()) return true;
 
@@ -662,14 +705,15 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const
 
   // Emit object
   if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::obj)) {
+    fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
     std::error_code err_c;
-    fs::path        dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
+    fs::path        dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / cuid.get().file_info.get_file_name();
     dest_path.replace_extension(".o");
 
     llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
 
     if (err_c) {
-      llvm::errs() << "[emitter:ERROR] File error : " << err_c.message();
+      llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
       return false;
     }
 
@@ -677,6 +721,33 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const
     llvm::legacy::PassManager pass;
 
     if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+      llvm::errs() << "[emitter:ERROR] TargetMachine doesn't support obj emit\n";
+      return false;
+    }
+
+    pass.run(*mod);
+    dest.flush();
+
+    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
+  }
+  // Emit object
+  if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::Asm)) {
+    fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
+    std::error_code err_c;
+    fs::path        dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / cuid.get().file_info.get_file_name();
+    dest_path.replace_extension(".o");
+
+    llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
+
+    if (err_c) {
+      llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
+      return false;
+    }
+
+
+    llvm::legacy::PassManager pass;
+
+    if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::AssemblyFile)) {
       llvm::errs() << "[emitter:ERROR] TargetMachine doesn't support obj emit";
       return false;
     }
@@ -684,12 +755,46 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n"; /*endl*/
+    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
   }
 
   return true;
 }
-bool pipeline::Pipeline::engage_module_linker(cu::ID cuid) const
+bool pipeline::Pipeline::engage_general_emitter() noexcept
+{
+  static bool log = can_log(emit);
+
+  auto* mod = cu::ID::main().get().llvm_module;
+  assert(mod);
+
+  fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
+
+  std::error_code err_c;
+  fs::path        dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
+  dest_path.replace_extension(".o");
+
+  llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
+
+  if (err_c) {
+    llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
+    return false;
+  }
+
+
+  llvm::legacy::PassManager pass;
+
+  if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+    llvm::errs() << "[emitter:ERROR] TargetMachine doesn't support obj emit";
+    return false;
+  }
+
+  pass.run(*mod);
+  dest.flush();
+
+  if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
+  return true;
+}
+bool pipeline::Pipeline::engage_module_linker() const noexcept
 {
   static bool log = can_log(linker);
 
@@ -699,13 +804,7 @@ bool pipeline::Pipeline::engage_module_linker(cu::ID cuid) const
   assert(main_mod);
 
   if (!main_mod) {
-    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking."
-              << "\n"; /*endl*/
-    return false;
-  }
-
-  if (llvm::verifyModule(*main_mod, &llvm::errs())) {
-    llvm::errs() << "[linker:ERROR] Module verification failed!\n";
+    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking.\n";
     return false;
   }
 
@@ -720,51 +819,66 @@ bool pipeline::Pipeline::engage_module_linker(cu::ID cuid) const
     if (!cu.llvm_module) continue; // safe
 
 
-    llvm::outs() << "[linker] verify module " << cu.llvm_module->getName() << "\n"
-                 << "  file: \"" << cu.file_info.path << "\"\n";
-    if (llvm::verifyModule(*cu.llvm_module, &llvm::errs())) {
-      llvm::errs() << "[linker:ERROR] Module verification \"" << cu.file_info.path << "\" failed !\n ";
-      return false;
-    }
-
-
-    if (log) std::cout << "[linker] Linking module: " << cu.llvm_module->getModuleIdentifier() << "\n"; /*endl*/
+    if (log) std::cout << "[linker] Linking module: " << cu.llvm_module->getModuleIdentifier() << "\n";
 
     auto module_to_link = std::unique_ptr<llvm::Module>(cu.llvm_module);
     if (llvm::Linker::linkModules(*main_mod, std::move(module_to_link))) {
-      std::cerr << "[linker:ERROR] Link failed on script " << cu.file_info.path << "\n"; /*endl*/
+      std::cerr << "[linker:ERROR] Link failed on script " << cu.file_info.path << "\n";
       failed = true;
     }
   }
 
-  if (failed) return false;
-
-  if (llvm::verifyModule(*main_mod, &llvm::errs())) {
-    llvm::errs() << "[linker:ERROR] Module verification failed!\n";
-    return false;
-  }
-
-  return true;
+  return !failed;
 }
 
-bool pipeline::Pipeline::engage_linker()
+bool pipeline::Pipeline::engage_linker() noexcept
 {
-  std::string extension = compiler::OPTIONS.target.platform == common::env::EPlatform::windows ? ".exe" : "";
+  std::string extension = compiler::OPTIONS.target.triple.platform == common::env::EPlatform::windows ? ".exe" : "";
 
-  fs::path dest_path = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
-  dest_path.replace_extension(".o");
+  fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
+
+  fs::path target_o = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
+  target_o.replace_extension(".o");
   fs::path out_bin = fs::path(compiler::OPTIONS.dir.get_dir_build()) / compiler::OPTIONS.get_project_name();
   out_bin.replace_extension(extension);
 
-  std::string command = "clang \"" + dest_path.string() + "\" -o \"" + out_bin.string() + "\"";
+  auto* main_mod = cu::ID::main().get().llvm_module;
 
-  std::cout << "[linker] Clang linking command:\n  " << command << "\n"; /*endl*/
-  if (auto err_code = system(command.c_str()); err_code != 0) {
-    std::cerr << "[linker:ERROR] Linker failed: system code error " << err_code << "\n"; /*endl*/
+  // const std::vector<std::string> args = {target_o.string(), "-lc", "-o", out_bin.string()};
+  //
+  // std::cout << "[linker] LLD linking command:\n  ld.lld";
+  // for (const auto& arg : args) std::cout << " " << arg;
+  // std::cout << "\n";
+
+  std::ostringstream cmd;
+  cmd << "clang " << target_o << " -o " << out_bin;
+  std::cout << "[linker] clang linking command:\n  " << cmd.str() << "\n";
+
+  // if (auto err_code = llvm::sys::ExecuteAndWait("ld.lld", {target_o.string(), "-lc", "-o", out_bin.string()});
+
+  const std::string mode = (compiler::OPTIONS.profile.debug) ? "debug" : "release";
+
+  if (auto err_code = std::system(cmd.str().c_str()); err_code != 0) {
+    if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
+      std::cerr << "@@VELOX_EXORDIUM_RESULTATI@@\n";
+      std::cerr << "{success:false,executable:\"\",mode:";
+      std::cerr << mode << "}\n";
+      std::cerr << "@@VELOX_CLAUSULA_RESULTATI@@\n";
+    } else {
+      std::cerr << "[linker:ERROR] Linker failed: system code error " << err_code << "\n";
+    }
     return false;
   }
 
-  std::cout << "[linker] Executable created at " << out_bin << "\n"; /*endl*/
+  if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
+    std::cout << "@@VELOX_EXORDIUM_RESULTATI@@\n";
+    std::cout << "{success:true,executable:";
+    std::cout << out_bin << ",mode:";
+    std::cout << mode << "}\n";
+    std::cout << "@@VELOX_CLAUSULA_RESULTATI@@\n";
+  } else {
+    std::cout << "[linker] Executable created at " << out_bin << "\n";
+  }
   return true;
 }
 

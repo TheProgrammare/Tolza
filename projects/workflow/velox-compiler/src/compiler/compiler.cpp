@@ -1,7 +1,9 @@
 #include "compiler.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <ostream>
 #include <string>
@@ -15,13 +17,14 @@
 #include <common/common.hpp>
 
 #include "binder/ffi_c_reader.hpp"
+#include "codegen/codegen_type.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/module.hpp"
 #include "nexus/scope.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/type/type.hpp"
-#include "nexus/symbol.hpp"
+#include "nexus/definition.hpp"
 #include "nexus/inference.hpp"
 #include "nexus/unresolved.hpp"
 #include "nexus/resolved.hpp"
@@ -38,10 +41,11 @@ inference::Arena  compiler::inference  = inference::Arena();
 
 
 compiler::Compiler        compiler::COMPILER = compiler::Compiler();
-common::compiler::Options compiler::OPTIONS;
-llvm::LLVMContext         compiler::LLVM_CTX;
+common::compiler::Options compiler::OPTIONS  = common::compiler::Options();
 
 const std::string common::SOFTWARE_NAME = "velox-compiler";
+
+namespace fs = std::filesystem;
 
 
 constexpr std::string_view pipeline_info =
@@ -64,9 +68,7 @@ constexpr std::string_view binder_info = "%0 files + %1 binding files = %2 total
 
 void compiler::Compiler::add_error(const Error_Diagnostic& error)
 {
-  auto it = std::ranges::find_if(errors, [&](std::pair<cu::ID, std::vector<Error_Diagnostic>>& elem) -> bool {
-    return elem.first == error.elem_first.cuid;
-  });
+  auto it = std::ranges::find_if(errors, [&](const auto& elem) -> bool { return elem.first == error.elem_first.cuid; });
 
   if (it != errors.end()) {
     auto& vec = it->second;
@@ -76,7 +78,10 @@ void compiler::Compiler::add_error(const Error_Diagnostic& error)
   }
 
   print_errors();
-  std::abort();
+
+  if (compiler::OPTIONS.diagnostic.error_mode == common::compiler::EErrorMode::fail_fatal) {
+    std::exit(1);
+  }
 }
 
 
@@ -86,43 +91,41 @@ compiler::Compiler::Compiler()
   type::initialization();
 }
 
-
 bool compiler::Compiler::start_compilation()
 {
   static const bool mute = compiler::OPTIONS.mute;
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (!compiler::OPTIONS.dir.current_config_file.empty() && !mute) {
+  if (compiler::OPTIONS.dir.current_config_file.empty() && !mute) {
     std::cout << "\n[build:warning] Raw compilation command detected, "
                  "please use 'velox-toolchain' to develop proprely with the Velox programming language.\n"
-              << "\n"; /*endl*/
+              << "\n";
+  }
+
+  {
+    auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C.vlx";
+    /*if (!fs::exists(p)) */ (void)pipeline.generate_libc_wrappers();
   }
 
   if (!mute) {
-    std::cout << "[velox-compiler] Compilation Started" << pipeline_info << "\n"; /*endl*/
-    std::cout << "  Config file used: \"" << compiler::OPTIONS.dir.current_config_file << "\""
-              << "\n"; /*endl*/
+    std::cout << "\n[velox-compiler] Compilation Started\n";
+    std::cout << "  Config file used: \"" << compiler::OPTIONS.dir.current_config_file << "\"\n";
   }
 
   // filesystem
-  std::filesystem::path target_dir = compiler::OPTIONS.dir.get_dir_source();
-  auto                  CUs        = compiler::pipeline.query_CUs_at_dir(cu::ID::main(), target_dir.string());
+  fs::path target_dir = compiler::OPTIONS.dir.get_dir_source();
+  auto     CUs        = compiler::pipeline.query_CUs_at_dir(cu::ID::main(), target_dir.string());
 
   if (CUs.empty()) {
     if (!mute) {
       std::cout << "[build] No files found at the source folder path:\n  " << target_dir << "\n";
       std::cout << "  Check if the source folder path is correct.\n";
       std::cout << "  Or start your project by creating your first script in the source folder path.";
-      std::cout << "\n"; /*endl*/
+      std::cout << "\n";
     }
     return false;
   }
-
-
-  auto end = std::chrono::high_resolution_clock::now();
-  actual_duration += std::chrono::duration<double, std::milli>(end - start).count();
-
 
   while (!compiler::pipeline.unprepared_compilation_units.empty()) {
     for (auto cuid : compiler::pipeline.unprepared_compilation_units) (void)compiler::pipeline.engage_preparer(cuid);
@@ -131,7 +134,7 @@ bool compiler::Compiler::start_compilation()
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
     for (const auto& [cuid, errs] : errors) {
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
-      for (const auto& err : errs) std::cout << err.print_error();
+      for (const auto& err : errs) std::cout << err.print_userfriendly_error();
     }
 
     if (compiler::pipeline.unprepared_compilation_units.empty()) {
@@ -149,23 +152,69 @@ bool compiler::Compiler::start_compilation()
 
   for (auto cuid : compiler::pipeline.prepared_compilation_units) (void)compiler::pipeline.engage_analyzer(cuid);
 
-  for (auto cuid : compiler::pipeline.analyzed_compilation_units) (void)compiler::pipeline.engage_generator(cuid);
-
-  // if all compilation_units are analyzed without any errors
-  if (compiler::pipeline.analyzed_compilation_units.size() == compiler::pipeline.compilation_units.size()) {
-    (void)compiler::pipeline.engage_module_linker(cu::ID::main());
+  bool success = true;
+  for (auto cuid : compiler::pipeline.analyzed_compilation_units) {
+    if (!compiler::pipeline.engage_generator(cuid)) success = false;
   }
 
-  (void)pipeline::Pipeline::engage_linker();
+  if (!success) {
+    auto end   = std::chrono::high_resolution_clock::now();
+    auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-  return true;
+    std::cout << "[velox-compiler] Compilation failed " color_YELLOW << milli << " ms" color_RESET "\n";
+    return false;
+  }
+
+  // no building or code emission in check mode
+  if (compiler::OPTIONS.is_check_mode) return true;
+
+  if (!compiler::pipeline.engage_module_linker()) {
+    return false;
+  }
+
+  fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
+  fs::create_directories(compiler::OPTIONS.dir.get_debug_graph_dir());
+  fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
+  fs::create_directories(compiler::OPTIONS.dir.get_preprocess_dir());
+
+  if (!pipeline::Pipeline::engage_general_emitter()) {
+    return false;
+  }
+
+  if (!pipeline::Pipeline::engage_linker()) {
+    return false;
+  }
+
+  auto end   = std::chrono::high_resolution_clock::now();
+  auto milli = std::chrono::duration<double, std::milli>(end - start).count();
+
+  std::cout << "[velox-compiler] Compilation successfully ended " color_YELLOW << milli << " ms" color_RESET "\n";
+
+  return success;
 }
 
 void compiler::Compiler::print_errors() const
 {
+  if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
+    std::cerr << "@@VELOX_EXORDIUM_DIAGNOSTICORUM@@\n[\n";
+
+  const auto last_cuid = errors.back().first;
   for (const auto& [cuid, errs] : errors) {
-    for (const auto& err : errs) std::cerr << err.print_error() << "\n"; /*endl*/
+
+    for (size_t i = 0; i < errs.size(); i++) {
+      const auto err = errs[i];
+      std::cerr << err.print_error();
+      if (i != errs.size() - 1)
+        std::cerr << ",\n";
+      else
+        std::cerr << "\n";
+    }
+
+    if (last_cuid != cuid) std::cerr << ",\n";
   }
+
+  if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
+    std::cerr << "]\n@@VELOX_CLAUSULA_DIAGNOSTICORUM@@";
 }
 
 

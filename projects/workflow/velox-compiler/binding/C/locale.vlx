@@ -1,0 +1,46 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-13 20:37:54
+ * 
+ * Source Language         : C
+ * Source Library          : locale
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type lconv = opaque
+type locale_t = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn setlocale(copy __category: s32, ref __locale: cstr) -> ptr'cune;
+fn localeconv() -> ptr'lconv;
+fn newlocale(copy __category_mask: s32, ref __locale: cstr, copy __base: locale_t) -> locale_t;
+fn duplocale(copy __dataset: locale_t) -> locale_t;
+fn freelocale(copy __dataset: locale_t) -> u0;
+fn uselocale(copy __dataset: locale_t) -> locale_t;
+
+} // extern
+
+} // export

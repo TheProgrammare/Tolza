@@ -13,15 +13,15 @@ struct Arena final {
   std::unordered_set<ast::ID, ast::ID::Hash> nodes;
   bool                                       sorted = false;
 
-  void add(ast::ID n) noexcept
+  void add(ast::ID nodeid) noexcept
   {
-    nodes.insert(n);
+    nodes.insert(nodeid);
     sorted = false;
   }
 
-  [[nodiscard]] bool is_unresolved(ast::ID n) const noexcept
+  [[nodiscard]] bool is_unresolved(ast::ID nodeid) const noexcept
   {
-    return nodes.contains(n);
+    return nodes.contains(nodeid);
   }
 };
 

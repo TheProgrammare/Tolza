@@ -5,6 +5,8 @@
 #include <string_view>
 
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "nexus/ids.hpp"
 #include "resolver_base.hpp"
 
@@ -29,24 +31,32 @@ struct Symbol final : Base {
   ast::ID current_rule;
   ast::ID current_lambda;
 
-  void resolve_node(ast::Node& node);
-  void resolve_node(ast::ID nodeid);
+  void resolve_node(ast::Node& node) noexcept;
+  void resolve_node(ast::ID nodeid) noexcept;
 
   // returns the symbol id definition
-  [[nodiscard]] symbol::ID resolve_id_sym(scope::ID ctx, const ast::Node& n, std::string_view id,
-                                          bool is_silent_error = false);
+  [[nodiscard]] definition::ID resolve_id_sym(scope::ID ctx, const ast::Node& n, std::string_view id,
+                                              bool is_silent_error = false) noexcept;
   // returns the symbol id definition
-  [[nodiscard]] symbol::ID resolve_path_sym(module::ID ctx, const ast::Node& n, std::string_view id,
-                                            const std::vector<std::string>& path, EPathAnchor anchor,
-                                            bool is_silent_error = false);
+  [[nodiscard]] definition::ID resolve_path_sym(module::ID ctx, const ast::Node& n, std::string_view id,
+                                                const std::vector<std::string>& path, EPathAnchor anchor,
+                                                bool is_silent_error = false) noexcept;
 
-  [[nodiscard]] size_t start_resolver();
+  void add_resolution(ast::Node& n, definition::ID defid) noexcept;
 
-  void resolve_Identifier(ast::Identifier& n);
-  void resolve_ID_Qualified(ast::ID_Qualified& n);
-  void resolve_ID_Typed(ast::ID_Typed& n);
-  void resolve_Expression_Call(ast::Expression_Call& n);
-  void resolve_Statement_GoTo(ast::Statement_GoTo& n);
+  [[nodiscard]] size_t start_resolver() noexcept;
+  void                 ensure_types_symbols() noexcept;
+
+  void resolve_Symbol_Id(ast::Symbol_Id& n) noexcept;
+  void resolve_Symbol_Qualified(ast::Symbol_Qualified& n) noexcept;
+  void resolve_Symbol_Type(ast::Symbol_Type& n) noexcept;
+  void resolve_Global_Function(ast::Global_Function& n) noexcept;
+  void resolve_Global_Extend_Fn(ast::Global_Extend_Fn& n) noexcept;
+  void resolve_SFM_Rule(ast::SFM_Rule& n) noexcept;
+  void resolve_Local_Lambda(ast::Local_Lambda& n) noexcept;
+  void resolve_Expression_Invocation(ast::Expression_Invocation& n) noexcept;
+  void resolve_Statement_GoTo(ast::Statement_GoTo& n) noexcept;
+  void resolve_Literal_Record(ast::Literal_Record& n) noexcept;
 };
 
 constexpr std::string_view SYM_HINT =

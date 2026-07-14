@@ -19,58 +19,70 @@
 
 #include <cstdint>
 #include <expected>
-#include <llvm/ADT/APFloat.h>
-#include <llvm/ADT/APInt.h>
+#include <llvm/IR/IRBuilder.h>
+
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "nexus/forward.hpp"
 #include "nexus/ast/forward.hpp"
+#include "codegen/llvm_forward.hpp"
 
-namespace resolver
+
+namespace codegen
 {
-struct Codegen;
-}
 
-namespace llvm
-{
-struct Value;
-struct Constant;
-struct Type;
-struct StructType;
-} // namespace llvm
+struct Codegen_AST;
 
-class LLVM_Tools
-{
-public:
-  LLVM_Tools(resolver::Codegen& _v)
-    : v(_v)
-  {
-  }
-  resolver::Codegen& v;
+struct Tools {
+  Tools(codegen::Codegen_AST& p_res);
+  codegen::Codegen_AST& res;
 
-  /*
-  llvm::Value* engage_move_semantic(ast::Node& p_target);
-  llvm::Value* engage_copy_semantic(ast::Node& p_target);
-
-  std::expected<symbol::ID, std::string> find_symbol(ast::Node& p_expr);
-  std::expected<ast::ID, std::string>      get_symbol_expression(symbol::ID p_symbol);
-  std::expected<llvm::Constant*, std::string>    create_constant(ast::Node& p_value);
-  llvm::Type*                                    generate_parameter_type(ast::Local_Parameter& p_param);
-  llvm::Type*                                    get_primtive_type(type::EPrimitiveTypeKind p_ty);
+  llvm::LLVMContext& ctx;
+  llvm::IRBuilder<>& builder;
+  llvm::Module*      mod;
 
 
-  llvm::Constant* get_cstr_constant(std::string_view val);
-  llvm::Constant* get_str_constant(std::string_view val);
-  llvm::Constant* get_text_constant(const std::u32string& val);
-  llvm::Constant* get_int_constant(size_t bits_size, int64_t int_val, std::string_view str_val = "",
-                                   bool is_signed = true, size_t radix = 10);
-  llvm::Constant* get_float_constant(size_t bits_size, double double_val, std::string_view str_val = "");
+  [[nodiscard]] llvm::Value* engage_move_semantic(ast::ID p_target) noexcept;
+  [[nodiscard]] llvm::Value* engage_copy_semantic(ast::ID p_target) noexcept;
 
-  llvm::Constant* get_primtive_zeroinitializer(type::EPrimitiveTypeKind ty);
-  llvm::Constant* get_zeroinitializer(type::ID ty);
+  [[nodiscard]] std::expected<definition::ID, std::string>  find_definition(ast::ID expr_id) noexcept;
+  [[nodiscard]] std::expected<ast::ID, std::string>         get_definition_expression(definition::ID defid) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> create_constant(ast::ID lit_id) noexcept;
 
 
-  std::u32string utf8_to_utf32(std::string_view s);
-  llvm::Value*   primitive_coerce(llvm::Value* p_val, llvm::Type* p_src, llvm::Type* p_dst);
-  */
+  [[nodiscard]] llvm::Constant* get_cstr_constant(std::string_view val) noexcept;
+  [[nodiscard]] llvm::Constant* get_str_constant(std::string_view val) noexcept;
+  [[nodiscard]] llvm::Constant* get_text_constant(const std::u32string& val) noexcept;
+  [[nodiscard]] llvm::Constant* get_int_constant(size_t bits_size, int64_t int_val, std::string_view str_val = "",
+                                                 bool is_signed = true, size_t radix = 10) noexcept;
+  [[nodiscard]] llvm::Constant* get_float_constant(size_t bits_size, double double_val,
+                                                   std::string_view str_val = "") noexcept;
+
+  [[nodiscard]] llvm::Constant* get_text_zeroinit(type::ETextType ty) noexcept;
+  [[nodiscard]] llvm::Constant* get_primtive_zeroinit(type::EPrimitiveTypeKind ty) noexcept;
+  [[nodiscard]] llvm::Constant* get_zeroinitializer(type::ID ty) noexcept;
+
+
+  [[nodiscard]] std::u32string utf8_to_utf32(std::string_view s) noexcept;
+  [[nodiscard]] llvm::Value*   primitive_coerce(llvm::Value* p_val, llvm::Type* p_src, llvm::Type* p_dst) noexcept;
+
+  [[nodiscard]] llvm::Value* codegen_explicit_cast(ast::ID from, type::ID to) const noexcept;
+
+  [[nodiscard]] llvm::Value* make_uninit(llvm::Type* ty, llvm::Value* val = nullptr) const noexcept;
+  [[nodiscard]] llvm::Value* make_zeroinit(llvm::Type* ty) const noexcept;
+  [[nodiscard]] llvm::Value* make_struct(llvm::Type* ty, std::vector<llvm::Value*> fields) const noexcept;
+  [[nodiscard]] llvm::Value* builtin_c_strlen(llvm::Value* in) const noexcept;
+
+  // returns start, length, end included
+  [[nodiscard]] std::tuple<llvm::Value*, llvm::Value*, bool> get_span(ast::ID nodeid) const noexcept;
+  [[nodiscard]] llvm::Value*    codegen_unary_op(ast::ID term, ast::EOp_Unary unary_op) const noexcept;
+  [[nodiscard]] llvm::Value*    codegen_binary_op(ast::ID left, ast::ID right, ast::EOp_Bin op_ty) const noexcept;
+  [[nodiscard]] llvm::Constant* init_global_array(const type::Array& ty, llvm::ConstantArray* default_val,
+                                                  bool is_uninit, bool is_const) const noexcept;
+  [[nodiscard]] llvm::Value*    init_array(const type::Array& ty, llvm::ConstantArray* default_val,
+                                           bool is_uninit) const noexcept;
 };
+
+} // namespace codegen

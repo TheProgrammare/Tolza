@@ -1,0 +1,139 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-14 02:31:47
+ * 
+ * Source Language         : C
+ * Source Library          : stdio
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type FILE = opaque
+type cookie_io_functions_t = opaque
+type size_t = u64
+type __va_list_tag = opaque
+type __gnuc_va_list = opaque
+type __ssize_t = s64
+type __off_t = s64
+type fpos_t = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Global Block
+ * ----------------------------------------------------------------------------
+ */
+var stdin: ptr'FILE
+var stdout: ptr'FILE
+var stderr: ptr'FILE
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn remove(ref __filename: cstr) -> s32;
+fn rename(ref __old: cstr, ref __new: cstr) -> s32;
+fn renameat(copy __oldfd: s32, ref __old: cstr, copy __newfd: s32, ref __new: cstr) -> s32;
+fn fclose(mut __stream: FILE) -> s32;
+fn tmpfile() -> ptr'FILE;
+fn tmpnam(copy __param_a: [cune; c]) -> ptr'cune;
+fn tmpnam_r(copy __s: [cune; c]) -> ptr'cune;
+fn tempnam(ref __dir: cstr, ref __pfx: cstr) -> ptr'cune;
+fn fflush(mut __stream: FILE) -> s32;
+fn fflush_unlocked(mut __stream: FILE) -> s32;
+fn fopen(ref __filename: cstr, ref __modes: cstr) -> ptr'FILE;
+fn freopen(ref __filename: cstr, ref __modes: cstr, mut __stream: FILE) -> ptr'FILE;
+fn fdopen(copy __fd: s32, ref __modes: cstr) -> ptr'FILE;
+fn fopencookie(mut __magic_cookie: u0, ref __modes: cstr, copy __io_funcs: cookie_io_functions_t) -> ptr'FILE;
+fn fmemopen(mut __s: u0, copy __len: size_t, ref __modes: cstr) -> ptr'FILE;
+fn open_memstream(addr __bufloc: ptr'cune, mut __sizeloc: size_t) -> ptr'FILE;
+fn setbuf(mut __stream: FILE, mut __buf: cune) -> u0;
+fn setvbuf(mut __stream: FILE, mut __buf: cune, copy __modes: s32, copy __n: size_t) -> s32;
+fn setbuffer(mut __stream: FILE, mut __buf: cune, copy __size: size_t) -> u0;
+fn setlinebuf(mut __stream: FILE) -> u0;
+fn fprintf(mut __stream: FILE, ref __format: cstr, ...) -> s32;
+fn printf(ref __format: cstr, ...) -> s32;
+fn sprintf(mut __s: cune, ref __format: cstr, ...) -> s32;
+fn vfprintf(mut __s: FILE, ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn vprintf(ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn vsprintf(mut __s: cune, ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn snprintf(mut __s: cune, copy __maxlen: u64, ref __format: cstr, ...) -> s32;
+fn vsnprintf(mut __s: cune, copy __maxlen: u64, ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn vasprintf(addr __ptr: ptr'cune, ref __f: cstr, copy __arg: __gnuc_va_list) -> s32;
+fn asprintf(addr __ptr: ptr'cune, ref __fmt: cstr, ...) -> s32;
+fn vdprintf(copy __fd: s32, ref __fmt: cstr, copy __arg: __gnuc_va_list) -> s32;
+fn dprintf(copy __fd: s32, ref __fmt: cstr, ...) -> s32;
+fn fscanf(mut __stream: FILE, ref __format: cstr, ...) -> s32;
+fn scanf(ref __format: cstr, ...) -> s32;
+fn sscanf(ref __s: cstr, ref __format: cstr, ...) -> s32;
+fn vfscanf(mut __s: FILE, ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn vscanf(ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn vsscanf(ref __s: cstr, ref __format: cstr, copy __arg: __va_list_tag) -> s32;
+fn fgetc(mut __stream: FILE) -> s32;
+fn getc(mut __stream: FILE) -> s32;
+fn getchar() -> s32;
+fn getc_unlocked(mut __stream: FILE) -> s32;
+fn getchar_unlocked() -> s32;
+fn fgetc_unlocked(mut __stream: FILE) -> s32;
+fn fputc(copy __c: s32, mut __stream: FILE) -> s32;
+fn putc(copy __c: s32, mut __stream: FILE) -> s32;
+fn putchar(copy __c: s32) -> s32;
+fn fputc_unlocked(copy __c: s32, mut __stream: FILE) -> s32;
+fn putc_unlocked(copy __c: s32, mut __stream: FILE) -> s32;
+fn putchar_unlocked(copy __c: s32) -> s32;
+fn getw(mut __stream: FILE) -> s32;
+fn putw(copy __w: s32, mut __stream: FILE) -> s32;
+fn fgets(mut __s: cune, copy __n: s32, mut __stream: FILE) -> ptr'cune;
+fn getdelim(addr __lineptr: ptr'cune, mut __n: size_t, copy __delimiter: s32, mut __stream: FILE) -> __ssize_t;
+fn getline(addr __lineptr: ptr'cune, mut __n: size_t, mut __stream: FILE) -> __ssize_t;
+fn fputs(ref __s: cstr, mut __stream: FILE) -> s32;
+fn puts(ref __s: cstr) -> s32;
+fn ungetc(copy __c: s32, mut __stream: FILE) -> s32;
+fn fread(mut __ptr: u0, copy __size: u64, copy __n: u64, mut __stream: FILE) -> u64;
+fn fwrite(ref __ptr: u0, copy __size: u64, copy __n: u64, mut __s: FILE) -> u64;
+fn fread_unlocked(mut __ptr: u0, copy __size: size_t, copy __n: size_t, mut __stream: FILE) -> size_t;
+fn fwrite_unlocked(ref __ptr: u0, copy __size: size_t, copy __n: size_t, mut __stream: FILE) -> size_t;
+fn fseek(mut __stream: FILE, copy __off: s64, copy __whence: s32) -> s32;
+fn ftell(mut __stream: FILE) -> s64;
+fn rewind(mut __stream: FILE) -> u0;
+fn fseeko(mut __stream: FILE, copy __off: __off_t, copy __whence: s32) -> s32;
+fn ftello(mut __stream: FILE) -> __off_t;
+fn fgetpos(mut __stream: FILE, mut __pos: fpos_t) -> s32;
+fn fsetpos(mut __stream: FILE, ref __pos: fpos_t) -> s32;
+fn clearerr(mut __stream: FILE) -> u0;
+fn feof(mut __stream: FILE) -> s32;
+fn ferror(mut __stream: FILE) -> s32;
+fn clearerr_unlocked(mut __stream: FILE) -> u0;
+fn feof_unlocked(mut __stream: FILE) -> s32;
+fn ferror_unlocked(mut __stream: FILE) -> s32;
+fn perror(ref __s: cstr) -> u0;
+fn fileno(mut __stream: FILE) -> s32;
+fn fileno_unlocked(mut __stream: FILE) -> s32;
+fn pclose(mut __stream: FILE) -> s32;
+fn popen(ref __command: cstr, ref __modes: cstr) -> ptr'FILE;
+fn ctermid(mut __s: cune) -> ptr'cune;
+fn flockfile(mut __stream: FILE) -> u0;
+fn ftrylockfile(mut __stream: FILE) -> s32;
+fn funlockfile(mut __stream: FILE) -> u0;
+
+} // extern
+
+} // export

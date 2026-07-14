@@ -128,9 +128,12 @@ AST_NODE(Global_Variable)
   EVisibility visibility = EVisibility::File_Scope;
 
   SET_TYPE(type);
-  ETransfertType assignment = ETransfertType::MoveSemantic; // assign type
-  SET_NODE(expression);                                     // affectation
-  EVariableKind kind = EVariableKind::Const;
+  ETransfertType assignment = ETransfertType::move; // assign type
+  SET_NODE(expression);                             // affectation
+  EVariableKind kind      = EVariableKind::_const;
+  bool          is_uninit = false;
+
+  std::string extern_abi;
 };
 
 } // namespace ast

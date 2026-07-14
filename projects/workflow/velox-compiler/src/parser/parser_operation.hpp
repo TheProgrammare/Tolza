@@ -35,8 +35,8 @@ private:
   [[nodiscard]] ast::ID _1_memory();
   [[nodiscard]] ast::ID _0_unary();
 
-  [[nodiscard]] ast::ID Create_BinOp(ast::ID p_left, ast::EBinOpType p_op, ast::ID p_right);
-  [[nodiscard]] ast::ID Create_UnOp(ast::EUnaryOpType p_op, ast::ID p_base);
+  [[nodiscard]] ast::ID Create_BinOp(ast::ID p_left, ast::EOp_Bin p_op, ast::ID p_right);
+  [[nodiscard]] ast::ID Create_UnOp(ast::EOp_Unary p_op, ast::ID p_base);
 
   Parser_Context& p;
 };

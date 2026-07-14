@@ -5,7 +5,6 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 
@@ -19,8 +18,8 @@ namespace module
 struct Module;
 struct Graph;
 
-using Mod_Path  = std::vector<std::string>;
-using Reexp_Ref = std::pair<module::ID, ast::ID>;
+using ModPath  = std::vector<std::string>;
+using ReexpRef = std::pair<module::ID, ast::ID>;
 
 
 enum class EModuleKind : uint8_t { Inline, File, Generated, System };
@@ -34,12 +33,12 @@ struct Module final {
 
     // node is Reexport
     // alias, <module, node>
-    StringMap<std::set<Reexp_Ref>> reexported_module;
+    StringMap<std::set<ReexpRef>> reexported_module;
 
-    void               export_item(ast::ID n) noexcept;
-    [[nodiscard]] bool reexport_item(module::ID m, ast::ID n) noexcept;
+    void               export_item(ast::ID nodeid) noexcept;
+    [[nodiscard]] bool reexport_item(module::ID modid, ast::ID nodeid) noexcept;
 
-    [[nodiscard]] const std::set<Reexp_Ref>& find_reexport(std::string_view alias) const noexcept;
+    [[nodiscard]] const std::set<ReexpRef>& find_reexport(std::string_view alias) const noexcept;
   };
 
   // generate module
@@ -88,15 +87,15 @@ struct Graph final {
   }
 
 
-  [[nodiscard]] Module& get(ID id) noexcept
+  [[nodiscard]] Module& get(ID modid) noexcept
   {
-    assert(id.offset() < modules.size());
-    return modules[id.offset()];
+    assert(modid.offset() < modules.size());
+    return modules[modid.offset()];
   }
-  [[nodiscard]] const Module& get(ID id) const noexcept
+  [[nodiscard]] const Module& get(ID modid) const noexcept
   {
-    assert(id.offset() < modules.size());
-    return modules[id.offset()];
+    assert(modid.offset() < modules.size());
+    return modules[modid.offset()];
   }
 
   [[nodiscard]] ID add(ID p_parent, Module modid) noexcept
@@ -135,19 +134,19 @@ struct Graph final {
                                         cu::EFileSource p_file_source, std::string& str_err) noexcept;
 
 
-[[nodiscard]] ID                        resolve_anchor(ID ctx, EPathAnchor anchor) noexcept;
-[[nodiscard]] ID                        resolve_from_children(ID ctx, const Mod_Path& path, size_t index) noexcept;
-[[nodiscard]] ID                        resolve_from_import(ID ctx, const Mod_Path& path, size_t index) noexcept;
-[[nodiscard]] ID                        resolve_from_reexport(ID ctx, const Mod_Path& path, size_t index) noexcept;
-[[nodiscard]] std::pair<ID, symbol::ID> resolve_symbol_from_children(ID ctx, const Mod_Path& path, size_t index,
-                                                                     std::string_view sym) noexcept;
-[[nodiscard]] std::pair<ID, symbol::ID> resolve_symbol_from_import(ID ctx, const Mod_Path& path, size_t index,
-                                                                   std::string_view sym) noexcept;
-[[nodiscard]] std::pair<ID, symbol::ID> resolve_symbol_from_reexport(ID ctx, const Mod_Path& path, size_t index,
-                                                                     std::string_view sym) noexcept;
-[[nodiscard]] ID                        resolve_module_path(ID ctx, const Mod_Path& path, EPathAnchor anchor) noexcept;
-[[nodiscard]] symbol::ID                resolve_path_symbol(ID ctx, const Mod_Path& path, EPathAnchor anchor,
-                                                            std::string_view sym_name) noexcept;
+[[nodiscard]] ID                            resolve_anchor(ID ctx, EPathAnchor anchor) noexcept;
+[[nodiscard]] ID                            resolve_from_children(ID ctx, const ModPath& path, size_t index) noexcept;
+[[nodiscard]] ID                            resolve_from_import(ID ctx, const ModPath& path, size_t index) noexcept;
+[[nodiscard]] ID                            resolve_from_reexport(ID ctx, const ModPath& path, size_t index) noexcept;
+[[nodiscard]] std::pair<ID, definition::ID> resolve_definition_from_children(ID ctx, const ModPath& path, size_t index,
+                                                                             std::string_view sym) noexcept;
+[[nodiscard]] std::pair<ID, definition::ID> resolve_definition_from_import(ID ctx, const ModPath& path, size_t index,
+                                                                           std::string_view sym) noexcept;
+[[nodiscard]] std::pair<ID, definition::ID> resolve_definition_from_reexport(ID ctx, const ModPath& path, size_t index,
+                                                                             std::string_view sym) noexcept;
+[[nodiscard]] ID             resolve_module_path(ID ctx, const ModPath& path, EPathAnchor anchor) noexcept;
+[[nodiscard]] definition::ID resolve_path_symbol(ID ctx, const ModPath& path, EPathAnchor anchor,
+                                                 std::string_view sym_name) noexcept;
 
 
 void initialization();

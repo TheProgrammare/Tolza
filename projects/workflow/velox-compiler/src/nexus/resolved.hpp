@@ -1,42 +1,31 @@
 #pragma once
 
 #include "nexus/forward.hpp"
+#include <unordered_map>
 
 
 namespace resolved
 {
-struct Binding final {
-  ast::ID    node;
-  symbol::ID sym;
-
-  auto operator<=>(const Binding& other) const noexcept
-  {
-    return sym <=> other.sym;
-  }
-};
 
 struct Arena final {
 
   bool freeze = false;
 
-  std::vector<Binding> bindings;
-  bool                 sorted = false;
+  std::unordered_map<ast::ID, definition::ID, ast::ID::Hash> bindings;
 
-  void add(ast::ID n, symbol::ID sym)
+  void add(ast::ID nodeid, definition::ID defid) noexcept
   {
     assert(!freeze && "Pool is immutable after symbol resolution");
 
-    bindings.emplace_back(Binding{.node = n, .sym = sym});
-    sorted = false;
+    bindings.emplace(nodeid, defid);
   }
 
-  void finalize();
 
-  [[nodiscard]] symbol::ID get_symbol(ast::ID n);
+  [[nodiscard]] definition::ID get_definition(ast::ID nodeid) noexcept;
 
-  [[nodiscard]] bool is_resolved(ast::ID n)
+  [[nodiscard]] bool is_resolved(ast::ID nodeid) const noexcept
   {
-    return bool(get_symbol(n));
+    return bindings.contains(nodeid);
   }
 };
 

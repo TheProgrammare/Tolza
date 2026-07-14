@@ -9,6 +9,7 @@
 #include <limits>
 #include <string_view>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 
@@ -54,7 +55,7 @@ namespace scope
 class ID;
 }
 
-namespace symbol
+namespace definition
 {
 class ID;
 }
@@ -159,6 +160,12 @@ struct is_allowed_id_type<uint64_t> : std::true_type {
         return std::hash<uint64_t>{}(x.raw());                                                                         \
       }                                                                                                                \
     };                                                                                                                 \
+    struct Compare {                                                                                                   \
+      bool operator()(const ID& a, const ID& b) const                                                                  \
+      {                                                                                                                \
+        return a.raw() < b.raw();                                                                                      \
+      }                                                                                                                \
+    };                                                                                                                 \
                                                                                                                        \
   private:                                                                                                             \
     uint64_t id = std::numeric_limits<uint64_t>::max();                                                                \
@@ -223,25 +230,39 @@ DEF_ID(
 namespace ast
 {
 
+enum class ENodeKind : uint8_t;
 struct Node;
 
 // node identifier
 DEF_COMPOSIT_ID(ID,
 
                 public :
+                // get real node
+                [[nodiscard]] ast::ID        canonical() const noexcept;
                 // get node token reference
-                [[nodiscard]] token::ID  token() const noexcept;
+                [[nodiscard]] ast::ENodeKind kind() const noexcept;
+                // get node token reference
+                [[nodiscard]] token::ID      token() const noexcept;
                 // node corresponding type if type declaration or infered type if expression
                 // return NO_ID(-1) if no type applicable
-                [[nodiscard]] type::ID   type() const noexcept;
+                [[nodiscard]] type::ID       type() const noexcept;
                 // check if node inferred
-                [[nodiscard]] bool       is_inferred() const noexcept;
-                // symbolic representation of the node only if it's a declaration
-                [[nodiscard]] symbol::ID symbol() const noexcept;
+                [[nodiscard]] bool           is_inferred() const noexcept;
+                // definitionic representation of the node only if it's a declaration
+                [[nodiscard]] definition::ID def() const noexcept;
+                // check if node resolved
+                [[nodiscard]] bool           is_resolved() const noexcept;
                 // scope node owner
-                [[nodiscard]] scope::ID  scope() const noexcept;
+                [[nodiscard]] scope::ID      scope() const noexcept;
                 // module node owner
-                [[nodiscard]] module::ID module() const noexcept;
+                [[nodiscard]] module::ID     module() const noexcept;
+                // debug string
+                [[nodiscard]] std::string    dump() const noexcept;
+
+                // from expression
+                [[nodiscard]] bool is_rvalue() const noexcept;
+                // from expression
+                [[nodiscard]] bool is_lvalue() const noexcept;
 
                 // get node reference
                 [[nodiscard]] ast::Node * get() noexcept;
@@ -272,6 +293,8 @@ DEF_COMPOSIT_ID(ID,
                 [[nodiscard]] size_t           pos() const noexcept;
                 // get line position
                 [[nodiscard]] size_t           line() const noexcept;
+                // get column position
+                [[nodiscard]] size_t           col() const noexcept;
                 // get all line string respresentation on file
                 [[nodiscard]] std::string_view line_str() const noexcept;
                 // get token reference
@@ -304,16 +327,24 @@ namespace type
 
 struct Type;
 enum class EPrimitiveTypeKind : uint8_t;
+enum class ETypeKind : uint8_t;
 
 // type identifier
 DEF_COMPOSIT_ID(
     ID,
 
     public :
-    // get symbol reference
-    [[nodiscard]] symbol::ID symbol() const noexcept;
-    // get node declaration reference
-    [[nodiscard]] ast::ID    declaration() const noexcept;
+    // get the canonical type
+    [[nodiscard]] type::ID                                          canonical() const noexcept;
+    // get node token reference
+    [[nodiscard]] type::ETypeKind                                   kind() const noexcept;
+    // get definition reference
+    [[nodiscard]] definition::ID                                    def() const noexcept;
+    // get type extensions
+    [[nodiscard]] const std::unordered_set<ast::ID, ast::ID::Hash>& extensions() const noexcept;
+    // debug string
+    [[nodiscard]] std::string                                       dump() const noexcept;
+
     // get type
     [[nodiscard]] Type & get() noexcept;
     // get type
@@ -323,11 +354,11 @@ DEF_COMPOSIT_ID(
     // get type
     template <typename T> [[nodiscard]] const T* as() const noexcept;
 
-    [[nodiscard]] static constexpr ID make_primitive(cu::ID cuid, EPrimitiveTypeKind prim) noexcept {
+    [[nodiscard]] static constexpr ID make_primitive(EPrimitiveTypeKind prim) noexcept {
       auto raw = static_cast<size_t>(prim);
       if (raw == 0) return ID::invalid(); // invalid case
 
-      return ID::make(cuid, raw);
+      return ID::make(cu::ID::main(), raw);
     }
 
 )
@@ -384,30 +415,30 @@ DEF_COMPOSIT_ID(ID,
 
 } // namespace scope
 
-namespace symbol
+namespace definition
 {
-struct Symbol;
+struct Definition;
 
-// symbol identifier
+// definition identifier
 DEF_COMPOSIT_ID(ID,
 
                 public :
-                // get symbol type
+                // get definition type
                 [[nodiscard]] type::ID   type() const noexcept;
-                // get symbol node reference
+                // get definition node reference
                 [[nodiscard]] ast::ID    node() const noexcept;
-                // scope symbol owner
+                // scope definition owner
                 [[nodiscard]] scope::ID  scope() const noexcept;
-                // module symbol owner
+                // module definition owner
                 [[nodiscard]] module::ID module() const noexcept;
-                // get symbol
-                [[nodiscard]] Symbol & get() noexcept;
-                // get symbol
-                [[nodiscard]] const Symbol& get() const noexcept;
+                // get definition
+                [[nodiscard]] Definition & get() noexcept;
+                // get definition
+                [[nodiscard]] const Definition& get() const noexcept;
 
 )
 
-} // namespace symbol
+} // namespace definition
 
 
 #undef DEF_ID

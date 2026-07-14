@@ -10,6 +10,7 @@
 #include "ast/ast_declaration_local.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
+#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/type/type.hpp"
@@ -114,7 +115,7 @@ ast::ID parser::Parser_Declaration::_module()
     node.regex = p.p_base->identifier();
 
 
-    (void)p.add_symbol(node.nodeid);
+    (void)p.add_definition(node.nodeid);
 
     return node.nodeid;
   }
@@ -147,7 +148,7 @@ ast::ID parser::Parser_Declaration::enumeration()
 
   auto& enu  = p.add_get_node<ast::Global_Enum>(p.peek().tokid);
   enu.name   = p.parse_name("", hint);
-  auto symid = p.add_symbol(enu.nodeid);
+  auto defid = p.add_definition(enu.nodeid);
   p.enter_scope(enu, "enum " + std::string(enu.name));
 
   (void)p.expect(63, token::ETokenKind::L_CURLY, "Expected start enum block '{' after enum name declaration.", hint);
@@ -168,7 +169,7 @@ ast::ID parser::Parser_Declaration::enumeration()
 
   p.exit_scope();
 
-  (void)parser_type_factory.make_enum(factory_variants, symid);
+  (void)parser_type_factory.make_enum(factory_variants, defid);
 
   return enu.nodeid;
 }
@@ -180,7 +181,7 @@ ast::ID parser::Parser_Declaration::_union()
 
   auto& _union = p.add_get_node<ast::Global_Union>(p.peek().tokid);
   _union.name  = p.parse_name("", hint);
-  auto symid   = p.add_symbol(_union.nodeid);
+  auto defid   = p.add_definition(_union.nodeid);
   p.enter_scope(_union, "union " + std::string(_union.name));
 
   (void)p.expect(182, token::ETokenKind::L_CURLY, "Expected start union block '{' after union name declaration.", hint);
@@ -203,7 +204,7 @@ ast::ID parser::Parser_Declaration::_union()
 
   p.exit_scope();
 
-  (void)parser_type_factory.make_union(factory_types, symid);
+  (void)parser_type_factory.make_union(factory_types, defid);
 
   return _union.nodeid;
 }
@@ -216,7 +217,7 @@ ast::ID parser::Parser_Declaration::flag()
   auto& flag = p.add_get_node<ast::Global_Flag>(p.peek().tokid);
   flag.name  = p.parse_name("", hint);
 
-  auto symid = p.add_symbol(flag.nodeid);
+  auto defid = p.add_definition(flag.nodeid);
   p.enter_scope(flag, "flag " + std::string(flag.name));
 
   (void)p.expect(184, token::ETokenKind::L_CURLY, "Expected start flag block '{' after flag name declaration.", hint);
@@ -232,7 +233,7 @@ ast::ID parser::Parser_Declaration::flag()
 
   p.exit_scope();
 
-  (void)parser_type_factory.make_flag(flag.flags.size(), symid);
+  (void)parser_type_factory.make_flag(flag.flags.size(), defid);
 
   return flag.nodeid;
 }
@@ -241,25 +242,27 @@ ast::ID parser::Parser_Declaration::global_variable()
 {
   constexpr std::string_view hint =
       R"(define global variable like:"
-  - mutable : `var name: type = expression` `var name = expression`"
-  - immutable : `let name: type = expression` `let name = expression`"
-  - constant (compiletime value): `const name: type = expression` `const name = expression`"
+  - mutable : `var name: R = expression` `var name = expression`"
+  - immutable : `let name: T = expression` `let name = expression`"
+  - constant (compiletime value): `const name: T = expression` `const name = expression`"
+  - garbage memory value: `var name: T = uninit` `var name = uninit`"
   - external mutable :"
    `# extern"
-    var name: type`"
+    var name: T`"
   - external immutable :"
    `# extern"
-    let name: type)";
+    let name: T`)";
 
   auto&              tok  = p.expect_any(65, {token::ETokenKind::LET, token::ETokenKind::VAR, token::ETokenKind::CONST},
                                          "Expected global variable declaration token", hint);
   ast::EVariableKind kind = ast::ETokenKind_to_EVariableKind(tok.kind);
 
-  auto& var = p.add_get_node<ast::Global_Variable>(p.peek().tokid);
-  var.kind  = kind;
-  var.name  = p.parse_name("", hint);
+  auto& var      = p.add_get_node<ast::Global_Variable>(p.peek().tokid);
+  var.kind       = kind;
+  var.name       = p.parse_name("", hint);
+  var.extern_abi = p.extern_abi;
 
-  (void)p.add_symbol(var.nodeid);
+  (void)p.add_definition(var.nodeid);
 
   if (var.name.empty()) {
     p.add_error(66, "Invalid Identifier !", "");
@@ -277,8 +280,16 @@ ast::ID parser::Parser_Declaration::global_variable()
   if (p.match(token::ETokenKind::ASSIGN)) {
     auto& assign_tok = p.peek(-1);
     var.assignment   = ast::ETokenKind_to_ETransfertType(assign_tok.kind);
-    auto expr        = p.p_expr->parse_expression();
-    var.expression   = expr;
+    if (p.match(token::ETokenKind::L_UNINIT)) {
+      var.is_uninit = true;
+    } else {
+      auto expr      = p.p_expr->parse_expression();
+      var.expression = expr;
+    }
+  }
+
+  if (var.is_uninit && var.kind != ast::EVariableKind::_var) {
+    p.add_error(67, "Illegal uninit variable with a const or immutable status", hint);
   }
 
   if (var.assignment == ast::ETransfertType::NONE && is_inferred_type)
@@ -292,33 +303,56 @@ ast::ID parser::Parser_Declaration::global_variable()
 ast::ID parser::Parser_Declaration::function()
 {
   constexpr std::string_view hint =
-      R"(define function like:"
-  - definition `fn myName() { ... }`"
-  - definition with return `fn myName() -> i32 { ... }`."
+      R"(define function like:
+  - definition `fn myName() { ... }`
+  - definition with return `fn myName() -> i32 { ... }`.
   - metacode allowed `# pure`)";
+
+  constexpr std::string_view main_hint =
+      R"(define main function like:
+  - implicit return `fn main() {...}`
+  - explicit return `fn main() -> s32 {}`
+  - with args `fn main(copy argc: s32, ref argv: cstr)`)";
 
   (void)p.match(token::ETokenKind::FUNCTION);
 
   auto tok_pos = p.tok_to_pos(p.peek().tokid);
 
-  auto& fn   = p.add_get_node<ast::Global_Function>(p.peek().tokid);
+  auto&      fn        = p.add_get_node<ast::Global_Function>(p.peek().tokid);
+  const auto old_ret   = p.current_returnable;
+  p.current_returnable = fn.nodeid;
+
   fn.name    = p.parse_name("", hint);
   fn.is_pure = p.metablock_contains(tok_pos, "pure");
 
   fn.extern_abi = p.extern_abi;
 
-  (void)p.add_symbol(fn.nodeid);
+  (void)p.add_definition(fn.nodeid);
   p.enter_scope(fn, "function " + std::string(fn.name));
 
-  auto proto = p.p_type->parse_and_mount_local_callable(fn.prototype, fn.is_explicit_ret_type);
+  auto [protoid, params] = p.p_type->prototype_from_declaration();
+  fn.prototype           = protoid;
+  fn.parameters          = params;
+
+  if (fn.name == "main") {
+    auto* proto = fn.prototype.as<type::Prototype>();
+    if (proto->is_explicit_ret) {
+      if (proto->ret != type::TYPEID_s32)
+        p.add_error(277, "The program entry function \"main\" must returns only s32 type",
+                    "define main function like:\n  - implicit ret `fn main() {...}`\n");
+    }
+    proto->ret = type::TYPEID_s32;
+  }
 
   // if extern : no definition
   if (!fn.extern_abi.empty() && p.check(token::ETokenKind::L_CURLY))
-    p.add_error(69, "Unexpected start code block '{' after a extern function declaration", hint);
+    p.add_error(69, "Unexpected start code block '{' after a extern function declaration", main_hint);
 
   if (fn.extern_abi.empty()) fn.codeblock = p.p_loc->parse_codeblock_instruction();
 
   p.exit_scope();
+
+  p.current_returnable = old_ret;
 
   return fn.nodeid;
 }
@@ -343,7 +377,7 @@ ast::ID parser::Parser_Declaration::generic()
   (void)p.match(token::ETokenKind::GENERIC);
 
   gen.name = p.parse_name("", kHint_gen);
-  (void)p.add_symbol(gen.nodeid);
+  (void)p.add_definition(gen.nodeid);
   p.enter_scope(gen, "generic " + std::string(gen.name));
   (void)p.expect(70, token::ETokenKind::L_ANGLE, "Expected start type '<' after generic name.", kHint_gen);
 
@@ -364,7 +398,7 @@ ast::ID parser::Parser_Declaration::generic()
       gen_op.target_gen_sym = firstok;
       auto& tok_op          = p.expect_any(74, token::k_operator,
                                            "Expected operator after 'op' keyword in generic filter argument.", kHint_filter);
-      gen_op.op_ty          = ast::ETokenKind_to_EBinOpType(tok_op.kind);
+      gen_op.op_ty          = ast::ETokenKind_to_EOp_Bin(tok_op.kind);
 
       gen.gen_conds.emplace_back(gen_op.nodeid);
       (void)p.match(token::ETokenKind::SEMICOLON);
@@ -415,8 +449,8 @@ ast::ID parser::Parser_Declaration::generic()
 
       gen.gen_conds.emplace_back(nested.nodeid);
     }
-    // case: T cast to/from ...
-    else if (p.match(token::ETokenKind::CAST)) {
+    // case: T AS to/from ...
+    else if (p.match(token::ETokenKind::AS)) {
       auto& castNode           = p.add_get_node<ast::Generic_Cast>(p.peek().tokid);
       castNode.source_typename = firstok;
 
@@ -442,6 +476,7 @@ ast::ID parser::Parser_Declaration::type_alias()
   constexpr std::string_view hint =
       R"(define type alias like:
   - type `type myAlias = i32`.
+  - opaque `type myAlias = opaque`.
   - generic `type Vec<T> = core::container::vector<T>`.
   - generic `type StrList = core::container::vector<str>`.)";
 
@@ -452,9 +487,14 @@ ast::ID parser::Parser_Declaration::type_alias()
   type_alias.alias = p.parse_name();
 
   // if alias, else it's a opaque type
-  if (p.match(token::ETokenKind::ASSIGN)) type_alias.type = p.p_type->parse_type();
+  (void)p.expect(211, token::ETokenKind::ASSIGN, "expected typealias assignation '='.", hint);
 
+  type_alias.type = p.p_type->parse_type();
 
-  (void)p.add_symbol(type_alias.nodeid);
+  auto defid = p.add_definition(type_alias.nodeid);
+
+  // define canonical alias
+  p.CU.types->add_canon(type_alias.alias, type_alias.type);
+
   return type_alias.nodeid;
 }

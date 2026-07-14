@@ -20,8 +20,8 @@ AST_NODE(Generic_Cast)
 
 AST_NODE(Generic_Op)
 {
-  std::string target_gen_sym;           // typename
-  EBinOpType  op_ty = EBinOpType::_add; // operator
+  std::string target_gen_sym;        // typename
+  EOp_Bin     op_ty = EOp_Bin::_add; // operator
   SET_TYPE(ret);
 };
 

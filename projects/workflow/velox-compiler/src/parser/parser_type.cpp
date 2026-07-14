@@ -1,6 +1,7 @@
 #include "parser_type.hpp"
 
 #include <cstddef>
+#include <cstdlib>
 #include <llvm/ADT/APInt.h>
 #include <string_view>
 #include <sys/types.h>
@@ -16,6 +17,7 @@
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/lexer/token_viewer.hpp"
+#include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
 
 #include "ast/ast_declaration_local.hpp"
@@ -29,20 +31,6 @@ parser::Parser_Type::Parser_Type(Parser_Context& p_ctx)
   : p(p_ctx)
 {
 }
-
-
-std::vector<type::ID> parser::Parser_Type::Params::to_type_params() const
-{
-  std::vector<type::ID> out;
-  out.reserve(params.size());
-
-  for (const auto& elem : params) {
-    out.emplace_back(elem.type);
-  }
-
-  return out;
-}
-
 
 // const, optional, volatile
 void parser::Parser_Type::get_qualifier(type::Qualifier& qualifier)
@@ -64,20 +52,36 @@ type::ID parser::Parser_Type::table(const type::Qualifier& qualifier)
   Int128  size_val;
 
   // static table (sized)
-  if (p.match(token::ETokenKind::ARROW)) {
-    size = p.p_expr->parse_expression();
+  if (p.match_chain({token::ETokenKind::SEMICOLON, token::ETokenKind::RANGE, token::ETokenKind::R_SQUARE})) {
+    get_qualifier(dec);
+    return parser_type_factory.make_slice(inner, dec);
+  }
+  if (p.match_chain({token::ETokenKind::SEMICOLON, token::ETokenKind::UNDERSCORE, token::ETokenKind::R_SQUARE})) {
+    get_qualifier(dec);
+    return parser_type_factory.make_dynamic_array(inner, dec);
+  }
+  if (p.check(token::ETokenKind::SEMICOLON) && p.peek(1).tokid.str() == "c"
+      && p.check_at(2, token::ETokenKind::R_SQUARE)) {
+    (void)p.next(); // consume ;
+    (void)p.next(); // consume c
+    (void)p.next(); // consume ]
+    get_qualifier(dec);
+    return parser_type_factory.make_slice(inner, dec, true);
+  }
+  if (p.match(token::ETokenKind::SEMICOLON)) {
+    size      = p.p_expr->parse_expression();
+    size_t sz = 0;
     if (const auto* size_node = size.as<ast::Literal_Integral>()) {
       size_val = size_node->val;
+      sz       = size_node->val.val->getZExtValue();
     }
-  }
 
-  if (p.match(token::ETokenKind::R_SQUARE)) {
+    (void)p.expect(672, token::ETokenKind::R_SQUARE, "Expected ']' after a static array size.", "");
+
     get_qualifier(dec);
+
+    return parser_type_factory.make_static_array(inner, sz, size, dec);
   }
-
-  if (size_val.val) return parser_type_factory.make_static_array(inner, size_val.val->getZExtValue(), dec);
-
-  return parser_type_factory.make_dynamic_array(inner, dec);
 }
 
 type::ID parser::Parser_Type::pointer(const type::Qualifier& qualifier)
@@ -126,14 +130,14 @@ type::ID parser::Parser_Type::id_type(const type::Qualifier& qualifier)
     auto [_nodeid, _ty] = p.p_base->identifier_typed();
 
     id            = _nodeid;
-    auto* id_node = id.as<ast::ID_Typed>();
+    auto* id_node = id.as<ast::Symbol_Type>();
     id_node->name = old_id;
   }
 
   auto dec = qualifier;
   get_qualifier(dec);
 
-  return parser_type_factory.make_identifier(ast::get_decl_name(id), id, symbol::ID::invalid(), dec);
+  return parser_type_factory.make_identifier(ast::get_decl_name(id), id, definition::ID::invalid(), dec);
 }
 
 type::ID parser::Parser_Type::tuple(const type::Qualifier& qualifier)
@@ -148,23 +152,13 @@ type::ID parser::Parser_Type::tuple(const type::Qualifier& qualifier)
 
 type::ID parser::Parser_Type::function_proto(const type::Qualifier& qualifier)
 {
-  auto proto = explicit_function_proto();
+  auto  protoid = prototype_from_type();
+  auto* proto   = protoid.as<type::Prototype>();
+  assert(proto);
 
-  std::vector<type::Prototype::Param> ty_params;
-  ty_params.reserve(proto.params.params.size());
+  proto->qualifier = qualifier;
 
-  for (const auto& param : proto.params.params) {
-    type::Prototype::Param out;
-    out.type        = param.type;
-    out.is_restrict = param.is_restrict;
-    out.passmode    = param.passmode;
-    ty_params.emplace_back(out);
-  }
-
-  auto dec = qualifier;
-  get_qualifier(dec);
-
-  return parser_type_factory.make_prototype(ty_params, proto.ret, proto.params.is_variadic, dec);
+  return protoid;
 }
 
 type::ID parser::Parser_Type::parse_type()
@@ -176,20 +170,24 @@ type::ID parser::Parser_Type::parse_type()
   - generic args `T<i32, U>`, `T<gen_args>`, `T<gen_args>::U`, ...
   - from module/namespace `A::B::T`, `A::B<U, V>`, `A::B<U, V>::T`, ...)";
 
-  type::Qualifier dec;
-  get_qualifier(dec);
+  type::Qualifier qua;
+  get_qualifier(qua);
 
   switch (p.peek().kind) {
-  case token::ETokenKind::L_SQUARE: return table(dec);
-  case token::ETokenKind::PTR:      return pointer(dec);
-  case token::ETokenKind::L_PAREN:  return tuple(dec);
-  case token::ETokenKind::FUNCTION: return function_proto(dec);
+  case token::ETokenKind::T_OPAQUE: {
+    (void)p.next();
+    return type::TYPEID_opaque;
+  }
+  case token::ETokenKind::L_SQUARE: return table(qua);
+  case token::ETokenKind::PTR:      return pointer(qua);
+  case token::ETokenKind::L_PAREN:  return tuple(qua);
+  case token::ETokenKind::FUNCTION: return function_proto(qua);
   default:                          break;
   }
 
-  if (p.check_any(token::k_type_primitive)) return primitive(dec);
+  if (p.check_any(token::k_type_primitive)) return primitive(qua);
 
-  if (p.check(token::ETokenKind::IDENTIFIER)) return id_type(dec);
+  if (p.check(token::ETokenKind::IDENTIFIER)) return id_type(qua);
 
   p.add_error(126, "Unexpected type definition '" + std::string(p.tok_to_str(p.peek().tokid)) + "'.", hint);
   return type::BAD_TYPE_ID;
@@ -231,60 +229,28 @@ ast::ID parser::Parser_Type::get_type()
   return get.nodeid;
 }
 
-parser::Parser_Type::Proto parser::Parser_Type::parse_and_mount_local_callable(type::ID& prototype_id,
-                                                                               bool&     is_explicit_ret)
-{
-  auto proto = p.p_type->explicit_function_proto();
 
-  std::vector<type::Prototype::Param> ty_params;
-  ty_params.reserve(proto.params.params.size());
-
-  for (const auto& param : proto.params.params) {
-    type::Prototype::Param out;
-    out.type        = param.type;
-    out.is_restrict = param.is_restrict;
-    out.passmode    = param.passmode;
-    ty_params.emplace_back(out);
-  }
-
-  prototype_id = parser_type_factory.make_prototype(ty_params, proto.ret, proto.params.is_variadic, NO_ID);
-
-  for (const auto& param : proto.params.params) {
-    auto& n_param = p.add_get_node<ast::Local_Parameter>(param.name_tok);
-
-    n_param.name          = param.name;
-    n_param.passmode      = param.passmode;
-    n_param.default_value = param.default_val;
-    n_param.type          = param.type;
-
-    (void)p.add_symbol(n_param.nodeid);
-  }
-
-  is_explicit_ret = proto.is_explicit_ret;
-
-  return proto;
-}
-
-parser::Parser_Type::Proto parser::Parser_Type::explicit_function_proto(bool p_is_lam)
+std::pair<type::ID, std::vector<ast::ID>> parser::Parser_Type::prototype_from_declaration(bool start_at_params)
 {
   constexpr std::string_view hint =
       R"(define function like:
   - `fn myName() { ... }`
-  - with return `fn myName() -> (i32, ...) { ... }`)";
+  - with return `fn myName() -> (copy i32, ...) { ... }`)";
 
   (void)p.match_any({token::ETokenKind::FUNCTION, token::ETokenKind::LAMBDA});
 
-  Proto proto;
+  type::Prototype proto;
 
-  // check
-  // parameters
-  (void)p.expect(131, token::ETokenKind::L_PAREN, "Expected start parameter defintion '(' after function declaration.",
-                 hint);
+  // check parameters
+  if (!start_at_params)
+    (void)p.expect(131, token::ETokenKind::L_PAREN,
+                   "Expected start parameter definition '(' after function declaration.", hint);
 
-  proto.params = parameters();
+  auto [is_variadic, params] = parameters();
 
-  // check
-  // return
+  proto.params = type::to_proto_params(params);
+
+  // check return
   if (p.match(token::ETokenKind::ARROW)) {
     proto.is_explicit_ret = true;
     proto.ret             = p.p_type->parse_type();
@@ -293,10 +259,64 @@ parser::Parser_Type::Proto parser::Parser_Type::explicit_function_proto(bool p_i
     proto.ret             = type::TYPEID_u0;
   }
 
-  return proto;
+  proto.is_variadic = is_variadic;
+
+  auto tyid = parser_type_factory.make_prototype(proto.params, proto.ret, proto.is_variadic);
+
+  return {tyid, params};
 }
 
-parser::Parser_Type::Params parser::Parser_Type::parameters()
+
+type::ID parser::Parser_Type::prototype_from_type()
+{
+  constexpr std::string_view hint =
+      R"(define function like:
+  - `fn myName() { ... }`
+  - with return `fn myName() -> (copy i32, ...) { ... }`)";
+
+  (void)p.match_any({token::ETokenKind::FUNCTION, token::ETokenKind::LAMBDA});
+  (void)p.match(token::ETokenKind::L_PAREN);
+
+  type::Prototype proto;
+
+  if (!p.match(token::ETokenKind::R_PAREN)) {
+    while (!p.is_end()) {
+      if (p.match(token::ETokenKind::VARIADIC)) {
+        proto.is_variadic = true;
+
+        (void)p.expect(154, token::ETokenKind::R_PAREN,
+                       "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
+        break;
+      }
+
+      type::Prototype_Param param;
+      param.passmode = ast::ETokenKind_to_EPassMode(p.next().kind);
+      if (param.passmode == ast::EPassMode::NONE)
+        p.add_error(132, "Expected parameter pass mode before the parameter name.", hint);
+
+      param.type = p.p_type->parse_type();
+
+      proto.params.emplace_back(param);
+
+      if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_PAREN)) break;
+    }
+  }
+
+  // check return
+  if (p.match(token::ETokenKind::ARROW)) {
+    proto.is_explicit_ret = true;
+    proto.ret             = p.p_type->parse_type();
+  } else {
+    proto.is_explicit_ret = false;
+    proto.ret             = type::TYPEID_u0;
+  }
+
+  auto tyid = parser_type_factory.make_prototype(proto.params, proto.ret, proto.is_variadic);
+
+  return tyid;
+}
+
+std::pair<bool, std::vector<ast::ID>> parser::Parser_Type::parameters()
 {
   constexpr std::string_view hint =
       R"(define parameter like:
@@ -311,24 +331,26 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
 
   if (p.match(token::ETokenKind::R_PAREN)) return {};
 
-  Params params;
+  std::vector<ast::ID> params;
+  bool                 is_variadic = false;
 
+  size_t count = 0;
   while (!p.is_end()) {
     if (p.match(token::ETokenKind::VARIADIC)) {
-      params.is_variadic = true;
+      is_variadic = true;
 
       (void)p.expect(154, token::ETokenKind::R_PAREN,
                      "Unexpected token after a variadic mark, the variadic must be the last parameter.", hint);
       break;
     }
 
-    Param param;
+    ast::Local_Parameter param;
     param.passmode = ast::ETokenKind_to_EPassMode(p.next().kind);
     if (param.passmode == ast::EPassMode::NONE)
       p.add_error(132, "Expected parameter pass mode before the parameter name.", hint);
 
-    param.name     = p.parse_name("", hint);
-    param.name_tok = p.peek(-1).tokid;
+    param.name = p.parse_name("", hint);
+    auto tok   = p.peek(-1).tokid;
     // check pointer parameter type
     (void)p.expect(133, token::ETokenKind::COLON, "Expected type definition ':' after parameter name.", hint);
     param.type = p.p_type->parse_type();
@@ -340,13 +362,17 @@ parser::Parser_Type::Params parser::Parser_Type::parameters()
                         "Unexpected defaut value for pass mode '" + std::string(EPassMode_to_str(param.passmode))
                             + "'.",
                         hint_passmode);
-      param.default_val = p.p_expr->parse_expression();
+      param.default_value = p.p_expr->parse_expression();
     }
 
-    params.params.emplace_back(param);
+    auto& out = p.p_base->inject_parameter(p.current_returnable, count++, param.name, param.passmode, param.type);
+    out.default_value = param.default_value;
+    out.is_restrict   = param.is_restrict;
+
+    params.emplace_back(out.nodeid);
 
     if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::R_PAREN)) break;
   }
 
-  return params;
+  return {is_variadic, params};
 }

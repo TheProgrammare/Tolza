@@ -1,0 +1,48 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-14 02:31:47
+ * 
+ * Source Language         : C
+ * Source Library          : inttypes
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type intmax_t = opaque
+type imaxdiv_t = opaque
+type uintmax_t = opaque
+type __gwchar_t = s32
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn imaxabs(copy __n: intmax_t) -> intmax_t;
+fn imaxdiv(copy __numer: intmax_t, copy __denom: intmax_t) -> imaxdiv_t;
+fn strtoimax(ref __nptr: cstr, addr __endptr: ptr'cune, copy __base: s32) -> intmax_t;
+fn strtoumax(ref __nptr: cstr, addr __endptr: ptr'cune, copy __base: s32) -> uintmax_t;
+fn wcstoimax(ref __nptr: __gwchar_t, addr __endptr: ptr'__gwchar_t, copy __base: s32) -> intmax_t;
+fn wcstoumax(ref __nptr: __gwchar_t, addr __endptr: ptr'__gwchar_t, copy __base: s32) -> uintmax_t;
+
+} // extern
+
+} // export

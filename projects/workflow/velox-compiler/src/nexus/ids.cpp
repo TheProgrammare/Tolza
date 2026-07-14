@@ -2,14 +2,17 @@
 
 #include "compiler/compiler.hpp"
 
+#include "nexus/ast/data.hpp"
+#include "nexus/extension.hpp"
 #include "nexus/inference.hpp"
 #include "nexus/module.hpp"
 #include "nexus/pipeline.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/resolved.hpp"
 #include "nexus/scope.hpp"
-#include "nexus/symbol.hpp"
+#include "nexus/definition.hpp"
 #include "nexus/ast/ast.hpp"
+#include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
 #include <cstdint>
 
@@ -37,7 +40,25 @@ const cu::CU& cu::ID::get() const noexcept
   return *scrs.at(rawid);
 }
 
+ast::ID ast::ID::canonical() const noexcept
+{
+  assert(*this && "Must be valid id");
 
+  const auto k = kind();
+
+  if (ast::ENodeKind_is_symbol(k)) {
+    if (auto defid = compiler::resolved.get_definition(*this)) {
+      if (auto nodeid = defid.node()) return nodeid;
+    }
+  }
+
+  return *this;
+}
+ast::ENodeKind ast::ID::kind() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return get()->kind();
+}
 token::ID ast::ID::token() const noexcept
 {
   assert(*this && "Must be valid id");
@@ -53,11 +74,19 @@ bool ast::ID::is_inferred() const noexcept
   assert(*this && "Must be valid id");
   return compiler::inference.is_inferred(*this);
 }
-symbol::ID ast::ID::symbol() const noexcept
+definition::ID ast::ID::def() const noexcept
 {
   assert(*this && "Must be valid id");
 
-  return compiler::resolved.get_symbol(*this);
+  if (auto defid = compiler::resolved.get_definition(*this)) return defid;
+
+  return NO_ID;
+}
+bool ast::ID::is_resolved() const noexcept
+{
+  assert(*this && "Must be valid id");
+
+  return compiler::resolved.is_resolved(*this);
 }
 scope::ID ast::ID::scope() const noexcept
 {
@@ -68,6 +97,32 @@ module::ID ast::ID::module() const noexcept
 {
   assert(*this && "Must be valid id");
   return scope().module();
+}
+std::string ast::ID::dump() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return ast::dump(*this);
+}
+
+
+bool ast::ID::is_rvalue() const noexcept
+{
+  assert(*this && "Must be valid id");
+
+  const auto k = kind();
+
+  assert(k != ENodeKind::Unknown && "invalid node facial kind");
+  if (k == ENodeKind::Expression_Table_Access) return false;
+  if (k >= ENodeKind::Literal_Boolean && k <= ENodeKind::Literal_Record) return true;
+  if (k >= ENodeKind::Expression_If_Ternary && k <= ENodeKind::Expression_Get_Type) return true;
+  if (k >= ENodeKind::Operation_Cast_As && k <= ENodeKind::Operation_Interval) return true;
+
+  return false;
+}
+bool ast::ID::is_lvalue() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return !is_rvalue();
 }
 ast::Node* ast::ID::get() noexcept
 {
@@ -121,6 +176,11 @@ size_t token::ID::line() const noexcept
   assert(*this && "Must be valid id");
   return cu().get().file_info.get_line_from_pos(pos());
 }
+size_t token::ID::col() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return cu().get().file_info.get_column_from_pos(pos());
+}
 std::string_view token::ID::line_str() const noexcept
 {
   assert(*this && "Must be valid id");
@@ -137,16 +197,30 @@ const token::Token& token::ID::get() const noexcept
   return cu().get().file_info.tokens->get(*this);
 }
 
-
-symbol::ID type::ID::symbol() const noexcept
+type::ID type::ID::canonical() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get().get_sym_id();
+  return get().tyid; // get is always canonical
 }
-ast::ID type::ID::declaration() const noexcept
+type::ETypeKind type::ID::kind() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get().get_sym_id().node();
+  return get().kind();
+}
+definition::ID type::ID::def() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return get().get_def_id();
+}
+const std::unordered_set<ast::ID, ast::ID::Hash>& type::ID::extensions() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return cu().get().extensions->get_extensions(*this);
+}
+std::string type::ID::dump() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return type::dump(*this);
 }
 type::Type& type::ID::get() noexcept
 {
@@ -293,39 +367,39 @@ const scope::Scope& scope::ID::get() const noexcept
   return scope::get(*this);
 }
 
-type::ID symbol::ID::type() const noexcept
+type::ID definition::ID::type() const noexcept
 {
   assert(*this && "Must be valid id");
   return node().type();
 }
-ast::ID symbol::ID::node() const noexcept
+ast::ID definition::ID::node() const noexcept
 {
   assert(*this && "Must be valid id");
   return get().nodeid;
 }
-scope::ID symbol::ID::scope() const noexcept
+scope::ID definition::ID::scope() const noexcept
 {
   assert(*this && "Must be valid id");
   return node().scope();
 }
-module::ID symbol::ID::module() const noexcept
+module::ID definition::ID::module() const noexcept
 {
   assert(*this && "Must be valid id");
   return node().module();
 }
-symbol::Symbol& symbol::ID::get() noexcept
+definition::Definition& definition::ID::get() noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().symbols->get(*this);
+  if (cu()) return cu().get().definitions->get(*this);
 
-  return symbol::get(*this);
+  return definition::get(*this);
 }
-const symbol::Symbol& symbol::ID::get() const noexcept
+const definition::Definition& definition::ID::get() const noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().symbols->get(*this);
+  if (cu()) return cu().get().definitions->get(*this);
 
-  return symbol::get(*this);
+  return definition::get(*this);
 }
 
 /*
@@ -358,9 +432,9 @@ const symbol::Symbol& symbol::ID::get() const noexcept
 
 AST_GET_INSTANCE(ast::Unknown)
 
-AST_GET_INSTANCE(ast::Identifier)
-AST_GET_INSTANCE(ast::ID_Qualified)
-AST_GET_INSTANCE(ast::ID_Typed)
+AST_GET_INSTANCE(ast::Symbol_Id)
+AST_GET_INSTANCE(ast::Symbol_Qualified)
+AST_GET_INSTANCE(ast::Symbol_Type)
 
 AST_GET_INSTANCE(ast::Path_Regex)
 AST_GET_INSTANCE(ast::Root)
@@ -372,7 +446,7 @@ AST_GET_INSTANCE(ast::Global_Extend_Fn)
 AST_GET_INSTANCE(ast::Global_Extend_Cast)
 AST_GET_INSTANCE(ast::Global_Extend_Op_Bin)
 AST_GET_INSTANCE(ast::Global_Extend_Op_Un)
-AST_GET_INSTANCE(ast::Global_Extend_Op_Access)
+AST_GET_INSTANCE(ast::Global_Extend_Op_Subscript)
 AST_GET_INSTANCE(ast::Global_Extend_Op_Transfert)
 AST_GET_INSTANCE(ast::Global_Extend_Op_Other)
 AST_GET_INSTANCE(ast::Global_Module)
@@ -422,6 +496,7 @@ AST_GET_INSTANCE(ast::Generic_Extension)
 AST_GET_INSTANCE(ast::Generic_Rule)
 
 AST_GET_INSTANCE(ast::Literal_Boolean)
+AST_GET_INSTANCE(ast::Literal_NullPtr)
 AST_GET_INSTANCE(ast::Literal_Integral)
 AST_GET_INSTANCE(ast::Literal_Fixed_Point)
 AST_GET_INSTANCE(ast::Literal_Floating_Point)
@@ -436,19 +511,16 @@ AST_GET_INSTANCE(ast::Literal_Table_Population)
 AST_GET_INSTANCE(ast::Literal_Map)
 AST_GET_INSTANCE(ast::Literal_Tuple)
 AST_GET_INSTANCE(ast::Literal_Range)
-AST_GET_INSTANCE(ast::Literal_Iterator)
-AST_GET_INSTANCE(ast::Literal_Enum)
-AST_GET_INSTANCE(ast::Literal_Structured_Data)
-AST_GET_INSTANCE(ast::Literal_Form)
+AST_GET_INSTANCE(ast::Literal_Record)
 
 AST_GET_INSTANCE(ast::Expression_If_Ternary)
 AST_GET_INSTANCE(ast::Expression_Member_Access)
 AST_GET_INSTANCE(ast::Expression_Self)
 AST_GET_INSTANCE(ast::Expression_Other)
-AST_GET_INSTANCE(ast::Expression_Call)
-AST_GET_INSTANCE(ast::Expression_Call_Argument)
-AST_GET_INSTANCE(ast::Expression_Call_Rule)
-AST_GET_INSTANCE(ast::Expression_Call_Pipe)
+AST_GET_INSTANCE(ast::Expression_Invocation)
+AST_GET_INSTANCE(ast::Expression_Invocation_Arg)
+AST_GET_INSTANCE(ast::Expression_Invocation_Rule)
+AST_GET_INSTANCE(ast::Expression_Invocation_Extend)
 AST_GET_INSTANCE(ast::Expression_Table_Access)
 AST_GET_INSTANCE(ast::Expression_Ptr_Val)
 AST_GET_INSTANCE(ast::Expression_Mut_Of)
@@ -476,7 +548,7 @@ AST_GET_INSTANCE(ast::Statement_Match_Case)
 AST_GET_INSTANCE(ast::Operation_Cast_As)
 AST_GET_INSTANCE(ast::Operation_Is)
 AST_GET_INSTANCE(ast::Operation_In)
-AST_GET_INSTANCE(ast::Operation_Assignment)
+AST_GET_INSTANCE(ast::Operation_Transfert)
 AST_GET_INSTANCE(ast::Operation_Binary)
 AST_GET_INSTANCE(ast::Operation_Unary)
 AST_GET_INSTANCE(ast::Operation_Interval)
@@ -495,9 +567,10 @@ AST_GET_INSTANCE(ast::Memory_Drop)
 TYPE_GET_INSTANCE(type::Primitive)
 TYPE_GET_INSTANCE(type::String)
 TYPE_GET_INSTANCE(type::Tuple)
-TYPE_GET_INSTANCE(type::StaticArray)
+TYPE_GET_INSTANCE(type::Array)
+TYPE_GET_INSTANCE(type::Buffer)
+TYPE_GET_INSTANCE(type::Slice)
 TYPE_GET_INSTANCE(type::Ptr)
-TYPE_GET_INSTANCE(type::DynamicArray)
 TYPE_GET_INSTANCE(type::Prototype)
 TYPE_GET_INSTANCE(type::Facet)
 TYPE_GET_INSTANCE(type::View)

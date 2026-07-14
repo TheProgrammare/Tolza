@@ -1,0 +1,135 @@
+
+# main velox toolchain config
+# it's the default configuration
+# set config field to specify a sub configuration to compile (use his name in sub_configs)
+
+# all fields will be stored as define element also
+
+
+# ======================
+# velox-compiler section 
+# ======================
+
+# if empty, the workspace file name will be used
+project_name                 = "velox-example"
+# sub .toml name to apply after this .toml 
+sub_config                   = ""  
+    
+[target]
+# enum: DEFAULT, x86_64, x86_32, aarch64, aarch32, riscv64, riscv32, ppc64, ppc32, mips64, mips32, wasm64, wasm32, sparc64, unknown, custom ...
+arch                         = "x86_64"                
+# enum: DEFAULT, linux, macos, windows, freebsd, openbsd, netbsd, dragonflybsd, android, ios, solaris, unknown, custom ...
+platform                     = "linux"                  
+# enum: DEFAULT, apple, pc, w64, unknown ...
+vendor                       = "pc"              
+# enum: DEFAULT, sysv, win64, gnu, aapcs, aapcs64, darwin_arm64, msvc_x86, msvc_x64, riscv_ilp32, riscv_lp64, wasm32, unknown, custom ...
+abi                          = "gnu"           
+# text: overrides host cpu detection
+cpu                          = ""                 
+# flags: sse|sse2|sse3|ssse3|sse4_1|sse4_2|avx|avx2|avx512|neon|sve|rvc|rvv|custom ...
+features                     = ""
+# enum: DEFAULT, cdecl, stdcall, fastcall, thiscall, sysv, sysv_x86_64, sysv_x86_32, win64, riscv_lp64, riscv_ilp32, aapcs, aapcs64, aapcs_vfp, vectorcall, wasm32, custom, unknown ...
+call_convention              = "sysv_x86_64"
+# enum: DEFAULT, tiny, small, kernel, medium, large ...
+code_model                   = "small"          
+# enum: DEFAULT, STATIC, PIC, PIE, ROPI, RWPI, ROPI_RWPI ...
+reloc_model                  = "PIE"         
+# flags: bin|llvm|obj|Asm|bc|static_lib|dynamic_lib ...
+emits                        = "bin"               
+
+[profile]
+# the debug profile will override some options
+
+# true = disable optimization, enable debug info
+debug                        = false
+# enum: DEFAULT, O0, O1, O2, O3, Os, Oz ...
+optimization                 = "O0"       
+
+[log]
+# flags: filesystem|lexer|preprocessor|parser|binder|shipowner|resolver_symbol|resolver_type|resolver_semantic|codegen|optimization|emit|linker|all ...
+logs                         = ""                             
+
+[warning]
+# flags: all|extra|pedantic|unused|dead_code|as_error ...
+warnings                     = ""
+# 1, 2, 3
+level                        = 0  
+
+[debug]
+# flags: ast
+debugs                       = ""
+
+[error]
+# enum: DEFAULT, fail_fatal, fail_recover ...
+mode = "fail_fatal"
+# enum: DEFAULT, userfriendly, json, github ...
+out = "json"
+
+[preprocessor]
+# text list : "my_undef", "my_other_undef", ...
+undefines = [
+  
+]
+[preprocessor.defines]
+# map : key_name = "text_value"
+
+
+[directory]
+# all path
+project                      = "./"
+build                        = "./build"  
+source                       = "./src"  
+vendor                       = "./vendor"  
+ffi_json                     = "./binding/ffi_json"  
+binding                      = "./binding"  
+compiler                     = "/home/flo/.local/share/velox/compiler"  
+stdlib                       = "/home/flo/.local/share/velox/lib/std"  
+packages                     = "/home/flo/.local/share/velox/lib/packages"
+
+[config]
+# designed to target a sub configuration parameters
+# map : config_name = "config_path"
+
+
+# ============
+# LLVM section
+# ============
+# This configuration is strictly for LLVM passes and code generation.
+# It does not affect your Velox preprocessor.
+
+[llvm]
+# verify before AND after passes
+verify_module                = true     
+# custom raw flags passed to LLVM
+# text list : "my_arg1", "my_arg2", ...
+args = [                                      
+  
+]
+
+# =============
+# C ffi section
+# =============
+# This configuration is strictly for C ffi passes on C std lib
+
+[c_ffi]
+# enum: DEFAULT, glibc, musl, libsystem, ucrt, msvcrt, mingw_libc, bionic, bsd_libc, custom, unknown ...
+libc                         = "unknown"
+# major.minor format: e.g. 10.2
+libc_version                 = "unknown_version"
+# enum: DEFAULT, c89, c99, c11, c17, c23, gnu89, gnu99, gnu11, gnu17, gnu23, unknown ...
+std                          = "unknown"
+# flags: gnu|bsd|darwin|posix|xopen|linux|android|crt_secure_no_warnings|custom ...
+c_source                     = "gnu|posix|xopen|linux"
+# enum: DEFAULT, gnu, musl, msvc, gnuabi, mingw, darwin, baremetal, wasi, custom, unknown ...
+environment                  = "gnu"
+# true, false
+disable_builtins             = false
+# true, false
+strict_aliasing              = false
+# path
+sysroot                      = ""
+# custom raw flags passed to the c linker
+# text list : "my_arg1", "my_arg2", ...
+args = [
+  
+]

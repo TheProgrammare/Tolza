@@ -1,6 +1,7 @@
 #include "type.hpp"
 
 #include <cassert>
+#include <cstdlib>
 #include <functional>
 #include <memory>
 #include <string_view>
@@ -12,11 +13,15 @@
 #include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "binder/binder_ffi.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
+#include "binder/binder_ffi.hpp"
+#include "nexus/type/data.hpp"
+#include "nexus/type/definition.hpp"
 
 
 #include <Neargye/magic_enum.hpp>
@@ -33,7 +38,7 @@ type::ID type::Arena::Factory::make_primitive(EPrimitiveTypeKind p, Qualifier qu
   assert(p != EPrimitiveTypeKind::NONE && "illegal primitive (EPrimitiveTypeKind::NONE)");
 
   if (qualifier.is_pure()) {
-    const auto main_ty = ID::make_primitive(cu::ID::main(), p);
+    const auto main_ty = ID::make_primitive(p);
     return main_ty;
   }
 
@@ -51,23 +56,34 @@ type::ID type::Arena::Factory::make_ptr(type::ID inner, Qualifier qualifier)
   t->inner     = inner;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_static_array(type::ID inner, size_t size, Qualifier qualifier)
+type::ID type::Arena::Factory::make_static_array(type::ID inner, size_t size, ast::ID size_expr, Qualifier qualifier)
 {
   assert(inner && "Invalid identifier");
 
-  auto t       = std::make_unique<type::StaticArray>();
-  t->qualifier = qualifier;
-  t->inner     = inner;
-  t->size      = size;
+  auto t             = std::make_unique<type::Array>();
+  t->qualifier       = qualifier;
+  t->inner           = inner;
+  t->size            = size;
+  t->size_expression = size_expr;
   return arena.intern(std::move(t));
 }
 type::ID type::Arena::Factory::make_dynamic_array(type::ID inner, Qualifier qualifier)
 {
   assert(inner && "Invalid identifier");
 
-  auto t       = std::make_unique<type::DynamicArray>();
+  auto t       = std::make_unique<type::Buffer>();
   t->qualifier = qualifier;
   t->inner     = inner;
+  return arena.intern(std::move(t));
+}
+type::ID type::Arena::Factory::make_slice(type::ID inner, Qualifier qualifier, bool is_c_table)
+{
+  assert(inner && "Invalid identifier");
+
+  auto t        = std::make_unique<type::Slice>();
+  t->qualifier  = qualifier;
+  t->inner      = inner;
+  t->is_c_table = is_c_table;
   return arena.intern(std::move(t));
 }
 type::ID type::Arena::Factory::make_tuple(const std::vector<type::ID>& elems, Qualifier qualifier)
@@ -77,7 +93,7 @@ type::ID type::Arena::Factory::make_tuple(const std::vector<type::ID>& elems, Qu
   t->elems     = elems;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_prototype(const std::vector<type::Prototype::Param>& params, type::ID ret,
+type::ID type::Arena::Factory::make_prototype(const std::vector<type::Prototype_Param>& params, type::ID ret,
                                               bool is_variadic, Qualifier qualifier)
 {
   auto t         = std::make_unique<type::Prototype>();
@@ -87,52 +103,53 @@ type::ID type::Arena::Factory::make_prototype(const std::vector<type::Prototype:
   t->is_variadic = is_variadic;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_enum(const std::vector<type::ID>& variants, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_enum(const std::vector<type::ID>& variants, definition::ID sym, Qualifier qualifier)
 {
   auto t       = std::make_unique<type::Enum>();
   t->qualifier = qualifier;
   t->variants  = variants;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_flag(size_t size, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_flag(size_t size, definition::ID sym, Qualifier qualifier)
 {
   auto t       = std::make_unique<type::Flag>();
   t->qualifier = qualifier;
   t->size      = size;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_union(const std::vector<type::ID>& variants, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_union(const std::vector<type::ID>& variants, definition::ID sym,
+                                          Qualifier qualifier)
 {
   auto t       = std::make_unique<type::Union>();
   t->qualifier = qualifier;
   t->variants  = variants;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_facet(const std::vector<type::ID>& fields, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_facet(const std::vector<type::ID>& fields, definition::ID sym, Qualifier qualifier)
 {
   auto t       = std::make_unique<type::Facet>();
   t->qualifier = qualifier;
   t->fields    = fields;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_view(const std::vector<type::ID>& facets, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_view(const std::vector<type::ID>& facets, definition::ID sym, Qualifier qualifier)
 {
   auto t       = std::make_unique<type::View>();
   t->qualifier = qualifier;
   t->facets    = facets;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_form(const std::vector<type::ID>& facets, symbol::ID sym, Qualifier qualifier)
+type::ID type::Arena::Factory::make_form(const std::vector<type::ID>& facets, definition::ID sym, Qualifier qualifier)
 {
   auto t       = std::make_unique<type::Form>();
   t->qualifier = qualifier;
   t->facets    = facets;
-  t->sym       = sym;
+  t->def       = sym;
   return arena.intern(std::move(t));
 }
 type::ID type::Arena::Factory::make_forward_identifier(std::string_view name, Qualifier qualifier)
@@ -142,15 +159,19 @@ type::ID type::Arena::Factory::make_forward_identifier(std::string_view name, Qu
   t->forward_name = std::string(name);
   return arena.intern(std::move(t));
 }
-type::ID type::Arena::Factory::make_identifier(std::string_view name, ast::ID nodeid, symbol::ID sym,
+type::ID type::Arena::Factory::make_identifier(std::string_view name, ast::ID nodeid, definition::ID sym,
                                                Qualifier qualifier)
 {
+  auto it = arena.resolved_identifiers.find(std::string(name));
+  if (it != arena.resolved_identifiers.end()) return it->second;
+
   auto t          = std::make_unique<type::Identifier>();
   t->qualifier    = qualifier;
   t->forward_name = std::string(name);
   t->nodeid       = nodeid;
-  t->sym          = sym;
-  return arena.intern(std::move(t));
+  t->def          = sym;
+  auto tyid       = arena.intern(std::move(t));
+  return tyid;
 }
 type::ID type::Arena::Factory::make_string(ETextType txt_ty, Qualifier qualifier)
 {
@@ -158,12 +179,12 @@ type::ID type::Arena::Factory::make_string(ETextType txt_ty, Qualifier qualifier
 
   if (qualifier.is_pure()) {
     switch (txt_ty) {
-    case ETextType::_str:   return TYPEID_str;
-    case ETextType::_c_str: return TYPEID_c_str;
-    case ETextType::_text:  return TYPEID_text;
-    case ETextType::_cune:  return TYPEID_cune;
-    case ETextType::_rune:  return TYPEID_rune;
-    default:                assert(txt_ty == ETextType::NONE && "Invalid text type");
+    case ETextType::_str:  return TYPEID_str;
+    case ETextType::_cstr: return TYPEID_cstr;
+    case ETextType::_text: return TYPEID_text;
+    case ETextType::_cune: return TYPEID_cune;
+    case ETextType::_rune: return TYPEID_rune;
+    default:               assert(txt_ty == ETextType::NONE && "Invalid text type");
     }
   }
 
@@ -171,11 +192,6 @@ type::ID type::Arena::Factory::make_string(ETextType txt_ty, Qualifier qualifier
   t->qualifier = qualifier;
   t->kind      = txt_ty;
   return arena.intern(std::move(t));
-}
-
-type::ID type::Identifier::get_type() const noexcept
-{
-  return sym.node().type();
 }
 
 
@@ -196,16 +212,23 @@ size_t type::Arena::hash_type(Type const& t) noexcept
     break;
   }
 
-  case ETypeKind::StaticArray: {
-    const auto* d = static_cast<const type::StaticArray*>(&t);
+  case ETypeKind::Array: {
+    const auto* d = static_cast<const type::Array*>(&t);
     h             = hash_combine(h, d->inner.offset());
     h             = hash_combine(h, d->size);
     break;
   }
 
-  case ETypeKind::DynamicArray: {
-    const auto* d = static_cast<const type::DynamicArray*>(&t);
+  case ETypeKind::Buffer: {
+    const auto* d = static_cast<const type::Buffer*>(&t);
     h             = hash_combine(h, d->inner.offset());
+    break;
+  }
+
+  case ETypeKind::Slice: {
+    const auto* d = static_cast<const type::Slice*>(&t);
+    h             = hash_combine(h, d->inner.offset());
+    h             = hash_combine(h, d->is_c_table);
     break;
   }
 
@@ -227,37 +250,37 @@ size_t type::Arena::hash_type(Type const& t) noexcept
 
   case ETypeKind::Enum: {
     const auto* d = static_cast<const type::Enum*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
   case ETypeKind::Flag: {
     const auto* d = static_cast<const type::Flag*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
   case ETypeKind::Union: {
     const auto* d = static_cast<const type::Union*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
   case ETypeKind::Facet: {
     const auto* d = static_cast<const type::Facet*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
   case ETypeKind::Form: {
     const auto* d = static_cast<const type::Form*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
   case ETypeKind::View: {
     const auto* d = static_cast<const type::View*>(&t);
-    h             = hash_combine(h, d->sym.offset());
+    h             = hash_combine(h, d->def.offset());
     break;
   }
 
@@ -285,95 +308,30 @@ size_t type::Arena::hash_type(Type const& t) noexcept
   return h;
 }
 
-symbol::ID type::Type::get_sym_id() const noexcept
+definition::ID type::Type::get_def_id() const noexcept
 {
   switch (kind()) {
-  case ETypeKind::Facet:      return static_cast<const type::Facet*>(this)->sym;
-  case ETypeKind::Form:       return static_cast<const type::Form*>(this)->sym;
-  case ETypeKind::Enum:       return static_cast<const type::Enum*>(this)->sym;
-  case ETypeKind::Flag:       return static_cast<const type::Flag*>(this)->sym;
-  case ETypeKind::Union:      return static_cast<const type::Union*>(this)->sym;
-  case ETypeKind::Identifier: return static_cast<const type::Identifier*>(this)->sym;
+  case ETypeKind::Facet:      return static_cast<const type::Facet*>(this)->def;
+  case ETypeKind::Form:       return static_cast<const type::Form*>(this)->def;
+  case ETypeKind::Enum:       return static_cast<const type::Enum*>(this)->def;
+  case ETypeKind::Flag:       return static_cast<const type::Flag*>(this)->def;
+  case ETypeKind::Union:      return static_cast<const type::Union*>(this)->def;
+  case ETypeKind::Identifier: return static_cast<const type::Identifier*>(this)->def;
   default:                    return NO_ID;
   }
 }
 
-bool type::Type::set_sym_id(symbol::ID symid) noexcept
+bool type::Type::set_def_id(definition::ID defid) noexcept
 {
   switch (kind()) {
-  case ETypeKind::Facet:      static_cast<type::Facet*>(this)->sym = symid; return true;
-  case ETypeKind::Form:       static_cast<type::Form*>(this)->sym = symid; return true;
-  case ETypeKind::Enum:       static_cast<type::Enum*>(this)->sym = symid; return true;
-  case ETypeKind::Flag:       static_cast<type::Flag*>(this)->sym = symid; return true;
-  case ETypeKind::Union:      static_cast<type::Union*>(this)->sym = symid; return true;
-  case ETypeKind::Identifier: static_cast<type::Identifier*>(this)->sym = symid; return true;
+  case ETypeKind::Facet:      static_cast<type::Facet*>(this)->def = defid; return true;
+  case ETypeKind::Form:       static_cast<type::Form*>(this)->def = defid; return true;
+  case ETypeKind::Enum:       static_cast<type::Enum*>(this)->def = defid; return true;
+  case ETypeKind::Flag:       static_cast<type::Flag*>(this)->def = defid; return true;
+  case ETypeKind::Union:      static_cast<type::Union*>(this)->def = defid; return true;
+  case ETypeKind::Identifier: static_cast<type::Identifier*>(this)->def = defid; return true;
   default:                    return false;
   }
-}
-
-std::string type::Type::velox_codegen() const noexcept
-{
-  switch (kind()) {
-  case ETypeKind::NONE:      return "";
-  case ETypeKind::Primitive: return GET_ENUM_NAME(static_cast<const type::Primitive*>(this)->primitive).substr(1);
-  case ETypeKind::String:    return GET_ENUM_NAME(static_cast<const type::String*>(this)->kind).substr(1);
-  case ETypeKind::Tuple:     {
-    std::string out;
-    const auto* tu = static_cast<const type::Tuple*>(this);
-    for (const auto& tyid : tu->elems) {
-      out += tyid.get().velox_codegen();
-      out += ", ";
-    }
-
-    return "(" + out.substr(0, out.size() - 2) + ")";
-  }
-  case ETypeKind::StaticArray:
-  case ETypeKind::Ptr:         {
-    const auto* ptr = static_cast<const type::Ptr*>(this);
-    return "ptr'" + ptr->inner.get().velox_codegen();
-  }
-  case ETypeKind::DynamicArray:
-  case ETypeKind::Prototype:    {
-    std::string params;
-    const auto* proto = static_cast<const type::Prototype*>(this);
-    for (const auto& param : proto->params) {
-      params += param.type.get().velox_codegen();
-      params += ", ";
-    }
-    params = params.substr(0, params.size() - 2);
-
-    return "(" + params + ") -> " + proto->ret.get().velox_codegen();
-  }
-  case ETypeKind::Facet: {
-    const auto* facet = static_cast<const type::Facet*>(this);
-    const auto* node  = facet->sym.node().as<ast::SFM_Facet>();
-    assert(node && "type node must be a facet");
-
-    std::string fields;
-    for (const auto& field : node->fields) {
-      const auto* f_node = field.as<ast::SFM_Facet_Field>();
-      assert(f_node && "a facet must have field nodes");
-
-      fields += std::string(f_node->name) + ": " + f_node->type.get().velox_codegen() + "\n";
-    }
-
-    return "facet" + std::string(node->name) + " {\n" + fields + "}\n";
-  }
-  case ETypeKind::View: {
-    const auto* view = static_cast<const type::View*>(this);
-    assert(view->sym && "a view type must refer to a symbol");
-  }
-  case ETypeKind::Identifier: {
-    const auto* id = static_cast<const type::Identifier*>(this);
-    return id->forward_name;
-  }
-  case ETypeKind::Form:
-  case ETypeKind::Enum:
-  case ETypeKind::Flag:
-  case ETypeKind::Union: break;
-  }
-
-  return "";
 }
 
 
@@ -392,15 +350,19 @@ bool type::TypeEq::operator()(Type const& a, Type const& b) const noexcept
     return static_cast<const type::Ptr*>(&a)->inner == static_cast<const type::Ptr*>(&b)->inner;
   }
 
-  case ETypeKind::StaticArray: {
-    auto const& da = static_cast<const type::StaticArray*>(&a);
-    auto const& db = static_cast<const type::StaticArray*>(&b);
+  case ETypeKind::Array: {
+    auto const& da = static_cast<const type::Array*>(&a);
+    auto const& db = static_cast<const type::Array*>(&b);
 
     return da->inner == db->inner && da->size == db->size;
   }
 
-  case ETypeKind::DynamicArray: {
-    return static_cast<const type::DynamicArray*>(&a)->inner == static_cast<const type::DynamicArray*>(&b)->inner;
+  case ETypeKind::Buffer: {
+    return static_cast<const type::Buffer*>(&a)->inner == static_cast<const type::Buffer*>(&b)->inner;
+  }
+
+  case ETypeKind::Slice: {
+    return static_cast<const type::Slice*>(&a)->inner == static_cast<const type::Slice*>(&b)->inner;
   }
 
   case ETypeKind::Tuple: {
@@ -415,27 +377,27 @@ bool type::TypeEq::operator()(Type const& a, Type const& b) const noexcept
   }
 
   case ETypeKind::Enum: {
-    return static_cast<const type::Enum*>(&a)->sym == static_cast<const type::Enum*>(&b)->sym;
+    return static_cast<const type::Enum*>(&a)->def == static_cast<const type::Enum*>(&b)->def;
   }
 
   case ETypeKind::Flag: {
-    return static_cast<const type::Flag*>(&a)->sym == static_cast<const type::Flag*>(&b)->sym;
+    return static_cast<const type::Flag*>(&a)->def == static_cast<const type::Flag*>(&b)->def;
   }
 
   case ETypeKind::Union: {
-    return static_cast<const type::Union*>(&a)->sym == static_cast<const type::Union*>(&b)->sym;
+    return static_cast<const type::Union*>(&a)->def == static_cast<const type::Union*>(&b)->def;
   }
 
   case ETypeKind::Facet: {
-    return static_cast<const type::Facet*>(&a)->sym == static_cast<const type::Facet*>(&b)->sym;
+    return static_cast<const type::Facet*>(&a)->def == static_cast<const type::Facet*>(&b)->def;
   }
 
   case ETypeKind::View: {
-    return static_cast<const type::View*>(&a)->sym == static_cast<const type::View*>(&b)->sym;
+    return static_cast<const type::View*>(&a)->def == static_cast<const type::View*>(&b)->def;
   }
 
   case ETypeKind::Form: {
-    return static_cast<const type::Form*>(&a)->sym == static_cast<const type::Form*>(&b)->sym;
+    return static_cast<const type::Form*>(&a)->def == static_cast<const type::Form*>(&b)->def;
   }
 
   case ETypeKind::Identifier: {
@@ -462,7 +424,7 @@ std::string_view type::EPrimitiveTypeKind_to_mangle(EPrimitiveTypeKind type) noe
   case EPrimitiveTypeKind::_rune:    return "ru";
 
   case EPrimitiveTypeKind::_u0:      return "u0";
-  case EPrimitiveTypeKind::_ptr:     return "ptrt";
+  case EPrimitiveTypeKind::_opaque:  return "ptrt";
   case EPrimitiveTypeKind::_ptrdiff: return "pdif";
 
   case EPrimitiveTypeKind::_ssize:   return "isz";
@@ -575,7 +537,9 @@ size_t type::EPrimitiveTypeKind_to_bits(EPrimitiveTypeKind type) noexcept
   case EPrimitiveTypeKind::_bool:    return 1;
   case EPrimitiveTypeKind::_cune:    return 8;
   case EPrimitiveTypeKind::_rune:    return 32;
-  case EPrimitiveTypeKind::_ptr:
+  case EPrimitiveTypeKind::NONE:
+  case EPrimitiveTypeKind::_u0:
+  case EPrimitiveTypeKind::_opaque:
   case EPrimitiveTypeKind::_ptrdiff:
   case EPrimitiveTypeKind::_fsize:
   case EPrimitiveTypeKind::_dsize:
@@ -609,8 +573,6 @@ size_t type::EPrimitiveTypeKind_to_bits(EPrimitiveTypeKind type) noexcept
   case EPrimitiveTypeKind::_u128:
   case EPrimitiveTypeKind::_b128:    return 128;
   case EPrimitiveTypeKind::_f80:     return 80;
-  case EPrimitiveTypeKind::_u0:
-  case EPrimitiveTypeKind::NONE:     return 0;
   }
 }
 
@@ -619,7 +581,7 @@ size_t type::EPrimitiveTypeKind_to_bytes(EPrimitiveTypeKind type) noexcept
   return EPrimitiveTypeKind_to_bits(type) / 8;
 }
 
-bool type::is_op_handled(EPrimitiveTypeKind src, ast::EBinOpType op) noexcept
+bool type::is_op_handled(EPrimitiveTypeKind src, ast::EOp_Bin op) noexcept
 {
   // return
   // op_primitive[static_cast<uint8_t>(op)][static_cast<uint8_t>(src)];
@@ -643,12 +605,12 @@ bool type::is_cast_implicit(EPrimitiveTypeKind src, EPrimitiveTypeKind target) n
 type::ETextType type::ETokenKind_to_ETextType(token::ETokenKind tok) noexcept
 {
   switch (tok) {
-  case token::ETokenKind::T_TEXT:     return ETextType::_text;
-  case token::ETokenKind::T_STRING:   return ETextType::_str;
-  case token::ETokenKind::T_C_STRING: return ETextType::_c_str;
-  case token::ETokenKind::T_CUNE:     return ETextType::_cune;
-  case token::ETokenKind::T_RUNE:     return ETextType::_rune;
-  default:                            return ETextType::NONE;
+  case token::ETokenKind::T_TEXT: return ETextType::_text;
+  case token::ETokenKind::T_STR:  return ETextType::_str;
+  case token::ETokenKind::T_CSTR: return ETextType::_cstr;
+  case token::ETokenKind::T_CUNE: return ETextType::_cune;
+  case token::ETokenKind::T_RUNE: return ETextType::_rune;
+  default:                        return ETextType::NONE;
   }
 }
 
@@ -662,13 +624,23 @@ type::ID type::get_prototype(ast::ID nodeid) noexcept
   return NO_ID;
 }
 
+type::ID type::get_inner(type::ID nodeid) noexcept
+{
+  if (const auto* n = nodeid.as<type::Ptr>()) return n->inner;
+  if (const auto* n = nodeid.as<type::Array>()) return n->inner;
+  if (const auto* n = nodeid.as<type::Buffer>()) return n->inner;
+  if (const auto* n = nodeid.as<type::Slice>()) return n->inner;
+
+  return NO_ID;
+}
+
 
 void type::initialization() noexcept
 {
   primitives.reserve(TYPEID_USER_START);
-
 #define prim(prim_ty)                                                                                                  \
   auto* name##prim_ty         = new type::Primitive();                                                                 \
+  name##prim_ty->tyid         = TYPEID##prim_ty;                                                                       \
   name##prim_ty->primitive    = EPrimitiveTypeKind::prim_ty;                                                           \
   primitives[TYPEID##prim_ty] = std::unique_ptr<type::Primitive>(name##prim_ty);
 
@@ -709,20 +681,119 @@ void type::initialization() noexcept
   prim(_ud32);
   prim(_ud64);
   prim(_ud128);
-  prim(_ptr);
+  prim(_opaque);
 
 #undef prim
 
 #define prim_txt(prim_ty)                                                                                              \
   auto* name##prim_ty               = new type::String();                                                              \
+  name##prim_ty->tyid               = TYPEID##prim_ty;                                                                 \
   name##prim_ty->kind               = ETextType::prim_ty;                                                              \
   primitives[type::TYPEID##prim_ty] = std::unique_ptr<type::String>(name##prim_ty);
 
-  prim_txt(_c_str);
+  prim_txt(_cstr);
   prim_txt(_str);
   prim_txt(_text);
 
 #undef prim_txt
+}
+
+std::string type::dump(ID tyid) noexcept
+{
+  const auto& ptr_ty = tyid.get();
+
+  switch (tyid.kind()) {
+  case ETypeKind::NONE:      return "";
+  case ETypeKind::Primitive: return std::string(magic_enum::enum_name(tyid.as<type::Primitive>()->primitive).substr(1));
+  case ETypeKind::String:    return std::string(magic_enum::enum_name(tyid.as<type::String>()->kind).substr(1));
+  case ETypeKind::Tuple:     {
+    std::string out;
+    const auto* tu = static_cast<const type::Tuple*>(&ptr_ty);
+    for (const auto& tyid : tu->elems) {
+      out += tyid.dump();
+      out += ", ";
+    }
+
+    return "(" + out.substr(0, out.size() - 2) + ")";
+  }
+  case ETypeKind::Array: {
+    const auto* ptr = static_cast<const type::Array*>(&ptr_ty);
+    return "[" + ptr->inner.dump() + "; " + std::to_string(ptr->size) + "]";
+  }
+  case ETypeKind::Buffer: {
+    const auto* ptr = static_cast<const type::Buffer*>(&ptr_ty);
+    return "[" + ptr->inner.dump() + "; _]";
+  }
+  case ETypeKind::Slice: {
+    const auto*       ptr  = static_cast<const type::Slice*>(&ptr_ty);
+    const std::string mode = ptr->is_c_table ? "c" : "..";
+    return "[" + ptr->inner.dump() + "; " + mode + "]";
+  }
+  case ETypeKind::Ptr: {
+    const auto* ptr = static_cast<const type::Ptr*>(&ptr_ty);
+    return "ptr'" + ptr->inner.dump();
+  }
+  case ETypeKind::Prototype: {
+    std::string params;
+    const auto* proto = static_cast<const type::Prototype*>(&ptr_ty);
+    for (const auto& param : proto->params) {
+      params += param.type.dump();
+      params += ", ";
+    }
+    params = params.substr(0, params.size() - 2);
+
+    return "fn(" + params + ") -> " + proto->ret.dump();
+  }
+  case ETypeKind::Facet: {
+    const auto* facet = static_cast<const type::Facet*>(&ptr_ty);
+    const auto* node  = facet->def.node().as<ast::SFM_Facet>();
+    assert(node && "type node must be a facet");
+
+    std::string fields;
+    for (const auto& field : node->fields) {
+      const auto* f_node = field.as<ast::SFM_Facet_Field>();
+      assert(f_node && "a facet must have field nodes");
+
+      fields += std::string(f_node->name) + ": " + f_node->type.dump() + "\n";
+    }
+
+    return "facet" + std::string(node->name) + " {\n" + fields + "}\n";
+  }
+  case ETypeKind::View: {
+    const auto* view = static_cast<const type::View*>(&ptr_ty);
+    assert(view->def && "a view type must refer to a symbol");
+  }
+  case ETypeKind::Identifier: {
+    const auto* id = static_cast<const type::Identifier*>(&ptr_ty);
+    return id->forward_name;
+  }
+  case ETypeKind::Form:
+  case ETypeKind::Enum:
+  case ETypeKind::Flag:
+  case ETypeKind::Union: break;
+  }
+
+  return "";
+}
+
+std::vector<type::Prototype_Param> type::to_proto_params(const std::vector<ast::ID>& params) noexcept
+{
+  std::vector<type::Prototype_Param> out;
+  out.reserve(params.size());
+
+  for (auto nodeid : params) {
+    auto* param = nodeid.as<ast::Local_Parameter>();
+    assert(param);
+
+    out.emplace_back(type::Prototype_Param{
+        .passmode    = param->passmode,
+        .type        = param->type,
+        .nodeid      = nodeid,
+        .is_restrict = param->is_restrict,
+    });
+  }
+
+  return out;
 }
 
 
@@ -731,6 +802,10 @@ type::Type& type::Arena::get(ID id) noexcept
   size_t offset = id.offset();
   if (offset >= 0 && offset < TYPEID_USER_START)
     return *type::primitives.at(type::ID::make(cu::ID::main(), offset)).get();
+
+  // canonical
+  auto it = canon_identifier.find(id);
+  if (it != canon_identifier.end()) return get(it->second);
 
   offset -= TYPEID_USER_START;
 
@@ -742,6 +817,10 @@ const type::Type& type::Arena::get(ID id) const noexcept
   size_t offset = id.offset();
   if (offset >= 0 && offset < TYPEID_USER_START)
     return *type::primitives.at(type::ID::make(cu::ID::main(), offset)).get();
+
+  // canonical
+  auto it = canon_identifier.find(id);
+  if (it != canon_identifier.end()) return get(it->second);
 
   offset -= TYPEID_USER_START;
 
@@ -772,9 +851,10 @@ T* type::as(ID id) noexcept
 TYPE_GET_INSTANCE(type::Primitive)
 TYPE_GET_INSTANCE(type::String)
 TYPE_GET_INSTANCE(type::Tuple)
-TYPE_GET_INSTANCE(type::StaticArray)
+TYPE_GET_INSTANCE(type::Array)
+TYPE_GET_INSTANCE(type::Buffer)
+TYPE_GET_INSTANCE(type::Slice)
 TYPE_GET_INSTANCE(type::Ptr)
-TYPE_GET_INSTANCE(type::DynamicArray)
 TYPE_GET_INSTANCE(type::Prototype)
 TYPE_GET_INSTANCE(type::Facet)
 TYPE_GET_INSTANCE(type::View)

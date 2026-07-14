@@ -31,6 +31,7 @@
 #include "binder/binder_ffi.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+#include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
 #include <common/utils.hpp>
 
@@ -52,22 +53,22 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
 
   BindManifest m = {
       .binding_language          = "C",
-      .target_arch               = ctx.target.arch,
-      .target_os                 = ctx.target.platform,
-      .target_abi                = ctx.target.abi,
-      .clang_libc                = ctx.clang.libc,
-      .clang_libc_version        = ctx.clang.libc_version,
-      .features_gnu_source       = ctx.target.abi == common::env::EABI::gnu,
+      .target_arch               = ctx.target.triple.arch,
+      .target_os                 = ctx.target.triple.platform,
+      .target_abi                = ctx.target.triple.abi,
+      .clang_libc                = ctx.c_ffi.libc,
+      .clang_libc_version        = ctx.c_ffi.libc_version,
+      .features_gnu_source       = ctx.target.triple.abi == common::env::EABI::gnu,
       .features_posix_c_source   = common::env::supports_posix(m.target_os),
-      .features_file_offset_bits = common::compiler::file_offset_bits(m.clang_libc, m.target_arch),
-      .features_time_bits        = common::compiler::time_bits(m.clang_libc, m.target_arch),
+      .features_file_offset_bits = common::env::file_offset_bits(m.clang_libc, m.target_arch),
+      .features_time_bits        = common::env::time_bits(m.clang_libc, m.target_arch),
   };
 
   auto tmp_path = fs::path(common::env::get_cache_dir());
   fs::create_directories(tmp_path);
   tmp_path /= "tmp_include.c";
 
-  const auto& clang_args = ctx.clang.generate_preprocessor_args();
+  const auto& c_ffi_args = ctx.c_ffi.generate_preprocessor_args();
 
 
   auto wrap_headers = [&](const std::initializer_list<std::string_view>& headers) {
@@ -76,7 +77,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
       ofs.clear();
       ofs << "#include <" << header << ">\n";
       ofs.close();
-      auto ast       = parse_c_compilation_unit(tmp_path.string(), clang_args);
+      auto ast       = parse_c_compilation_unit(tmp_path.string(), c_ffi_args);
       ast->bind.lang = "C";
       ast->bind.lib  = header.substr(0, header.size() - 2);
 
@@ -86,7 +87,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
 
   wrap_headers(HEADERS_C_ISO);
 
-  auto& platform = compiler::OPTIONS.target.platform;
+  auto& platform = compiler::OPTIONS.target.triple.platform;
 
   // headers resolution
   if (platform == common::env::EPlatform::linux) {
@@ -135,10 +136,10 @@ void ffi::C_Reader::generate_c_api_wrappers(std::string_view from, std::string_v
   const fs::path pfrom(from);
   const fs::path pto(to);
 
-  const auto& clang_args = compiler::OPTIONS.clang.generate_preprocessor_args();
+  const auto& c_ffi_args = compiler::OPTIONS.c_ffi.generate_preprocessor_args();
 
-  auto generate_wrapper = [&clang_args, this](const fs::path& _from, std::string_view _to) {
-    auto ast       = parse_c_compilation_unit(_from.string(), clang_args);
+  auto generate_wrapper = [&c_ffi_args, this](const fs::path& _from, std::string_view _to) {
+    auto ast       = parse_c_compilation_unit(_from.string(), c_ffi_args);
     ast->bind.lang = "C";
     ast->bind.lib  = _from.stem();
     ast->velox_codegen(_to);
@@ -188,7 +189,7 @@ CXChildVisitResult ffi::c_universal_visitor(CXCursor p_cursor, CXCursor p_parent
 
   auto* reader = static_cast<ffi::C_Reader*>(p_client_data);
 
-  auto [_, success] = reader->symbols_generated.emplace(name);
+  auto [_, success] = reader->definitions_generated.emplace(name);
   if (!success) return CXChildVisit_Recurse; // continue recurse
 
 
@@ -346,7 +347,7 @@ type::EPrimitiveTypeKind ffi::C_Reader::c_type_base_to_primitive(CXType t) noexc
   case CXType_Bool:       return type::EPrimitiveTypeKind::_bool;
   case CXType_Void:       return type::EPrimitiveTypeKind::_u0;
 
-  case CXType_NullPtr:    return type::EPrimitiveTypeKind::_ptr;
+  case CXType_NullPtr:    return type::EPrimitiveTypeKind::_opaque;
 
   default:                return type::EPrimitiveTypeKind::NONE;
   }
@@ -356,7 +357,7 @@ ast::EPassMode ffi::C_Reader::c_type_to_pass_mode(CXType input) noexcept
 {
   //  Direct Value
   if (input.kind != CXType_Pointer) {
-    return ast::EPassMode::Copy;
+    return ast::EPassMode::copy;
   }
 
   // Level 1
@@ -371,13 +372,13 @@ ast::EPassMode ffi::C_Reader::c_type_to_pass_mode(CXType input) noexcept
   if (!lvl1_is_ptr) {
 
     // -------------------------
-    // const char* -> c_str
+    // const char* -> cstr
     // -------------------------
 
     bool is_char = lvl1.kind == CXType_Char_S || lvl1.kind == CXType_SChar || lvl1.kind == CXType_UChar;
 
     if (lvl1_const && is_char) {
-      return ast::EPassMode::Ref;
+      return ast::EPassMode::ref;
     }
 
     // -------------------------
@@ -385,12 +386,12 @@ ast::EPassMode ffi::C_Reader::c_type_to_pass_mode(CXType input) noexcept
     // T*       -> mut T
     // -------------------------
 
-    return lvl1_const ? ast::EPassMode::Ref : ast::EPassMode::Mut;
+    return lvl1_const ? ast::EPassMode::ref : ast::EPassMode::mut;
   }
 
 
   // Double pointer
-  return ast::EPassMode::Addr;
+  return ast::EPassMode::addr;
 }
 
 type::ID ffi::C_Reader::c_type_resolve_ptr(CXType input) noexcept
@@ -428,7 +429,7 @@ type::ID ffi::C_Reader::c_type_resolve_ptr(CXType input) noexcept
     if (pointer_depth == 1 && inner_ty == type::TYPEID_cune) {
       const auto& inner = current_ast->types->get(inner_ty);
       if (inner.qualifier.is_constant) {
-        return type::TYPEID_c_str;
+        return type::TYPEID_cstr;
       }
     }
 
@@ -449,18 +450,12 @@ type::ID ffi::C_Reader::c_type_resolve_atomic(CXType input) noexcept
 
 type::ID ffi::C_Reader::c_type_resolve_array(CXType input, type::Qualifier& dec) noexcept
 {
-  size_t table_size = 0;
-
   CXType elem    = clang_getArrayElementType(input);
   auto   elem_ty = c_type_to_type(elem);
 
-  if (input.kind == CXType_ConstantArray) {
-    table_size = static_cast<size_t>(clang_getArraySize(input));
-  }
-
-  auto& ty = current_ast->add_get_type<type::StaticArray>(dec);
-  ty.inner = elem_ty;
-  ty.size  = table_size;
+  auto& ty      = current_ast->add_get_type<type::Slice>(dec);
+  ty.inner      = elem_ty;
+  ty.is_c_table = true;
 
   return ty.tyid;
 }
@@ -472,26 +467,26 @@ type::ID ffi::C_Reader::c_type_resolve_proto(CXType input, type::Qualifier& dec)
   const int  n           = clang_getNumArgTypes(input);
   const bool is_variadic = clang_isFunctionTypeVariadic(input);
 
-  std::vector<type::Prototype::Param> params;
+  std::vector<type::Prototype_Param> params;
   params.reserve(n);
 
   for (int i = 0; i < n; i++) {
-    CXType                 arg = clang_getArgType(input, i);
-    type::Prototype::Param param;
+    CXType                arg = clang_getArgType(input, i);
+    type::Prototype_Param param;
 
     param.passmode = c_type_to_pass_mode(arg);
     switch (param.passmode) {
-    case ast::EPassMode::Mut:
-    case ast::EPassMode::Ref:
-    case ast::EPassMode::Addr: arg = clang_getPointeeType(arg); break;
+    case ast::EPassMode::mut:
+    case ast::EPassMode::ref:
+    case ast::EPassMode::addr: arg = clang_getPointeeType(arg); break;
     default:                   break;
     }
 
     param.type = c_type_to_type(arg);
 
     // C string type detected (constnat pointer on char)
-    if (param.passmode == ast::EPassMode::Ref && param.type == type::TYPEID_cune) {
-      param.type = type::TYPEID_c_str;
+    if (param.passmode == ast::EPassMode::ref && param.type == type::TYPEID_cune) {
+      param.type = type::TYPEID_cstr;
     }
 
     params.emplace_back(param);
@@ -537,7 +532,7 @@ type::ID ffi::C_Reader::c_type_resolve_opaque(CXCursor decl, type::Qualifier& de
       underlying      = c_type_normalize(underlying);
 
       auto prim = c_type_base_to_primitive(underlying);
-      if (prim != type::EPrimitiveTypeKind::NONE) node.type = type::ID::make_primitive(cu::ID::main(), prim);
+      if (prim != type::EPrimitiveTypeKind::NONE) node.type = type::ID::make_primitive(prim);
     }
   }
 
@@ -883,9 +878,9 @@ ast::ID ffi::C_Reader::c_global_to_global(CXCursor cur) noexcept
   clang_disposeString(cur_name);
 
   if (clang_isConstQualifiedType(cur_ty))
-    node.kind = ast::EVariableKind::Let;
+    node.kind = ast::EVariableKind::_let;
   else
-    node.kind = ast::EVariableKind::Var;
+    node.kind = ast::EVariableKind::_var;
 
   const auto tyid = c_type_to_type(cur_ty);
   node.type       = tyid;
@@ -958,8 +953,8 @@ ffi::BindManifest ffi::BindManifest::read_manifest(std::string_view path) noexce
   m.target_os   = get_enum("target.platform", common::env::EPlatform, unknown);
   m.target_abi  = get_enum("target.abi", common::env::EABI, unknown);
 
-  m.clang_libc         = get_enum("libc.kind", common::compiler::ELibC, unknown);
-  m.clang_libc_version = common::compiler::Clang::LibCVersion::parse(get_str("libc.version"));
+  m.clang_libc         = get_enum("libc.kind", common::env::ELibC, unknown);
+  m.clang_libc_version = common::compiler::Cffi::LibCVersion::parse(get_str("libc.version"));
 
   m.compiler_clang_version = get_str("compiler.clang_version");
 
@@ -977,13 +972,13 @@ ffi::BindManifest ffi::BindManifest::read_manifest(std::string_view path) noexce
 
   auto f_f_offset_bits = tbl.at_path("features.file_offset_bits");
   if (!f_f_offset_bits)
-    m.features_file_offset_bits = common::compiler::file_offset_bits(m.clang_libc, m.target_arch);
+    m.features_file_offset_bits = common::env::file_offset_bits(m.clang_libc, m.target_arch);
   else
     m.features_file_offset_bits = f_f_offset_bits.value_or(64);
 
   auto f_time_bits = tbl.at_path("features.time_bits");
   if (!f_time_bits)
-    m.features_time_bits = common::compiler::time_bits(m.clang_libc, m.target_arch);
+    m.features_time_bits = common::env::time_bits(m.clang_libc, m.target_arch);
   else
     m.features_time_bits = f_time_bits.value_or(64);
 

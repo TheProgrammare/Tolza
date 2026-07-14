@@ -1,130 +1,142 @@
 #include "static_evaluation.hpp"
 
 #include <expected>
+#include <llvm-19/llvm/IR/Constant.h>
+#include <llvm-19/llvm/IR/Constants.h>
+#include <llvm-19/llvm/IR/Type.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <cmath>
 
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "codegen/codegen.hpp"
+#include "codegen/codegen_type.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_numeric_128_bits.hpp"
 #include "ast/ast_operation.hpp"
-#include "codegen/resolver_codegen.hpp"
 #include "codegen_tools.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/type/data.hpp"
 
-Static_Evaluator::Static_Evaluator(resolver::Codegen& _v)
-  : tools(new LLVM_Tools(_v))
-  , v(_v)
+codegen::Static_Evaluator::Static_Evaluator(codegen::Codegen_AST& p_res)
+  : tools(new Tools(p_res))
+  , res(p_res)
 {
 }
-/*
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::evaluate_expression(ast::AExpression& value)
+
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::evaluate_expression(ast::ID expr) noexcept
 {
-  if (auto ptr = dynamic_cast<ast::ALiteral*>(&value)) {
-    return ptr;
-  } else if (auto ptr = dynamic_cast<ast::Expr_ID*>(&value)) {
-    auto expr = tools->get_symbol_expression(*ptr->identifier_symbol);
+  expr = expr.canonical();
 
-  } else if (auto ptr = dynamic_cast<ast::Expr_ID_Qualified*>(&value)) {
-    auto expr = tools->get_symbol_expression(*ptr->identifier_symbol);
-  } else if (auto ptr = dynamic_cast<ast::operation::Binary*>(&value)) {
-    auto lhs = evaluate_expression(*ptr->left);
+  if (auto* ptr = expr.as<ast::Operation_Binary>()) {
+    auto lhs = evaluate_expression(ptr->left);
     if (!lhs) return std::unexpected(lhs.error());
 
-    auto rhs = evaluate_expression(*ptr->right);
+    auto rhs = evaluate_expression(ptr->right);
     if (!rhs) return std::unexpected(rhs.error());
 
     auto& L = *lhs.value();
     auto& R = *rhs.value();
 
-    if (auto L_ptr = dynamic_cast<ast::literal::Integral*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Integral*>(&R);
+    if (auto* L_ptr = ptr->left.as<ast::Literal_Integral>()) {
+      auto* R_ptr = ptr->right.as<ast::Literal_Integral>();
       return integral(*L_ptr, *R_ptr, ptr->op_ty);
-    } else if (auto L_ptr = dynamic_cast<ast::literal::Floating_Point*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Floating_Point*>(&R);
+    }
+    if (auto* L_ptr = ptr->left.as<ast::Literal_Floating_Point>()) {
+      auto* R_ptr = ptr->right.as<ast::Literal_Floating_Point>();
       return floating(*L_ptr, *R_ptr, ptr->op_ty);
-    } else if (auto L_ptr = dynamic_cast<ast::literal::Fixed_Point*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Fixed_Point*>(&R);
+    }
+    if (auto* L_ptr = ptr->left.as<ast::Literal_Fixed_Point>()) {
+      auto* R_ptr = ptr->right.as<ast::Literal_Fixed_Point>();
       return decimal(*L_ptr, *R_ptr, ptr->op_ty);
-    } else if (auto L_ptr = dynamic_cast<ast::literal::Boolean*>(&L)) {
-      auto R_ptr = dynamic_cast<ast::literal::Boolean*>(&R);
+    }
+    if (auto* L_ptr = ptr->left.as<ast::Literal_Boolean>()) {
+      auto* R_ptr = ptr->right.as<ast::Literal_Boolean>();
       return boolean(*L_ptr, *R_ptr, ptr->op_ty);
     }
-  } else if (auto ptr = dynamic_cast<ast::operation::Unary*>(&value)) {
-    auto term = evaluate_expression(*ptr->base);
-    if (!term) return std::unexpected(term.error());
-
-    auto& T = *term.value();
-
+  } else if (auto* ptr = expr.as<ast::Operation_Unary>()) {
     switch (ptr->unary_op) {
-    case EUnaryOpType::NONE:         break;
-    case EUnaryOpType::_not:         return boolean_not(T);
-    case EUnaryOpType::_plus:        return scalar_plus(T);
-    case EUnaryOpType::_minus:       return scalar_minus(T);
-    case EUnaryOpType::_invert_sign: return boolean_not(T);
+    case ast::EOp_Unary::NONE:         return evaluate_expression(ptr->base);
+    case ast::EOp_Unary::_not:         return boolean_not(ptr->base);
+    case ast::EOp_Unary::_plus:        return scalar_plus(ptr->base);
+    case ast::EOp_Unary::_minus:       return scalar_minus(ptr->base);
+    case ast::EOp_Unary::_invert_sign: return boolean_not(ptr->base);
     }
   }
 
-  Error_Diagnostic err(v.CU, 169, value.node_CU.get(), value.node_token, compiler::EPhase::llvmir,
+  if (auto ptr = tools->create_constant(expr)) return ptr.value();
+
+  if (auto* glo = expr.as<ast::Global_Variable>()) return evaluate_expression(glo->expression);
+  if (auto* loc = expr.as<ast::Local_Variable>()) return evaluate_expression(loc->expression);
+
+  Error_Diagnostic err(res.CU.cuid, 169, expr, compiler::EPhase::llvmir,
                        "The expression can't be evaluated at compilation time", "");
-  return std::unexpected(err.print_error());
+  return std::unexpected(err.print_userfriendly_error());
 }
 
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast::literal::Integral& L,
-                                                                      const ast::literal::Integral& R, EBinOpType op)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::integral(const ast::Literal_Integral& L,
+                                                                                const ast::Literal_Integral& R,
+                                                                                ast::EOp_Bin op) noexcept
 {
-  auto to_lit  = [](const Int128& value) { return new ast::literal::Integral(value); };
-  auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
+  auto to_int = [&](const llvm::APInt& value) {
+    return llvm::ConstantInt::getIntegerValue(res.get_type(L.nodeid.type()), value);
+  };
+  auto to_fp = [&](double value) { return llvm::ConstantFP::get(res.get_type(L.nodeid.type()), value); };
+
+  auto to_bool = [](bool value) { return llvm::ConstantInt::get(codegen::LLVM_TYPEID_bool, value); };
 
   auto& L_val = *L.val.val;
   auto& R_val = *R.val.val;
 
-  bool is_signed = EPrimType_is_signed(L.type);
+  bool is_signed = type::EPrimitiveTypeKind_is_signed(L.type);
 
-  if (EPrimType_is_integral(L.type)) {
+  if (type::EPrimitiveTypeKind_is_integral(L.type)) {
     switch (op) {
-    case EBinOpType::Add: {
-      return to_lit(Int128(L_val + R_val));
+    case ast::EOp_Bin::_add: {
+      return to_int(L_val + R_val);
     }
-    case EBinOpType::Sub: {
-      return to_lit(Int128(L_val - R_val));
+    case ast::EOp_Bin::_sub: {
+      return to_int(L_val - R_val);
     }
-    case EBinOpType::Mul: {
-      return to_lit(Int128(L_val * R_val));
+    case ast::EOp_Bin::_mul: {
+      return to_int(L_val * R_val);
     }
-    case EBinOpType::Div: {
+    case ast::EOp_Bin::_div: {
+      double L_f;
+      double R_f;
+
       if (is_signed) {
-        auto L_f = L_val.signedRoundToDouble();
-        auto R_f = R_val.signedRoundToDouble();
-        return new ast::literal::Floating_Point(Float128(L_f / R_f));
+        L_f = L_val.signedRoundToDouble();
+        R_f = R_val.signedRoundToDouble();
       } else {
-        auto L_f = L_val.roundToDouble();
-        auto R_f = R_val.roundToDouble();
-        return new ast::literal::Floating_Point(Float128(L_f / R_f));
+        L_f = L_val.roundToDouble();
+        R_f = R_val.roundToDouble();
       }
+
+      return to_fp(L_f / R_f);
     }
-    case EBinOpType::Mod: {
-      if (is_signed)
-        return to_lit(Int128(L_val.srem(R_val)));
-      else
-        return to_lit(Int128(L_val.urem(R_val)));
+    case ast::EOp_Bin::_mod: {
+      if (is_signed) to_int(L_val.srem(R_val));
+      return to_int(L_val.urem(R_val));
     }
-    case EBinOpType::Quo: {
+    case ast::EOp_Bin::_quo: {
       if (is_signed) {
         llvm::APInt r = L_val.srem(R_val);
 
         if (r.isNegative()) r += R_val.abs();
 
-        return to_lit(Int128(r));
-      } else {
-        return to_lit(Int128(L_val.urem(R_val)));
+        return to_int(r);
       }
+      return to_int(L_val.urem(R_val));
     }
-    case EBinOpType::Rem: {
+    case ast::EOp_Bin::_rem: {
       if (is_signed) {
         llvm::APInt q = L_val.sdiv(R_val);
         llvm::APInt r = L_val.srem(R_val);
@@ -137,169 +149,160 @@ std::expected<ast::ALiteral*, std::string> Static_Evaluator::integral(const ast:
             q -= 1;
         }
 
-        return to_lit(Int128(q));
-      } else {
-        return to_lit(Int128(L_val.udiv(R_val)));
+        return to_int(q);
       }
+
+      return to_int(L_val.udiv(R_val));
     }
-    case EBinOpType::Divrem: {
-      Error_Diagnostic err(v.CU, 170, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
+    case ast::EOp_Bin::_divrem: {
+      Error_Diagnostic err(res.CU.cuid, 170, L.nodeid, compiler::EPhase::llvmir,
                            "Unexpected operation for compilation time evaluation.", "");
-      return std::unexpected(err.print_error());
+      return std::unexpected(err.print_userfriendly_error());
     }
-    case EBinOpType::Pow: {
-      Int128 result(1);
-      auto&  base = L_val;
-      auto&  exp  = R_val;
+    case ast::EOp_Bin::_pow: {
+      llvm::APInt result = llvm::APInt(L_val.getBitWidth(), 1);
+      auto&       base   = L_val;
+      auto&       exp    = R_val;
       while (!exp.isZero()) {
-        if ((*R.val.val)[0]) // bit de poids faible
-          *result.val *= base;
-        exp = exp.lshr(1); // diviser exp par 2
-        base *= base;      // exponentiation rapide
+        if ((*R.val.val)[0]) // low bit
+          result *= base;
+        exp = exp.lshr(1); // div exp by 2
+        base *= base;      // fast exponentiation
       }
-      return new ast::literal::Integral(result);
+      return to_int(result);
     }
-    case EBinOpType::Gre: {
-      if (is_signed)
-        return to_bool(L_val.sgt(R_val));
-      else
-        return to_bool(L_val.ugt(R_val));
+    case ast::EOp_Bin::_gre: {
+      if (is_signed) return to_bool(L_val.sgt(R_val));
+      return to_bool(L_val.ugt(R_val));
     }
-    case EBinOpType::Low: {
-      if (is_signed)
-        return to_bool(L_val.slt(R_val));
-      else
-        return to_bool(L_val.ult(R_val));
+    case ast::EOp_Bin::_low: {
+      if (is_signed) return to_bool(L_val.slt(R_val));
+      return to_bool(L_val.ult(R_val));
     }
-    case EBinOpType::Gre_eq: {
-      if (is_signed)
-        return to_bool(L_val.sge(R_val));
-      else
-        return to_bool(L_val.uge(R_val));
+    case ast::EOp_Bin::_gre_eq: {
+      if (is_signed) return to_bool(L_val.sge(R_val));
+      return to_bool(L_val.uge(R_val));
     }
-    case EBinOpType::Low_eq: {
-      if (is_signed)
-        return to_bool(L_val.sle(R_val));
-      else
-        return to_bool(L_val.ule(R_val));
+    case ast::EOp_Bin::_low_eq: {
+      if (is_signed) return to_bool(L_val.sle(R_val));
+      return to_bool(L_val.ule(R_val));
     }
-    case EBinOpType::_eq:
-    case EBinOpType::_eqs:
-    case EBinOpType::_is:
-    case EBinOpType::_in:  {
+    case ast::EOp_Bin::_eq:
+    case ast::EOp_Bin::_eqs:
+    case ast::EOp_Bin::_is:
+    case ast::EOp_Bin::_in:  {
       return to_bool(L_val.eq(R_val));
     }
-    case EBinOpType::_neq:
-    case EBinOpType::_neqs:
-    case EBinOpType::_nis:
-    case EBinOpType::_nin:  {
+    case ast::EOp_Bin::_neq:
+    case ast::EOp_Bin::_neqs:
+    case ast::EOp_Bin::_nis:
+    case ast::EOp_Bin::_nin:  {
       return to_bool(L_val.ne(R_val));
     }
     default: {
-      Error_Diagnostic err(v.CU, 171, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                           "Unexpected operation on integral.", "");
-      return std::unexpected(err.print_error());
+      Error_Diagnostic err(res.CU.cuid, 171, L.nodeid, compiler::EPhase::llvmir, "Unexpected operation on integral.",
+                           "");
+      return std::unexpected(err.print_userfriendly_error());
     }
     }
-  } else if (EPrimType_is_byte(L.type)) {
+  } else if (type::EPrimitiveTypeKind_is_byte(L.type)) {
     llvm::APInt mask = llvm::APInt::getAllOnes(L_val.getBitWidth());
 
     switch (op) {
-    case EBinOpType::_and:
-    case EBinOpType::_b_and: {
-      return to_lit(Int128(L_val & R_val));
+    case ast::EOp_Bin::_and:
+    case ast::EOp_Bin::_b_and: {
+      return to_int(L_val & R_val);
     }
-    case EBinOpType::_nand:
-    case EBinOpType::_b_nand: {
-      return to_lit(Int128(~(L_val & R_val) & mask));
+    case ast::EOp_Bin::_nand:
+    case ast::EOp_Bin::_b_nand: {
+      return to_int(~(L_val & R_val) & mask);
     }
-    case EBinOpType::_or:
-    case EBinOpType::_b_or: {
-      return to_lit(Int128(L_val | R_val));
+    case ast::EOp_Bin::_or:
+    case ast::EOp_Bin::_b_or: {
+      return to_int(L_val | R_val);
     }
-    case EBinOpType::_xor:
-    case EBinOpType::_b_xor: {
-      return to_lit(Int128(L_val ^ R_val));
+    case ast::EOp_Bin::_xor:
+    case ast::EOp_Bin::_b_xor: {
+      return to_int(L_val ^ R_val);
     }
-    case EBinOpType::_nor:
-    case EBinOpType::_b_nor: {
-      return to_lit(Int128(~(L_val | R_val) & mask));
+    case ast::EOp_Bin::_nor:
+    case ast::EOp_Bin::_b_nor: {
+      return to_int(~(L_val | R_val) & mask);
     }
-    case EBinOpType::_xnor:
-    case EBinOpType::_b_xnor: {
-      return to_lit(Int128(~(L_val ^ R_val) & mask));
+    case ast::EOp_Bin::_xnor:
+    case ast::EOp_Bin::_b_xnor: {
+      return to_int(~(L_val ^ R_val) & mask);
     }
-    case EBinOpType::ls0: {
-      return to_lit(Int128(L_val.shl(R_val.getLimitedValue())));
+    case ast::EOp_Bin::_b_shl_0: {
+      return to_int(L_val.shl(R_val.getLimitedValue()));
     }
-    case EBinOpType::ls1: {
+    case ast::EOp_Bin::_b_shl_1: {
       unsigned width = L_val.getBitWidth();
       unsigned shift = R_val.getLimitedValue();
       auto     r     = L_val.shl(shift);
       auto     fill  = llvm::APInt::getAllOnes(width).lshr(width - shift);
       r |= fill;
-      return to_lit(Int128(r));
+      return to_int(r);
     }
-    case EBinOpType::lsa: {
+    case ast::EOp_Bin::_b_shl_a: {
     }
-    case EBinOpType::rs0: {
-      return to_lit(Int128(L_val.lshr(R_val.getLimitedValue())));
+    case ast::EOp_Bin::_b_shr_0: {
+      return to_int(L_val.lshr(R_val.getLimitedValue()));
     }
-    case EBinOpType::rs1: {
+    case ast::EOp_Bin::_b_shr_1: {
       unsigned width = L_val.getBitWidth();
       unsigned shift = R_val.getLimitedValue();
 
       llvm::APInt r    = L_val.lshr(shift);                                 // shift classique
       llvm::APInt fill = llvm::APInt::getAllOnes(width).shl(width - shift); // bits de gauche mis à 1
       r |= fill;
-      return to_lit(Int128(r));
+      return to_int(r);
     }
-    case EBinOpType::rsa: {
-      return to_lit(Int128(L_val.ashr(R_val.getLimitedValue())));
+    case ast::EOp_Bin::_b_shr_a: {
+      return to_int(L_val.ashr(R_val.getLimitedValue()));
     }
-    case EBinOpType::lr: {
-      return to_lit(Int128(L_val.rotl(R_val.getLimitedValue())));
+    case ast::EOp_Bin::_b_rol: {
+      return to_int(L_val.rotl(R_val.getLimitedValue()));
     }
-    case EBinOpType::rr: {
-      return to_lit(Int128(L_val.rotr(R_val.getLimitedValue())));
+    case ast::EOp_Bin::_b_ror: {
+      return to_int(L_val.rotr(R_val.getLimitedValue()));
     }
     default: {
-      Error_Diagnostic err(v.CU, 172, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                           "Unexpected operation on byte.", "");
-      return std::unexpected(err.print_error());
+      Error_Diagnostic err(res.CU.cuid, 172, L.nodeid, compiler::EPhase::llvmir, "Unexpected operation on byte.", "");
+      return std::unexpected(err.print_userfriendly_error());
     }
     }
-  } else {
-    Error_Diagnostic err(v.CU, 173, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                         "Unexpected type.", "");
-    return std::unexpected(err.print_error());
   }
+
+  Error_Diagnostic err(res.CU.cuid, 173, L.nodeid, compiler::EPhase::llvmir, "Unexpected type.", "");
+  return std::unexpected(err.print_userfriendly_error());
 }
-std::expected<ast::ALiteral*, std::string>
-Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::literal::Floating_Point& R, EBinOpType op)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::floating(const ast::Literal_Floating_Point& L,
+                                                                                const ast::Literal_Floating_Point& R,
+                                                                                ast::EOp_Bin op) noexcept
 {
-  auto to_lit  = [](const Float128& value) { return new ast::literal::Floating_Point(value); };
-  auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
+  auto to_fp = [&](const llvm::APFloat& value) { return llvm::ConstantFP::get(res.get_type(L.nodeid.type()), value); };
+  auto to_bool = [](bool value) { return llvm::ConstantInt::get(codegen::LLVM_TYPEID_bool, value); };
 
   auto& L_val = *L.val.val;
   auto& R_val = *R.val.val;
 
-  bool is_signed = EPrimType_is_signed(L.type);
+  bool is_signed = type::EPrimitiveTypeKind_is_signed(L.type);
 
   switch (op) {
-  case EBinOpType::Add: {
-    return to_lit(Float128(L_val + R_val));
+  case ast::EOp_Bin::_add: {
+    return to_fp(L_val + R_val);
   }
-  case EBinOpType::Sub: {
-    return to_lit(Float128(L_val - R_val));
+  case ast::EOp_Bin::_sub: {
+    return to_fp(L_val - R_val);
   }
-  case EBinOpType::Mul: {
-    return to_lit(Float128(L_val * R_val));
+  case ast::EOp_Bin::_mul: {
+    return to_fp(L_val * R_val);
   }
-  case EBinOpType::Div: {
-    return to_lit(Float128(L_val / R_val));
+  case ast::EOp_Bin::_div: {
+    return to_fp(L_val / R_val);
   }
-  case EBinOpType::Mod: {
+  case ast::EOp_Bin::_mod: {
     llvm::APFloat q = L_val;
     q.divide(R_val, llvm::APFloat::rmTowardZero);
     q.roundToIntegral(llvm::APFloat::rmTowardZero);
@@ -316,13 +319,13 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
       r.add(abs_b, llvm::APFloat::rmNearestTiesToEven);
     }
 
-    return to_lit(Float128(r));
+    return to_fp(r);
   }
-  case EBinOpType::Quo: {
-    Error_Diagnostic err(v.CU, 174, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
+  case ast::EOp_Bin::_quo: {
+    Error_Diagnostic err(res.CU.cuid, 174, L.nodeid, compiler::EPhase::llvmir,
                          "Unexpected opration for floating type, use floor(fsize)", "");
   }
-  case EBinOpType::Rem: {
+  case ast::EOp_Bin::_rem: {
     llvm::APFloat q = L_val;
     q.divide(R_val, llvm::APFloat::rmTowardZero);   // q = a/b
     q.roundToIntegral(llvm::APFloat::rmTowardZero); // trunc
@@ -333,15 +336,15 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
     llvm::APFloat r = L_val;
     r.subtract(qb, llvm::APFloat::rmNearestTiesToEven);
 
-    return to_lit(Float128(r));
+    return to_fp(r);
   }
-  case EBinOpType::Divrem: {
+  case ast::EOp_Bin::_divrem: {
 
-    Error_Diagnostic err(v.CU, 175, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
+    Error_Diagnostic err(res.CU.cuid, 175, L.nodeid, compiler::EPhase::llvmir,
                          "Unexpected operation for compilation time evaluation.", "");
-    return std::unexpected(err.print_error());
+    return std::unexpected(err.print_userfriendly_error());
   }
-  case EBinOpType::Pow: {
+  case ast::EOp_Bin::_pow: {
     double base = L_val.convertToDouble();
     double exp  = R_val.convertToDouble();
 
@@ -351,47 +354,47 @@ Static_Evaluator::floating(const ast::literal::Floating_Point& L, const ast::lit
 
     if (std::isnan(result)) return std::unexpected("invalid floating power");
 
-    return to_lit(Float128(result));
+    return llvm::ConstantFP::get(res.get_type(L.nodeid.type()), result);
   }
-  case EBinOpType::Gre: {
+  case ast::EOp_Bin::_gre: {
     return to_bool(L_val > R_val);
   }
-  case EBinOpType::Low: {
+  case ast::EOp_Bin::_low: {
     return to_bool(L_val < R_val);
   }
-  case EBinOpType::Gre_eq: {
+  case ast::EOp_Bin::_gre_eq: {
     return to_bool(L_val >= R_val);
   }
-  case EBinOpType::Low_eq: {
+  case ast::EOp_Bin::_low_eq: {
     return to_bool(L_val <= R_val);
   }
-  case EBinOpType::_eq:
-  case EBinOpType::_in: {
+  case ast::EOp_Bin::_eq:
+  case ast::EOp_Bin::_in: {
     return to_bool(float_almost_eq_ULP(L_val, R_val));
   }
-  case EBinOpType::_neq:
-  case EBinOpType::_nin: {
+  case ast::EOp_Bin::_neq:
+  case ast::EOp_Bin::_nin: {
     return to_bool(!float_almost_eq_ULP(L_val, R_val));
     bool test = L_val == R_val;
   }
-  case EBinOpType::_eqs:
-  case EBinOpType::_is:  {
+  case ast::EOp_Bin::_eqs:
+  case ast::EOp_Bin::_is:  {
     return to_bool(L_val == R_val);
   }
-  case EBinOpType::_neqs:
-  case EBinOpType::_nis:  {
+  case ast::EOp_Bin::_neqs:
+  case ast::EOp_Bin::_nis:  {
     return to_bool(L_val != R_val);
   }
   default: {
-    Error_Diagnostic err(v.CU, 176, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation on byte.", "");
-    return std::unexpected(err.print_error());
+    Error_Diagnostic err(res.CU.cuid, 176, L.nodeid, compiler::EPhase::llvmir, "Unexpected operation on byte.", "");
+    return std::unexpected(err.print_userfriendly_error());
   }
   }
 }
 
 
-bool Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::APFloat& R, unsigned maxULP)
+bool codegen::Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::APFloat& R,
+                                                    unsigned maxULP) noexcept
 {
   if (L.isNaN() || R.isNaN()) return false;
 
@@ -416,175 +419,172 @@ bool Static_Evaluator::float_almost_eq_ULP(const llvm::APFloat& L, const llvm::A
   return diff.ule(maxULP);
 }
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::decimal(const ast::literal::Fixed_Point& L,
-                                                                     const ast::literal::Fixed_Point& R, EBinOpType op)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::decimal(const ast::Literal_Fixed_Point& L,
+                                                                               const ast::Literal_Fixed_Point& R,
+                                                                               ast::EOp_Bin op) noexcept
 {
-  auto to_lit = [](const llvm::APInt& value, size_t scale, EPrimitiveTypeKind raw_type) -> ast::ALiteral* {
-    return new ast::literal::Fixed_Point(Int128(value), scale, raw_type);
-  };
-  auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
+  auto to_dec = [&](const llvm::APInt& v) { return llvm::ConstantInt::get(res.get_type(L.nodeid.type()), v); };
 
-  llvm::APInt L_val = *L.val.val; // copy
-  llvm::APInt R_val = *R.val.val; // copy
+  llvm::APInt L_val = *L.val.val;
+  llvm::APInt R_val = *R.val.val;
 
-  size_t max_scale = std::max(L.scale, R.scale);
+  const size_t max_scale = std::max(L.scale, R.scale);
 
-  auto align_scales = [&](llvm::APInt& val, size_t val_decimal) {
-    for (size_t i = val_decimal; i < max_scale; ++i) val = val * 10;
+  auto align_scales = [&](llvm::APInt& v, size_t s) {
+    size_t diff = max_scale - s;
+    if (diff > 0) v <<= diff; // FIX: power-of-two scaling
   };
 
   switch (op) {
-  case EBinOpType::Add: {
+
+  case ast::EOp_Bin::_add:
+  case ast::EOp_Bin::_sub: {
     align_scales(L_val, L.scale);
     align_scales(R_val, R.scale);
-    llvm::APInt result = L_val + R_val;
-    return to_lit(result, max_scale, L.raw_type);
+
+    llvm::APInt result = (op == ast::EOp_Bin::_add) ? (L_val + R_val) : (L_val - R_val);
+
+    return to_dec(result);
   }
-  case EBinOpType::Sub: {
-    align_scales(L_val, L.scale);
-    align_scales(R_val, R.scale);
-    llvm::APInt result = L_val - R_val;
-    return to_lit(result, max_scale, L.raw_type);
+
+  case ast::EOp_Bin::_mul: {
+    // widen to avoid overflow
+    llvm::APInt wideL = L_val.sext(L_val.getBitWidth() * 2);
+    llvm::APInt wideR = R_val.sext(R_val.getBitWidth() * 2);
+
+    llvm::APInt shift(wideL.getBitWidth(), max_scale);
+
+    llvm::APInt result = (wideL * wideR);
+
+    if (type::EPrimitiveTypeKind_is_signed(L.raw_type))
+      result = result.ashr(shift);
+    else
+      result = result.lshr(shift);
+
+    return to_dec(result.trunc(L_val.getBitWidth()));
   }
-  case EBinOpType::Mul: {
-    llvm::APInt result       = L_val * R_val;
-    size_t      result_scale = L.scale + R.scale;
-    return to_lit(result, result_scale, L.raw_type);
-  }
-  case EBinOpType::Div: {
-    // scale dividende to keep precision
-    llvm::APInt scale(L_val.getBitWidth(), 1);
-    for (size_t i = 0; i < max_scale; ++i) scale = scale * 10;
+
+  case ast::EOp_Bin::_div: {
+    llvm::APInt scale    = llvm::APInt(L_val.getBitWidth(), 1).shl(max_scale);
     llvm::APInt dividend = L_val * scale;
-    llvm::APInt result;
-    if (EPrimType_is_signed(L.raw_type))
-      result = dividend.udiv(R_val);
-    else
-      result = dividend.sdiv(R_val);
 
-    return to_lit(result, max_scale, L.raw_type);
-  }
-  case EBinOpType::Quo: {
-    // integral quotient
-    llvm::APInt result;
-    if (EPrimType_is_signed(L.raw_type))
-      result = L_val.udiv(R_val);
-    else
-      result = L_val.sdiv(R_val);
+    llvm::APInt result = type::EPrimitiveTypeKind_is_signed(L.raw_type) ? dividend.sdiv(R_val) : dividend.udiv(R_val);
 
-    return to_lit(result, 0, L.raw_type);
+    return to_dec(result);
   }
-  case EBinOpType::Rem: {
-    llvm::APInt result;
-    if (EPrimType_is_signed(L.raw_type))
-      result = L_val.urem(R_val);
-    else
-      result = L_val.srem(R_val);
 
-    return to_lit(result, 0, L.raw_type);
-  }
-  case EBinOpType::Divrem: {
+  case ast::EOp_Bin::_quo: {
+    llvm::APInt result = type::EPrimitiveTypeKind_is_signed(L.raw_type) ? L_val.sdiv(R_val) : L_val.udiv(R_val);
 
-    Error_Diagnostic err(v.CU, 177, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation for compilation time evaluation.", "");
-    return std::unexpected(err.print_error());
+    return to_dec(result);
   }
-  case EBinOpType::_eq: {
+
+  case ast::EOp_Bin::_rem: {
+    llvm::APInt result = type::EPrimitiveTypeKind_is_signed(L.raw_type) ? L_val.srem(R_val) : L_val.urem(R_val);
+
+    return to_dec(result);
+  }
+
+  case ast::EOp_Bin::_eq:
+  case ast::EOp_Bin::_neq: {
     align_scales(L_val, L.scale);
     align_scales(R_val, R.scale);
-    return to_bool(L_val == R_val);
+
+    bool res_bool = (op == ast::EOp_Bin::_eq) ? (L_val == R_val) : (L_val != R_val);
+
+    return llvm::ConstantInt::get(codegen::LLVM_TYPEID_bool, res_bool);
   }
-  case EBinOpType::_neq: {
-    align_scales(L_val, L.scale);
-    align_scales(R_val, R.scale);
-    return to_bool(L_val != R_val);
-  }
-  default: return std::unexpected("Unexpected operation on Decimal");
+
+  case ast::EOp_Bin::_divrem: return std::unexpected("Invalid compile-time operation");
+
+  default:                    return std::unexpected("Unexpected operation on Decimal");
   }
 }
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean(const ast::literal::Boolean& L,
-                                                                     const ast::literal::Boolean& R, EBinOpType op)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::boolean(const ast::Literal_Boolean& L,
+                                                                               const ast::Literal_Boolean& R,
+                                                                               ast::EOp_Bin                op) noexcept
 {
-  auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
+  auto to_bool = [](bool value) { return llvm::ConstantInt::get(codegen::LLVM_TYPEID_bool, value); };
 
   bool L_val = L.val;
   bool R_val = R.val;
 
   switch (op) {
-    // EQUAL
-  case EBinOpType::_eq:
-  case EBinOpType::_is:     return to_bool(L_val == R_val);
-  case EBinOpType::_neq:
-  case EBinOpType::_nis:    return to_bool(L_val != R_val);
+  // EQUAL
+  case ast::EOp_Bin::_eq:
+  case ast::EOp_Bin::_is:     return to_bool(L_val == R_val);
+  case ast::EOp_Bin::_neq:
+  case ast::EOp_Bin::_nis:    return to_bool(L_val != R_val);
   // AND
-  case EBinOpType::_b_and:
-  case EBinOpType::_and:    return to_bool(L_val && R_val);
-  case EBinOpType::_b_nand:
-  case EBinOpType::_nand:   return to_bool(!(L_val && R_val));
+  case ast::EOp_Bin::_b_and:
+  case ast::EOp_Bin::_and:    return to_bool(L_val && R_val);
+  case ast::EOp_Bin::_b_nand:
+  case ast::EOp_Bin::_nand:   return to_bool(!(L_val && R_val));
   // OR
-  case EBinOpType::_b_or:
-  case EBinOpType::_or:     return to_bool(L_val || R_val);
-  case EBinOpType::_b_nor:
-  case EBinOpType::_nor:    return to_bool(!(L_val || R_val));
-  default:                  {
-    Error_Diagnostic err(v.CU, 178, L.node_CU.get(), L.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation on boolean.", "");
-    return std::unexpected(err.print_error());
+  case ast::EOp_Bin::_b_or:
+  case ast::EOp_Bin::_or:     return to_bool(L_val || R_val);
+  case ast::EOp_Bin::_b_nor:
+  case ast::EOp_Bin::_nor:    return to_bool(!(L_val || R_val));
+  default:                    {
+    Error_Diagnostic err(res.CU.cuid, 178, L.nodeid, compiler::EPhase::llvmir, "Unexpected operation on boolean.", "");
+    return std::unexpected(err.print_userfriendly_error());
   }
   }
 }
 
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::boolean_not(const ast::ALiteral& term)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::boolean_not(ast::ID term) noexcept
 {
-  auto to_bool = [](bool value) { return new ast::literal::Boolean(value); };
+  term = term.canonical();
 
-  if (auto ptr = dynamic_cast<const ast::literal::Boolean*>(&term)) {
-    return to_bool(!ptr->val);
-  } else {
-    Error_Diagnostic err(v.CU, 179, term.node_CU.get(), term.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation 'not' on term.", "");
-    return std::unexpected(err.print_error());
+  if (auto* ptr = term.as<ast::Literal_Boolean>()) {
+    bool val = !ptr->val;
+    return llvm::ConstantInt::get(codegen::LLVM_TYPEID_bool, val);
   }
+
+  Error_Diagnostic err(res.CU.cuid, 179, term, compiler::EPhase::llvmir, "Unexpected operation 'not' on term.", "");
+  return std::unexpected(err.print_userfriendly_error());
 }
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_minus(const ast::ALiteral& term)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::scalar_minus(ast::ID term) noexcept
 {
-  if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&term)) {
+  term = term.canonical();
+
+  if (auto* ptr = term.as<ast::Literal_Integral>()) {
     llvm::APInt& val = *ptr->val.val;
-    if (!val.isNegative()) val.negate();
-    return new ast::literal::Integral(Int128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&term)) {
-    llvm::APFloat& val = *ptr->val.val;
-    if (!val.isNegative()) val.changeSign();
-    return new ast::literal::Floating_Point(Float128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Fixed_Point*>(&term)) {
-    llvm::APInt& val = *ptr->val.val;
-    if (!val.isNegative()) val.negate();
-    return new ast::literal::Integral(Int128(val));
-  } else {
-    Error_Diagnostic err(v.CU, 180, term.node_CU.get(), term.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation 'minus' on term.", "");
-    return std::unexpected(err.print_error());
+    val.negate();
+    return llvm::ConstantInt::get(res.get_type(term.type()), val);
   }
+  if (auto* ptr = term.as<ast::Literal_Fixed_Point>()) {
+    llvm::APInt& val = *ptr->val.val;
+    val.negate();
+    return llvm::ConstantInt::get(res.get_type(term.type()), val);
+  }
+  if (auto* ptr = term.as<ast::Literal_Floating_Point>()) {
+    llvm::APFloat& val = *ptr->val.val;
+    val.changeSign();
+    return llvm::ConstantFP::get(res.get_type(term.type()), val);
+  }
+
+  Error_Diagnostic err(res.CU.cuid, 180, term, compiler::EPhase::llvmir, "Unexpected operation 'minus' on term.", "");
+  return std::unexpected(err.print_userfriendly_error());
 }
-std::expected<ast::ALiteral*, std::string> Static_Evaluator::scalar_plus(const ast::ALiteral& term)
+std::expected<llvm::Constant*, std::string> codegen::Static_Evaluator::scalar_plus(ast::ID term) noexcept
 {
-  if (auto ptr = dynamic_cast<const ast::literal::Integral*>(&term)) {
+  term = term.canonical();
+
+  if (auto* ptr = term.as<ast::Literal_Integral>()) {
     llvm::APInt& val = *ptr->val.val;
-    if (val.isNegative()) val.negate();
-    return new ast::literal::Integral(Int128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Floating_Point*>(&term)) {
-    llvm::APFloat& val = *ptr->val.val;
-    if (val.isNegative()) val.changeSign();
-    return new ast::literal::Floating_Point(Float128(val));
-  } else if (auto ptr = dynamic_cast<const ast::literal::Fixed_Point*>(&term)) {
-    llvm::APInt& val = *ptr->val.val;
-    if (val.isNegative()) val.negate();
-    return new ast::literal::Integral(Int128(val));
-  } else {
-    Error_Diagnostic err(v.CU, 181, term.node_CU.get(), term.node_token, compiler::EPhase::llvmir,
-                         "Unexpected operation 'minus' on term.", "");
-    return std::unexpected(err.print_error());
+    return llvm::ConstantInt::get(res.get_type(term.type()), val);
   }
+  if (auto* ptr = term.as<ast::Literal_Fixed_Point>()) {
+    llvm::APInt& val = *ptr->val.val;
+    return llvm::ConstantInt::get(res.get_type(term.type()), val);
+  }
+  if (auto* ptr = term.as<ast::Literal_Floating_Point>()) {
+    llvm::APFloat& val = *ptr->val.val;
+    return llvm::ConstantFP::get(res.get_type(term.type()), val);
+  }
+
+  Error_Diagnostic err(res.CU.cuid, 180, term, compiler::EPhase::llvmir, "Unexpected operation 'minus' on term.", "");
+  return std::unexpected(err.print_userfriendly_error());
 }
-*/

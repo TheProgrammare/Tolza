@@ -13,7 +13,7 @@ class APInt;
 class Float128 final
 {
 public:
-  llvm::APFloat* const val;
+  llvm::APFloat* val;
 
   Float128();
   ~Float128();

@@ -2,7 +2,6 @@
 
 #include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/type/type.hpp"
 
 namespace ast
 {
@@ -22,24 +21,32 @@ AST_NODE(Expression_Member_Access)
   SET_NODE(right_identifier);
 };
 
-AST_NODE(Expression_Self){};
+AST_NODE(Expression_Self)
+{
+  SET_NODE(target);
+};
 
-AST_NODE(Expression_Other){};
+AST_NODE(Expression_Other)
+{
+  SET_NODE(target);
+};
 
 // (10, a, param3 = b, param5 = c)
-AST_NODE(Expression_Call_Argument)
+AST_NODE(Expression_Invocation_Arg)
 {
   [[maybe_unused]] std::string explicit_name;
   SET_NODE(expression);
 };
 
-AST_NODE(Expression_Call)
+AST_NODE(Expression_Invocation)
 {
   SET_NODE(callee);
   SET_VECTOR_NODE(arguments);
+
+  EInvocationKind invocation_kind = EInvocationKind::NONE;
 };
 
-AST_NODE(Expression_Call_Rule)
+AST_NODE(Expression_Invocation_Rule)
 {
   SET_NODE(target_form);
 
@@ -48,18 +55,13 @@ AST_NODE(Expression_Call_Rule)
   SET_VECTOR_TYPE(arguments_types)
 };
 
-AST_NODE(Expression_Call_Pipe)
+AST_NODE(Expression_Invocation_Extend)
 {
+  SET_NODE(target_form);
+
   SET_NODE(callee);
   SET_VECTOR_NODE(arguments);
   SET_VECTOR_TYPE(arguments_types)
-
-  std::vector<std::vector<ID>>         next_arguments;
-  std::vector<std::vector<::type::ID>> next_arguments_types;
-
-  std::vector<EBinOpType> mutable_ops;
-
-  bool is_mutable = false;
 };
 
 // a[i] a?[i]

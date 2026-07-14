@@ -211,14 +211,14 @@ bool metacode::Generator::eval_cond(metacode::ID id) noexcept
 bool metacode::Generator::eval_binary(metacode::Binary_Cond& c) noexcept
 {
   switch (c.type) {
-  case ast::EBinOpType::_eq:   return eval_expr(c.left) == eval_expr(c.right);
-  case ast::EBinOpType::_neq:  return eval_expr(c.left) != eval_expr(c.right);
-  case ast::EBinOpType::_and:  return eval_cond(c.left) && eval_cond(c.right);
-  case ast::EBinOpType::_nand: return !(eval_cond(c.left) && eval_cond(c.right));
-  case ast::EBinOpType::_or:   return eval_cond(c.left) || eval_cond(c.right);
-  case ast::EBinOpType::_xor:  return !eval_cond(c.left) != !eval_cond(c.right);
-  case ast::EBinOpType::_xnor: return eval_cond(c.left) && eval_cond(c.right);
-  default:                     assert(false && "Illegal bin op type in preprocessor instruction");
+  case ast::EOp_Bin::_eq:   return eval_expr(c.left) == eval_expr(c.right);
+  case ast::EOp_Bin::_neq:  return eval_expr(c.left) != eval_expr(c.right);
+  case ast::EOp_Bin::_and:  return eval_cond(c.left) && eval_cond(c.right);
+  case ast::EOp_Bin::_nand: return !(eval_cond(c.left) && eval_cond(c.right));
+  case ast::EOp_Bin::_or:   return eval_cond(c.left) || eval_cond(c.right);
+  case ast::EOp_Bin::_xor:  return !eval_cond(c.left) != !eval_cond(c.right);
+  case ast::EOp_Bin::_xnor: return eval_cond(c.left) && eval_cond(c.right);
+  default:                  assert(false && "Illegal bin op type in preprocessor instruction");
   }
 }
 bool metacode::Generator::eval_not_unary(metacode::Unary_Not_Cond& c) noexcept

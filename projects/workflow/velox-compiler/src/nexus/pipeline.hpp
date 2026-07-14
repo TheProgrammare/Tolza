@@ -51,48 +51,51 @@ struct Pipeline {
   std::unordered_set<cu::ID, cu::ID::Hash> analyzed_compilation_units;
 
   // push to prepared_compilation_units
-  [[nodiscard]] std::vector<cu::ID> query_CUs_at_dir(cu::ID parent_cuid, std::string_view path);
+  [[nodiscard]] std::vector<cu::ID> query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept;
   // push to prepared_compilation_units
-  [[nodiscard]] cu::ID              query_CU_at_path(cu::ID parent_cuid, std::string_view path);
+  [[nodiscard]] cu::ID              query_CU_at_path(cu::ID parent_cuid, std::string_view path) noexcept;
 
-  [[nodiscard]] static std::unique_ptr<cu::CU> build_CU_from_path(cu::ID parent_cuid, std::string_view path);
+  [[nodiscard]] static std::unique_ptr<cu::CU> build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept;
 
+  [[nodiscard]] bool generate_libc_wrappers() noexcept;
 
-  [[nodiscard]] static double timing(const std::function<void()>& f);
+  [[nodiscard]] static double timing(const std::function<void()>& f) noexcept;
 
   // for each compilation unit
-  [[nodiscard]] bool        engage_preparer(cu::ID cuid);
+  [[nodiscard]] bool        engage_preparer(cu::ID cuid) noexcept;
   // for all prepared_compilation_units
-  [[nodiscard]] size_t      engage_shipowner();
-  [[nodiscard]] bool        engage_bindings();
+  [[nodiscard]] size_t      engage_shipowner() noexcept;
+  [[nodiscard]] bool        engage_bindings() noexcept;
   // for each compilation unit
-  [[nodiscard]] bool        engage_analyzer(cu::ID cuid);
+  [[nodiscard]] bool        engage_analyzer(cu::ID cuid) noexcept;
   // for all analyzed_compilation_units
-  [[nodiscard]] bool        engage_generator(cu::ID cuid);
+  [[nodiscard]] bool        engage_generator(cu::ID cuid) noexcept;
   // link and make object
-  [[nodiscard]] bool        engage_module_linker(cu::ID cuid) const;
-  [[nodiscard]] static bool engage_linker();
+  [[nodiscard]] bool        engage_module_linker() const noexcept;
+  [[nodiscard]] static bool engage_linker() noexcept;
+  [[nodiscard]] static bool engage_general_emitter() noexcept;
 
 
 private:
   // preparer
-  [[nodiscard]] static bool pass_lexer(cu::ID cuid);
-  [[nodiscard]] static bool pass_preprocessor(cu::ID cuid);
-  [[nodiscard]] static bool pass_parser(cu::ID cuid);
+  [[nodiscard]] static bool pass_lexer(cu::ID cuid) noexcept;
+  [[nodiscard]] static bool pass_preprocessor(cu::ID cuid) noexcept;
+  [[nodiscard]] static bool pass_parser(cu::ID cuid) noexcept;
 
 
-  [[nodiscard]] bool pass_binding_generation(const std::vector<std::string>& path, std::string_view alias);
+  [[nodiscard]] bool pass_binding_generation(const std::vector<std::string>& path, std::string_view alias) noexcept;
 
   // analyzer
-  [[nodiscard]] static size_t pass_resolution_symbol(cu::ID cuid);
-  [[nodiscard]] static size_t pass_resolution_inference(cu::ID cuid);
-  [[nodiscard]] static size_t pass_resolution_semantic(cu::ID cuid);
+  [[nodiscard]] static size_t pass_resolution_symbol(cu::ID cuid) noexcept;
+  [[nodiscard]] static size_t pass_resolution_inference(cu::ID cuid) noexcept;
+  [[nodiscard]] static size_t pass_resolution_semantic(cu::ID cuid) noexcept;
 
   // generator
-  [[nodiscard]] static bool pass_code_generation(cu::ID cuid);
-  [[nodiscard]] bool        pass_llvm_optimization(cu::ID cuid) const;
-  [[nodiscard]] static bool pass_llvm_emitter(cu::ID cuid);
-  [[nodiscard]] bool        pass_script_emitter(cu::ID cuid) const;
+  [[nodiscard]] static bool pass_code_generation(cu::ID cuid) noexcept;
+  void                      generate_target() noexcept;
+  [[nodiscard]] bool        pass_llvm_optimization(cu::ID cuid) const noexcept;
+  [[nodiscard]] static bool pass_llvm_emitter(cu::ID cuid) noexcept;
+  [[nodiscard]] bool        pass_script_emitter(cu::ID cuid) const noexcept;
 };
 
 

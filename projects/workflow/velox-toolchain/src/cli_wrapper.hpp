@@ -10,6 +10,6 @@ namespace cli
 void                      sanitize_filename(std::string& name) noexcept;
 [[nodiscard]] bool        yes_no_question(std::string_view msg) noexcept;
 [[nodiscard]] std::string get_input(std::string_view msg) noexcept;
-[[nodiscard]] std::string ask_filename() noexcept;
+[[nodiscard]] std::string ask_text(std::string_view msg, bool is_filename = false) noexcept;
 
 } // namespace cli

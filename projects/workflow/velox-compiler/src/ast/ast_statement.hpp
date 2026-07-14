@@ -58,11 +58,19 @@ AST_NODE(Statement_GoTo_Label)
 AST_NODE(Statement_Return)
 {
   SET_NODE(value);
+
+  SET_NODE(returnable);
 };
 
-AST_NODE(Statement_Break){};
+AST_NODE(Statement_Break)
+{
+  SET_NODE(breakeable);
+};
 
-AST_NODE(Statement_Continue){};
+AST_NODE(Statement_Continue)
+{
+  SET_NODE(continuable);
+};
 
 // constant/comparison => {}
 AST_NODE(Statement_Match_Case)

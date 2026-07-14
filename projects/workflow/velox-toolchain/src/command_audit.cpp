@@ -112,36 +112,36 @@ void command::audit::audit_workspace(std::string_view root) noexcept
  [Audit]             Files        Lines         Code     Comments       Blanks
  Source Code     %0    %1    %2    %3    %4
  Third Party     %5    %6    %7    %8    %9
- Binder          %10    %11    %12    %13    %14
+ Binder         %10   %11   %12   %13   %14
 =============================================================================== 
- [Total]         %15    %16    %17    %18    %19
+ [Total]        %15   %16   %17   %18   %19
 =============================================================================== 
  [Population]        Roles     Entities   Components      Systems      Imports
-    %32    %20    %21    %22    %23    %24
+   %32   %20   %21   %22   %23   %24
  Enumerations    Functions     Generics       Unions        Flags      Exports
-    %25    %26    %27    %28    %29    %30
+   %25   %26   %27   %28   %29   %30
 =============================================================================== 
- [Disk Size]     %31 Ko
+ [Disk Size]   %31 Ko
 ===============================================================================
   )";
 
   auto fmt_number = [&](size_t num) {
     std::ostringstream os;
-    os << std::setw(9) << std::setfill(' ') << num;
+    os << std::setfill(' ') << std::setw(9) << num;
     return os.str();
   };
 
   auto fmt_dbl = [&](double num) {
     std::ostringstream os;
-    os << std::fixed << std::setprecision(2) << std::setw(9) << std::setfill(' ') << num;
+    os << std::fixed << std::setfill(' ') << std::setprecision(2) << std::setw(9) << num;
     return os.str();
   };
-  std::cout << "Starting audit...";
+  std::cout << "[velox] Starting audit...\n";
 
-  CategoryStats source_code;
-  CategoryStats vendor;
-  CategoryStats binder;
-  GlobalStats   global;
+  auto source_code = CategoryStats();
+  auto vendor      = CategoryStats();
+  auto binder      = CategoryStats();
+  auto global      = GlobalStats();
 
   // Collect files
   struct Task {
@@ -195,10 +195,10 @@ void command::audit::audit_workspace(std::string_view root) noexcept
   workers.reserve(thread_count);
   for (size_t t = 0; t < thread_count; ++t) {
     workers.emplace_back([&]() {
-      CategoryStats local_src{};
-      CategoryStats local_vendor{};
-      CategoryStats local_bind{};
-      GlobalStats   local_global{};
+      auto local_src    = CategoryStats();
+      auto local_vendor = CategoryStats();
+      auto local_bind   = CategoryStats();
+      auto local_global = GlobalStats();
 
       while (true) {
         size_t i = index.fetch_add(1);
@@ -230,7 +230,7 @@ void command::audit::audit_workspace(std::string_view root) noexcept
   done = true;
   progress_thread.join();
 
-  std::cout << "\r\033[K[velox] audit complete.";
+  std::cout << "\r\033[K\n[velox] audit complete.";
 
   global.global_cat.lines         = source_code.lines + vendor.lines + binder.lines;
   global.global_cat.code_lines    = source_code.code_lines + vendor.code_lines + binder.code_lines;

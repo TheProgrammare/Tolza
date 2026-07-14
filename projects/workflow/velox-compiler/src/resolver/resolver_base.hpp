@@ -22,7 +22,7 @@ struct Base {
   void add_error_two_nodes(ErrorCode, const ast::Node& first, const ast::Node& second, std::string_view msg,
                            std::string_view hint) const;
 
-  [[nodiscard]] compiler::EPhase current_EPhase() const;
+  [[nodiscard]] virtual compiler::EPhase current_EPhase() const;
 };
 
 } // namespace resolver

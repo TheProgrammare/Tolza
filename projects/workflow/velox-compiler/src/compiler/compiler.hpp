@@ -46,7 +46,6 @@ struct Error_Diagnostic;
 
 namespace llvm
 {
-class LLVMContext;
 class TargetMachine;
 } // namespace llvm
 
@@ -88,8 +87,6 @@ struct Compiler {
   // vector to keep the chronology
   std::vector<std::pair<cu::ID, std::vector<Error_Diagnostic>>> errors;
 
-  double actual_duration = 0.0F;
-
   [[nodiscard]] bool start_compilation();
 
   void add_error(const Error_Diagnostic& error);
@@ -108,7 +105,6 @@ extern inference::Arena   inference;
 
 extern Compiler                  COMPILER;
 extern common::compiler::Options OPTIONS;
-extern llvm::LLVMContext         LLVM_CTX;
 inline llvm::TargetMachine*      TM = nullptr;
 
 } // namespace compiler

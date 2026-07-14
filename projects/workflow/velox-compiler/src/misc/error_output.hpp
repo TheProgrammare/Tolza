@@ -35,6 +35,9 @@ struct Error_Elem {
 
   Error_Info error_info;
 
+  Error_Elem(cu::ID _cuid, ErrorCode _code, ast::ID nodeid, compiler::EPhase _phase, std::string_view _msg,
+             std::string_view _hint);
+
   Error_Elem(cu::ID _cuid, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
              std::string_view _msg, std::string_view _hint)
     : cuid(_cuid)
@@ -47,7 +50,7 @@ struct Error_Elem {
           .phase = _phase,
       }
   {
-    assert((!_cuid || start_pos < end_pos) && "Illegal error bounds");
+    assert((!_cuid || start_pos <= end_pos) && "Illegal error bounds");
   }
 
   Error_Elem(cu::ID _cuid, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
@@ -62,23 +65,19 @@ struct Error_Elem {
           .phase = _phase,
       }
   {
-    assert((!_cuid || start_pos < end_pos) && "Illegal error bounds");
+    assert((!_cuid || start_pos <= end_pos) && "Illegal error bounds");
   }
 
-  // [file] file:LL:CC
-  // [code] | code line
-  //        |      ^^^^
-  // [error] [AAwxyz] blabla
-  // [hint] blabla
-  // [context] global -> fn -> ...
-  [[nodiscard]] std::string print_error() const noexcept;
-  [[nodiscard]] std::string print_code() const noexcept;
-  [[nodiscard]] std::string print_messages() const noexcept;
-  [[nodiscard]] std::string print_cursor() const noexcept;
-  [[nodiscard]] std::string print_line() const noexcept;
-  [[nodiscard]] std::string print_line_cursor() const noexcept;
-  [[nodiscard]] std::string print_source() const noexcept;
-  [[nodiscard]] std::string print_link_error() const
+
+  [[nodiscard]] std::string      print_error() const noexcept;
+  [[nodiscard]] std::string      print_code() const noexcept;
+  [[nodiscard]] std::string      print_messages() const noexcept;
+  [[nodiscard]] std::string      print_cursor() const noexcept;
+  [[nodiscard]] std::string_view get_raw_line() const noexcept;
+  [[nodiscard]] std::string      print_line() const noexcept;
+  [[nodiscard]] std::string      print_line_cursor() const noexcept;
+  [[nodiscard]] std::string      print_source() const noexcept;
+  [[nodiscard]] std::string      print_link_error() const
   {
     return {};
   }
@@ -91,6 +90,11 @@ struct Error_Diagnostic {
     , elem_second(std::move(second))
   {
   }
+  Error_Diagnostic(cu::ID _cuid, ErrorCode _code, ast::ID nodeid1, ast::ID nodeid2, compiler::EPhase _phase,
+                   std::string_view _msg, std::string_view _hint);
+  Error_Diagnostic(cu::ID _cuid, ErrorCode _code, ast::ID nodeid, compiler::EPhase _phase, std::string_view _msg,
+                   std::string_view _hint);
+
   Error_Diagnostic(cu::ID _cuid, ErrorCode _code, size_t _start_pos, size_t _end_pos, compiler::EPhase _phase,
                    std::string_view _msg, std::string_view _hint)
     : elem_first(_cuid, _code, _start_pos, _end_pos, _phase, _msg, _hint)
@@ -102,5 +106,72 @@ struct Error_Diagnostic {
   Error_Elem elem_first;
   Error_Elem elem_second;
 
+  /* One line error
+   * [file] file:LL:CC
+   * [code] | code line
+   *        |      ^^^^
+   * [error] [AAwxyz] blabla
+   * [hint] blabla
+   */
+  /* Multi line error same file
+   * [file] file:LL:CC
+   *        |      vvvv
+   * [from] | code line
+   *        | ...
+   * [to]   | code line
+   *        |      ^^^^
+   * [error] [AAwxyz] blabla
+   * [hint] blabla
+   */
+  /* Multi line error different file
+   * [file] file:LL:CC
+   *        |      vvvv
+   * [from] | code line
+   *        | ...
+   * [to]   | code line
+   *        |      ^^^^
+   * [file] file:LL:CC
+   * [error] [AAwxyz] blabla
+   * [hint] blabla
+   */
+  [[nodiscard]] std::string print_userfriendly_error() const noexcept;
+  [[nodiscard]] std::string print_json_error() const noexcept;
+  [[nodiscard]] std::string print_github_error() const noexcept;
   [[nodiscard]] std::string print_error() const noexcept;
 };
+
+
+inline std::string escape_json(std::string_view text) noexcept
+{
+  std::string result;
+  result.reserve(text.size());
+
+  for (char c : text) {
+    switch (c) {
+    case '"':  result += "\\\""; break;
+
+    case '\\': result += "\\\\"; break;
+
+    case '\b': result += "\\b"; break;
+
+    case '\f': result += "\\f"; break;
+
+    case '\n': result += "\\n"; break;
+
+    case '\r': result += "\\r"; break;
+
+    case '\t': result += "\\t"; break;
+
+    default:
+      if (static_cast<unsigned char>(c) < 0x20) {
+        char buffer[7];
+        std::snprintf(buffer, sizeof(buffer), "\\u%04X", c);
+        result += buffer;
+      } else {
+        result += c;
+      }
+    }
+  }
+
+  return result;
+}

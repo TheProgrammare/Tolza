@@ -1,4 +1,5 @@
 #include "utils.hpp"
+#include "common/environment.hpp"
 
 
 std::vector<std::string> common::utils::split_flags(std::string_view s, char separator) noexcept

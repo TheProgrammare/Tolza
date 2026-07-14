@@ -29,6 +29,7 @@
 #include "nexus/forward.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
+#include "nexus/type/forward.hpp"
 
 namespace ast
 {
@@ -38,24 +39,23 @@ namespace ast
 
 #define SET_CALLABLE                                                                                                   \
   SET_VECTOR_NODE(parameters);                                                                                         \
-                                                                                                                       \
   SET_TYPE(prototype);                                                                                                 \
   SET_NODE(codeblock);                                                                                                 \
                                                                                                                        \
-  common::compiler::ECallingConv call_convention;                                                                      \
+  common::env::ECallConvention call_convention;                                                                        \
                                                                                                                        \
-  bool is_pure              = false;                                                                                   \
-  bool is_explicit_ret_type = false;
+  bool is_pure         = false;                                                                                        \
+  bool is_explicit_ret = false;
 
 #define SET_NODE(name)   ast::ID name;
-#define SET_SYMBOL(name) symbol::ID name;
+#define SET_SYMBOL(name) definition::ID name;
 #define SET_TYPE(name)   type::ID name;
 
 #define SET_INFERRED_TYPE        type::ID inferred_type;
 #define SET_INFERRED_TYPE_(name) type::ID name;
 
 #define SET_VECTOR_NODE(name)   std::vector<ast::ID> name;
-#define SET_VECTOR_SYMBOL(name) std::vector<symbol::ID> name;
+#define SET_VECTOR_SYMBOL(name) std::vector<definition::ID> name;
 #define SET_VECTOR_TYPE(name)   std::vector<type::ID> name;
 
 using Path = std::vector<std::string>;
@@ -204,13 +204,11 @@ template <DerivedNode T>
   return static_cast<T*>(&n);
 }
 
-
-[[nodiscard]] std::string get_decl_name(ID nodeid) noexcept;
-
-[[nodiscard]] EVisibility get_decl_visibility(ID nodeid) noexcept;
-
-[[nodiscard]] std::string get_mangled_id(ID id) noexcept;
-
-[[nodiscard]] std::string get_debug_str(ID id) noexcept;
+[[nodiscard]] std::string            get_decl_name(ID nodeid) noexcept;
+[[nodiscard]] EVisibility            get_decl_visibility(ID nodeid) noexcept;
+[[nodiscard]] std::string            get_mangled_id(ID id) noexcept;
+[[nodiscard]] std::string            debug_node_on_line(ID id) noexcept;
+[[nodiscard]] std::string            dump(ID id) noexcept;
+[[nodiscard]] const type::Prototype* get_prototype(ID id) noexcept;
 
 } // namespace ast

@@ -299,7 +299,7 @@ constexpr std::string_view BINDER_EXTERN_GLOBAL_TEMPLATE = "%0 %1: %2\n";
 constexpr std::string_view BINDER_EXTERN_TYPEALIAS_TEMPLATE = "type %0 = %1\n";
 
 // %0 name
-constexpr std::string_view BINDER_EXTERN_OPAQUE_TEMPLATE = "type %0 // opaque\n";
+constexpr std::string_view BINDER_EXTERN_OPAQUE_TEMPLATE = "type %0 = opaque\n";
 
 // %0 parameters
 // %1 retuns

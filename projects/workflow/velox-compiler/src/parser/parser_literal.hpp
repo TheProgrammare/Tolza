@@ -13,6 +13,7 @@ struct Parser_Literal final {
 
   [[nodiscard]] ast::ID try_literal(bool p_is_silent_error = false);
   [[nodiscard]] ast::ID literal_range(ast::ID p_start = ast::ID::invalid());
+  [[nodiscard]] ast::ID literal_nullptr();
 
 
 private:
@@ -30,8 +31,9 @@ private:
   [[nodiscard]] ast::ID literal_tuple();
 
 public:
-  [[nodiscard]] ast::ID literal_form(ast::ID nodeid = ast::ID::invalid());
-  [[nodiscard]] ast::ID literal_facet(ast::ID nodeid = ast::ID::invalid());
+  [[nodiscard]] ast::ID literal_record(ast::ID name);
+  [[nodiscard]] ast::ID literal_form(ast::ID name);
+  [[nodiscard]] ast::ID literal_facet(ast::ID name);
   [[nodiscard]] ast::ID literal_field();
 
 

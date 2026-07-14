@@ -3,6 +3,7 @@
 #include <cassert>
 #include <string_view>
 
+#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/metacode/metacode.hpp"
@@ -409,7 +410,7 @@ metacode::ID metacode::Preprocessor::preprocess_condition() noexcept
 
       bin->left  = lhs;
       bin->right = rhs;
-      bin->type  = ast::ETokenKind_to_EBinOpType(op);
+      bin->type  = ast::ETokenKind_to_EOp_Bin(op);
       lhs        = bin->metaid;
     } else {
       break; // no op -> end

@@ -238,62 +238,55 @@ bool Lexer::tokenize_DFA() noexcept
   return true;
 }
 
+
 void Lexer::process_escape() noexcept
 {
-  // read next chracter after backslash
-  (void)stream.match('\\');
+  (void)stream.next(); // consume '\'
 
-  on_escape = true;
+  char c = stream.peek();
+  if (!stream.next()) {
+    add_error(6, "Incomplete escape sequence", "");
+    return;
+  }
 
-  switch (stream.peek()) {
+  switch (c) {
   case 'n':
   case 't':
   case 'r':
   case '\\':
-  case '\'':
   case '"':
+  case '\'':
   case '0':
   case 'a':
   case 'b':
   case 'f':
   case 'v':  break;
-
-  // hex sequence \xHH
   case 'x':  {
-    for (int i = 0; i < 2; ++i) { // read 1 or 2 hex
+    unsigned char value = 0;
+    for (int i = 0; i < 2; ++i) {
       if (!stream.next() || !common::utils::is_hex(stream.peek())) {
-        add_error(2, "Invalid hex escape sequence", "define hex escape like: `\\xHH`");
+        add_error(2, "Invalid hex escape", "");
+        return;
+      }
+      int v = common::utils::hex_value(stream.peek());
+      if (v < 0) {
+        add_error(2, "Invalid hex digit", "");
         return;
       }
     }
-    break;
-  }
-  // Unicode sequence \uXXXX or \UXXXXXXXX
-  case 'u':
-  case 'U': {
-    int num_digits = (stream.check('u')) ? 4 : 8;
-    for (int i = 0; i < num_digits; ++i) {
-      if (!stream.next() || !common::utils::is_hex(stream.peek())) {
-        add_error(3, "Invalid Unicode escape sequence", "define unicode escape like: `\\uXXXX`");
-        return;
-      }
-    }
-    break;
+    return;
   }
 
-  default:
-    // escape char unknown : keep literally or ring the error
-    add_error(6, "Unknown escape sequence: \\" + std::to_string(stream.peek()), "");
-    break;
+  default: add_error(6, "Unknown escape sequence", ""); return;
   }
 }
 
 void Lexer::tokenize_textual() noexcept
 {
   auto tok_text = [&](bool with_escape, bool with_interpolation, std::vector<char> end_tokens) {
+    start_buffer();
     do {
       if (with_interpolation) {
-
         if (stream.check('{')) {
           if (!is_buffer_empty()) add_token(token::ETokenKind::L_TEXTUAL);
           start_buffer();
@@ -327,8 +320,15 @@ void Lexer::tokenize_textual() noexcept
       }
 
       if (end_tokens.empty()) {
+        if (stream.check_at(1, '"')) {
+          add_token(token::ETokenKind::L_TEXTUAL);
+          (void)stream.next(); // consume
+          return;
+        }
         if (stream.check('"')) {
           add_token(token::ETokenKind::L_TEXTUAL);
+          // special empty string
+          CU.file_info.tokens->tokens.back().length = 0;
           return;
         }
       } else if (end_tokens.size() == 1) {
@@ -365,12 +365,12 @@ void Lexer::tokenize_textual() noexcept
   } else if (stream.match_chain({'r', '"', '"', '"'})) {
     if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
 
-    tok_text(false, true, {'\n', '"', '"', '"'});
+    tok_text(true, true, {'\n', '"', '"', '"'});
   } else if (stream.match_chain({'r', '#', '"'})) {
-    tok_text(false, true, {'#', '"'});
+    tok_text(true, true, {'#', '"'});
   } else {
     (void)stream.next(); // consume "
-    tok_text(true, true, {});
+    tok_text(false, true, {});
   }
 }
 
@@ -648,6 +648,7 @@ void Lexer::add_token(token::ETokenKind kind, bool do_not_move) noexcept
 
   (void)CU.file_info.tokens->add(tok);
 }
+
 
 void Lexer::add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept
 {

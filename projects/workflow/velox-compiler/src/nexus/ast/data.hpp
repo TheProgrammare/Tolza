@@ -12,9 +12,10 @@ enum class ENodeKind : uint8_t {
   Unknown,
 
   // identifiers
-  Identifier,
-  ID_Qualified,
-  ID_Typed,
+
+  Symbol_Id,
+  Symbol_Qualified,
+  Symbol_Type,
 
   Path_Regex,
 
@@ -30,7 +31,7 @@ enum class ENodeKind : uint8_t {
   Global_Extend_Cast,
   Global_Extend_Op_Bin,
   Global_Extend_Op_Un,
-  Global_Extend_Op_Access,
+  Global_Extend_Op_Subscript,
   Global_Extend_Op_Transfert,
   Global_Extend_Op_Other,
   Global_Module,
@@ -87,6 +88,7 @@ enum class ENodeKind : uint8_t {
 
   // literals
   Literal_Boolean,
+  Literal_NullPtr,
   Literal_Integral,
   Literal_Fixed_Point,
   Literal_Floating_Point,
@@ -101,20 +103,17 @@ enum class ENodeKind : uint8_t {
   Literal_Map,
   Literal_Tuple,
   Literal_Range,
-  Literal_Iterator,
-  Literal_Enum,
-  Literal_Structured_Data,
-  Literal_Form,
+  Literal_Record,
 
   // expressions
   Expression_If_Ternary,
   Expression_Member_Access,
   Expression_Self,
   Expression_Other,
-  Expression_Call,
-  Expression_Call_Argument,
-  Expression_Call_Rule,
-  Expression_Call_Pipe,
+  Expression_Invocation,
+  Expression_Invocation_Arg,
+  Expression_Invocation_Extend,
+  Expression_Invocation_Rule,
   Expression_Table_Access,
   Expression_Ptr_Val,
   Expression_Mut_Of,
@@ -144,7 +143,7 @@ enum class ENodeKind : uint8_t {
   Operation_Cast_As,
   Operation_Is,
   Operation_In,
-  Operation_Assignment,
+  Operation_Transfert,
   Operation_Binary,
   Operation_Unary,
   Operation_Interval,
@@ -155,20 +154,21 @@ enum class ENodeKind : uint8_t {
   Memory_Drop,
 };
 
-[[nodiscard]] inline bool ENodeKind_is_ID(ENodeKind kind)
+[[nodiscard]] inline bool ENodeKind_is_symbol(ENodeKind kind)
 {
-  return kind >= ENodeKind::Identifier && kind <= ENodeKind::ID_Typed;
+  return kind >= ENodeKind::Symbol_Id && kind <= ENodeKind::Symbol_Type;
 }
 
 [[nodiscard]] inline bool ENodeKind_is_literal(ENodeKind kind)
 {
-  return kind >= ENodeKind::Literal_Boolean && kind <= ENodeKind::Literal_Form;
+  return kind >= ENodeKind::Literal_Boolean && kind <= ENodeKind::Literal_Record;
 }
 
 [[nodiscard]] inline bool ENodeKind_is_callable(ENodeKind kind)
 {
-  return kind == ENodeKind::Expression_Call || kind == ENodeKind::Global_Function || kind == ENodeKind::Global_Extend_Fn
-         || kind == ENodeKind::Local_Lambda || kind == ENodeKind::SFM_Rule || kind == ENodeKind::Expression_Call_Rule;
+  return kind == ENodeKind::Expression_Invocation || kind == ENodeKind::Global_Function
+         || kind == ENodeKind::Global_Extend_Fn || kind == ENodeKind::Local_Lambda || kind == ENodeKind::SFM_Rule
+         || kind == ENodeKind::Expression_Invocation_Rule;
 }
 
 [[nodiscard]] inline bool ENodeKind_is_local(ENodeKind kind)
@@ -203,7 +203,7 @@ enum class ENodeKind : uint8_t {
 }
 
 
-enum class EUnaryOpType : uint8_t {
+enum class EOp_Unary : uint8_t {
   NONE,
   // arithmetic
   _not,         // not !
@@ -212,23 +212,24 @@ enum class EUnaryOpType : uint8_t {
   _invert_sign, // invert sign
 };
 
-[[nodiscard]] EUnaryOpType ETokenKind_to_EUnaryOpType(token::ETokenKind tok);
+[[nodiscard]] EOp_Unary ETokenKind_to_EOp_Unary(token::ETokenKind tok);
 
-[[nodiscard]] std::string_view EUnaryOpType_to_str(EUnaryOpType opTy);
+[[nodiscard]] std::string_view EOp_Unary_to_str(EOp_Unary opTy);
 
-enum class EAccessOpType : uint8_t {
+enum class EOp_Subscript : uint8_t {
   NONE,
-  _index,       // NO BIN OP AST USED, index[i] -> T
-  _index_bound, // NO BIN OP AST USED, index?[i] -> T?
-  _slice,       // NO BIN OP AST USED, slicing[start..end] -> Slice<T>
-  _slice_bound, // NO BIN OP AST USED, slicing?[start..end] -> Slice<T>?
-  _b_slice,     // NO BIN OP AST USED, slicing bits ~[start..end]
+  _index,       // index[i] -> T
+  _index_bound, // index?[i] -> T?
+  _slice,       // slicing[start..end] -> Slice<T>
+  _slice_bound, // slicing?[start..end] -> Slice<T>?
+  _b_index,     // index bit ~[i] -> bool
+  _b_slice,     // slicing bits ~[start..end] -> bsize
 };
 
-[[nodiscard]] std::string_view EAccessOpType_to_str(EAccessOpType opTy);
+[[nodiscard]] std::string_view EOp_Subscript_to_str(EOp_Subscript opTy);
 
 
-enum class EBinOpType : uint8_t {
+enum class EOp_Bin : uint8_t {
   NONE,
   // arithmetic
   _add,    // add +
@@ -282,82 +283,86 @@ enum class EBinOpType : uint8_t {
   _mem_dist, // mem.dist
 };
 
-[[nodiscard]] EBinOpType ETokenKind_to_EBinOpType(token::ETokenKind tok);
+[[nodiscard]] EOp_Bin ETokenKind_to_EOp_Bin(token::ETokenKind tok);
 
-[[nodiscard]] std::string_view EBinOpType_to_str(EBinOpType op);
+[[nodiscard]] std::string_view EOp_Bin_to_str(EOp_Bin op);
 
-[[nodiscard]] inline bool EBinOpType_is_logical(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_logical(EOp_Bin op)
 {
-  return op >= EBinOpType::_and && op <= EBinOpType::_xnor;
+  return op >= EOp_Bin::_and && op <= EOp_Bin::_xnor;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_memory(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_memory(EOp_Bin op)
 {
-  return op >= EBinOpType::_mem_add && op <= EBinOpType::_mem_dist;
+  return op >= EOp_Bin::_mem_add && op <= EOp_Bin::_mem_dist;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_comparison(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_comparison(EOp_Bin op)
 {
-  return op >= EBinOpType::_ordering && op <= EBinOpType::_xnor;
+  return op >= EOp_Bin::_ordering && op <= EOp_Bin::_xnor;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_bitwise(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_bitwise(EOp_Bin op)
 {
-  return op >= EBinOpType::_b_and && op <= EBinOpType::_b_ror;
+  return op >= EOp_Bin::_b_and && op <= EOp_Bin::_b_ror;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_boolean(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_boolean(EOp_Bin op)
 {
-  return op >= EBinOpType::_gre && op <= EBinOpType::_neq;
+  return op >= EOp_Bin::_ordering && op <= EOp_Bin::_xnor;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_textual(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_textual(EOp_Bin op)
 {
-  return (op >= EBinOpType::_eq && op <= EBinOpType::_neqs) || op == EBinOpType::_add;
+  return (op >= EOp_Bin::_eq && op <= EOp_Bin::_neqs) || op == EOp_Bin::_add;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_decimal(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_decimal(EOp_Bin op)
 {
-  return op >= EBinOpType::_add && op <= EBinOpType::_neqs;
+  return op >= EOp_Bin::_add && op <= EOp_Bin::_neqs;
 }
 
-[[nodiscard]] inline bool EBinOpType_is_integral(EBinOpType op)
+[[nodiscard]] inline bool EOp_Bin_is_integral(EOp_Bin op)
 {
-  return op >= EBinOpType::_add && op <= EBinOpType::_neqs;
+  return op >= EOp_Bin::_add && op <= EOp_Bin::_neqs;
 }
 
+enum class EInvocationKind : uint8_t { NONE, fn_call, enum_bind, pattern };
 
-enum class ECapability : uint8_t { NONE, Ref, Mut, Copy, Move };
+// name op like : _name
+enum class EOp_Other : uint8_t { NONE, _del, _predicat };
+[[nodiscard]] EOp_Other ETokenStr_to_EOp_Other(std::string_view tok_str);
+
+
+enum class ECapability : uint8_t { NONE, ref, mut, copy, move };
 
 [[nodiscard]] ECapability      ETokenKind_to_ECapability(token::ETokenKind tok);
 [[nodiscard]] std::string_view ECapability_to_str(ECapability capa);
 [[nodiscard]] ECapability      deduce_type_ECapability(bool is_complex, bool is_mut);
 
 
-enum class EPassMode : uint8_t { NONE, Mut, Ref, Copy, Move, Addr };
+enum class EPassMode : uint8_t { NONE, mut, ref, copy, move, addr };
 
 [[nodiscard]] EPassMode        ETokenKind_to_EPassMode(token::ETokenKind tok);
 [[nodiscard]] std::string_view EPassMode_to_str(EPassMode passMode);
 [[nodiscard]] bool             EPassMode_Can_Default(EPassMode passMode);
 
 
-enum class EExprPassMode : uint8_t { NONE, Mut, Ref, Copy, Move };
+enum class EExprPassMode : uint8_t { NONE, mut, ref, copy, move };
 
 [[nodiscard]] EExprPassMode ETokenKind_to_EExprPassMode(token::ETokenKind tok);
 
 
-enum class EVariableKind : uint8_t { NONE, Const, Let, Var };
+enum class EVariableKind : uint8_t { NONE, _const, _let, _var };
 
 [[nodiscard]] EVariableKind    ETokenKind_to_EVariableKind(token::ETokenKind tok);
 [[nodiscard]] std::string_view EVariableKind_to_str(EVariableKind kind);
 
 
-enum class ETransfertType : uint8_t { NONE, Copy, MoveSemantic };
+enum class ETransfertType : uint8_t { NONE, copy, move };
 
 [[nodiscard]] ETransfertType   ETokenKind_to_ETransfertType(token::ETokenKind tok);
 [[nodiscard]] std::string_view ETransfertType_to_str(ETransfertType type);
-
-enum class EOtherOp : uint8_t { NONE, del, predicat };
 
 
 } // namespace ast

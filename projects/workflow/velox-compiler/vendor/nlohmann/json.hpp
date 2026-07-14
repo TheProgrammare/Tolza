@@ -4662,46 +4662,46 @@ template<typename StringType, typename Arg>
 using string_can_append = decltype(std::declval<StringType&>().append(std::declval < Arg && > ()));
 
 template<typename StringType, typename Arg>
-using detect_string_can_append = is_detected<string_can_append, StringType, Arg>;
+using detecT_STR_can_append = is_detected<string_can_append, StringType, Arg>;
 
 template<typename StringType, typename Arg>
 using string_can_append_op = decltype(std::declval<StringType&>() += std::declval < Arg && > ());
 
 template<typename StringType, typename Arg>
-using detect_string_can_append_op = is_detected<string_can_append_op, StringType, Arg>;
+using detecT_STR_can_append_op = is_detected<string_can_append_op, StringType, Arg>;
 
 template<typename StringType, typename Arg>
 using string_can_append_iter = decltype(std::declval<StringType&>().append(std::declval<const Arg&>().begin(), std::declval<const Arg&>().end()));
 
 template<typename StringType, typename Arg>
-using detect_string_can_append_iter = is_detected<string_can_append_iter, StringType, Arg>;
+using detecT_STR_can_append_iter = is_detected<string_can_append_iter, StringType, Arg>;
 
 template<typename StringType, typename Arg>
 using string_can_append_data = decltype(std::declval<StringType&>().append(std::declval<const Arg&>().data(), std::declval<const Arg&>().size()));
 
 template<typename StringType, typename Arg>
-using detect_string_can_append_data = is_detected<string_can_append_data, StringType, Arg>;
+using detecT_STR_can_append_data = is_detected<string_can_append_data, StringType, Arg>;
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && detect_string_can_append_op<OutStringType, Arg>::value, int > = 0 >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && detecT_STR_can_append_op<OutStringType, Arg>::value, int > = 0 >
 inline void concat_into(OutStringType& out, Arg && arg, Args && ... rest);
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && !detect_string_can_append_op<OutStringType, Arg>::value
-                         && detect_string_can_append_iter<OutStringType, Arg>::value, int > = 0 >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_op<OutStringType, Arg>::value
+                         && detecT_STR_can_append_iter<OutStringType, Arg>::value, int > = 0 >
 inline void concat_into(OutStringType& out, const Arg& arg, Args && ... rest);
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && !detect_string_can_append_op<OutStringType, Arg>::value
-                         && !detect_string_can_append_iter<OutStringType, Arg>::value
-                         && detect_string_can_append_data<OutStringType, Arg>::value, int > = 0 >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_op<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_iter<OutStringType, Arg>::value
+                         && detecT_STR_can_append_data<OutStringType, Arg>::value, int > = 0 >
 inline void concat_into(OutStringType& out, const Arg& arg, Args && ... rest);
 
 template<typename OutStringType, typename Arg, typename... Args,
-         enable_if_t<detect_string_can_append<OutStringType, Arg>::value, int> = 0>
+         enable_if_t<detecT_STR_can_append<OutStringType, Arg>::value, int> = 0>
 inline void concat_into(OutStringType& out, Arg && arg, Args && ... rest)
 {
     out.append(std::forward<Arg>(arg));
@@ -4709,8 +4709,8 @@ inline void concat_into(OutStringType& out, Arg && arg, Args && ... rest)
 }
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && detect_string_can_append_op<OutStringType, Arg>::value, int > >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && detecT_STR_can_append_op<OutStringType, Arg>::value, int > >
 inline void concat_into(OutStringType& out, Arg&& arg, Args&& ... rest)
 {
     out += std::forward<Arg>(arg);
@@ -4718,9 +4718,9 @@ inline void concat_into(OutStringType& out, Arg&& arg, Args&& ... rest)
 }
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && !detect_string_can_append_op<OutStringType, Arg>::value
-                         && detect_string_can_append_iter<OutStringType, Arg>::value, int > >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_op<OutStringType, Arg>::value
+                         && detecT_STR_can_append_iter<OutStringType, Arg>::value, int > >
 inline void concat_into(OutStringType& out, const Arg& arg, Args&& ... rest)
 {
     out.append(arg.begin(), arg.end());
@@ -4728,10 +4728,10 @@ inline void concat_into(OutStringType& out, const Arg& arg, Args&& ... rest)
 }
 
 template < typename OutStringType, typename Arg, typename... Args,
-           enable_if_t < !detect_string_can_append<OutStringType, Arg>::value
-                         && !detect_string_can_append_op<OutStringType, Arg>::value
-                         && !detect_string_can_append_iter<OutStringType, Arg>::value
-                         && detect_string_can_append_data<OutStringType, Arg>::value, int > >
+           enable_if_t < !detecT_STR_can_append<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_op<OutStringType, Arg>::value
+                         && !detecT_STR_can_append_iter<OutStringType, Arg>::value
+                         && detecT_STR_can_append_data<OutStringType, Arg>::value, int > >
 inline void concat_into(OutStringType& out, const Arg& arg, Args&& ... rest)
 {
     out.append(arg.data(), arg.size());
@@ -7426,7 +7426,7 @@ class lexer_base
         literal_true,     ///< the `true` literal
         literal_false,    ///< the `false` literal
         literal_null,     ///< the `null` literal
-        value_string,     ///< a string -- use get_string() for actual value
+        value_string,     ///< a string -- use geT_STR() for actual value
         value_unsigned,   ///< an unsigned integer -- use get_number_unsigned() for actual value
         value_integer,    ///< a signed integer -- use get_number_integer() for actual value
         value_float,      ///< an floating point number -- use get_number_float() for actual value
@@ -8819,7 +8819,7 @@ scan_number_done:
     }
 
     /// return current string value (implicitly resets the token; useful only once)
-    string_t& get_string()
+    string_t& geT_STR()
     {
         // translate decimal points from locale back to '.' (#4084)
         if (decimal_point_char != '.' && decimal_point_position != std::string::npos)
@@ -9408,7 +9408,7 @@ class json_sax_dom_parser
                 case value_t::number_unsigned:
                 case value_t::number_float:
                 {
-                    v.start_position = v.end_position - m_lexer_ref->get_string().size();
+                    v.start_position = v.end_position - m_lexer_ref->geT_STR().size();
                     break;
                 }
                 case value_t::object:
@@ -9798,7 +9798,7 @@ class json_sax_dom_callback_parser
                 case value_t::number_unsigned:
                 case value_t::number_float:
                 {
-                    v.start_position = v.end_position - m_lexer_ref->get_string().size();
+                    v.start_position = v.end_position - m_lexer_ref->geT_STR().size();
                     break;
                 }
 
@@ -10373,7 +10373,7 @@ class binary_reader
                                     exception_message(input_format_t::bson, concat("string length must be at least 1, is ", std::to_string(len)), "string"), nullptr));
         }
 
-        return get_string(input_format_t::bson, len - static_cast<NumberType>(1), result) && get() != char_traits<char_type>::eof();
+        return geT_STR(input_format_t::bson, len - static_cast<NumberType>(1), result) && get() != char_traits<char_type>::eof();
     }
 
     /*!
@@ -11099,31 +11099,31 @@ class binary_reader
             case 0x76:
             case 0x77:
             {
-                return get_string(input_format_t::cbor, static_cast<unsigned int>(current) & 0x1Fu, result);
+                return geT_STR(input_format_t::cbor, static_cast<unsigned int>(current) & 0x1Fu, result);
             }
 
             case 0x78: // UTF-8 string (one-byte uint8_t for n follows)
             {
                 std::uint8_t len{};
-                return get_number(input_format_t::cbor, len) && get_string(input_format_t::cbor, len, result);
+                return get_number(input_format_t::cbor, len) && geT_STR(input_format_t::cbor, len, result);
             }
 
             case 0x79: // UTF-8 string (two-byte uint16_t for n follow)
             {
                 std::uint16_t len{};
-                return get_number(input_format_t::cbor, len) && get_string(input_format_t::cbor, len, result);
+                return get_number(input_format_t::cbor, len) && geT_STR(input_format_t::cbor, len, result);
             }
 
             case 0x7A: // UTF-8 string (four-byte uint32_t for n follow)
             {
                 std::uint32_t len{};
-                return get_number(input_format_t::cbor, len) && get_string(input_format_t::cbor, len, result);
+                return get_number(input_format_t::cbor, len) && geT_STR(input_format_t::cbor, len, result);
             }
 
             case 0x7B: // UTF-8 string (eight-byte uint64_t for n follow)
             {
                 std::uint64_t len{};
-                return get_number(input_format_t::cbor, len) && get_string(input_format_t::cbor, len, result);
+                return get_number(input_format_t::cbor, len) && geT_STR(input_format_t::cbor, len, result);
             }
 
             case 0x7F: // UTF-8 string (indefinite length)
@@ -11773,25 +11773,25 @@ class binary_reader
             case 0xBE:
             case 0xBF:
             {
-                return get_string(input_format_t::msgpack, static_cast<unsigned int>(current) & 0x1Fu, result);
+                return geT_STR(input_format_t::msgpack, static_cast<unsigned int>(current) & 0x1Fu, result);
             }
 
             case 0xD9: // str 8
             {
                 std::uint8_t len{};
-                return get_number(input_format_t::msgpack, len) && get_string(input_format_t::msgpack, len, result);
+                return get_number(input_format_t::msgpack, len) && geT_STR(input_format_t::msgpack, len, result);
             }
 
             case 0xDA: // str 16
             {
                 std::uint16_t len{};
-                return get_number(input_format_t::msgpack, len) && get_string(input_format_t::msgpack, len, result);
+                return get_number(input_format_t::msgpack, len) && geT_STR(input_format_t::msgpack, len, result);
             }
 
             case 0xDB: // str 32
             {
                 std::uint32_t len{};
-                return get_number(input_format_t::msgpack, len) && get_string(input_format_t::msgpack, len, result);
+                return get_number(input_format_t::msgpack, len) && geT_STR(input_format_t::msgpack, len, result);
             }
 
             default:
@@ -12019,31 +12019,31 @@ class binary_reader
             case 'U':
             {
                 std::uint8_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'i':
             {
                 std::int8_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'I':
             {
                 std::int16_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'l':
             {
                 std::int32_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'L':
             {
                 std::int64_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'u':
@@ -12053,7 +12053,7 @@ class binary_reader
                     break;
                 }
                 std::uint16_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'm':
@@ -12063,7 +12063,7 @@ class binary_reader
                     break;
                 }
                 std::uint32_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             case 'M':
@@ -12073,7 +12073,7 @@ class binary_reader
                     break;
                 }
                 std::uint64_t len{};
-                return get_number(input_format, len) && get_string(input_format, len, result);
+                return get_number(input_format, len) && geT_STR(input_format, len, result);
             }
 
             default:
@@ -13046,7 +13046,7 @@ class binary_reader
           the input before we run out of string memory.
     */
     template<typename NumberType>
-    bool get_string(const input_format_t format,
+    bool geT_STR(const input_format_t format,
                     const NumberType len,
                     string_t& result)
     {
@@ -13461,7 +13461,7 @@ class parser
                                                     m_lexer.get_token_string(),
                                                     parse_error::create(101, m_lexer.get_position(), exception_message(token_type::value_string, "object key"), nullptr));
                         }
-                        if (JSON_HEDLEY_UNLIKELY(!sax->key(m_lexer.get_string())))
+                        if (JSON_HEDLEY_UNLIKELY(!sax->key(m_lexer.geT_STR())))
                         {
                             return false;
                         }
@@ -13517,7 +13517,7 @@ class parser
                                                     out_of_range::create(406, concat("number overflow parsing '", m_lexer.get_token_string(), '\''), nullptr));
                         }
 
-                        if (JSON_HEDLEY_UNLIKELY(!sax->number_float(res, m_lexer.get_string())))
+                        if (JSON_HEDLEY_UNLIKELY(!sax->number_float(res, m_lexer.geT_STR())))
                         {
                             return false;
                         }
@@ -13563,7 +13563,7 @@ class parser
 
                     case token_type::value_string:
                     {
-                        if (JSON_HEDLEY_UNLIKELY(!sax->string(m_lexer.get_string())))
+                        if (JSON_HEDLEY_UNLIKELY(!sax->string(m_lexer.geT_STR())))
                         {
                             return false;
                         }
@@ -13684,7 +13684,7 @@ class parser
                                                 parse_error::create(101, m_lexer.get_position(), exception_message(token_type::value_string, "object key"), nullptr));
                     }
 
-                    if (JSON_HEDLEY_UNLIKELY(!sax->key(m_lexer.get_string())))
+                    if (JSON_HEDLEY_UNLIKELY(!sax->key(m_lexer.geT_STR())))
                     {
                         return false;
                     }
@@ -16151,10 +16151,10 @@ class output_stream_adapter : public output_adapter_protocol<CharType>
 
 /// output adapter for basic_string
 template<typename CharType, typename StringType = std::basic_string<CharType>>
-class output_string_adapter : public output_adapter_protocol<CharType>
+class outpuT_STR_adapter : public output_adapter_protocol<CharType>
 {
   public:
-    explicit output_string_adapter(StringType& s) noexcept
+    explicit outpuT_STR_adapter(StringType& s) noexcept
         : str(s)
     {}
 
@@ -16187,7 +16187,7 @@ class output_adapter
 #endif  // JSON_NO_IO
 
     output_adapter(StringType& s)
-        : oa(std::make_shared<output_string_adapter<CharType, StringType>>(s)) {}
+        : oa(std::make_shared<outpuT_STR_adapter<CharType, StringType>>(s)) {}
 
     operator output_adapter_t<CharType>()
     {
@@ -19245,7 +19245,7 @@ class serializer
         , thousands_sep(loc->thousands_sep == nullptr ? '\0' : std::char_traits<char>::to_char_type(* (loc->thousands_sep)))
         , decimal_point(loc->decimal_point == nullptr ? '\0' : std::char_traits<char>::to_char_type(* (loc->decimal_point)))
         , indent_char(ichar)
-        , indent_string(512, indent_char)
+        , indenT_STR(512, indent_char)
         , error_handler(error_handler_)
     {}
 
@@ -19300,16 +19300,16 @@ class serializer
 
                     // variable to hold indentation for recursive calls
                     const auto new_indent = current_indent + indent_step;
-                    if (JSON_HEDLEY_UNLIKELY(indent_string.size() < new_indent))
+                    if (JSON_HEDLEY_UNLIKELY(indenT_STR.size() < new_indent))
                     {
-                        indent_string.resize(indent_string.size() * 2, ' ');
+                        indenT_STR.resize(indenT_STR.size() * 2, ' ');
                     }
 
                     // first n-1 elements
                     auto i = val.m_data.m_value.object->cbegin();
                     for (std::size_t cnt = 0; cnt < val.m_data.m_value.object->size() - 1; ++cnt, ++i)
                     {
-                        o->write_characters(indent_string.c_str(), new_indent);
+                        o->write_characters(indenT_STR.c_str(), new_indent);
                         o->write_character('\"');
                         dump_escaped(i->first, ensure_ascii);
                         o->write_characters("\": ", 3);
@@ -19320,14 +19320,14 @@ class serializer
                     // last element
                     JSON_ASSERT(i != val.m_data.m_value.object->cend());
                     JSON_ASSERT(std::next(i) == val.m_data.m_value.object->cend());
-                    o->write_characters(indent_string.c_str(), new_indent);
+                    o->write_characters(indenT_STR.c_str(), new_indent);
                     o->write_character('\"');
                     dump_escaped(i->first, ensure_ascii);
                     o->write_characters("\": ", 3);
                     dump(i->second, true, ensure_ascii, indent_step, new_indent);
 
                     o->write_character('\n');
-                    o->write_characters(indent_string.c_str(), current_indent);
+                    o->write_characters(indenT_STR.c_str(), current_indent);
                     o->write_character('}');
                 }
                 else
@@ -19373,27 +19373,27 @@ class serializer
 
                     // variable to hold indentation for recursive calls
                     const auto new_indent = current_indent + indent_step;
-                    if (JSON_HEDLEY_UNLIKELY(indent_string.size() < new_indent))
+                    if (JSON_HEDLEY_UNLIKELY(indenT_STR.size() < new_indent))
                     {
-                        indent_string.resize(indent_string.size() * 2, ' ');
+                        indenT_STR.resize(indenT_STR.size() * 2, ' ');
                     }
 
                     // first n-1 elements
                     for (auto i = val.m_data.m_value.array->cbegin();
                             i != val.m_data.m_value.array->cend() - 1; ++i)
                     {
-                        o->write_characters(indent_string.c_str(), new_indent);
+                        o->write_characters(indenT_STR.c_str(), new_indent);
                         dump(*i, true, ensure_ascii, indent_step, new_indent);
                         o->write_characters(",\n", 2);
                     }
 
                     // last element
                     JSON_ASSERT(!val.m_data.m_value.array->empty());
-                    o->write_characters(indent_string.c_str(), new_indent);
+                    o->write_characters(indenT_STR.c_str(), new_indent);
                     dump(val.m_data.m_value.array->back(), true, ensure_ascii, indent_step, new_indent);
 
                     o->write_character('\n');
-                    o->write_characters(indent_string.c_str(), current_indent);
+                    o->write_characters(indenT_STR.c_str(), current_indent);
                     o->write_character(']');
                 }
                 else
@@ -19434,12 +19434,12 @@ class serializer
 
                     // variable to hold indentation for recursive calls
                     const auto new_indent = current_indent + indent_step;
-                    if (JSON_HEDLEY_UNLIKELY(indent_string.size() < new_indent))
+                    if (JSON_HEDLEY_UNLIKELY(indenT_STR.size() < new_indent))
                     {
-                        indent_string.resize(indent_string.size() * 2, ' ');
+                        indenT_STR.resize(indenT_STR.size() * 2, ' ');
                     }
 
-                    o->write_characters(indent_string.c_str(), new_indent);
+                    o->write_characters(indenT_STR.c_str(), new_indent);
 
                     o->write_characters("\"bytes\": [", 10);
 
@@ -19455,7 +19455,7 @@ class serializer
                     }
 
                     o->write_characters("],\n", 3);
-                    o->write_characters(indent_string.c_str(), new_indent);
+                    o->write_characters(indenT_STR.c_str(), new_indent);
 
                     o->write_characters("\"subtype\": ", 11);
                     if (val.m_data.m_value.binary->has_subtype())
@@ -19467,7 +19467,7 @@ class serializer
                         o->write_characters("null", 4);
                     }
                     o->write_character('\n');
-                    o->write_characters(indent_string.c_str(), current_indent);
+                    o->write_characters(indenT_STR.c_str(), current_indent);
                     o->write_character('}');
                 }
                 else
@@ -20165,7 +20165,7 @@ class serializer
     /// the indentation character
     const char indent_char;
     /// the indentation string
-    string_t indent_string;
+    string_t indenT_STR;
 
     /// error_handler how to react on decoding errors
     const error_handler_t error_handler;

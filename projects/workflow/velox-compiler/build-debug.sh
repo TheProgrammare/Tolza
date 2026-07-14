@@ -2,6 +2,8 @@
 # build-debug.sh
 # Script to configure and build Velox using CMake + Ninja in parallel
 
+clear
+
 set -e
 
 # Build directory

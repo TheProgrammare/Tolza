@@ -8,12 +8,14 @@
 
 #include "compiler/compiler.hpp"
 
+#include "nexus/extension.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/metacode/metacode.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/module.hpp"
 #include "nexus/scope.hpp"
-#include "nexus/symbol.hpp"
+#include "nexus/definition.hpp"
+#include "nexus/ast/ast.hpp"
 #include "nexus/type/type.hpp"
 
 #include <string>
@@ -54,8 +56,9 @@ cu::CU::CU()
   , nodes(new ast::Arena(cuid))
   , types(new type::Arena(cuid))
   , scopes(new scope::Graph(cuid))
-  , symbols(new symbol::Arena(cuid))
+  , definitions(new definition::Arena(cuid))
   , modules(new module::Graph(cu::ID::invalid(), cuid))
+  , extensions(new extension::Arena())
 {
   auto&       root_mod  = modules->get_file_root();
   auto&       root_scp  = scopes->get_file_root();
@@ -81,8 +84,9 @@ cu::CU::CU(cu::ID _parent_cuid, cu::ID _cuid, std::string_view _file_path, const
   , nodes(new ast::Arena(cuid))
   , types(new type::Arena(cuid))
   , scopes(new scope::Graph(cuid))
-  , symbols(new symbol::Arena(cuid))
+  , definitions(new definition::Arena(cuid))
   , modules(new module::Graph(_parent_cuid, cuid))
+  , extensions(new extension::Arena())
 {
   auto&       root_mod  = modules->get_file_root();
   auto&       root_scp  = scopes->get_file_root();
@@ -121,22 +125,21 @@ std::string_view cu::FileInfo::get_line(size_t p_line) const
 
   return {data.data() + get_line_start(p_line), line_size};
 }
-// ligne -> début
 size_t cu::FileInfo::get_line_start(size_t line) const
 {
   if (line == 0) return 0;
 
   assert(line < last_offset_line.size());
 
-  return last_offset_line[line - 1];
+  return last_offset_line[line];
 }
 
-// ligne -> fin (position du \n)
+// line -> end (\n)
 size_t cu::FileInfo::get_line_end(size_t line) const
 {
   assert(line < last_offset_line.size());
 
-  return last_offset_line[line];
+  return last_offset_line[line + 1];
 }
 size_t cu::FileInfo::get_line_size(size_t line) const
 {

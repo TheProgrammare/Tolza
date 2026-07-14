@@ -45,12 +45,12 @@ void AST_Printer::visit(ast::ID& n)
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::ID_Qualified& n)
+void AST_Printer::visit(ast::Symbol_Qualified& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::ID_Typed& n)
+void AST_Printer::visit(ast::Symbol_Type& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (const auto& elem : n.gen_args) elem->accept(*this);
@@ -574,18 +574,11 @@ void AST_Printer::visit(ast::Literal_Enum& n)
   out_print += "</ul></li>\n";
 }
 
-void AST_Printer::visit(ast::Literal_Structured_Data& n)
+void AST_Printer::visit(ast::Literal_Record& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   n.name->accept(*this);
   for (const auto& elem : n.field_args) elem->accept(*this);
-  out_print += "</ul></li>\n";
-}
-void AST_Printer::visit(ast::Literal_Form& n)
-{
-  out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
-  n.name->accept(*this);
-  for (const auto& elem : n.facet_args) elem->accept(*this);
   out_print += "</ul></li>\n";
 }
 
@@ -618,22 +611,22 @@ void AST_Printer::visit(ast::Expression_Other& n)
   out_print += "</ul></li>\n";
 }
 
-void AST_Printer::visit(ast::Expression_Call& n)
+void AST_Printer::visit(ast::Expression_Invocation& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::Expression_Call_Argument& n)
+void AST_Printer::visit(ast::Expression_Invocation_Argument& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::Expression_Call_Rule& n)
+void AST_Printer::visit(ast::Expression_Invocation_Rule& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::Expression_Call_Pipe& n)
+void AST_Printer::visit(ast::Expression_Invocation_Pipe& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   for (const auto& elem : n.gen_args) {
@@ -818,7 +811,7 @@ void AST_Printer::visit(ast::Operation_In& n)
   n.right->accept(*this);
   out_print += "</ul></li>\n";
 }
-void AST_Printer::visit(ast::Operation_Assignment& n)
+void AST_Printer::visit(ast::Operation_Transfert& n)
 {
   out_print += "<li class='node'>" + n.debug_str() + "<ul class='children'>\n";
   n.left->accept(*this);

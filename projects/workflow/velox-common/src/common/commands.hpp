@@ -28,7 +28,7 @@ protected:
   CLI::App& app;
 
   std::string compiler_path;
-  std::string from_path;
+  std::string from_path = ".";
   std::string to_path;
   bool        ffi_json_flag = false;
   bool        ffi_c_flag    = false;
@@ -39,6 +39,7 @@ protected:
 
   void         init_command_compiler() noexcept;
   virtual void init_command_build() noexcept = 0;
+  virtual void init_command_check() noexcept = 0;
   void         init_command_ffi() noexcept;
 
   virtual void exec_ffi_command() noexcept = 0;

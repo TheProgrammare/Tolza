@@ -21,11 +21,23 @@
           "velox"
         ],
         "extensions": [
-          ".vlx",
-          ".vlxbind",
-          ".vlxlib"
+          ".vlx"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "velox.build",
+        "title": "Velox: Build"
+      },
+      {
+        "command": "velox.run",
+        "title": "Velox: Run"
+      },
+      {
+        "command": "velox.check",
+        "title": "Velox: Check"
       }
     ],
     "grammars": [
@@ -41,5 +53,23 @@
         "path": "./snippets/velox-snippets.json"
       }
     ]
+  },
+  "activationEvents": [
+    "onLanguage:velox",
+    "onCommand:velox.build",
+    "onCommand:velox.run",
+    "onCommand:velox.check"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "compile": "tsc",
+    "vscode:prepublish": "npm run compile"
+  },
+  "keywords": [],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/vscode": "^1.125.0",
+    "typescript": "^6.0.3"
   }
 }

@@ -103,12 +103,14 @@ struct CU {
   const FileInfo file_info;
 
   // local pools
-  metacode::Graph* const metacodes = nullptr; // preprocessor pass
-  ast::Arena* const      nodes     = nullptr; // parsing pass
-  type::Arena* const     types     = nullptr; // parsing pass
-  scope::Graph* const    scopes    = nullptr; // parsing pass
-  symbol::Arena* const   symbols   = nullptr; // parsing pass
-  module::Graph* const   modules   = nullptr; // parsing pass
+  metacode::Graph* const   metacodes       = nullptr; // preprocessor pass
+  ast::Arena* const        nodes           = nullptr; // parsing pass
+  type::Arena* const       types           = nullptr; // parsing pass
+  scope::Graph* const      scopes          = nullptr; // parsing pass
+  definition::Arena* const definitions     = nullptr; // parsing pass
+  module::Graph* const     modules         = nullptr; // parsing pass
+  extension::Arena* const  extensions      = nullptr; // parsing pass
+  size_t                   inference_count = 0;
 
 
   // dependencies

@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Velox: Build",
+            "type": "shell",
+            "command": "velox-compiler",
+            "args": [
+                "build",
+                "${workspaceFolder}/velox.toml"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

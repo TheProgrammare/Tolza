@@ -16,19 +16,21 @@ struct Arena {
 
   std::unordered_map<ast::ID, type::ID, ast::ID::Hash> inference;
 
-  void add(ast::ID n, type::ID type)
+  void add(ast::ID nodeid, type::ID tyid) noexcept
   {
+    assert(tyid && "Invalid type");
+
     assert(!freeze && "Pool is immutable after type resolution");
 
-    inference.try_emplace(n, type);
+    inference.insert_or_assign(nodeid, tyid);
   }
 
-  [[nodiscard]] ast::ID get_declaration(type::ID ty) const
+  [[nodiscard]] ast::ID get_declaration(type::ID tyid) const noexcept
   {
-    auto result = std::ranges::find_if(inference, [&](std::pair<ast::ID, type::ID> pair) -> bool {
+    auto result = std::ranges::find_if(inference, [&](const auto& pair) -> bool {
       auto& nodeid = pair.first;
       auto& tyid   = pair.second;
-      return tyid == ty;
+      return tyid == tyid;
     });
 
     if (result != inference.end()) return result->first;
@@ -36,17 +38,17 @@ struct Arena {
     return NO_ID;
   }
 
-  [[nodiscard]] type::ID get_inference(ast::ID n) const
+  [[nodiscard]] type::ID get_inference(ast::ID nodeid) const noexcept
   {
-    auto it = inference.find(n);
+    auto it = inference.find(nodeid);
     if (it != inference.end()) return it->second;
 
     return NO_ID;
   }
 
-  [[nodiscard]] bool is_inferred(ast::ID n) const
+  [[nodiscard]] bool is_inferred(ast::ID nodeid) const noexcept
   {
-    return inference.find(n) != inference.end();
+    return inference.find(nodeid) != inference.end();
   }
 };
 

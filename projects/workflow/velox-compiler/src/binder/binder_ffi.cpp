@@ -18,7 +18,6 @@
 
 #include "Neargye/magic_enum.hpp"
 #include "ast/ast_base.hpp"
-#include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
@@ -28,6 +27,8 @@
 #include "nexus/ids.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/inference.hpp"
+#include "nexus/type/data.hpp"
+#include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
 
 namespace fs = std::filesystem;
@@ -301,7 +302,7 @@ std::string ffi::AST::func_to_str(const ast::Global_Function& p_func) const noex
 
 std::string ffi::AST::global_to_str(const ast::Global_Variable& p_glo) const noexcept
 {
-  std::string kind = p_glo.kind == ast::EVariableKind::Let ? "let" : "var";
+  std::string kind = p_glo.kind == ast::EVariableKind::_let ? "let" : "var";
 
   std::string out(BINDER_EXTERN_GLOBAL_TEMPLATE);
   common::utils::fmt_template(out, {kind, p_glo.name, type_to_str(types->get(p_glo.type))});
@@ -341,22 +342,35 @@ std::string ffi::AST::type_to_str(const type::Type& ty) const noexcept
 
     return "(" + out.substr(0, out.size() - 2) + ")";
   }
-  case type::ETypeKind::StaticArray:
-  case type::ETypeKind::Ptr:         {
+  case type::ETypeKind::Array: {
+    const auto* ptr = static_cast<const type::Array*>(&ty);
+    return "[" + type_to_str(types->get(ptr->inner)) + "; " + std::to_string(ptr->size) + "]";
+  }
+  case type::ETypeKind::Buffer: {
+    const auto* ptr = static_cast<const type::Buffer*>(&ty);
+    return "[" + type_to_str(types->get(ptr->inner)) + "; _]";
+  }
+  case type::ETypeKind::Slice: {
+    const auto*       ptr   = static_cast<const type::Slice*>(&ty);
+    const std::string right = ptr->is_c_table ? "c" : "..";
+    return "[" + type_to_str(types->get(ptr->inner)) + "; " + right + "]";
+  }
+  case type::ETypeKind::Ptr: {
     const auto* ptr = static_cast<const type::Ptr*>(&ty);
     return "ptr'" + type_to_str(types->get(ptr->inner));
   }
-  case type::ETypeKind::DynamicArray:
-  case type::ETypeKind::Prototype:    {
+  case type::ETypeKind::Prototype: {
     std::string params;
     const auto* proto = static_cast<const type::Prototype*>(&ty);
     for (const auto& param : proto->params) {
+      params += magic_enum::enum_name(param.passmode);
+      params += " ";
       params += type_to_str(types->get(param.type));
       params += ", ";
     }
     params = params.substr(0, params.size() - 2);
 
-    return "(" + params + ") -> " + type_to_str(types->get(proto->ret));
+    return "fn(" + params + ") -> " + type_to_str(types->get(proto->ret));
   }
   case type::ETypeKind::Flag: {
     auto nodeid = inferences->get_declaration(ty.tyid);
@@ -528,13 +542,13 @@ AST_ADD_NODE(ast::Global_Function)
 AST_ADD_NODE(ast::Global_Alias_Type)
 AST_ADD_NODE(ast::Global_Flag)
 AST_ADD_NODE(ast::SFM_Form)
-AST_ADD_NODE(ast::Identifier)
+AST_ADD_NODE(ast::Symbol_Id)
 AST_ADD_NODE(ast::Local_Parameter)
 AST_ADD_NODE(ast::SFM_Facet_Field)
 AST_ADD_NODE(ast::Union_Field)
 AST_ADD_NODE(ast::Flag_Field)
 AST_ADD_NODE(ast::Enum_Field)
-AST_ADD_NODE(ast::Literal_Structured_Data)
+AST_ADD_NODE(ast::Literal_Record)
 
 #undef AST_ADD_NODE
 
@@ -544,9 +558,10 @@ AST_ADD_NODE(ast::Literal_Structured_Data)
 ADD_GET_TYPE(type::Primitive)
 ADD_GET_TYPE(type::String)
 ADD_GET_TYPE(type::Tuple)
-ADD_GET_TYPE(type::StaticArray)
+ADD_GET_TYPE(type::Array)
+ADD_GET_TYPE(type::Buffer)
+ADD_GET_TYPE(type::Slice)
 ADD_GET_TYPE(type::Ptr)
-ADD_GET_TYPE(type::DynamicArray)
 ADD_GET_TYPE(type::Prototype)
 ADD_GET_TYPE(type::Facet)
 ADD_GET_TYPE(type::View)

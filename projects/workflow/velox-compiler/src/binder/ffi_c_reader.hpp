@@ -31,11 +31,6 @@
 #include "nexus/ids.hpp"
 
 
-namespace common
-{
-struct Compiler_Options;
-}
-
 namespace ffi
 {
 
@@ -65,7 +60,7 @@ struct C_Reader {
   [[nodiscard]] type::ID        c_type_resolve_union(CXCursor decl, type::Qualifier& dec) noexcept;
   [[nodiscard]] type::ID        c_type_resolve_enum(CXCursor decl, type::Qualifier& dec) noexcept;
 
-  std::set<std::string> symbols_generated;
+  std::set<std::string> definitions_generated;
 
   static void generate_libc_wrappers() noexcept;
 
@@ -93,12 +88,14 @@ struct BindManifest {
 
   std::string binding_language;
 
+  common::compiler::TargetTriple triple;
+
   common::env::EArch     target_arch;
   common::env::EPlatform target_os;
   common::env::EABI      target_abi;
 
-  common::compiler::ELibC              clang_libc;
-  common::compiler::Clang::LibCVersion clang_libc_version;
+  common::env::ELibC                  clang_libc;
+  common::compiler::Cffi::LibCVersion clang_libc_version;
 
   std::string compiler_clang_version;
 

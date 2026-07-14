@@ -1,42 +1,39 @@
 #pragma once
 
-#include <cstdint>
+#include <expected>
 #include <string>
 
-enum class EBinOpType : uint8_t;
+#include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
+#include "llvm_forward.hpp"
 
-namespace llvm
+namespace codegen
 {
-class APFloat;
-}
-
-struct LLVM_Tools;
-
-namespace resolver
-{
-struct Codegen;
-}
-
+struct Codegen_AST;
+struct Tools;
 
 struct Static_Evaluator {
-  Static_Evaluator(resolver::Codegen& _v);
+  Static_Evaluator(codegen::Codegen_AST& p_res);
 
-  resolver::Codegen& v;
-  LLVM_Tools*        tools;
-  /*
-    void add_error();
+  codegen::Codegen_AST& res;
+  Tools*                tools;
 
-    std::expected<ast::ALiteral*, std::string> evaluate_expression(ast::AExpression& value);
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> evaluate_expression(ast::ID n) noexcept;
 
-    bool float_almost_eq_ULP(const llvm::APFloat& L, const llvm::APFloat& R, unsigned maxULP = 4);
+  [[nodiscard]] bool float_almost_eq_ULP(const llvm::APFloat& L, const llvm::APFloat& R, unsigned maxULP = 4) noexcept;
 
-    std::expected<ast::ALiteral*, std::string> integral(const ast::literal::Integral& L, const ast::literal::Integral&
-    R, EBinOpType op); std::expected<ast::ALiteral*, std::string> floating(const ast::literal::Floating_Point& L, const
-    ast::literal::Floating_Point& R, EBinOpType op); std::expected<ast::ALiteral*, std::string> decimal(const
-    ast::literal::Fixed_Point& L, const ast::literal::Fixed_Point& R, EBinOpType op); std::expected<ast::ALiteral*,
-    std::string> boolean(const ast::literal::Boolean& L, const ast::literal::Boolean& R, EBinOpType op);
-    std::expected<ast::ALiteral*, std::string> boolean_not(const ast::ALiteral& term);
-    std::expected<ast::ALiteral*, std::string> scalar_minus(const ast::ALiteral& term);
-    std::expected<ast::ALiteral*, std::string> scalar_plus(const ast::ALiteral& term);
-    */
+  [[nodiscard]] std::expected<llvm::Constant*, std::string>
+  integral(const ast::Literal_Integral& L, const ast::Literal_Integral& R, ast::EOp_Bin op) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string>
+  floating(const ast::Literal_Floating_Point& L, const ast::Literal_Floating_Point& R, ast::EOp_Bin op) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string>
+  decimal(const ast::Literal_Fixed_Point& L, const ast::Literal_Fixed_Point& R, ast::EOp_Bin op) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string>
+  boolean(const ast::Literal_Boolean& L, const ast::Literal_Boolean& R, ast::EOp_Bin op) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> boolean_not(ast::ID term) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> scalar_minus(ast::ID term) noexcept;
+  // no effect
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> scalar_plus(ast::ID term) noexcept;
 };
+
+} // namespace codegen

@@ -21,10 +21,10 @@ struct Scope final {
 
   struct Items final {
     // declaration name, reference
-    StringMap<symbol::ID> symbols;
+    StringMap<definition::ID> definitions;
 
-    [[nodiscard]] bool       add_symbol(symbol::ID sym) noexcept;
-    [[nodiscard]] symbol::ID find_symbol(std::string_view name) const noexcept;
+    [[nodiscard]] bool           add_definition(definition::ID defid) noexcept;
+    [[nodiscard]] definition::ID find_definition(std::string_view name) const noexcept;
   };
 
   struct Port final {
@@ -50,10 +50,8 @@ struct Scope final {
 
 [[nodiscard]] Scope& get(ID id) noexcept;
 
-[[nodiscard]] ast::ID get_scope_node(ast::ENodeKind kind, ID start_scpid) noexcept;
-
-[[nodiscard]] symbol::ID find_lexical_symbol(scope::ID ctx, std::string_view name) noexcept;
-[[nodiscard]] symbol::ID find_in_chain_scope(scope::ID ctx, std::string_view name) noexcept;
+[[nodiscard]] definition::ID find_lexical_symbol(scope::ID ctx, std::string_view name) noexcept;
+[[nodiscard]] definition::ID find_in_chain_scope(scope::ID ctx, std::string_view name) noexcept;
 
 struct Graph final {
   Graph() = delete;
@@ -76,12 +74,12 @@ struct Graph final {
   std::unordered_map<ID, module::ID, ID::Hash> module;
 
 
-  [[nodiscard]] Scope& get(ID id) noexcept
+  [[nodiscard]] Scope& get(ID scpid) noexcept
   {
 
-    assert(id.cu() == cuid && "Must be the same script");
-    assert(id.offset() < scopes.size());
-    return scopes[id.offset()];
+    assert(scpid.cu() == cuid && "Must be the same script");
+    assert(scpid.offset() < scopes.size());
+    return scopes[scpid.offset()];
   }
 
   [[nodiscard]] const Scope& get(ID id) const noexcept
@@ -91,7 +89,7 @@ struct Graph final {
     return scopes[id.offset()];
   }
 
-  [[nodiscard]] ID add(ID p_parent, Scope p_scp)
+  [[nodiscard]] ID add(ID p_parent, Scope p_scp) noexcept
   {
     assert(!freeze && "Pool is immutable after parsing pass");
 

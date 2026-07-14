@@ -2,10 +2,12 @@
 
 #include <vector>
 
+#include "ast/ast_literal.hpp"
 #include "nexus/ast/ast.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_operation.hpp"
 
+#include "nexus/ast/data.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/forward.hpp"
 #include "parser/parser_base.hpp"
@@ -29,7 +31,7 @@ ast::ID parser::Parser_Expression::parse_expression()
   if (p.check_val("addr") && p.check_at(1, token::ETokenKind::TICK)) return addr_of();
   if (p.check(token::ETokenKind::AMPERSAND)) return addr_of();
   if (p.check_val("val") && p.check_at(1, token::ETokenKind::TICK)) return ptr_val();
-  if (p.check(token::ETokenKind::OP_ASTERISK)) return ptr_val();
+  if (p.check(token::ETokenKind::OP_MULTIPLY)) return ptr_val();
 
   auto op = p.p_op->try_operation();
 
@@ -38,7 +40,7 @@ ast::ID parser::Parser_Expression::parse_expression()
 
     auto& node = p.add_get_node<ast::Operation_Binary>(p.peek().tokid);
     node.left  = op;
-    node.op_ty = ast::ETokenKind_to_EBinOpType(p.next().kind);
+    node.op_ty = ast::ETokenKind_to_EOp_Bin(p.next().kind);
     node.right = parse_expression();
     op         = node.nodeid;
   }
@@ -74,7 +76,12 @@ ast::ID parser::Parser_Expression::base_expression()
 
   if (auto lit = p.p_lit->try_literal(true)) return lit;
 
-  if (p.check_any(token::k_start_identifier)) return p.p_base->identifier();
+  if (p.check_any(token::k_start_identifier)) {
+    auto id = p.p_base->identifier();
+    if (p.check_chain({token::ETokenKind::L_CURLY, token::ETokenKind::DOT})) return p.p_lit->literal_facet(id);
+    if (p.check_chain({token::ETokenKind::L_CURLY, token::ETokenKind::AT})) return p.p_lit->literal_form(id);
+    return id;
+  }
 
 
   p.add_error(79, "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid)) + "' keyword.", hint);
@@ -110,13 +117,11 @@ ast::ID parser::Parser_Expression::suffix_expression(ast::ID p_base_expr)
   // supported access operators:
   // member access : a.b
   // function call : a(b)
-  // run rule : a::>b()
+  // expand call : a.b()
+  // run rule : a->b()
   // ptr at : a'at(b)
   // ptr offset : a'offset(b)
   // table access : a[i]
-  // These operators can be chained:
-  // a.b'at(1).c'offset(2)[5].e::>run_sys(1, 2).u(10).v
-  // (highly not recommended :( )
 
   while (!p.is_end()) {
     // member access
@@ -125,10 +130,11 @@ ast::ID parser::Parser_Expression::suffix_expression(ast::ID p_base_expr)
     }
     // function call
     else if (p.check(token::ETokenKind::L_PAREN)) {
+      assert(ast::ENodeKind_is_symbol(p_base_expr.kind()));
       p_base_expr = function_call(p_base_expr);
     }
     // run rule
-    else if (p.check(token::ETokenKind::RUN_RULE)) {
+    else if (p.check(token::ETokenKind::ARROW)) {
       p_base_expr = rule_call(p_base_expr);
     }
     // table access
@@ -200,7 +206,7 @@ std::vector<ast::ID> parser::Parser_Expression::call_arguments()
   while (!p.is_end()) {
 
 
-    auto& arg = p.add_get_node<ast::Expression_Call_Argument>(p.peek().tokid);
+    auto& arg = p.add_get_node<ast::Expression_Invocation_Arg>(p.peek().tokid);
 
     // if parameter invocation
     if (p.check_chain({token::ETokenKind::IDENTIFIER, token::ETokenKind::ASSIGN})) {
@@ -232,22 +238,21 @@ ast::ID parser::Parser_Expression::function_call(ast::ID p_callee)
 {
   (void)p.match(token::ETokenKind::L_PAREN);
 
-  auto& call     = p.add_get_node<ast::Expression_Call>(p.peek().tokid);
+  auto& call     = p.add_get_node<ast::Expression_Invocation>(p.peek().tokid);
   call.callee    = p_callee;
   call.arguments = call_arguments();
-
-  // if (auto ptr = dynamic_cast<ast::AIdentifier*>(call->callee.get())) p.sym_m->check_if_unresolved_extern_sym(*ptr);
+  if (call.arguments.empty()) call.invocation_kind = ast::EInvocationKind::fn_call;
 
   return call.nodeid;
 }
 
 ast::ID parser::Parser_Expression::rule_call(ast::ID p_target_form)
 {
-  (void)p.match(token::ETokenKind::RUN_RULE);
+  (void)p.match(token::ETokenKind::ARROW);
 
   auto& base_tok = p.peek(-1);
 
-  auto& rule_call       = p.add_get_node<ast::Expression_Call_Rule>(p.peek().tokid);
+  auto& rule_call       = p.add_get_node<ast::Expression_Invocation_Rule>(p.peek().tokid);
   rule_call.target_form = p_target_form;
   rule_call.callee      = p.p_base->identifier();
   rule_call.arguments   = call_arguments();
@@ -309,7 +314,7 @@ ast::ID parser::Parser_Expression::ptr_val()
 
   (void)p.match_val("val");
   (void)p.match(token::ETokenKind::TICK);
-  (void)p.match(token::ETokenKind::OP_ASTERISK);
+  (void)p.match(token::ETokenKind::OP_MULTIPLY);
   node.target = p.p_expr->parse_expression();
 
   return node.nodeid;

@@ -25,7 +25,7 @@
 int run_velox(int argc, const char* argv[])
 {
   CLI::App            app{"Velox compiler (" + common::SOFTWARE_VERSION + ")", common::SOFTWARE_NAME};
-  compiler::Commander commander(app);
+  compiler::Commander commander(app, argc, argv);
 
   CLI11_PARSE(app, argc, argv);
 

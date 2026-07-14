@@ -1,0 +1,88 @@
+/*
+ * =============================================================================
+ *  Velox Compiler - Generated Binding File
+ * =============================================================================
+ *
+ * Velox Compiler Version  : 2026.2.0b
+ * Generated on            : 2026-07-13 20:37:54
+ * 
+ * Source Language         : C
+ * Source Library          : time
+ * Generation Version      : NONE
+ * Author                  : NONE
+ *
+ * -----------------------------------------------------------------------------
+ * WARNING: This file is auto-generated.
+ * Do not edit manually.
+ * -----------------------------------------------------------------------------
+ */
+
+export {
+
+extern "C" {
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Type Block
+ * ----------------------------------------------------------------------------
+ */
+type clock_t = opaque
+type time_t = opaque
+type tm = opaque
+type size_t = u64
+type locale_t = opaque
+type timespec = opaque
+type clockid_t = opaque
+type pid_t = opaque
+type sigevent = opaque
+type timer_t = opaque
+type itimerspec = opaque
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Global Block
+ * ----------------------------------------------------------------------------
+ */
+var tzname: [ptr'cune; c]
+var daylight: s32
+var timezone: s64
+
+/*
+ * ----------------------------------------------------------------------------
+ *  Velox Binding - Function Block
+ * ----------------------------------------------------------------------------
+ */
+fn clock() -> clock_t;
+fn time(mut __timer: time_t) -> time_t;
+fn difftime(copy __time1: time_t, copy __time0: time_t) -> f64;
+fn mktime(mut __tp: tm) -> time_t;
+fn strftime(mut __s: cune, copy __maxsize: size_t, ref __format: cstr, ref __tp: tm) -> size_t;
+fn strftime_l(mut __s: cune, copy __maxsize: size_t, ref __format: cstr, ref __tp: tm, copy __loc: locale_t) -> size_t;
+fn gmtime(ref __timer: time_t) -> ptr'tm;
+fn localtime(ref __timer: time_t) -> ptr'tm;
+fn gmtime_r(ref __timer: time_t, mut __tp: tm) -> ptr'tm;
+fn localtime_r(ref __timer: time_t, mut __tp: tm) -> ptr'tm;
+fn asctime(ref __tp: tm) -> ptr'cune;
+fn ctime(ref __timer: time_t) -> ptr'cune;
+fn asctime_r(ref __tp: tm, mut __buf: cune) -> ptr'cune;
+fn ctime_r(ref __timer: time_t, mut __buf: cune) -> ptr'cune;
+fn tzset() -> u0;
+fn timegm(mut __tp: tm) -> time_t;
+fn timelocal(mut __tp: tm) -> time_t;
+fn dysize(copy __year: s32) -> s32;
+fn nanosleep(ref __requested_time: timespec, mut __remaining: timespec) -> s32;
+fn clock_getres(copy __clock_id: clockid_t, mut __res: timespec) -> s32;
+fn clock_gettime(copy __clock_id: clockid_t, mut __tp: timespec) -> s32;
+fn clock_settime(copy __clock_id: clockid_t, ref __tp: timespec) -> s32;
+fn clock_nanosleep(copy __clock_id: clockid_t, copy __flags: s32, ref __req: timespec, mut __rem: timespec) -> s32;
+fn clock_getcpuclockid(copy __pid: pid_t, mut __clock_id: clockid_t) -> s32;
+fn timer_create(copy __clock_id: clockid_t, mut __evp: sigevent, mut __timerid: timer_t) -> s32;
+fn timer_delete(copy __timerid: timer_t) -> s32;
+fn timer_settime(copy __timerid: timer_t, copy __flags: s32, ref __value: itimerspec, mut __ovalue: itimerspec) -> s32;
+fn timer_gettime(copy __timerid: timer_t, mut __value: itimerspec) -> s32;
+fn timer_getoverrun(copy __timerid: timer_t) -> s32;
+fn timespec_get(mut __ts: timespec, copy __base: s32) -> s32;
+
+} // extern
+
+} // export

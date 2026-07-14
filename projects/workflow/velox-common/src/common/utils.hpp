@@ -6,20 +6,21 @@
 #include <vector>
 
 
-#define GET_ENUM_NAME(_enum)   common::utils::str_to_kebab(magic_enum::enum_name(_enum))
-#define GET_FLAGS_NAME(_flags) common::utils::str_to_kebab(magic_enum::enum_flags_name(_flags, ','))
+#define GET_ENUM_NAME(_enum)   std::string(magic_enum::enum_name(_enum))
+#define GET_FLAGS_NAME(_flags) std::string(magic_enum::enum_flags_name(_flags, '|'))
+
 
 #define STR_TO_ENUM(_input, _enum)                                                                                     \
   magic_enum::enum_cast<_enum>(common::utils::str_to_snake(_input), magic_enum::case_insensitive)
 #define STR_TO_FLAGS(_input, _flags)                                                                                   \
-  magic_enum::enum_flags_cast<_flags>(common::utils::str_to_snake(_input), ',', magic_enum::case_insensitive)
+  magic_enum::enum_flags_cast<_flags>(common::utils::str_to_snake(_input), '|', magic_enum::case_insensitive)
 
 
 namespace common::utils
 {
 
 
-[[nodiscard]] std::vector<std::string> split_flags(std::string_view s, char separator = ',') noexcept;
+[[nodiscard]] std::vector<std::string> split_flags(std::string_view s, char separator = '|') noexcept;
 
 [[nodiscard]] bool is_valid_identifier(std::string_view s, bool path_possible = false) noexcept;
 
@@ -42,6 +43,16 @@ namespace common::utils
 {
   return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
+
+
+[[nodiscard]] inline int hex_value(char c) noexcept
+{
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1; // invalid
+}
+
 
 [[nodiscard]] inline bool is_alnum(unsigned char c) noexcept
 {
@@ -113,6 +124,6 @@ struct FastRNG {
   }
 };
 
-extern common::utils::FastRNG RAND;
+extern FastRNG RAND;
 
 } // namespace common::utils

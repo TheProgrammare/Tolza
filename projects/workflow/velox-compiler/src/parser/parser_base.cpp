@@ -8,6 +8,7 @@
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "compiler/compiler.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
@@ -40,7 +41,7 @@ parser::Parser_Base::~Parser_Base()
 {
 }
 
-ast::ID parser::Parser_Base::parse_import()
+ast::ID parser::Parser_Base::parse_import() noexcept
 {
   constexpr std::string_view hint =
       R"(define import module like:
@@ -75,12 +76,13 @@ ast::ID parser::Parser_Base::parse_import()
 
   std::string out_err;
   auto        mod = module::build_module_from_path(p.cuid, regex->path, regex->source, out_err);
-  if (!mod && regex->source != cu::EFileSource::binding) {
+  if (!mod) {
     auto& tok = p.CU.file_info.tokens->get(imp.node_token_id);
     auto  err = Error_Diagnostic(p.cuid, 238, tok.begin, tok.begin + tok.length, compiler::EPhase::binder, out_err, "");
     compiler::COMPILER.add_error(err);
-    throw std::runtime_error("module doesn't exists.");
   }
+
+  assert(mod && "invalid moduleid");
 
   const bool scp_r = p.get_current_scope().port.import_module(mod, imp.nodeid);
   assert(scp_r && "Importation failed");
@@ -89,12 +91,12 @@ ast::ID parser::Parser_Base::parse_import()
   std::cout << "├import: " << imp.alias << "\n";
 #endif
 
-  p.CU.imports.try_emplace(imp.nodeid, mod);
+  p.CU.imports.insert_or_assign(imp.nodeid, mod);
 
   return imp.nodeid;
 }
 
-ast::ID parser::Parser_Base::parse_export()
+ast::ID parser::Parser_Base::parse_export() noexcept
 {
   constexpr std::string_view hint = "define export module like: `export {...}`";
 
@@ -120,7 +122,7 @@ ast::ID parser::Parser_Base::parse_export()
   return exp_node.nodeid;
 }
 
-ast::ID parser::Parser_Base::parse_reexport()
+ast::ID parser::Parser_Base::parse_reexport() noexcept
 {
   constexpr std::string_view hint = "define re-export module like: `reexport <path>`";
 
@@ -158,7 +160,7 @@ ast::ID parser::Parser_Base::parse_reexport()
 }
 
 
-ast::ID parser::Parser_Base::parse_extern()
+ast::ID parser::Parser_Base::parse_extern() noexcept
 {
   constexpr std::string_view hint = R"(define extern like: `extern "ABI" {...}`)";
 
@@ -187,7 +189,7 @@ ast::ID parser::Parser_Base::parse_extern()
   return ext_node.nodeid;
 }
 
-ast::ID parser::Parser_Base::parse_instruction()
+ast::ID parser::Parser_Base::parse_instruction() noexcept
 {
   constexpr std::string_view hint =
       R"(define insutrction like:
@@ -222,7 +224,7 @@ ast::ID parser::Parser_Base::parse_instruction()
 
   if (auto expr = p.p_expr->parse_expression()) {
     // assignation and operator assignment
-    if (p.check_any(token::kAssignationTokens)) {
+    if (p.check_any(token::k_op_assign)) {
       auto assign = p.p_op->assignment(expr);
 
       return assign;
@@ -236,7 +238,7 @@ ast::ID parser::Parser_Base::parse_instruction()
   THROW_BAD_NODE;
 }
 
-ast::ID parser::Parser_Base::regex_path()
+ast::ID parser::Parser_Base::regex_path() noexcept
 {
   constexpr std::string_view hint =
       R"(define regex path like: 
@@ -287,12 +289,11 @@ ast::ID parser::Parser_Base::regex_path()
       regex.path.emplace_back(p.parse_name("Expected identifier in regex path.", hint));
     } else {
       const auto& tok_str = p.peek().tokid.str();
-      auto        it      = std::ranges::find_if(token::k_keywords,
-                                                 [&](const std::pair<std::string_view, token::ETokenKind>& pair) -> bool {
-                                       const auto& name = pair.first;
-                                       const auto& kind = pair.second;
-                                       return tok_str == name;
-                                     });
+      auto        it      = std::ranges::find_if(token::k_keywords, [&](const auto& pair) -> bool {
+        const auto& name = pair.first;
+        const auto& kind = pair.second;
+        return tok_str == name;
+      });
 
       if (it != token::k_keywords.end()) {
         regex.path.emplace_back(tok_str);
@@ -316,7 +317,7 @@ ast::ID parser::Parser_Base::regex_path()
 }
 
 
-ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_allowed)
+ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_allowed) noexcept
 {
   constexpr std::string_view hint =
       R"(define identifier like:"
@@ -335,7 +336,7 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
   }
   // it's a simple id with no path
   else if (p.peek(1).kind != token::ETokenKind::STATIC_ACCESS) {
-    auto& id = p.add_get_node<ast::Identifier>(p.peek().tokid);
+    auto& id = p.add_get_node<ast::Symbol_Id>(p.peek().tokid);
     if (!p_keyword_allowed)
       id.name = p.parse_name("", hint);
     else
@@ -348,7 +349,7 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
   // it's qualified id
   if (p_no_qualified_id) p.add_error_tok(113, p.peek(-1), "Unexpected qualified id.", hint);
 
-  auto& id  = p.add_get_node<ast::ID_Qualified>(p.peek().tokid);
+  auto& id  = p.add_get_node<ast::Symbol_Qualified>(p.peek().tokid);
   id.anchor = anchor;
 
   size_t count = 0;
@@ -374,13 +375,13 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
   return id.nodeid;
 }
 
-std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed()
+std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed() noexcept
 {
   (void)p.match_any({token::ETokenKind::TURBO_FISH, token::ETokenKind::L_CURLY});
 
-  auto& id_type = p.add_get_node<ast::ID_Typed>(p.peek(-2).tokid);
+  auto& id_type = p.add_get_node<ast::Symbol_Type>(p.peek(-2).tokid);
 
-  auto tyid = parser_type_factory.make_identifier("__NONE__", id_type.nodeid, symbol::ID{});
+  auto tyid = parser_type_factory.make_identifier("__NONE__", id_type.nodeid, definition::ID{});
 
   if (p.match(token::ETokenKind::R_ANGLE)) return {id_type.nodeid, tyid};
 
@@ -393,4 +394,57 @@ std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed()
   // p.sym_m->check_if_unresolved_extern_sym(*id_type.get());
 
   return {id_type.nodeid, tyid};
+}
+
+
+ast::Local_Parameter& parser::Parser_Base::inject_parameter(ast::ID parent_callable, size_t pos, std::string_view name,
+                                                            ast::EPassMode passmode, type::ID tyid) noexcept
+{
+  auto& n           = p.add_get_node<ast::Local_Parameter>(p.peek().tokid);
+  n.name            = name;
+  n.passmode        = passmode;
+  n.type            = tyid;
+  n.parent_callable = parent_callable;
+  n.position        = pos;
+
+  (void)p.add_definition(n.nodeid);
+
+  if (name == "self") {
+    if (!p.p_extend->in_extend) p.add_error(266, "Unexpected 'self' special variable outside any extend.", "");
+
+    p.p_extend->current_self = n.nodeid;
+  } else if (name == "other") {
+    if (!p.p_extend->in_extend) p.add_error(266, "Unexpected 'self' special variable outside any extend.", "");
+
+    p.p_extend->current_other = n.nodeid;
+  }
+
+  return n;
+}
+ast::Local_Variable& parser::Parser_Base::inject_variable(std::string_view name, ast::EVariableKind kind, type::ID tyid,
+                                                          ast::ID expr) noexcept
+{
+  auto& n      = p.add_get_node<ast::Local_Variable>(p.peek().tokid);
+  n.name       = name;
+  n.kind       = kind;
+  n.type       = tyid;
+  n.expression = expr;
+
+  (void)p.add_definition(n.nodeid);
+
+  return n;
+}
+
+ast::Local_Capability& parser::Parser_Base::inject_capability(std::string_view name, ast::ECapability capa,
+                                                              type::ID tyid, ast::ID expr) noexcept
+{
+  auto& n      = p.add_get_node<ast::Local_Capability>(p.peek().tokid);
+  n.name       = name;
+  n.kind       = capa;
+  n.type       = tyid;
+  n.expression = expr;
+
+  (void)p.add_definition(n.nodeid);
+
+  return n;
 }

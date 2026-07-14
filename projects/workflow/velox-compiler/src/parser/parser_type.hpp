@@ -9,28 +9,6 @@ namespace parser
 struct Parser_Type final {
   Parser_Type(Parser_Context& p_ctx);
 
-  struct Param final {
-    token::ID      name_tok;
-    std::string    name;
-    ast::EPassMode passmode;
-    type::ID       type;
-    ast::ID        default_val;
-    bool           is_restrict = false;
-  };
-
-  struct Params final {
-    std::vector<Param> params;
-    bool               is_variadic = false;
-
-    [[nodiscard]] std::vector<type::ID> to_type_params() const;
-  };
-
-  struct Proto final {
-    Params   params;
-    type::ID ret;
-    bool     is_explicit_ret;
-  };
-
   [[nodiscard]] type::ID parse_type();
 
 private:
@@ -44,11 +22,14 @@ private:
 
 
 public:
-  [[nodiscard]] Proto                 parse_and_mount_local_callable(type::ID& prototype_id, bool& is_explicit_ret);
-  [[nodiscard]] std::vector<type::ID> explicit_tuple();
-  [[nodiscard]] ast::ID               get_type();
-  [[nodiscard]] Proto                 explicit_function_proto(bool p_is_lam = false);
-  [[nodiscard]] Params                parameters();
+  [[nodiscard]] std::vector<type::ID>                     explicit_tuple();
+  [[nodiscard]] ast::ID                                   get_type();
+  // proto, parameters
+  [[nodiscard]] std::pair<type::ID, std::vector<ast::ID>> prototype_from_declaration(bool start_at_params = false);
+  // parameters
+  [[nodiscard]] type::ID                                  prototype_from_type();
+  // is_variadic, parameters
+  [[nodiscard]] std::pair<bool, std::vector<ast::ID>>     parameters();
 
   Parser_Context& p;
 };

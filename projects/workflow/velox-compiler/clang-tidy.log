@@ -9,10 +9,10 @@ Running clang-tidy for 48 files out of 48 in compilation database ...
       |       ^~~~~~~~~
       |       Mod_Path
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/symbol.cpp:40:37: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
-   40 | symbol::Symbol& symbol::Dispatcher::get(ID symid) noexcept
+   40 | symbol::Symbol& symbol::Dispatcher::get(ID defid) noexcept
       |                                     ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/symbol.cpp:46:43: warning: method 'get' can be made static [readability-convert-member-functions-to-static]
-   46 | const symbol::Symbol& symbol::Dispatcher::get(ID symid) const noexcept
+   46 | const symbol::Symbol& symbol::Dispatcher::get(ID defid) const noexcept
       |                                           ^             ~~~~~
 45390 warnings generated.
 
@@ -414,11 +414,11 @@ Running clang-tidy for 48 files out of 48 in compilation database ...
       |     ^~~~
       |     const auto *
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:167:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
-  167 |     auto d = static_cast<const type::StaticArray*>(&t);
+  167 |     auto d = static_cast<const type::Array*>(&t);
       |     ^~~~
       |     const auto *
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:174:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
-  174 |     auto d = static_cast<const type::DynamicArray*>(&t);
+  174 |     auto d = static_cast<const type::Buffer*>(&t);
       |     ^~~~
       |     const auto *
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/nexus/type/type.cpp:180:5: warning: 'auto d' can be declared as 'const auto *d' [readability-qualified-auto]
@@ -598,7 +598,7 @@ Running clang-tidy for 48 files out of 48 in compilation database ...
    59 |   : CU(_CU)
       |        ~~~
       |        CU
-   60 |   , ctx(compiler::LLVM_CTX)
+   60 |   , ctx(ctx)
    61 |   , __module(std::make_unique<llvm::Module>(_CU.file_info.get_module_name(), ctx))
       |                                             ~~~
       |                                             CU
@@ -956,16 +956,16 @@ Running clang-tidy for 48 files out of 48 in compilation database ...
   229 |       if (p.match(token::ETokenKind::T_TEXT) || p.match_val("t")) {
       |                                              ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:231:9: note: +4, including nesting penalty of 3, nesting level increased to 4
-  231 |         if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+  231 |         if (p.match(token::ETokenKind::T_STR) || p.match_val("s")) {
       |         ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:231:50: note: +1
-  231 |         if (p.match(token::ETokenKind::T_STRING) || p.match_val("s")) {
+  231 |         if (p.match(token::ETokenKind::T_STR) || p.match_val("s")) {
       |                                                  ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:234:14: note: +1, nesting level increased to 3
-  234 |       } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
+  234 |       } else if (p.match(token::ETokenKind::T_CSTR) || p.match_val("c")) {
       |              ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:234:57: note: +1
-  234 |       } else if (p.match(token::ETokenKind::T_C_STRING) || p.match_val("c")) {
+  234 |       } else if (p.match(token::ETokenKind::T_CSTR) || p.match_val("c")) {
       |                                                         ^
 /media/data/Workspace/velox/projects/workflow/velox-compiler/src/parser/parser_literal.cpp:236:14: note: +1, nesting level increased to 3
   236 |       } else if (p.match(token::ETokenKind::T_CUNE) || p.match_val("cu")) {

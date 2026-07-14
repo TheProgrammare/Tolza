@@ -13,7 +13,7 @@ AST_NODE(SFM_Facet_Field)
   SET_TYPE(type);
   SET_NODE(default_value);
   bool        is_no_default = false;
-  ECapability capability    = ECapability::Copy;
+  ECapability capability    = ECapability::copy;
 };
 
 AST_NODE(SFM_Facet)
@@ -40,16 +40,12 @@ AST_NODE(SFM_Form)
   std::string name;
   EVisibility visibility = EVisibility::File_Scope;
 
+  // literal facet (Literal_Record)
+  // or identifier
+  // or identifier typed
   SET_VECTOR_NODE(facets);
 
-  SET_VECTOR_NODE(constructors);
-  SET_NODE(destructor);
-
   SET_VECTOR_NODE(gen_params);
-
-  SET_VECTOR_NODE(operators);
-  SET_VECTOR_NODE(accessors);
-  SET_VECTOR_NODE(casters);
 
   bool isDestructible = true;
   bool isMoveable     = true;
@@ -65,9 +61,9 @@ AST_NODE(SFM_Rule)
   SET_VECTOR_NODE(parameters);
   SET_TYPE(prototype);
   SET_VECTOR_NODE(cases);
-  bool is_const             = false;
-  bool is_pure              = false;
-  bool is_explicit_ret_type = false;
+  bool is_const        = false;
+  bool is_pure         = false;
+  bool is_explicit_ret = false;
 };
 
 AST_NODE(SFM_Rule_Case)

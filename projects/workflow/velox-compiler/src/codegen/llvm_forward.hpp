@@ -3,6 +3,8 @@
 namespace llvm
 {
 class Value;
+class APFloat;
+class APInt;
 class Constant;
 class Type;
 class LLVMContext;
@@ -17,4 +19,5 @@ class BranchInst;
 class LoadInst;
 class BasicBlock;
 class Argument;
+class PointerType;
 } // namespace llvm

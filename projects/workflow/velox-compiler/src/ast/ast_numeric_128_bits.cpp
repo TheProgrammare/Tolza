@@ -12,7 +12,6 @@ Float128::Float128()
 
 Float128::~Float128()
 {
-  delete val;
 }
 
 Float128::Float128(const llvm::APFloat& value)
@@ -53,7 +52,6 @@ Int128::Int128()
 
 Int128::~Int128()
 {
-  delete val;
 }
 
 

@@ -109,12 +109,12 @@ ast::ID parser::Parser_Declaration_Local::parse_pattern(ast::ID comparison_expr)
 
 ast::ID parser::Parser_Declaration_Local::variable()
 {
-  auto& var    = p.add_get_node<ast::Local_Variable>(p.peek().tokid);
-  var.kind     = ast::ETokenKind_to_EVariableKind(p.next().kind);
-  var.name     = p.parse_name();
-  var.isStatic = p.metablock_contains(p.tok_to_pos(var.node_token_id), "static");
+  auto& var     = p.add_get_node<ast::Local_Variable>(p.peek().tokid);
+  var.kind      = ast::ETokenKind_to_EVariableKind(p.next().kind);
+  var.name      = p.parse_name();
+  var.is_static = p.metablock_contains(p.tok_to_pos(var.node_token_id), "static");
 
-  (void)p.add_symbol(var.nodeid);
+  (void)p.add_definition(var.nodeid);
 
   bool is_inferred_ty = false;
 
@@ -137,11 +137,16 @@ ast::ID parser::Parser_Declaration_Local::variable()
 
   (void)p.next();
 
-  auto expr = p.p_expr->parse_expression();
+  if (p.match(token::ETokenKind::L_UNINIT)) {
+    var.is_uninit = true;
+  } else {
+    auto expr      = p.p_expr->parse_expression();
+    var.expression = expr;
+  }
 
-  // if (isAutoTy) var->type = resolve_type(expr.get());
-
-  var.expression = expr;
+  if (var.is_uninit && var.kind != ast::EVariableKind::_var) {
+    p.add_error(64, "Illegal uninit variable with a const or immutable status", "");
+  }
 
   return var.nodeid;
 }
@@ -169,7 +174,7 @@ ast::ID parser::Parser_Declaration_Local::tuple_destructuring()
       loc.name = p.parse_name("", hint);
       unpack.bindings.emplace_back(loc.nodeid);
 
-      (void)p.add_symbol(loc.nodeid);
+      (void)p.add_definition(loc.nodeid);
     } else {
       unpack.bindings.emplace_back(ast::ID::make(p.cuid, WILCARD_ID));
     }
@@ -218,19 +223,19 @@ ast::ID parser::Parser_Declaration_Local::lambda_capture()
 
     switch (capa) {
     case ast::ECapability::NONE:
-    case ast::ECapability::Ref:  {
+    case ast::ECapability::ref:  {
       auto& R = p.add_get_node<ast::Expression_Ref_Of>(p.peek(-1).tokid);
       nodeid  = R.nodeid;
     }
-    case ast::ECapability::Mut: {
+    case ast::ECapability::mut: {
       auto& M = p.add_get_node<ast::Expression_Mut_Of>(p.peek(-1).tokid);
       nodeid  = M.nodeid;
     }
-    case ast::ECapability::Copy: {
+    case ast::ECapability::copy: {
       auto& C = p.add_get_node<ast::Expression_Copy_Of>(p.peek(-1).tokid);
       nodeid  = C.nodeid;
     }
-    case ast::ECapability::Move: {
+    case ast::ECapability::move: {
       auto& M = p.add_get_node<ast::Expression_Move_Of>(p.peek(-1).tokid);
       nodeid  = M.nodeid;
     }
@@ -244,12 +249,14 @@ ast::ID parser::Parser_Declaration_Local::lambda_capture()
 
 ast::ID parser::Parser_Declaration_Local::lambda()
 {
-  auto& lam = p.add_get_node<ast::Local_Lambda>(p.peek().tokid);
+  auto&      lam       = p.add_get_node<ast::Local_Lambda>(p.peek().tokid);
+  const auto old_ret   = p.current_returnable;
+  p.current_returnable = lam.nodeid;
 
   if (p.check(token::ETokenKind::IDENTIFIER)) {
     lam.name = p.parse_name();
 
-    (void)p.add_symbol(lam.nodeid);
+    (void)p.add_definition(lam.nodeid);
     p.enter_scope(lam, "lambda \"" + std::string(lam.name) + "\"");
   } else {
     p.enter_scope(lam, "lambda");
@@ -260,11 +267,15 @@ ast::ID parser::Parser_Declaration_Local::lambda()
   // check capture
   if (p.match(token::ETokenKind::L_SQUARE)) lam.capture = lambda_capture();
 
-  auto proto = p.p_type->parse_and_mount_local_callable(lam.prototype, lam.is_explicit_ret_type);
+  auto [protoid, params] = p.p_type->prototype_from_declaration();
+  lam.prototype          = protoid;
+  lam.parameters         = params;
 
   lam.codeblock = p.p_loc->parse_codeblock_instruction();
 
   p.exit_scope();
+
+  p.current_returnable = old_ret;
 
   return lam.nodeid;
 }
@@ -322,7 +333,7 @@ ast::ID parser::Parser_Declaration_Local::facet_pattern(ast::ECapability p_capa,
 
   const auto* facet_node = p_facet_id.get();
 
-  assert(ast::ENodeKind_is_ID(facet_node->kind()));
+  assert(ast::ENodeKind_is_symbol(facet_node->kind()));
   // Illegal identifier, impossible to use a type
 
   auto& facet_pat = p.add_get_node<ast::Local_Pattern_Facet>(p.peek().tokid);
@@ -372,7 +383,7 @@ ast::ID parser::Parser_Declaration_Local::form_pattern(ast::ECapability p_capa, 
 
   const auto* form_node = p_form_id.get();
 
-  assert(ast::ENodeKind_is_ID(form_node->kind()));
+  assert(ast::ENodeKind_is_symbol(form_node->kind()));
   // Illegal identifier, impossible to use a type
 
   auto& form_pat      = p.add_get_node<ast::Local_Pattern_Form>(p.peek().tokid);
@@ -461,7 +472,7 @@ ast::ID parser::Parser_Declaration_Local::enum_pattern(ast::ECapability p_capa, 
 
   const auto* enum_node = p_enum_id.get();
 
-  assert(ast::ENodeKind_is_ID(enum_node->kind()));
+  assert(ast::ENodeKind_is_symbol(enum_node->kind()));
   // Illegal identifier, impossible to use a type
 
   auto& pat = p.add_get_node<ast::Local_Pattern_Enum>(p.peek().tokid);

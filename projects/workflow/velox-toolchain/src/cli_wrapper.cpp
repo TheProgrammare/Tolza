@@ -40,14 +40,14 @@ std::string cli::get_input(std::string_view msg) noexcept
   return reponse;
 }
 
-std::string cli::ask_filename() noexcept
+std::string cli::ask_text(std::string_view msg, bool is_filename) noexcept
 {
 retry:
-  std::cout << "[velox:ask] Write down the file name: ";
+  std::cout << "[velox:ask] " << msg << " : ";
   std::string name;
   std::getline(std::cin, name);
 
-  if (!is_valid_filename(name)) {
+  if (is_filename && !is_valid_filename(name)) {
     sanitize_filename(name);
     if (yes_no_question("File name invalid, do you want to use this version: \"" + name + "\" ?")) return name;
 

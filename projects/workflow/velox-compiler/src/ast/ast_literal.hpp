@@ -40,14 +40,14 @@ AST_NODE(Literal_Cune)
 
 AST_NODE(Literal_Rune)
 {
-  std::string_view code_points;
+  std::string code_points;
 };
 
 
 AST_NODE(Literal_Text_Pure)
 {
-  std::string_view  val;
-  ::type::ETextType text_type = ::type::ETextType::_str;
+  std::string       val;
+  ::type::ETextType text_type = ::type::ETextType::NONE;
 };
 
 // format_spec ::= [options][width][grouping]["." precision][type]
@@ -60,8 +60,8 @@ AST_NODE(Literal_Text_Pure)
 // "%"
 AST_NODE(Literal_Format_Specifier)
 {
-  std::string_view src_Str;
-  char             fill = '\0'; // char fill, e.g. '0', '*', ' '
+  std::string src_Str;
+  char        fill = '\0'; // char fill, e.g. '0', '*', ' '
   enum class EAlign : uint8_t { Right, Left, Center, Justify };
   EAlign align = EAlign::Right; // '>', '<', '^', '~', '='
 
@@ -124,12 +124,15 @@ AST_NODE(Literal_Table_Population)
   SET_NODE(map_expression_value);
 };
 
+AST_NODE(Literal_NullPtr){};
+
 AST_NODE(Literal_Table)
 { // for explicit specified values like: { 0, 1, 2, 3 }
   SET_VECTOR_NODE(values);
 
   // for procedural generated values like: { 0..4 = rand::gauss() }
   SET_NODE(population);
+  SET_TYPE(type);
 
   // can be a ex nihilo node (for primitive types)
   SET_INFERRED_TYPE
@@ -155,14 +158,6 @@ AST_NODE(Literal_Map)
   size_t ty_sizeByte = 0;
 };
 
-AST_NODE(Literal_Enum)
-{
-  // path = enum name
-  // base_name = enum element
-  SET_NODE(name);
-  SET_VECTOR_NODE(member_values);
-};
-
 AST_NODE(Literal_Tuple)
 {
   struct Field {
@@ -182,25 +177,13 @@ AST_NODE(Literal_Range)
   bool endInclude = false;
 };
 
-// CIdentity{ name: "Zagreus", age: 25 }
-// can be facet, union, enum, flag
-AST_NODE(Literal_Structured_Data)
+// Person{@CIdentity{.name= "Zagreus", .age= 25}} : form/view
+// CIdentity{.name= "Zagreus", .age= 25} : facet
+AST_NODE(Literal_Record)
 {
   SET_NODE(name);
+  std::vector<std::string> fields_names; // empty : it's a literal form
   SET_VECTOR_NODE(fields_args);
-};
-
-// Person{ CIdentity.name: "Zagreus", CIdentity.age: 25 }
-// not the same as Person("Zagreus", 32) it's a call of constructor
-AST_NODE(Literal_Form)
-{
-  SET_NODE(name);
-  SET_VECTOR_NODE(facet_args);
-};
-
-AST_NODE(Literal_Iterator)
-{
-  SET_NODE(collection);
 };
 
 } // namespace ast

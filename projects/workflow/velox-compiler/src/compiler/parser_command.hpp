@@ -26,13 +26,20 @@
 
 #pragma once
 
+#include "common/compiler_options.hpp"
 #include <string>
 
 #include <common/commands.hpp>
+#include <vector>
 
 namespace CLI
 {
 class App;
+}
+
+namespace common::compiler
+{
+struct Sub_Compiler_Options;
 }
 
 namespace compiler
@@ -41,11 +48,11 @@ namespace compiler
 class Commander : common::Commander
 {
 public:
-  Commander(CLI::App& _app)
-    : common::Commander(_app)
-  {
-    init_commands();
-  }
+  Commander(CLI::App& _app, int argc, const char* argv[]);
+
+  common::compiler::Sub_Compiler_Options& opt;
+
+  std::vector<std::string> args;
 
 private:
   void init_commands() noexcept;
@@ -53,7 +60,10 @@ private:
   void init_command_cogito() noexcept;
   void init_command_ffi() noexcept;
 
+  void compilation_args(CLI::App* build) noexcept;
+
   void init_command_build() noexcept override;
+  void init_command_check() noexcept override;
   void exec_ffi_command() noexcept override;
 };
 

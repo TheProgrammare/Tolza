@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/utils.hpp"
+#include "nexus/forward.hpp"
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
 
@@ -13,7 +14,10 @@
   inline bool lexical_cast(const std::string& input, _flag& output)                                                    \
   {                                                                                                                    \
     auto value = STR_TO_FLAGS(input, _flag);                                                                           \
-    if (!value.has_value()) return false;                                                                              \
+    if (!value.has_value()) {                                                                                          \
+      output = _flag::NONE;                                                                                            \
+      return true;                                                                                                     \
+    }                                                                                                                  \
     output = *value;                                                                                                   \
     return true;                                                                                                       \
   }
@@ -24,7 +28,10 @@
   inline bool lexical_cast(const std::string& input, _enum& output)                                                    \
   {                                                                                                                    \
     auto value = STR_TO_ENUM(input, _enum);                                                                            \
-    if (!value.has_value()) return false;                                                                              \
+    if (!value.has_value()) {                                                                                          \
+      output = _enum::DEFAULT;                                                                                         \
+      return false;                                                                                                    \
+    }                                                                                                                  \
     output = *value;                                                                                                   \
     return true;                                                                                                       \
   }
@@ -34,29 +41,25 @@ namespace CLI::detail
 {
 
 SERALIZE_FLAG(common::compiler::FCPUFeature)
-SERALIZE_FLAG(common::compiler::FCSource)
-template <>
-[[nodiscard]] inline bool lexical_cast(const std::string& input, common::compiler::FPass& output)
-{
-  const auto value = STR_TO_FLAGS(input, common::compiler::FPass);
-  if (!value.has_value()) return false;
-  output = *value;
-  return true;
-}
+SERALIZE_FLAG(common::env::FCSource)
 SERALIZE_FLAG(common::compiler::FDebugPrinter)
 SERALIZE_FLAG(common::compiler::FEmit)
+SERALIZE_FLAG(common::compiler::FWarnMode)
+SERALIZE_FLAG(common::compiler::FPass)
 
-SERALIZE_ENUM(common::compiler::ECStandard)
-SERALIZE_ENUM(common::compiler::EPlatformFlavor)
-SERALIZE_ENUM(common::compiler::EEnvironment)
-SERALIZE_ENUM(common::compiler::ELibC)
+SERALIZE_ENUM(common::env::ECStandard)
+SERALIZE_ENUM(common::env::EEnvironment)
+SERALIZE_ENUM(common::env::ELibC)
 SERALIZE_ENUM(common::compiler::ECodeModel)
 SERALIZE_ENUM(common::compiler::ERelocModel)
-SERALIZE_ENUM(common::compiler::ECallingConv)
+SERALIZE_ENUM(common::compiler::EErrorMode)
+SERALIZE_ENUM(common::compiler::EDiagnosticFormat)
+SERALIZE_ENUM(common::env::ECallConvention)
 SERALIZE_ENUM(common::env::EABI)
 SERALIZE_ENUM(common::env::EPlatform)
 SERALIZE_ENUM(common::env::EArch)
 SERALIZE_ENUM(common::env::EVendor)
+
 
 template <>
 [[nodiscard]] inline bool lexical_cast(const std::string& input, common::compiler::EOptimization& output)
@@ -96,9 +99,9 @@ template <>
 }
 
 template <>
-[[nodiscard]] inline bool lexical_cast(const std::string& input, common::compiler::Clang::LibCVersion& output)
+[[nodiscard]] inline bool lexical_cast(const std::string& input, common::compiler::Cffi::LibCVersion& output)
 {
-  output = common::compiler::Clang::LibCVersion::parse(input);
+  output = common::compiler::Cffi::LibCVersion::parse(input);
   return output.major != 0 && output.minor != 0;
 }
 
