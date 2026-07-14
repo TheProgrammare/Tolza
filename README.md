@@ -29,6 +29,8 @@ Velox deliberately avoids implicit behavior in favor of clarity, predictability,
 
 > For technical implementation details, see the ![MANIFEST](MANIFEST.md)
 
+> For VSCode plugin, see [here](https://github.com/TheProgrammare/Velox-VScode-Plugin)
+
 ## Why Velox?
 
 Modern systems languages each make different trade-offs:
