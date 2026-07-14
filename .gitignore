@@ -1,12 +1,5 @@
-# Velox compiler generation
+.cache
 build/
-source/
-LLVM-IR/
-FFI-JSON/
-EMBinds/
-post-preprocess/
-dot/
-.cache/
 
 # Prerequisites
 *.d

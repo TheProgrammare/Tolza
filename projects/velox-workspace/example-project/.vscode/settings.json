@@ -1,3 +1,0 @@
-{
-    "velox.release.executable": "${workspaceFolder}/build/debug/myapp"
-}

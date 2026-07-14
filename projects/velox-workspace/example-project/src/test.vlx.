@@ -1,8 +1,0 @@
-
-extern "C" {
-  fn printf(copy format: cstr, ...) -> s32
-}
-
-fn main() {
-  printf("Hello World\n")
-}
