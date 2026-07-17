@@ -66,22 +66,22 @@ move_form(player, player, (10.0, 20.0, 30.0), 5.0)
 note a role or a rule can simplify the function declaration and call:
 
 
-# Role
-> Use `role` to declare a role
+# View
+> Use `view` to declare a view
  
-roles are a package of facets to check if forms have some facets
+view are a package of facets to check if forms have some facets
 useful for simple generic functions or rule case !
 
-a role cannot be used in an form composition, it's a generic/rule_case/parameter guarantee shortcut
+a view cannot be used in an form composition, it's a generic/rule_case/parameter guarantee shortcut
 ```
-role name { facets, ... }
+view name { facets, ... }
 ```
 
 
-## Role Parameters
+## View Parameters
 ```
-role RMovable { CPosition, CPhysic }
-extend RMovable::move(mut self, ref new_pos: xyz_pos, copy vel: f32) {
+View vMovable { CPosition, CPhysic }
+extend vMovable::move(mut self, ref new_pos: xyz_pos, copy vel: f32) {
   self.CPosition = CPosition{.x= new_pos.x, .y= new_pos.y, .z= new_pos.z}
   self.CPhysic.vel = vel
 }
@@ -89,14 +89,15 @@ extend RMovable::move(mut self, ref new_pos: xyz_pos, copy vel: f32) {
 form Car { use CPosition, use CPhysic }
 
 var my_car: Car
-my_car@RMovable.move({.x= 10}, 100)
+my_car@vMovable.move({.x= 10}, 100)
 ```
 
-> Tips: use roles to extend some cross-facet behaviour without specific form context
+> Tips: use views to extend some cross-facet behaviour without specific form context
 
 calling
 ```
-move_form_role(player, (10.0, 20.0, 30.0), 5.0)
+player.move((10.0, 20.0, 30.0), 5.0) // will check if player is vMovable compile time compatible
+vMovable::move(player, (10.0, 20.0, 30.0), 5.0) // explicit move call from vMovable extension, will check if player is vMovable compile time compatible
 ```
 
 
