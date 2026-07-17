@@ -11,8 +11,8 @@ Meta statements are block of code designed to modify the ast from compilation ti
 
 | statement | syntax | effect |
 |-|-|-|
-| if | `meta if <compiletime cond> {...} meta elif {...} meta else {...}` | only code inside the valid statement will be parsed |
-| for | `meta for i in <range/collection/enum/union> {}` | will duplicate code inside his scope, the index/element can be used to inject token inside the scope. Can iterate on enum and union. index and item becomes local permutation symbols in the scope |
+| if | `meta if <compiletime cond> {...} meta elif {...} meta else {...}` | Only code inside the valid branch will remain in the final AST after compile-time evaluation |
+| for | `meta for i in <range/collection/enum/union> {}` | will duplicate code inside his scope, the index/element can be used to inject token inside the scope. Can iterate on enum and union. A meta loop variable is a compile-time symbol bound to a compile-time value |
 | match | `meta match <compiletime expr> {}` | only code inside the valid case will be parsed |
 
 > condiition can be a defined macro
@@ -28,7 +28,7 @@ There is some builtin meta expressions
 | expression | syntax | effect |
 |-|-|-|
 | size | `meta::size(...)` | returns the memory size of the node: variable/definition/type... |
-| type | `meta::type(...)` | returns the type of the expression |
+| typeof | `meta::typeof(...)` | returns the type of the expression |
 | name | `meta::name(...)` | returns the symbolic name of the node: variable/field/definition/identifier/type... |
 
 # meta declaration
@@ -74,7 +74,7 @@ fn sum() {}
 You can reuse metacode with names, parameters can be passed
 ```
 # // metacode instructions
-meta name(<params>) -> <target>
+# macro name(<params>) -> <target>
 ```
 Explanation:
 Target permit to precise the object applied `fn|type|lam|var|let|gen|...`
