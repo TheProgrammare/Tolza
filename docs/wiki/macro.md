@@ -7,6 +7,7 @@ macro name(<params>) -> <target> {...}
 ```
 Explanation:
 Target permit to precise the object applied `fn|type|lam|var|let|gen|...`, `_` means any
+
 If the target is not specified the macro is a inplace code constructor
 
 the target can be modified by some fields
