@@ -80,7 +80,7 @@ view name { facets, ... }
 
 ## View Parameters
 ```
-View vMovable { CPosition, CPhysic }
+view vMovable { CPosition, CPhysic }
 extend vMovable::move(mut self, ref new_pos: xyz_pos, copy vel: f32) {
   self.CPosition = CPosition{.x= new_pos.x, .y= new_pos.y, .z= new_pos.z}
   self.CPhysic.vel = vel
