@@ -70,30 +70,37 @@ Cumulative metacode can be in a unique line:
 fn sum() {}
 ```
 
-## Block
-You can reuse metacode with names, parameters can be passed
+## macro
 ```
-# // metacode instructions
-# macro name(<params>) -> <target>
+macro name(<params>) -> <target> {...}
 ```
 Explanation:
-Target permit to precise the object applied `fn|type|lam|var|let|gen|...`
+Target permit to precise the object applied `fn|type|lam|var|let|gen|...`, `_` means any
 If the target is not specified a warning will be triggered
 
 ```
-# timeout timeout_
-# pure
-meta metacode_reused_name(timeout_: f32) -> fn
+macro log_async(timeout_: f32) -> fn {
+  fn.attributes.add(async)
+  fn.attributes.add(pure)
+  fn.code.before {
+    var timer = std::time::start()
+  }
+  fn.code.after {
+    std::console::log("run time: " + timer as str)
+  }
+  fn.on_call {
+    call timeout timeout_
+  }
+}
 
-# metacode_reused_name(10)
+# log_async(10)
 fn fonc_example() {};
 ```
 
 metacode block can be exported
 ```
 export {
-  # pure
-  meta metacode_reused() -> fn
+  macro metacode_reused() -> fn
 }
 ```
 
@@ -145,7 +152,7 @@ export operations {
   fn update_pos_ui() { ... }
 }
 } // end meta scope
-} // end if os == windows or os == linux
+} // end meta if os == windows or os == linux
 ```
 
 ## builtin declarations
