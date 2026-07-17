@@ -12,10 +12,12 @@ Meta statements are block of code designed to modify the ast from compilation ti
 | statement | syntax | effect |
 |-|-|-|
 | if | `meta if <compiletime cond> {...} meta elif {...} meta else {...}` | only code inside the valid statement will be parsed |
-| for | `meta for i in <range/collection/enum/union> {}` | will duplicate code inside his scope, the index/element can be used to inject token inside the scope. Can iterate on enum and union. |
+| for | `meta for i in <range/collection/enum/union> {}` | will duplicate code inside his scope, the index/element can be used to inject token inside the scope. Can iterate on enum and union. index and item becomes local permutation symbols in the scope |
 | match | `meta match <compiletime expr> {}` | only code inside the valid case will be parsed |
 
 > condiition can be a defined macro
+
+> for index/item interpolation : use string like interpolation `${i}` next to the identifier to parse with e.g. `fn myfunction_${T}(); var _local_${T}_result = ...`
 
 # meta expression
 Meta expressions are defined at compilation time, consider as special function like inside the module `meta`
