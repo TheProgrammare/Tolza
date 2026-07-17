@@ -8,7 +8,7 @@ There is two types of management of memory:
 # Memory Managment: Pointers
 | name | syntax | info |
 |-|-|-|
-| non typed memory address | `ptr'u0` | useful for C interop (`void*`) |
+| non typed memory address | `ptr'u0` | useful for C interop (`void*`) but prefer explicit memory buffer `[u0; c]` |
 | raw pointer | `ptr'T` | if no escape in the scope, will delete |
 | unique pointer | `uptr'T` | only `move=` to change his position and invalidate his last position |
 | shared pointer | `sptr'T` | only `=` to add his reference to the new position and increment his counter |
