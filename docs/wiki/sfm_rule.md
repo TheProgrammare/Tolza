@@ -5,10 +5,10 @@ A rule guarantees that any form allowed to execute it will follow at least one v
 rule name<gen_args>(<params>) {...}
 ```
 
-Rules are callable only by an form instance by the instruction `my_form::>my_rule()`
+Rules are callable only by an form instance by the instruction `my_form->my_rule()`
 ```
 var my_player = Player::{CId.name = "Marc"}
-my_player::>Jump(100)
+my_player->Jump(100)
 ```
 
 > Note: if none match occurs, a compilation error occurs
@@ -62,6 +62,6 @@ rule move(copy new_pos: xyz_pos, copy vel: f32) {
 ```
 calling
 ```
-player::>move((10.0, 20.0, 30.0), 5.0)
+player->move((10.0, 20.0, 30.0), 5.0)
 ```
 
