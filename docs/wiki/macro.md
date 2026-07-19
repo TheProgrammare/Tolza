@@ -54,7 +54,7 @@ macro log_async(timeout_: f32) -> fn {
 fn fonc_example() {};
 ```
 
-metacode block can be exported
+macros can be exported
 ```
 export {
   macro metacode_reused() -> fn {...}
@@ -65,7 +65,3 @@ macro parameters can be simple types resolved at compilation time
 
 or macro parameters can be ast types
 
-## AST Types
-unique types to configure the compiler ast nodes
-
-| node | fields
