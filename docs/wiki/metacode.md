@@ -1,20 +1,56 @@
 
 # Metaprogrammation
-metaprogrammation is behaviour declarative who starts with `#`
-can define some behaviour : module exportation, async, parallel, contigous memory alignment, etc...
+metaprogrammation is a compilation time behaviour designed to add some information to the compiler, change the ast from compile time expressions, macros, and for code reflexion
 
-## Cumulative Metacode
-Cumulative metacode union behaviours when the new line have `#`
+# meta statement
+Meta statements are block of code designed to modify the ast from compilation time conditions
 
-If the new line don't have # the metacode is no longer cumulative
+> use the keyword `meta` to indicate a meta statement
+
+> they can be used in global scope and local scopes
+
+| statement | syntax | effect |
+|-|-|-|
+| if | `meta if <compiletime cond> {...} meta elif {...} meta else {...}` | Only code inside the valid branch will remain in the final AST after compile-time evaluation |
+| for | `meta for i in <range/collection/enum/union> {}` | will duplicate code inside his scope, the index/element can be used to inject token inside the scope. Can iterate on enum and union. A meta loop variable is a compile-time symbol bound to a compile-time value |
+| match | `meta match <compiletime expr> {}` | only code inside the valid case will be parsed |
+
+> condiition can be a defined macro
+
+> for index/item interpolation : use string like interpolation `${i}` next to the identifier to parse with e.g. `fn myfunction_${T}(); var _local_${T}_result = ...`
+
+# meta expression
+Meta expressions are defined at compilation time, consider as special function like inside the module `meta`
+
+> Note: the `const` variable is _de facto_ a meta expression and usable inside meta statment and expressions
+
+There is some builtin meta expressions
+| expression | syntax | effect |
+|-|-|-|
+| size | `meta::size(...)` | returns the memory size of the node: variable/definition/type... |
+| typeof | `meta::typeof(...)` | returns the type of the expression |
+| name | `meta::name(...)` | returns the symbolic name of the node: variable/field/definition/identifier/type... |
+
+# meta declaration
+Consider as compiler helper ans tips. Resolvers (type/symbol/semantic) will use them to check the user intention declared thought his meta declarations. 
+
+> Use the keyword `#` to indicate a meta declaration
+
+> Meta declarations can be cumulates on same line or next lines
+
+## behaviour
+If the new line don't have `#`, the metacode is no longer cumulative
 ```
 # const
 # extern
 
 fn function<T>(a: T) -> i32 {...}
 ```
+
+> for more elaborated behaviour, use macros
+
 Explanation: 
-The function will only be generic and not exported and not promise const because an new line without # separate them
+- The function will only be generic and not exported and not promise const because an new line without `#` separate them
 
 e.g.
 ```
@@ -37,37 +73,13 @@ Cumulative metacode can be in a unique line:
 fn sum() {}
 ```
 
-## Metacode Block
-You can reuse metacode with names, parameters can be passed
-```
-# meta name(<params>) -> <target>
-# // metacode instructions
-```
-Explanation:
-Target permit to precise the object applied `fn|type|lam|var|let|gen|...`
-If the target is not specified a warning will be triggered
-
-```
-# meta metacode_reused_name(timeout_: f32) -> fn
-# timeout timeout_
-# pure
-
-# metacode_reused_name(10)
-fn fonc_example() {};
-```
-
-metacode block can be exported
-```
-export {
-  # meta metacode_reused() -> fn
-  # pure
-}
-```
+## macro
+see [macro.md](/docs/wiki/macro.md)
 
 ## Scoped Metacode
 The replication of the metacode is permitted by:
-- `# scope ... # end scope` metacode scope 
-- `# scope name ... # end scope` named metacode scode
+- `meta {...}` metacode scope 
+- `meta name {...}` named metacode scode
 
 >The scope is the end of the metacode block influence
 
@@ -79,12 +91,12 @@ It's possible to filter metacode parent/child scoping with:
 
 e.g.
 ```
-# if os == windows or os == linux
+meta if os == windows or os == linux {
 
-# async main
-# scope
+# async
+meta {
 export operations {
-  fn add() {}
+  fn add() {...}
   facet CMap_pos { 
     var lat: i32 = 0
     var long: i32 = 0 
@@ -100,90 +112,23 @@ export operations {
     } 
   }
   
-  # if os == linux
+  meta if os == linux {
   fn lin_convert_pos(lat: i32, long: i32) { ... }
-  # elif os == windows
+  } meta elif os == windows {
   fn win_convert_pos(lat: i32, long: i32) { ... }
-  # end if // elif
+  } meta elif other { // compilation macro 
+  ...
+  }
 
-  # exclude
+  # exclude // meta scope excluded
   fn update_pos_ui() { ... }
 }
-# end scope // async main
-# end if // os == windows or os == linux
+} // end meta scope
+} // end meta if os == windows or os == linux
 ```
 
-## Metacode Conditional
-metacodes can set condition during the compilation to compile or exclude code parts
-
-| name | syntax | e.g. | info |
-|-|-|-|-|
-| if condition | `# if ...` | `# if some_user_define`,<br> `#  user_define == 10` | |
-| elif condition | `# elif ...` | `# elif other_user_define` | |
-| else condition | `# else` | `# else` | |
-| end condition | `# end if` | `# end if` | to terminate the conditional metacode | |
-
-> there is some native conditions for clean compilation and reading
-
-| name | syntax | e.g. | info |
-|-|-|-|-|
-| bits condition | `# if bits == ...` | `# if bits == 64` | indicate the architecture bits (8/16/32/64) |
-| architecture condition | `# if arch == ...` | `# if arch == x86_64` | indicate the architecture type (ARM64/x86_64/x86/IBM/...) |
-| operating rule condition | `# if os == ...` | `# if os == linux` | indicate the operating rule (Linux/Windows/MacOS/...) |
-| mode condition | `# if debug` | `# if debug` | for the compilation in debug mode |
-
-## Metacode Expansion
-metacodes can generate code before the compilation
-
-- use `# expand` to set the code expansion 
-- use `# for _NAME as a | b | c ...` to define the generation placeholder
-- use `# each` to define the expansion scope
-
-you can define multiple placeholders (it's became like a dimensions like table)
-
-use placeholders in code with double square like: `[[_U]]`
-
-> Note: the generation will iterate for all placeholders multiply by their alts
-
-e.g.
-```
-# expand
-# for _T as a | b | c
-# for _U as 1 | 2
-# each
-  fn add(val: [[_T]]) -> isize {
-    return [[_T]] + [[_U]]
-  }
-# end each// expand
-``` 
-will generate for
-
-| `_U` | `_T` | | |
-|-|-|-|-|
-|   | a  | b  | c  |
-| 1 | a1 | b1 | c1 |
-| 2 | a2 | b2 | c2 |
-
-You can set some exceptions or conditions during the expansion:
-- use `# expand if ...` `# expand elif` `# expand else` `# end`
-```
-# expand
-# for _T as i32 | i64 | i128
-# for _U as f32 | f64 | f128
-# each
-  fn add(a: [[_T]], b: [[_T]]) -> [[_U]] {
-    # expand if [[_U]] == f128 or [[_T]] == i128
-    log::warning("usage of 128 bytes type, please check your architecture!")
-    # end expand if
-    
-    return a + b;
-  }
-# end each
-```
-
-
-# Other Metacodes
-## Script Target
+## builtin declarations
+### Script Target
 | name | syntax | info
 |-|-|-|
 | author name | `# author "name"` | declare the script author. |
@@ -202,7 +147,7 @@ You can set some exceptions or conditions during the expansion:
 | documentation | `# doc ""` | |
 | operating rule used | `# os ""` | |
 
-## Function / Lambda Target (`fn`, `lam`)
+### Function / Lambda Target (`fn`, `lam`)
 | name | syntax | info 
 |-|-|-|
 | asynchrone execution | `# async` | mark the function as asynchronous. |
@@ -213,21 +158,13 @@ You can set some exceptions or conditions during the expansion:
 | unit test | `# test` | the function is a unit test. |
 | for performance | `# benchmark` | the function is for performance benchmarking. |
 
-## Form Target
+### Form Target
 | name | syntax | info 
 |-|-|-|
 |  | `# align N` | enforce memory alignment (e.g. `# align(8)`). |
 |  | `# serializable` | allow automatic serialization. |
 
-## Enum Target
+### Enum Target
 | name | syntax | info 
 |-|-|-|
 |  | `# repr(type)` | define underlying representation (e.g. `i8`, `u32`). |
-
-## Scope Target
-| name | syntax | info 
-|-|-|-|
-| scope | `# scope ... # end scope` | define a named scope where metacodes apply. |
-| scope | `# scope name ... # end scope` | define a named scope where metacodes apply. |
-| exclusion | `# exclude all` | exclude current block from inherited metacodes. |
-| exclusion | `# exclude name` | exclude a named scope only. |
