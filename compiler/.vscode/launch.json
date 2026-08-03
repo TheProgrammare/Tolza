@@ -1,0 +1,63 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug about",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "args": [
+                "--about"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        },
+        {
+            "name": "Debug cogito",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "args": [
+                "cogito"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        },
+        {
+            "name": "Debug build classic",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "args": [
+                "build",
+                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        },
+                {
+            "name": "Debug check classic",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "args": [
+                "check",
+                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        },
+        {
+            "name": "Release build",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/release/velox-compiler",
+            "args": [
+                "build",
+                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml",
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        }
+    ]
+}
