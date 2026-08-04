@@ -58,7 +58,7 @@ Velox n'utilise pas de ramasse-miette ou un inspecteur d'emprunt.
 À la place, il se base sur un système de **capacité explicites** qui contrôle:
 - les lectures
 - les mutations (lecture/écriture)
-- validité de durée de vie (selon l'usage de l'origine et les nouvelles lectures/mutations déclarées)
+- validité de durée de vie
 
 Ces règles sont:
 - locales (pas d'inférence global)
@@ -68,14 +68,13 @@ Ces règles sont:
 ### 3. Composition statique à la place de l'héritage
 Velox n'utilise pas le paradigme classique orienté objet avec héritage de classe.
 
-Il favorise la **compoisition statique (COP ou POC en Français)***
-- les entitées sont composées de composants
-- les systèmes opèrent sur des jeux de composants
-- les chemin de résolution des systèmes et d'accès aux données sont résolus à la compilation
+Il favorise la **strucural facet method (SFM) ou la méthode de structuration (de code) par facette (MSF)**
+_ les facets (facettes) sont des ensembles devariables contiguë
+- les forms (formes) sont composées de facettes
+- les rules (règles) opèrent sur des jeux de facettes traité au cas par cas
+- les chemin de résolution des rules et d'accès aux données sont résolus à la compilation
 
 Cela évite le polymorphisme caché et la distribution durant le temps d'exécution par défaut.
-
-> COP: Compositional Oriented Paradigm ou POC: Programmation Orienté Composition
 
 ### 4. Typage fort avec coût explicite
 Velox rend les sémantiques de valeurs explicite en distinguant:
@@ -92,7 +91,7 @@ Cela rend les caractéristiques de performance visibles et auditables.
 ## Un exemple simple
 
 ```
-comp Vec2 {
+facet Vec2 {
     x: f32 = 0,
     y: f32 = 0,
 }
@@ -138,14 +137,14 @@ Velox permet d'utiliser du code externe avec un minimum de code et sans collisio
 
 ### Exemple: Usage de la Librairie C
 ```
-  import extern C::stdio
+  import bind/C/stdio as C
 
   fn main() {
     C::printf("%s", "Hello World")
   }
 ```
 Explications:
-- `import extern C::stdio` déclare la librairie externe à importer
+- `import bind/C/stdio` déclare la librairie externe à importer
 - `C::printf` référence la fonction dans la librairie en utilisant l'espace de nom du langage
 - Le compilateur génère automatiquement un script de liaison relié aux fonctions externes 
 
@@ -176,5 +175,3 @@ Documentation
 - 📄 Exemples: plus tard
 - 🛠️ Compilation premier-plan: en cours (écrit en C++)
 - 🖥️ Compilation arriège-plan: génération LLVM-IR en cours
-- 🔍 Colorisation syntaxique: fait (VS Code)
-- 📜 Extrait de code: fait (VS Code)
