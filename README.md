@@ -62,7 +62,7 @@ Velox does not use a garbage collector or a borrow checker.
 Instead, it relies on a system of **explicit capabilities** that control:
 - read access
 - mutation (read/write access)
-- lifetime validity (from the origin usage and new access declared)
+- lifetime validity
 
 These rules are:
 - local (no global inference)
@@ -72,32 +72,32 @@ These rules are:
 ### 3. Static composition over inheritance
 Velox does not use classical object-oriented inheritance.
 
-It favors **static composition (COP)**:
-- components are set of variables
-- entities are composed of components
-- systems operate on well-defined component sets
-- system selection and data access are resolved at compile time
+It favors **structural facet model (SFM)**:
+- facets are set of variables
+_ views are a package of facets
+- forms are composed of facets
+- rules operate on well-defined facet sets cases
+- rule selection and data access are resolved at compile time
 
 This avoids hidden polymorphism and runtime dispatch.
 
-> COP: Compositional Oriented Paradigm
 
 ```
 // speculative standard lib
-comp CBufferData<T> { data: ptr'T = nullptr, size: usize = 0, capacity: usize = 0 }
-entity Buffer<T> { use CBufferData<T> }
-sys populate<T>(items: [T]) {
-  CBufferData<T>(buf) {
-    buf::>resize(items.size)
+facet BufferData<T> { data: ptr'T = nullptr, size: usize = 0, capacity: usize = 0 }
+form Buffer<T> { use BufferData<T> }
+rule populate<T>(items: [T; ..]) {
+  BufferData<T>(buf) {
+    buf->resize(items.size)
     for item in items {
-      buf::>add_item(item)
+      buf->add_item(item)
     }
   }
-  return self // universal constructor if entity have CBufferData
+  return form // universal constructor if the form have BufferData facet
 }
-sys add_item<T>(item: T) {
-  CBufferData<T>(buf) {
-    if buf.size >= buf.capacity && !this::>resize() => return false
+rule add_item<T>(item: T) {
+  BufferData<T>(buf) {
+    if buf.size >= buf.capacity && !this->resize() => return false
     buf.data[buf.size] = item
     buf.size += 1
     return true
@@ -105,16 +105,16 @@ sys add_item<T>(item: T) {
 }
 
 // user code
-entity Item { ID: usize = -1 as usize, name: $str, amount: usize = 0 }
-entity Inventory { use CBufferData<Item> }
+facet Item { ID: usize = -1 as usize, name: $str, amount: usize = 0 }
+form Inventory { use BufferData<Item> }
 
 fn main() {
   let apple = Item{0, "Apple", 10}
   let sword = Item{1, "Sword", 1}
-  let player_inv = Inventory::>populate({apple, sword})
+  let player_inv = Inventory->populate({apple, sword})
   for i in 2..5 {
     let rand_item = Item{i, std::rand(0) as str, i * 2}
-    player_inv::>add_item(rand_item)
+    player_inv->add_item(rand_item)
   }
 }
 
@@ -134,7 +134,7 @@ This makes performance characteristics visible and auditable.
 ## A Simple Example
 
 ```velox
-comp Vec2 {
+faczt Vec2 {
     x: f32 = 0,
     y: f32 = 0,
 }
@@ -183,14 +183,14 @@ Velox allows the use of external code with minimal boilerplate and no name colli
 
 ### Example: Using a C Library
 ```Velox
-import bind::C::stdio as C
+import bind/C/stdio as C
 
 fn main() {
   C::printf("Hello World !"c_str)
 }
 ```
 Explanation:
-- `import bind::C::stdio` declares a binding to import
+- `import bind/C/stdio` declares a binding to import
 - `C::printf` references the language, then the script
 - `as C` isolate the importation into the `C` namespace to use like `C::scanf(...)`
 - The compiler generates a binding script linking the external function automatically
@@ -225,5 +225,3 @@ Documentation
 - 🛠️ Toolchain: done (build in c++) 
 - 🧮 Front-end Compiler: work in progress (build in C++)
 - 🖥️ Back-end Compiler: LLVM-IR generation work in progress
-- 🔍 Highlighter: done (VS Code)
-- 📜 Snippet: done (VS Code)
