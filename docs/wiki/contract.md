@@ -16,7 +16,7 @@ Preconditions :
 Postcondition :
 | mode | syntax | info |
 |-|-|-|
-| static | `post <cond>` | static execution mandatory, the function becomes statically evaluable |
+| static | `post <cond>` | static contract verification |
 | debug | `post <cond> -> assert` | makes an assertion after the call, only in debug build |
 | runtime | `post <cond> -> <error>` | transform the function return to Result<T, str>, check after the call, condition violation return the string error |
 
