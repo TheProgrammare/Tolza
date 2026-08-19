@@ -7,24 +7,24 @@ The default contract condition mode is `static`
 Preconditions :
 | mode | syntax | info |
 |-|-|-|
-| static | `pre <cond> -> static` `pre <cond>` | static evaluation mandatory, no runtime check |
-| debug | `pre <cond> -> debug` | makes an assertion before the call, only in debug build |
-| runtime | `pre <cond> -> runtime` | transform the function return to Result<T, str>, check before the call, condition violation will not execute the function then return the string error |
+| static | `pre <cond>` | static proof mandatory, no runtime check |
+| debug | `pre <cond> -> assert` | makes an assertion before the call, only in debug build |
+| runtime | `pre <cond> -> <error>` | transform the function return to Result<T, str>, check before the call, condition violation will not execute the function then return the string error |
 
-> on `debug` and `runtime` mode, the compiler will try to avoid runtime checking if the values are statically evaluable
+> on `debug` and runtime mode, the compiler will try to avoid runtime checking if the values are statically evaluable
 
 Postcondition :
 | mode | syntax | info |
 |-|-|-|
-| static | `post <cond> -> static` `post <cond>` | static execution mandatory, the function becomes statically evaluable |
-| debug | `post <cond> -> debug` | makes an assertion after the call, only in debug build |
-| runtime | `post <cond> -> runtime` | transform the function return to Result<T, str>, check after the call, condition violation return the string error |
+| static | `post <cond>` | static execution mandatory, the function becomes statically evaluable |
+| debug | `post <cond> -> assert` | makes an assertion after the call, only in debug build |
+| runtime | `post <cond> -> <error>` | transform the function return to Result<T, str>, check after the call, condition violation return the string error |
 
 syntax example:
 ```velox
 fn foo(x: ssize) -> ssize
-  pre x > 0 -> runtime
-  post ret >= x -> runtime
+  pre x > 0 -> error::bad_sign
+  post ret >= x -> error::bad_value
 { ... }
 
 fn main() {
