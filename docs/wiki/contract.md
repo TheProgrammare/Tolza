@@ -20,3 +20,18 @@ Postcondition :
 | debug | `post <cond> -> debug` | makes an assertion after the call, only in debug build |
 | runtime | `post <cond> -> runtime` | transform the function return to Result<T, str>, check after the call, condition violation return the string error |
 
+syntax example:
+```velox
+fn foo(x: ssize) -> ssize
+  pre x > 0 -> runtime
+  post ret >= x -> runtime
+{ ... }
+
+fn main() {
+  let result = foo(10)
+  match result {
+  Ok(val) => println(val)
+  Err(msg) => println(msg)
+  }
+}
+```
