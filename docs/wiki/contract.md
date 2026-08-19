@@ -9,7 +9,8 @@ Preconditions :
 |-|-|-|
 | static | `pre <cond>` | static proof mandatory, no runtime check |
 | debug | `pre <cond> -> assert` | makes an assertion before the call, only in debug build |
-| runtime | `pre <cond> -> <error>` | transform the function return to Result<T, E | ...>, check before the call, condition violation will not execute the function then return the string error |
+| runtime | `pre <cond> -> <error>` | transform the function return to Result<T, E | ...>, check before the call, condition violation will not execute the function then return the error |
+| runtime | `pre <cond> -> panic("msg")` | engage a panic behavior before the call, panic can be catched or will terminate the process |
 
 > on `debug` and runtime mode, the compiler will try to avoid runtime checking if the values are statically evaluable
 
@@ -18,7 +19,8 @@ Postcondition :
 |-|-|-|
 | static | `post <cond>` | static contract verification |
 | debug | `post <cond> -> assert` | makes an assertion after the call, only in debug build |
-| runtime | `post <cond> -> <error>` | transform the function return to Result<T, ... | E>, check after the call, condition violation return the string error |
+| runtime | `post <cond> -> <error>` | transform the function return to Result<T, ... | E>, check after the call, condition violation return the error |
+| runtime | `post <cond> -> panic("msg")` | engage a panic behavior after the call, panic can be catched or will terminate the process |
 
 syntax example:
 ```velox
