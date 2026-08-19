@@ -9,7 +9,7 @@ Preconditions :
 |-|-|-|
 | static | `pre <cond>` | static proof mandatory, no runtime check |
 | debug | `pre <cond> -> assert` | makes an assertion before the call, only in debug build |
-| runtime | `pre <cond> -> <error>` | transform the function return to Result<T, str>, check before the call, condition violation will not execute the function then return the string error |
+| runtime | `pre <cond> -> <error>` | transform the function return to Result<T, E | ...>, check before the call, condition violation will not execute the function then return the string error |
 
 > on `debug` and runtime mode, the compiler will try to avoid runtime checking if the values are statically evaluable
 
@@ -18,11 +18,11 @@ Postcondition :
 |-|-|-|
 | static | `post <cond>` | static contract verification |
 | debug | `post <cond> -> assert` | makes an assertion after the call, only in debug build |
-| runtime | `post <cond> -> <error>` | transform the function return to Result<T, str>, check after the call, condition violation return the string error |
+| runtime | `post <cond> -> <error>` | transform the function return to Result<T, ... | E>, check after the call, condition violation return the string error |
 
 syntax example:
 ```velox
-fn foo(x: ssize) -> ssize
+fn foo(x: ssize) -> ssize // real return Result<ssize, error::bad_sign | error::bad_value>
   pre x > 0 -> error::bad_sign
   post ret >= x -> error::bad_value
 { ... }
