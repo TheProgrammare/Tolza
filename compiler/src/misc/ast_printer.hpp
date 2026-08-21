@@ -153,7 +153,7 @@ struct AST_Printer final {
   */
 };
 
-// %0 velox-compiler version
+// %0 tolza-compiler version
 // %1 file path
 // %2 ast view
 constexpr std::string_view PRINT_FILE_HTLM_TEMPLATE =
@@ -163,7 +163,7 @@ constexpr std::string_view PRINT_FILE_HTLM_TEMPLATE =
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Velox AST View</title>
+<title>Tolza AST View</title>
 
 
 <style>
@@ -270,8 +270,8 @@ constexpr std::string_view PRINT_FILE_HTLM_TEMPLATE =
 </head>
 <body>
 
-<h1>Velox AST View - %1</h1>
-<h2>Auto generated .html file by velox-compiler version %0</h2>
+<h1>Tolza AST View - %1</h1>
+<h2>Auto generated .html file by tolza-compiler version %0</h2>
 
 <div id="controls">
   <button id="expand-all">Expand all</button>

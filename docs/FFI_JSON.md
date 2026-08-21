@@ -7,7 +7,7 @@
 This document defines the **JSON convention** used to represent an **Abstract Syntax Tree (AST)** for FFI (Foreign Function Interface) bindings.  
 The JSON file contains all the necessary information to define **functions, types, structures, entities, enums, unions, flags, and aliases** exposed by an external library.
 
-Each AST section is represented by a JSON object with specific fields, strictly defined to ensure reliable conversion into the corresponding Velox structures (`functions`, `type`, `components`, `entities`, `globals`, `enums`, `unions`, `flags`, `typealiases`).
+Each AST section is represented by a JSON object with specific fields, strictly defined to ensure reliable conversion into the corresponding Tolza structures (`functions`, `type`, `components`, `entities`, `globals`, `enums`, `unions`, `flags`, `typealiases`).
 
 ## Key conventions
 - **Types** are described by objects containing the base type (`base_type`) and additional attributes such as pointer, array, const/volatile qualifiers, and atomicity.
@@ -23,13 +23,13 @@ Each AST section is represented by a JSON object with specific fields, strictly 
 - All boolean fields are optional and default to `false` if omitted.
 - All name fields are mandatory.
 
-This JSON convention enables reliable **serialization and deserialization of the AST** in Velox using functions from the `FFI::JSON` namespace.
+This JSON convention enables reliable **serialization and deserialization of the AST** in Tolza using functions from the `FFI::JSON` namespace.
 
 ## FFI JSON Pipeline
-The pipeline permit to generate FFI for velox from any language or lib
+The pipeline permit to generate FFI for tolza from any language or lib
 
 The generator must convert the Foreign Code to a valid JSON AST. 
-The Velox compiler will inspect JSON files (at `FFI_JSON/` in current project folder) then generate binding scripts for the compilation at EMBBinder phase (at `EMBinder/` in current project folder)
+The Tolza compiler will inspect JSON files (at `FFI_JSON/` in current project folder) then generate binding scripts for the compilation at EMBBinder phase (at `EMBinder/` in current project folder)
 
 Binding script generation:
 

@@ -28,25 +28,16 @@
 #include "codegen/codegen_insurance.hpp"
 #include "codegen/codegen_type.hpp"
 #include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_literal.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
-#include "ast/ast_operation.hpp"
+
+#include "ast/ast_expression.hpp"
 
 #include "compiler/compiler.hpp"
-#include "misc/error_output.hpp"
-#include "nexus/metacode/metacode.hpp"
+
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 
 #include <Neargye/magic_enum.hpp>
 
@@ -66,9 +57,11 @@ llvm::Value* codegen::Tools::engage_move_semantic(ast::ID p_target) noexcept
   auto* ty  = res.get_type(p_target.type());
 
   auto* dest = builder.CreateAlloca(ty, nullptr, "tmp_moved");
+  return dest;
 }
 llvm::Value* codegen::Tools::engage_copy_semantic(ast::ID target) noexcept
 {
+  return nullptr;
 }
 
 
@@ -106,7 +99,7 @@ std::expected<llvm::Constant*, std::string> codegen::Tools::create_constant(ast:
       return get_text_constant(utf32);
     }
     default:
-      return std::unexpected("The text type is invalid (" + std::string(magic_enum::enum_name(ptr->text_type)) + ")");
+      return std::unexpected(std::format("The text type is invalid ({})", magic_enum::enum_name(ptr->text_type)));
     }
   }
 
@@ -293,7 +286,7 @@ llvm::Value* codegen::Tools::primitive_coerce(llvm::Value* p_val, llvm::Type* p_
   if (p_src == p_dst) return p_val;
 
   // bool to int
-  if (p_src->getIntegerBitWidth() == 1 && p_dst->isIntegerTy()) {
+  if (p_src->getPrimitiveSizeInBits() == 1 && p_dst->isIntegerTy()) {
     return builder.CreateZExt(p_val, p_dst);
   }
 
@@ -372,6 +365,8 @@ llvm::Value* codegen::Tools::codegen_explicit_cast(ast::ID from, type::ID to) co
         }
       }
       case type::EPrimitiveTypeKind::_rune: {
+      }
+      default: {
       }
       }
     }
@@ -571,10 +566,10 @@ llvm::Value* codegen::Tools::codegen_unary_op(ast::ID term, ast::EOp_Unary unary
   }
 
   if (!op)
-    res.add_error(207, *term.get(),
-                  "Illegal unary operation (" + std::string(ast::EOp_Unary_to_str(unary_op)) + ") on type \""
-                      + term.type().dump() + "\"",
-                  "");
+    res.add_error(
+        207, term.get(),
+        std::format("Illegal unary operation ({}) on type \"{}\'", ast::EOp_Unary_to_str(unary_op), term.type().dump()),
+        "");
 
   return op;
 }
@@ -585,8 +580,8 @@ llvm::Value* codegen::Tools::codegen_binary_op(ast::ID left, ast::ID right, ast:
   auto* l_val = res.insurance.ensure_rvalue(left, "bin.l");
   auto* r_val = res.insurance.ensure_rvalue(right, "bir");
 
-  if (!l_val) res.add_error(226, *left.get(), "Can't be evaluated as value.", "");
-  if (!r_val) res.add_error(226, *right.get(), "Can't be evaluated as value.", "");
+  if (!l_val) res.add_error(226, left.get(), "Can't be evaluated as value.", "");
+  if (!r_val) res.add_error(226, right.get(), "Can't be evaluated as value.", "");
   if (!l_val || !r_val) return nullptr;
 
   auto* llvm_op_ty = res.get_type(left.type());
@@ -885,10 +880,10 @@ llvm::Value* codegen::Tools::codegen_binary_op(ast::ID left, ast::ID right, ast:
   }
 
   if (!op)
-    res.add_error(207, *left.get(),
-                  "Illegal operation  (" + std::string(ast::EOp_Bin_to_str(op_ty)) + ") between types: \n\""
-                      + left.type().dump() + "\" " + std::string(ast::EOp_Bin_to_str(op_ty)) + " \""
-                      + right.type().dump() + "\"",
+    res.add_error(207, left.get(),
+                  std::format("Illegal operation ({}) between types:\n  `{}` {} `{}`",
+                              std::string(ast::EOp_Bin_to_str(op_ty)), left.type().dump(), ast::EOp_Bin_to_str(op_ty),
+                              right.type().dump()),
                   "");
 
   return op;

@@ -166,17 +166,17 @@ void resolver::Inference::ensure_primitive_literal(ast::ID lit, type::ID ty_infe
 
   } else if (const auto* inf_tbl = ty_inference.as<type::Array>()) {
     if (auto* ptr = lit.as<ast::Literal_Table>()) {
-      ptr->type = inf_tbl->tyid;
+      ptr->type = inf_tbl->tyid();
     } else
       assert(false && "Illegal type inference reached");
   } else if (const auto* inf_tbl = ty_inference.as<type::Buffer>()) {
     if (auto* ptr = lit.as<ast::Literal_Table>()) {
-      ptr->type = inf_tbl->tyid;
+      ptr->type = inf_tbl->tyid();
     } else
       assert(false && "Illegal type inference reached");
   } else if (const auto* inf_tbl = ty_inference.as<type::Slice>()) {
     if (auto* ptr = lit.as<ast::Literal_Table>()) {
-      ptr->type = inf_tbl->tyid;
+      ptr->type = inf_tbl->tyid();
     } else
       assert(false && "Illegal type inference reached");
   } else {
@@ -233,7 +233,7 @@ void resolver::Inference::ensure_expression_resolution(ast::ID expr_nodeid, type
   if (!ty_inference) return;
 
   if (!expr_nodeid.is_inferred() && !silent_error) {
-    add_error(234, *expr_nodeid.get(), "Impossible to define the expression type.", "");
+    add_error(234, expr_nodeid.get(), "Impossible to define the expression type.", "");
     return;
   }
 
@@ -243,15 +243,16 @@ bad_inference:
   // check if type inferred is compatible to the expected inference (or expected type
   if (expr_nodeid.type() != ty_inference && !silent_error) {
     if (type::ETypeKind_is_user_defined(ty_inference.kind())) {
-      const auto* n = ty_inference.def().node().get();
-      add_error_two_nodes(230, *expr_nodeid.get(), *n, "Illegal type inference.", "");
+      const auto n = ty_inference.def().node().get();
+      add_error_two_nodes(230, expr_nodeid.get(), n, "Illegal type inference.", "");
     } else {
       if (!expr_nodeid.type()) {
-        add_error(230, *expr_nodeid.get(),
-                  "Expression type undefined, inference tried on \"" + ty_inference.dump() + "\".", "");
+        add_error(230, expr_nodeid.get(),
+                  std::format("Expression type undefined, inference tried on \"{}\".", ty_inference.dump()), "");
       } else if (!type::rule::can_implicit_cast(expr_nodeid.type(), ty_inference)) {
-        add_error(230, *expr_nodeid.get(),
-                  "Illegal type inference \"" + expr_nodeid.type().dump() + "\" as \"" + ty_inference.dump() + "\".",
+        add_error(230, expr_nodeid.get(),
+                  std::format("Illegal type inference \"{}\" as \"", expr_nodeid.type().dump()) + ty_inference.dump()
+                      + "\".",
                   "");
       }
     }
@@ -272,7 +273,7 @@ bool resolver::Inference::is_lazy_literal(ast::ID nodeid) const
 
 size_t resolver::Inference::start_resolver()
 {
-  resolve_node(CU.nodes->get_file_root()->nodeid());
+  resolve_node(CU.ast->get_file_root()->nodeid());
 
   return inference_count;
 }
@@ -638,7 +639,7 @@ void resolver::Inference::resolve_Statement_For(const ast::Statement_For& n)
   if (const auto* ptr = n.expression.as<ast::Literal_Range>()) {
     add_inference(n.index, ptr->start.type());
   } else if (!type::ETypeKind_is_iterable(n.expression.type().kind()))
-    add_error(272, *n.expression.get(), "The type \"" + n.expression.type().dump() + "\" is not iterable.", "");
+    add_error(272, n.expression.get(), std::format("The type \"{}\" is not iterable.", n.expression.type().dump()), "");
   else {
     if (n.index) add_inference(n.index, type::get_inner(n.expression.type()));
     for (auto it : n.items) add_inference(it, type::get_inner(n.expression.type()));
@@ -670,7 +671,7 @@ void resolver::Inference::resolve_Statement_Return(const ast::Statement_Return& 
   // return void
   if (!n.value) {
     if (n.returnable.type() != type::TYPEID_u0)
-      add_error_two_nodes(246, n.header, *n.returnable.get(),
+      add_error_two_nodes(246, n.header, n.returnable.get(),
                           "Invalid void return, expression needed, the function returns values.", "");
 
     add_inference(n.nodeid(), n.returnable.type());
@@ -841,7 +842,7 @@ void resolver::Inference::resolve_Operation_Cast_As(const ast::Operation_Cast_As
 
     if (!type::rule::can_explicit_cast(n.expression.type(), n.type.canonical())) {
       add_error(267, n.header,
-                "Invalid explicit cast \"" + n.expression.type().dump() + "\" as \"" + n.type.dump() + "\"", "");
+                std::format("Invalid explicit cast `{}` as `{}`", n.expression.type().dump(), n.type.dump()), "");
     }
     break;
   }

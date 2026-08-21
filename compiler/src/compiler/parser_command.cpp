@@ -1,6 +1,6 @@
 #include "parser_command.hpp"
 
-#include <iostream>
+#include <print>
 #include <string>
 #include <filesystem>
 
@@ -28,10 +28,6 @@
 namespace fs = std::filesystem;
 
 
-#define OUT_LOG std::cout << "[ffi] "
-#define OUT_ERR std::cerr << "[ffi:ERROR] "
-
-
 compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
   : common::Commander(_app)
   , args(argv, argv + argc)
@@ -43,10 +39,10 @@ compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
 
 void compiler::Commander::init_command_cogito() noexcept
 {
-  auto* cogito   = app.add_subcommand("velox-toolchain", "Revceive the toolchain cogito ask");
+  auto* cogito   = app.add_subcommand("tolza-toolchain", "Revceive the toolchain cogito ask");
   auto* ergo_sum = cogito->add_subcommand("cogito", "Respond to René Descartes");
   ergo_sum->callback([&]() {
-    std::cout << "[velox-compiler] ergo sum\n  " << common::env::get_exe_dir() << "\n";
+    std::println("[tolza-compiler] ergo sum\n {}", common::env::get_exe_dir());
     exit(0);
   });
 }
@@ -165,7 +161,7 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
 
 void compiler::Commander::init_command_build() noexcept
 {
-  auto* build = app.add_subcommand("build", "Compile Velox project");
+  auto* build = app.add_subcommand("build", "Compile Tolza project");
   build->alias("b");
 
   compilation_args(build);
@@ -174,9 +170,9 @@ void compiler::Commander::init_command_build() noexcept
     compiler::OPTIONS = common::compiler::Options::read_config(opt.current_config_file);
 
     if (!compiler::OPTIONS.mute) {
-      std::cout << "[velox] Command executed: \n";
-      for (const auto& arg : args) std::cout << arg << " ";
-      std::cout << "\n";
+      std::println("[tolza] Command executed:");
+      for (const auto& arg : args) std::print("{} ", arg);
+      std::println();
     }
 
     compiler::COMPILER.run_requested = true;
@@ -185,7 +181,7 @@ void compiler::Commander::init_command_build() noexcept
 
 void compiler::Commander::init_command_check() noexcept
 {
-  auto* check = app.add_subcommand("check", "Check Velox code");
+  auto* check = app.add_subcommand("check", "Check Tolza code");
 
   compilation_args(check);
 
@@ -197,9 +193,9 @@ void compiler::Commander::init_command_check() noexcept
     compiler::OPTIONS.diagnostic.out_format = common::compiler::EDiagnosticFormat::json;
 
     if (!compiler::OPTIONS.mute) {
-      std::cout << "[velox] Command executed: \n";
-      for (const auto& arg : args) std::cout << arg << " ";
-      std::cout << "\n";
+      std::println("[tolza] Command executed:");
+      for (const auto& arg : args) std::print("{} ", arg);
+      std::println();
     }
 
     compiler::COMPILER.run_requested = true;
@@ -208,6 +204,16 @@ void compiler::Commander::init_command_check() noexcept
 
 void compiler::Commander::init_commands() noexcept
 {
+  app.set_version_flag("--version,-v", "Version: " SOFTWARE_VERSION);
+
+  app.add_flag_function(
+      "--about,-a",
+      [&](int count) {
+        std::println(compiler::SOFTWARE_ABOUT);
+        exit(0);
+      },
+      "Show detailed software info");
+
   init_command_build();
   init_command_check();
   init_command_cogito();
@@ -220,32 +226,32 @@ void compiler::Commander::exec_ffi_command() noexcept
   from_path = common::fileutils::resolve_path(from_path);
 
   if (!fs::exists(from_path)) {
-    OUT_ERR "The source path doesn't exists.\n";
+    std::println(stderr, "The source path doesn't exists.");
     exit(1);
   }
   if (!fs::exists(to_path)) {
-    OUT_ERR "The destination path doesn't exists.\n";
+    std::println(stderr, "The destination path doesn't exists.");
     exit(1);
   }
 
   if (ffi_json_flag) {
     auto     ast       = ffi::JSON_Reader::parse_json_compilation_unit(from_path);
     fs::path dest_file = fs::path(to_path) / ast->bind.lang / ast->bind.lib;
-    dest_file.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+    dest_file.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
 
-    ast->velox_codegen(dest_file.string());
+    ast->tolza_codegen(dest_file.string());
 
     exit(0);
   } else if (ffi_c_flag) {
     auto     ast       = ffi::C_Reader::parse_c_compilation_unit(from_path);
     fs::path dest_file = fs::path(to_path) / ast->bind.lang / ast->bind.lib;
-    dest_file.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+    dest_file.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
 
-    ast->velox_codegen(dest_file.string());
+    ast->tolza_codegen(dest_file.string());
 
     exit(0);
   } else {
-    OUT_ERR "Unspecified ffi mode.\n";
+    std::println(stderr, "Unspecified ffi mode.");
     exit(1);
   }
 }

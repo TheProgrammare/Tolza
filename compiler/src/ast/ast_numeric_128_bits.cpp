@@ -41,7 +41,7 @@ std::string Float128::float128_to_string(int precision) const
 {
   llvm::SmallVector<char, 128> buf;
   val->toString(buf, precision);
-  return std::string(buf.begin(), buf.end());
+  return {buf.begin(), buf.end()};
 }
 
 

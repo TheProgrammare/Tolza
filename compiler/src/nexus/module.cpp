@@ -122,7 +122,7 @@ module::ID module::build_module_from_path(cu::ID parent_cuid, const std::vector<
     auto& cu = parent_cuid.get();
     dir      = fs::path(cu.file_info.path).parent_path() / fs::path(cu.file_info.path).stem();
     if (!fs::exists(dir)) {
-      str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
+      str_err = std::format("Directory at \"{}\" doesn't exists.", dir.string());
       return NO_ID;
     }
   }
@@ -132,17 +132,17 @@ module::ID module::build_module_from_path(cu::ID parent_cuid, const std::vector<
 
     if (i == p_path.size() - 1) {
       const std::string old_dir = dir;
-      dir                       = common::fileutils::get_velox_file(dir.string());
-      // is not a velox file : it could be a directory module: mod.vlx
+      dir                       = common::fileutils::get_tolza_file(dir.string());
+      // is not a tolza file : it could be a directory module: mod.tlz
       if (dir.empty()) {
         dir /= "mod";
-        dir = common::fileutils::get_velox_file(dir.string());
-        if (!common::fileutils::is_velox_file(dir.string())) {
-          str_err = "File at \"" + old_dir + "\" doesn't exists or isn't a velox file.";
+        dir = common::fileutils::get_tolza_file(dir.string());
+        if (!common::fileutils::is_tolza_file(dir.string())) {
+          str_err = std::format("File at \"{}\" doesn't exists or isn't a tolza file.", old_dir);
           return NO_ID;
         }
-      } else if (!common::fileutils::is_velox_file(dir.string())) {
-        str_err = "Directory at \"" + dir.string() + "\" doesn't exists or isn't a velox file.";
+      } else if (!common::fileutils::is_tolza_file(dir.string())) {
+        str_err = std::format("Directory at \"{}\" doesn't exists or isn't a tolza file.", dir.string());
         return NO_ID;
       }
 
@@ -150,7 +150,7 @@ module::ID module::build_module_from_path(cu::ID parent_cuid, const std::vector<
     }
 
     if (!fs::exists(dir)) {
-      str_err = "Directory at \"" + dir.string() + "\" doesn't exists.";
+      str_err = std::format("Directory at \"{}\" doesn't exists.", dir.string());
       return NO_ID;
     }
   }

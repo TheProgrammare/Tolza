@@ -1,6 +1,6 @@
 # 🏁 Getting Started
 
-To contribute to the Velox programming language, clone this repository and follow the instructions below.
+To contribute to the Tolza programming language, clone this repository and follow the instructions below.
 
 ## C++ standard
 The C++ standard used here is **C++23**  
@@ -11,7 +11,7 @@ The C++ standard used here is **C++23**
 ## Recommended compiler
 The project is designed to be built with **Clang**.
 
-Velox generates LLVM IR and uses Clang for C language inspection during automatic binding generation.
+Tolza generates LLVM IR and uses Clang for C language inspection during automatic binding generation.
 
 
 ## Install dependencies
@@ -85,7 +85,7 @@ Ensure LLVM include paths and libraries are visible to the IDE
 - GitHub Actions (GitHub)
 - LLDB DAP (LLVM) : Debugging
 - Clang-Format (Xaver Hellauer) : Code formatation for clang
-- velox-vscode-plugin-1.0.0.vsix (project plugin) : coloration code + snippets only
+- tolza-vscode-plugin-1.0.0.vsix (project plugin) : coloration code + snippets only
 
 **Settings**
 Go to File > Preferences > Settings</br>
@@ -161,6 +161,6 @@ Currently, any error added will throw a runtime error to inspect any possible er
 # Project Coding Pattern
 There is some convention to code properly.
 
-To build `velox-toolchain` or `velox-compiler`, please use the  designed bash script `build-debug.sh` or `build-release.sh` for debug or release build. Located at the root of each sub-project.
+To build `tolza-toolchain` or `tolza-compiler`, please use the  designed bash script `build-debug.sh` or `build-release.sh` for debug or release build. Located at the root of each sub-project.
 
 To test your code, please use the designed `launch.json` script, or create your custom `.json` launch event.

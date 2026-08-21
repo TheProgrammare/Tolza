@@ -9,6 +9,7 @@
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 
+
 namespace llvm
 {
 class Module;
@@ -37,7 +38,7 @@ enum class EFileSource : uint8_t {
 [[nodiscard]] std::string      EFileSource_to_dir(EFileSource p_file_source);
 [[nodiscard]] std::string_view EFileSource_to_str(EFileSource p_file_source);
 
-[[nodiscard]] std::string normalize_velox_script_path(std::string_view path);
+[[nodiscard]] std::string normalize_tolza_script_path(std::string_view path);
 [[nodiscard]] std::string file_path_to_str(const std::vector<std::string>& path, EFileSource p_file_source);
 
 struct FileInfo {
@@ -79,8 +80,11 @@ struct CU {
   CU();
   ~CU();
 
+  // file cu
   explicit CU(cu::ID _parent_cuid, cu::ID _cuid, std::string_view _file_path, const std::string& _data,
               const std::vector<size_t>& _last_offset_line);
+  // temp cu
+  explicit CU(cu::ID _cuid);
 
   CU(const CU&)            = delete;
   CU& operator=(const CU&) = delete;
@@ -103,14 +107,14 @@ struct CU {
   const FileInfo file_info;
 
   // local pools
-  metacode::Graph* const   metacodes       = nullptr; // preprocessor pass
-  ast::Arena* const        nodes           = nullptr; // parsing pass
-  type::Arena* const       types           = nullptr; // parsing pass
-  scope::Graph* const      scopes          = nullptr; // parsing pass
-  definition::Arena* const definitions     = nullptr; // parsing pass
-  module::Graph* const     modules         = nullptr; // parsing pass
-  extension::Arena* const  extensions      = nullptr; // parsing pass
-  size_t                   inference_count = 0;
+  metacode::Graph*   metacodes       = nullptr; // preprocessor pass
+  ast::Arena*        ast             = nullptr; // parsing pass
+  type::Arena*       types           = nullptr; // parsing pass
+  scope::Graph*      scopes          = nullptr; // parsing pass
+  definition::Arena* definitions     = nullptr; // parsing pass
+  module::Graph*     modules         = nullptr; // parsing pass
+  extension::Arena*  extensions      = nullptr; // parsing pass
+  size_t             inference_count = 0;
 
 
   // dependencies
@@ -120,6 +124,14 @@ struct CU {
 
   // extra
   llvm::Module* llvm_module = nullptr; // codegen pass
+};
+
+struct TEMP_CU : public CU {
+  TEMP_CU(cu::ID _cuid, metacode::Graph* _metacode = nullptr, ast::Arena* _ast = nullptr, type::Arena* _type = nullptr,
+          scope::Graph* _scope = nullptr, definition::Arena* _def = nullptr, module::Graph* _module = nullptr,
+          extension::Arena* _ext = nullptr);
+
+  size_t temp_cu_offset;
 };
 
 [[nodiscard]] module::ID resolve_regex_path(module::ID ctx, const std::vector<std::string>& path,

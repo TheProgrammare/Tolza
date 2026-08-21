@@ -1,6 +1,6 @@
 #include "commands.hpp"
 
-#include <iostream>
+#include <print>
 
 #include <CLIUtils/CLI11.hpp>
 
@@ -16,10 +16,10 @@ void common::Commander::init_command_compiler() noexcept
   compiler->alias("c");
 
   {
-    auto* find        = compiler->add_subcommand("find", "Search of velox-compiler");
-    auto* opt_all     = find->add_flag("--all", compiler_all, "Find all velox-compiler installed");
-    auto* opt_version = find->add_option("--version", compiler_version, "Find specific velox-compiler version");
-    auto* opt_latest  = find->add_flag("--latest", compiler_latest, "Find latest velox-compiler version");
+    auto* find        = compiler->add_subcommand("find", "Search of tolza-compiler");
+    auto* opt_all     = find->add_flag("--all", compiler_all, "Find all tolza-compiler installed");
+    auto* opt_version = find->add_option("--version", compiler_version, "Find specific tolza-compiler version");
+    auto* opt_latest  = find->add_flag("--latest", compiler_latest, "Find latest tolza-compiler version");
     auto* opt_path    = find->add_option("path", from_path,
                                          "If no path provided, will use standard path or custom path in toolchain.toml");
 
@@ -30,7 +30,7 @@ void common::Commander::init_command_compiler() noexcept
     find->callback([&]() {
       from_path = common::fileutils::resolve_path(from_path);
 
-      auto found = [](std::string_view c) { std::cout << "[compiler] Found at \"" << c << "\"\n"; };
+      auto found = [](std::string_view c) { std::println("[compiler] Found at \"{}\"", c); };
 
       if (!from_path.empty()) {
         if (compiler_all) {
@@ -70,14 +70,14 @@ void common::Commander::init_command_compiler() noexcept
           }
         }
       }
-      std::cout << "[compiler] No compiler found.\n";
+      std::println("[tolza:compiler] No compiler found.");
     });
   }
   {
-    auto* set         = compiler->add_subcommand("set", "Set the compiler used in velox.toml configuration");
-    auto* opt_path    = set->add_option("path", from_path, "Set the path of the velox-compiler used");
-    auto* opt_latest  = set->add_option("--latest", compiler_latest, "Set the latest velox-compiler used");
-    auto* opt_version = set->add_option("--version,-v", compiler_version, "Set specific velox-compiler version used");
+    auto* set         = compiler->add_subcommand("set", "Set the compiler used in tolza.toml configuration");
+    auto* opt_path    = set->add_option("path", from_path, "Set the path of the tolza-compiler used");
+    auto* opt_latest  = set->add_option("--latest", compiler_latest, "Set the latest tolza-compiler used");
+    auto* opt_version = set->add_option("--version,-v", compiler_version, "Set specific tolza-compiler version used");
     auto* opt_custom_path = set->add_option("--custom-path", to_path, "Set the custom compiler directory to search");
     opt_path->excludes(opt_version, opt_latest);
     opt_version->excludes(opt_path, opt_latest, opt_custom_path);
@@ -114,10 +114,10 @@ void common::Commander::init_command_compiler() noexcept
       }
     });
   }
-#ifdef VELOX_TOOLCHAIN
+#ifdef TOLZA_TOOLCHAIN
   {
-    auto* cogito = compiler->add_subcommand("cogito", "Check if the file is indeed the velox-compiler");
-    cogito->add_option("path", from_path, "If no path provided, will check the compiler used in the velox.toml");
+    auto* cogito = compiler->add_subcommand("cogito", "Check if the file is indeed the tolza-compiler");
+    cogito->add_option("path", from_path, "If no path provided, will check the compiler used in the tolza.toml");
     cogito->callback([&]() {
       from_path = common::fileutils::resolve_path(from_path);
       toolchain::Options::cogito_compiler(
@@ -130,12 +130,12 @@ void common::Commander::init_command_compiler() noexcept
 
 void common::Commander::init_command_ffi() noexcept
 {
-  auto* ffi = app.add_subcommand("ffi", "Translate ffi representation to .vlxbind wrappers");
+  auto* ffi = app.add_subcommand("ffi", "Translate ffi representation to .tlzbind wrappers");
   ffi->add_option("--from,-f", from_path, "Source of the ffi representation")
       ->required()
       ->expected(1)
       ->type_name("<source>");
-  ffi->add_option("--to,-t", to_path, "Directory destination of the .vlxbind generated")
+  ffi->add_option("--to,-t", to_path, "Directory destination of the .tlzbind generated")
       ->required()
       ->expected(1)
       ->type_name("<dest>");
@@ -148,16 +148,6 @@ void common::Commander::init_command_ffi() noexcept
 
 void common::Commander::init_common_commands() noexcept
 {
-  app.set_version_flag("--version,-v", "Version: " + common::SOFTWARE_VERSION);
-
-  app.add_flag_function(
-      "--about,-a",
-      [&](int count) {
-        std::cout << common::SOFTWARE_ABOUT << "\n";
-        exit(0);
-      },
-      "Show detailed software info");
-
   init_command_compiler();
   init_command_ffi();
 }

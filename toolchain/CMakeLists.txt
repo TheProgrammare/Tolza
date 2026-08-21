@@ -1,10 +1,7 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_C_COMPILER "clang")
-set(CMAKE_CXX_COMPILER "clang++")
-
-project(velox
-    VERSION 2026.1.1
+project(tolza
+    VERSION 2026.8
     LANGUAGES C CXX
 )
 
@@ -18,62 +15,76 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# name
-set(SOFTWARE_NAME "velox-toolchain")
-# version
-string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
 
 # ----------------------------
 # Sources
 # ----------------------------
-set(VELOX_SOURCES
+set(TOLZA_SOURCES
 
-    src/command_package.hpp
-    src/command_workspace.hpp
-    src/command_audit.cpp
-    src/cli_wrapper.hpp
-    src/command_compiler.cpp
-    src/command_compiler.hpp
-    src/command_workspace.cpp
-    src/toolchain/toolchain.hpp
-    src/toolchain/main.cpp
-    src/toolchain/parser_command.hpp
-    src/toolchain/parser_command.cpp
-    src/toolchain/toolchain.cpp
-    src/command_audit.hpp
-    src/command_build.cpp
-    src/cli_wrapper.cpp
-    src/command_check.hpp
-    src/command_package.cpp
-    src/command_check.cpp
-    src/command_build.hpp
+    ./src/cli_wrapper.cpp
+    ./src/cli_wrapper.hpp
+    ./src/command_audit.cpp
+    ./src/command_audit.hpp
+    ./src/command_build.cpp
+    ./src/command_build.hpp
+    ./src/command_check.cpp
+    ./src/command_check.hpp
+    ./src/command_compiler.cpp
+    ./src/command_compiler.hpp
+    ./src/command_package.cpp
+    ./src/command_package.hpp
+    ./src/command_workspace.cpp
+    ./src/command_workspace.hpp
+    ./src/toolchain/main.cpp
+    ./src/toolchain/parser_command.cpp
+    ./src/toolchain/parser_command.hpp
+    ./src/toolchain/toolchain.cpp
+    ./src/toolchain/toolchain.hpp
 
 )
 
-# add velox-common scripts
+# add tolza-common scripts
 # for the compiler data interface
-add_subdirectory(../common velox-common)
+add_subdirectory(../common tolza-common)
 
-add_executable(velox ${VELOX_SOURCES})
+
+add_executable(tolza ${TOLZA_SOURCES})
+
+# version
+string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
+string(TIMESTAMP TOLZA_VERSION "%Y-%m")
+
+target_compile_definitions(tolza
+    PUBLIC
+        SOFTWARE_NAME="tolza-toolchain"
+        SOFTWARE_VERSION="${SOFTWARE_VERSION}"
+        TOLZA_VERSION="${TOLZA_VERSION}"
+)
 
 # ----------------------------
 # Include directories
 # ----------------------------
 # Root for project includes
-target_include_directories(velox
+target_include_directories(tolza
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_libraries(velox
+target_link_libraries(tolza
     PRIVATE
-        velox-common
+        tolza-common
 )
 
 
 # rename final binary
-#set_target_properties(velox PROPERTIES
+#set_target_properties(tolza PROPERTIES
     #OUTPUT_NAME "${SOFTWARE_NAME}-${SOFTWARE_VERSION}b" # beta version mode
     #OUTPUT_NAME "${SOFTWARE_NAME}-${SOFTWARE_VERSION}" # normal version mode
 #)
 
+include(GNUInstallDirs)
+
+install(
+    TARGETS tolza
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

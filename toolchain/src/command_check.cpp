@@ -20,23 +20,23 @@
 
 
 #include <expected>
-#include <iostream>
+#include <print>
 #include <filesystem>
 
 #include <marzer/toml++.hpp>
 
 namespace fs = std::filesystem;
 
-#define OUT_LOG std::cout << "[check] "
-#define OUT_ERR std::cerr << "[check:ERROR] "
+#define HLOG "[tolza] "
+#define HERR "[tolza:ERROR] "
 
 
-bool command::check::check_velox_config(std::string_view file, bool full_config, bool verbose) noexcept
+bool command::check::check_tolza_config(std::string_view file, bool full_config, bool verbose) noexcept
 {
   const fs::path f(file);
 
   if (!fs::exists(f)) {
-    OUT_ERR "The config file at " << f << " dosen't exists.";
+    std::println(stderr, HERR "The config file at \"{}\" dosen't exist.", f.string());
     return false;
   }
 
@@ -44,14 +44,14 @@ bool command::check::check_velox_config(std::string_view file, bool full_config,
   try {
     fs::create_directories(cache);
   } catch (const std::runtime_error& e) {
-    std::cerr << e.what() << "\n";
+    std::println(stderr, HERR "{}", e.what());
     return false;
   }
 
-  std::string               cache_config = fs::path(cache) / "velox.toml.template";
+  std::string               cache_config = fs::path(cache) / "tolza.toml.template";
   common::compiler::Options c            = common::compiler::Options::read_config(cache_config);
 
-  (void)workspace::write_file(cache.string(), "velox.toml.template");
+  (void)workspace::write_file(cache.string(), "tolza.toml.template");
   (void)c.write_config(cache.string());
   if (cache_config.empty()) return false;
 
@@ -59,19 +59,19 @@ bool command::check::check_velox_config(std::string_view file, bool full_config,
   try {
     eg_tbl = toml::parse_file(cache_config);
   } catch (const toml::parse_error& e) {
-    std::cerr << e.what() << ", at: " << e.source().begin.line << ":" << e.source().begin.column << "\n";
+    std::println(stderr, HERR "{}, at: {}:{}", e.what(), e.source().begin.line, e.source().begin.column);
     return false;
   }
   toml::table tbl;
   try {
     tbl = toml::parse_file(f.string());
   } catch (const toml::parse_error& e) {
-    OUT_ERR << e.what();
+    std::println(stderr, HERR "{}", e.what());
     return false;
   }
   for (auto& [section, fields] : tbl) {
     if (!eg_tbl.contains(section)) {
-      OUT_ERR "Unexpected section [" << section.str() << "]";
+      std::println(stderr, HERR "Unexpected section [{}]", section.str());
       return false;
     }
   }
@@ -83,33 +83,33 @@ bool command::check::check_workspace(std::string_view ws_path, bool verbose) noe
 {
   const fs::path p(ws_path);
 
-  OUT_LOG "Checking workspace check...";
+  std::println("Checking workspace check...");
 
   if (!fs::exists(p)) {
-    OUT_ERR "The directory at " << p << " dosen't exists.";
+    std::println(stderr, HERR "The directory at \"{}\" dosen't exist.", p.string());
     return false;
   }
 
   bool src_found = true;
   if (!fs::exists(fs::path(p) / "src")) {
-    OUT_ERR "The mandatory file \"src/\" at " << p << " /src dosen't exists.";
+    std::println(stderr, HERR R"(The mandatory file "src/" at "{}" /src dosen't exist.)", p.string());
     src_found = false;
   }
 
   bool config_found   = true;
   bool config_healthy = true;
-  if (!fs::exists(fs::path(p) / "velox.toml")) {
-    OUT_ERR "The mandatory \"velox.toml\" at " << p << " /velox.toml dosen't exists.";
+  if (!fs::exists(fs::path(p) / "tolza.toml")) {
+    std::println(stderr, HERR R"(The mandatory "tolza.toml" at "{}" /tolza.toml dosen't exist.)", p.string());
     config_found = false;
   } else {
-    if (!check_velox_config(std::string(p / "velox.toml"), true, verbose)) {
-      OUT_ERR "The config at " << p << " /velox.toml is invalid.";
+    if (!check_tolza_config(std::string(p / "tolza.toml"), true, verbose)) {
+      std::println(stderr, HERR R"(The config at "" /tolza.toml is invalid.)", p.string());
       config_healthy = false;
     }
   }
 
   if (src_found && config_found && config_healthy) {
-    OUT_LOG "The project is healthy and ready for compilation and development.";
+    std::println(HLOG "The project is healthy and ready for compilation and development.");
     return true;
   }
 

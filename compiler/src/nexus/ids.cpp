@@ -12,7 +12,6 @@
 #include "nexus/resolved.hpp"
 #include "nexus/scope.hpp"
 #include "nexus/definition.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/type/definition.hpp"
@@ -25,23 +24,43 @@ cu::CU& cu::ID::get() noexcept
   auto& scrs = compiler::pipeline.compilation_units;
 
   assert(*this && "Must be valid id");
-  auto rawid = raw();
-  assert(rawid < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
-  assert(rawid < scrs.size() && rawid >= 0 && "ID index is out of bound");
+  auto _offset = offset();
 
-  return *scrs.at(rawid);
+  assert(_offset < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
+
+  if (is_temp()) {
+    auto& temps = compiler::pipeline.temp_compilation_units;
+    assert(_offset < temps.size() && _offset >= 0 && "ID index is out of bound");
+    return *temps.at(_offset);
+  }
+
+  assert(_offset < scrs.size() && _offset >= 0 && "ID index is out of bound");
+
+  return *scrs.at(_offset);
 }
 const cu::CU& cu::ID::get() const noexcept
 {
   auto& scrs = compiler::pipeline.compilation_units;
 
   assert(*this && "Must be valid id");
-  auto rawid = raw();
-  assert(rawid < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
-  assert(rawid < scrs.size() && rawid >= 0 && "ID index is out of bound");
+  auto _offset = offset();
+  assert(_offset < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
 
-  return *scrs.at(rawid);
+  if (is_temp()) {
+    auto& temps = compiler::pipeline.temp_compilation_units;
+    assert(_offset < temps.size() && _offset >= 0 && "ID index is out of bound");
+    return *temps.at(_offset);
+  }
+
+  assert(_offset < scrs.size() && _offset >= 0 && "ID index is out of bound");
+  return *scrs.at(_offset);
 }
+
+bool cu::ID::is_temp() const noexcept
+{
+  return id & FLAG_TEMP_CU;
+}
+
 
 ast::ID ast::ID::canonical() const noexcept
 {
@@ -60,12 +79,12 @@ ast::ID ast::ID::canonical() const noexcept
 ast::ENodeKind ast::ID::kind() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get()->kind;
+  return get().kind;
 }
 token::ID ast::ID::token() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get()->start_tokid;
+  return get().start_tokid;
 }
 type::ID ast::ID::type() const noexcept
 {
@@ -94,7 +113,7 @@ bool ast::ID::is_resolved() const noexcept
 scope::ID ast::ID::scope() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get()->scpid;
+  return get().scpid;
 }
 module::ID ast::ID::module() const noexcept
 {
@@ -127,31 +146,27 @@ bool ast::ID::is_lvalue() const noexcept
   assert(*this && "Must be valid id");
   return !is_rvalue();
 }
-ast::NodeHeader* ast::ID::get() noexcept
+ast::NodeHeader& ast::ID::get() noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return &cu().get().nodes->get(*this);
-  return nullptr;
+  return cu().get().ast->get(*this);
 }
-const ast::NodeHeader* ast::ID::get() const noexcept
+const ast::NodeHeader& ast::ID::get() const noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return &cu().get().nodes->get(*this);
-  return nullptr;
+  return cu().get().ast->get(*this);
 }
-template <typename T>
+template <ast::Generic T>
 [[nodiscard]] T* ast::ID::as() noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().nodes->as<T>(*this);
-  return nullptr;
+  return cu().get().ast->as<T>(*this);
 }
-template <typename T>
+template <ast::Generic T>
 [[nodiscard]] const T* ast::ID::as() const noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().nodes->as<T>(*this);
-  return nullptr;
+  return cu().get().ast->as<T>(*this);
 }
 
 
@@ -208,12 +223,12 @@ type::ID type::ID::canonical() const noexcept
 type::ETypeKind type::ID::kind() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get().kind();
+  return get().kind;
 }
 definition::ID type::ID::def() const noexcept
 {
   assert(*this && "Must be valid id");
-  return get().get_def_id();
+  return compiler::inference.get_declaration(*this).def();
 }
 const std::unordered_set<ast::ID, ast::ID::Hash>& type::ID::extensions() const noexcept
 {
@@ -225,31 +240,27 @@ std::string type::ID::dump() const noexcept
   assert(*this && "Must be valid id");
   return type::dump(*this);
 }
-type::Type& type::ID::get() noexcept
+type::TypeHeader& type::ID::get() noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().types->get(*this);
-  return type::get(*this);
+  return cu().get().types->get(*this);
 }
-const type::Type& type::ID::get() const noexcept
+const type::TypeHeader& type::ID::get() const noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().types->get(*this);
-  return type::get(*this);
+  return cu().get().types->get(*this);
 }
-template <typename T>
+template <type::Generic T>
 T* type::ID::as() noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().types->as<T>(*this);
-  return type::as<T>(*this);
+  return cu().get().types->as<T>(*this);
 }
-template <typename T>
+template <type::Generic T>
 const T* type::ID::as() const noexcept
 {
   assert(*this && "Must be valid id");
-  if (cu()) return cu().get().types->as<T>(*this);
-  return type::as<T>(*this);
+  return cu().get().types->as<T>(*this);
 }
 
 

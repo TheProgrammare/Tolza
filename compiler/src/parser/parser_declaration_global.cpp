@@ -57,7 +57,7 @@ ast::ID parser::Parser_Declaration::parse_declaration()
   default:                           break;
   }
 
-  p.add_error(60, "Illegal instruction '" + std::string(p.tok_to_str(tok.tokid)) + "' in global.",
+  p.add_error(60, std::format("Illegal instruction '{}' in global.", p.tok_to_str(tok.tokid)),
               "you can define in global: namespace, variable, function, form, facet, rule");
 
   (void)p.next();
@@ -89,7 +89,7 @@ ast::ID parser::Parser_Declaration::parse_codeblock_declaration(bool no_import, 
     if (auto decl = parse_declaration())
       cb.elements.emplace_back(decl);
     else
-      p.add_error(255, "Unexpected token '" + std::string(p.peek().tokid.str()) + "' inside codeblock.",
+      p.add_error(255, std::format("Unexpected token '{}' inside codeblock.", p.peek().tokid.str()),
                   "A codeblock is ended by '}'");
 
     // one instruction

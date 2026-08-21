@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
-#include <iostream>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -71,12 +71,12 @@ parser::Parser_Context::~Parser_Context()
 {
 }
 
-template <typename T>
+template <ast::Generic T>
 T& parser::Parser_Context::add_get_node(token::ID tokid) noexcept
 {
   assert(tokid && "Invalid token id");
   assert(tokid.pos() < CU.file_info.data.size() && "Invalid token position");
-  T& n                 = CU.nodes->add_get<T>();
+  T& n                 = CU.ast->add_get<T>();
   n.header.start_tokid = tokid;
   n.header.scpid       = current_scpid;
   node_count++;
@@ -85,7 +85,7 @@ T& parser::Parser_Context::add_get_node(token::ID tokid) noexcept
 
 bool parser::Parser_Context::start_parsing()
 {
-  auto* root_node = CU.nodes->get_file_root();
+  auto* root_node = CU.ast->get_file_root();
   current_modid   = CU.modules->get_file_root().modid;
   current_scpid   = CU.scopes->get_file_root().scpid;
 
@@ -99,13 +99,14 @@ bool parser::Parser_Context::start_parsing()
       if (tok_v->match(token::ETokenKind::S_END_OF_FILE)) break;
     }
   } catch (const std::runtime_error& e) {
-    // std::cerr << e.what() << "\n"; context.tokView.synchronize(); attempt_recovery();
+    // std::println(stderr, "{}", e.what());
+    // context.tokView.synchronize(); attempt_recovery();
     return false;
   }
 
   return errs == compiler::COMPILER.errors.size();
 
-  CU.nodes->freeze       = true;
+  CU.ast->freeze         = true;
   CU.types->freeze       = true;
   CU.definitions->freeze = true;
   CU.modules->freeze     = true;
@@ -209,8 +210,8 @@ void parser::Parser_Context::enter_scope(ast::ID nodeid, std::string_view debug_
 
   scope_depth++;
 #ifdef DEBUG
-  for (size_t i = 0; i < scope_depth; ++i) std::cout << "│ ";
-  std::cout << "┌scope: " << debug_name << "\n";
+  for (size_t i = 0; i < scope_depth; ++i) std::print("│ ");
+  std::println("┌scope: {}", debug_name);
 #endif
 
   current_scpid = CU.scopes->add(current_scpid, scp);
@@ -218,8 +219,8 @@ void parser::Parser_Context::enter_scope(ast::ID nodeid, std::string_view debug_
 void parser::Parser_Context::exit_scope()
 {
 #ifdef DEBUG
-  for (size_t i = 0; i < scope_depth; ++i) std::cout << "│ ";
-  std::cout << "└end\n";
+  for (size_t i = 0; i < scope_depth; ++i) std::print("│ ");
+  std::println("└end");
 #endif
   scope_depth--;
   assert(scope_depth >= 0 && "Too much exit scope");
@@ -258,12 +259,9 @@ void parser::Parser_Context::attempt_recovery()
   // recovery loop case
   static Token lastokRecovered;
   if (lastokRecovered.span == tok_v->peek().span) {
-    std::cerr << "\n--------------------- ! COMPILATION STOPPED ! -------------------" << "\n"; // endl
-    std::cerr << "  Compiler: Infinitive recovery loop detected!"
-                   << "\n"; // endl
-    std::cerr
-      << "  Please check the code source."
-      << "\n"; // endl
+    std::println(stderr, R"(\n--------------------- ! COMPILATION STOPPED ! -------------------
+  Compiler: Infinitive recovery loop detected!
+  Please check the code source.)");
   return;
 }
 else
@@ -281,9 +279,8 @@ bool parser::Parser_Context::match_field_separator(token::ETokenKind separator =
   if (separator != token::ETokenKind::S_END_OF_FILE) {
     if (match(separator)) return false;
     if (match(end)) return true;
-    tok_v->add_error(12, "Unexpected token '" + std::string(tok_to_str(tok_v->peek().tokid)) + "' in expression.",
-                     "expected a separator '" + std::to_string(int(separator)) + "' or a ending '"
-                         + std::to_string(int(end)) + "'");
+    tok_v->add_error(12, std::format("Unexpected token '{}' in expression.", tok_to_str(tok_v->peek().tokid)),
+                     std::format("expected a separator '{}' or a ending '{}'", int(separator), int(end)));
 
   } else {
     if (match(end)) return true;
@@ -300,14 +297,14 @@ bool parser::Parser_Context::match_field_any_separator(token::ETokenKind p_separ
   std::string sym_end;
   size_t      sym_count = 0;
   for (const auto& elem : p_end) {
-    sym_end += "'" + std::to_string(int(elem)) + "', ";
+    sym_end += std::format("'{}', ", std::to_string(int(elem)));
     if (++sym_count > 10) {
       sym_end += "\n";
       sym_count = 0;
     }
   }
-  tok_v->add_error(13, "Unexpected token '" + std::string(tok_to_str(tok_v->peek().tokid)) + "' in expression.",
-                   "expected a separator '" + std::to_string(int(p_separator)) + "' or a ending {" + sym_end + "}");
+  tok_v->add_error(13, std::format("Unexpected token '{}' in expression.", tok_to_str(tok_v->peek().tokid)),
+                   std::format("expected a separator '{}' or a ending {}", std::to_string(int(p_separator)), sym_end));
   return false;
 }
 
@@ -400,8 +397,8 @@ definition::ID parser::Parser_Context::add_definition(ast::ID nodeid)
   const auto defid = CU.definitions->add(def);
 
 #ifdef DEBUG
-  for (size_t i = 0; i < scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├sym: " << magic_enum::enum_name.nodeid().get()->kind()) << " : " << sym.get_name() << "\n";
+  for (size_t i = 0; i < scope_depth; ++i) std::print("│ ");
+  std::println("├sym: {} : {}", magic_enum::enum_name.nodeid().get()->kind(), sym.get_name());
 #endif
   assert(current_scpid && "Invalid scope");
 
@@ -417,7 +414,7 @@ void parser::Parser_Context::add_error(ErrorCode code, std::string_view msg, std
   tok_v->add_error(code, msg, hint);
   if (count++ > MAX_ERRORS) throw std::runtime_error("Too many errors emitted. Parser aborted.");
 
-  common::compiler::DEBUG_VELOX_ICE(msg);
+  common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 void parser::Parser_Context::add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg,
                                            std::string_view hint) const
@@ -426,7 +423,7 @@ void parser::Parser_Context::add_error_tok(ErrorCode code, const token::Token& t
   tok_v->add_error_tok(code, tok, msg, hint);
   if (count++ > MAX_ERRORS) throw std::runtime_error("Too many errors emitted. Parser aborted.");
 
-  common::compiler::DEBUG_VELOX_ICE(msg);
+  common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(velox)
+project(tolza)
 
-add_subdirectory(velox-common)
-add_subdirectory(velox-toolchain)
-add_subdirectory(velox-compiler)
+add_subdirectory(tolza-common)
+add_subdirectory(tolza-toolchain)
+add_subdirectory(tolza-compiler)

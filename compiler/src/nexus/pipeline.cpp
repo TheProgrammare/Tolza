@@ -6,13 +6,9 @@
 #include <filesystem>
 #include <functional>
 #include <fstream>
-#include <initializer_list>
-#include <ios>
-#include <iostream>
+#include <print>
 
 #include <memory>
-#include <ostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -57,7 +53,6 @@
 // Project headers
 #include "Neargye/magic_enum_flags.hpp"
 #include "binder/ffi_c_reader.hpp"
-#include "binder/ffi_json_reader.hpp"
 #include "binder/binder_ffi.hpp"
 
 #include "codegen/codegen.hpp"
@@ -101,9 +96,9 @@ pipeline::Pipeline::Pipeline()
 
 std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept
 {
-  assert(common::fileutils::is_velox_file(path));
+  assert(common::fileutils::is_tolza_file(path));
 
-  auto p = common::fileutils::get_velox_file(path);
+  auto p = common::fileutils::get_tolza_file(path);
 
   std::ifstream f(std::string(p).c_str());
 
@@ -129,7 +124,7 @@ std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cui
 
 std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept
 {
-  auto f_founds = common::fileutils::find_velox_files(path, true);
+  auto f_founds = common::fileutils::find_tolza_files(path, true);
 
   std::vector<cu::ID> compilation_units_ids;
 
@@ -180,7 +175,7 @@ bool pipeline::Pipeline::generate_libc_wrappers() noexcept
 {
   auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C";
   fs::remove_all(p);
-  p = common::fileutils::get_velox_file(p.string());
+  p = common::fileutils::get_tolza_file(p.string());
   fs::remove(p);
 
   static bool log = can_log(binder);
@@ -189,7 +184,7 @@ bool pipeline::Pipeline::generate_libc_wrappers() noexcept
   auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });
 
   if (log) {
-    std::cout << "[binder:C] C wrappers generation completed  | " color_YELLOW << duration << " ms" color_RESET << "\n";
+    std::println("[binder:C] C wrappers generation completed | {:.2f} ms", duration);
   }
 
   return true;
@@ -215,8 +210,7 @@ bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (cu.file_info.data.empty()) {
-    std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "the file \"" << cu.file_info.path
-              << "\" is empty.\n";
+    std::println(stderr, "[lexer:{}:error] the file \"{}\" is empty.", count, cu.file_info.path);
     return false;
   }
 
@@ -226,12 +220,11 @@ bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
   auto duration = timing([&]() { success = lex.tokenize(); });
 
   if (log && success) {
-    std::cout << "[lexer:" << count << "] \"" << cu.file_info.path << "\" | " << lex.stream.data().size()
-              << " characters | " color_YELLOW << duration << " ms" color_RESET << "\n";
+    std::println("[lexer:{}] \"{}\" | {} characters | {:.2} ms", count, cu.file_info.path, lex.stream.data().size(),
+                 duration);
   }
   if (!success) {
-    std::cerr << color_RED "[lexer:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
-              << duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[lexer:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, duration);
   }
 
   count++;
@@ -257,16 +250,14 @@ bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (log && pre_success && gen_success) {
-    std::cout << "[preprocessor:" << count << "] \"" << cu.file_info.path << "\" | " << gen.tokens_generated.size()
-              << " tokens | " color_YELLOW << pre_duration + gen_duration << " ms" color_RESET << "\n";
+    std::println("[preprocessor:{}] \"{}\" | {} tokens | {:.2} ms", count, cu.file_info.path,
+                 gen.tokens_generated.size(), pre_duration + gen_duration);
   }
   if (!pre_success) {
-    std::cerr << color_RED "[preprocessor:" << count << ":error] " color_RESET "\"" << cu.file_info.path
-              << "\" " color_YELLOW << pre_duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[preprocessor:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, pre_duration);
   }
   if (!gen_success) {
-    std::cerr << color_RED "[preprocessor:generator:" << count << ":error] " color_RESET "\"" << cu.file_info.path
-              << "\" " color_YELLOW << gen_duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[preprocessor:generator:{}:error] \"{}\" {:.2}", count, cu.file_info.path, gen_duration);
   }
 
   count++;
@@ -289,13 +280,11 @@ bool pipeline::Pipeline::pass_parser(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (log && success) {
-    std::cout << "[parser:" << count << "] \"" << cu.file_info.path << "\" | " << parser.node_count
-              << " nodes | " color_YELLOW << duration << " ms" color_RESET << "\n";
+    std::println("[parser:{}] \"{}\" {} nodes | {:.2} ms", count, cu.file_info.path, parser.node_count, duration);
   }
 
   if (!success) {
-    std::cerr << color_RED "[parser:" << count << ":error] " color_RESET "\"" << cu.file_info.path << "\" " color_YELLOW
-              << duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[parser:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, duration);
   }
 
   count++;
@@ -331,7 +320,7 @@ bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>&
 
   fs::path bind_path = compiler::OPTIONS.dir.get_dir_binding();
   for (const auto& i : path) bind_path /= i;
-  bind_path.replace_extension(common::fileutils::VELOX_FILE_EXTENSION);
+  bind_path.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
   fs::create_directories(bind_path.parent_path());
 
   std::fstream f(bind_path);
@@ -340,10 +329,10 @@ bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>&
 
   // // universal ffi json
   //  auto ast = ffi::JSON_Reader::parse_json_compilation_unit(ffi_path.string());
-  //  ast->velox_codegen(ast->bind.get_file_path());
+  //  ast->tolza_codegen(ast->bind.get_file_path());
 
 
-  bind_path = common::fileutils::get_velox_file(bind_path.string());
+  bind_path = common::fileutils::get_tolza_file(bind_path.string());
 
   compiler::pipeline.binding_compilation_units_to_prepare.insert(bind_path);
 
@@ -389,9 +378,9 @@ size_t pipeline::Pipeline::engage_shipowner() noexcept
           auto& tok = cu.file_info.tokens->get(regex->header.start_tokid);
 
           auto err = Error_Diagnostic(cuid, 249, tok.begin, tok.begin + tok.length, compiler::EPhase::shipowner,
-                                      "Impossible to generate the file at \""
-                                          + cu::file_path_to_str(regex->path, regex->source) + "."
-                                          + std::string(common::fileutils::VELOX_FILE_EXTENSION) + "*\"",
+                                      std::format("Impossible to generate the file at \"{}.{}*\"",
+                                                  cu::file_path_to_str(regex->path, regex->source),
+                                                  std::string(common::fileutils::TOLZA_FILE_EXTENSION)),
                                       "");
           compiler::COMPILER.add_error(err);
         }
@@ -434,31 +423,27 @@ bool pipeline::Pipeline::engage_analyzer(cu::ID cuid) noexcept
 
   auto sym_duration = timing([&]() { sym = pass_resolution_symbol(cuid); });
   if (log_sym) {
-    std::cout << "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" | " << sym
-              << " references resolved | " << color_YELLOW << sym_duration << " ms" color_RESET << "\n";
+    std::println("[resolver:symbol:{}] \"{}\" | {} references resolved | {:.2} ms", count, cu.file_info.path, sym,
+                 sym_duration);
   } else if (have_error()) {
-    std::cerr << color_RED "[resolver:symbol:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << sym_duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[resolver:symbol:{}] \"{}\" {:.2} ms", count, cu.file_info.path, sym_duration);
     compiler::COMPILER.print_errors();
     return false;
   }
   auto ty_duration = timing([&]() { ty = pass_resolution_inference(cuid); });
   if (log_ty) {
-    std::cout << "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" | " << ty
-              << " inferences resolved | " << color_YELLOW << ty_duration << " ms" color_RESET << "\n";
+    std::println("[resolver:inference:{}] \"{}\" | {} inferences resolved | {:.2} ms", count, cu.file_info.path, ty,
+                 ty_duration);
   } else if (have_error()) {
-    std::cerr << color_RED "[resolver:inference:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << ty_duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[resolver:inference:{}] \"{}\" {:.2} ms", count, cu.file_info.path, ty_duration);
     compiler::COMPILER.print_errors();
     return false;
   }
   auto sem_duration = timing([&]() { sem = pass_resolution_semantic(cuid); });
   if (log_sem) {
-    std::cout << "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" | " << color_YELLOW
-              << sem_duration << " ms" color_RESET << "\n";
+    std::println("[resolver:semantic:{}] \"{}\" | {:.2} ms", count, cu.file_info.path, sem_duration);
   } else if (have_error()) {
-    std::cerr << color_RED "[resolver:semantic:" << count << "] \"" << cu.file_info.path << "\" " color_YELLOW
-              << sem_duration << " ms" color_RESET << "\n";
+    std::println(stderr, "[resolver:semantic:{}] \"{}\" {:.2} ms", count, cu.file_info.path, sem_duration);
     compiler::COMPILER.print_errors();
     return false;
   }
@@ -566,8 +551,8 @@ bool pipeline::Pipeline::pass_code_generation(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (log)
-    std::cout << "[codegen:" << count << "/" << compiler::pipeline.analyzed_compilation_units.size() << "] \""
-              << cu.file_info.path << "\" | " << color_YELLOW << duration << " ms" color_RESET << "\n";
+    std::println("[codegen:{}:{}] \"{}\" | {:.2} ms", count, compiler::pipeline.analyzed_compilation_units.size(),
+                 cu.file_info.path, duration);
 
   count++;
 
@@ -583,7 +568,7 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
   try {
     fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
   } catch (const std::runtime_error& e) {
-    std::cerr << "[emit:ERROR] Directory creation failed: " << e.what() << "\n";
+    std::println(stderr, "[emit:ERROR] Directory creation failed: {}", e.what());
     return false;
   }
 
@@ -599,14 +584,14 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (EC) {
-    llvm::errs() << "[emit:llvm:" << count << "] Error cannot open the file: " << EC.message() << "\n";
+    llvm::errs() << std::format("[emit:llvm:{}] Error cannot open the file: {}\n", count, EC.message());
     count++;
     return false;
   }
 
   cu.llvm_module->print(out_f, nullptr);
 
-  if (log) std::cout << "[emit:llvm:" << count << "] emission of the llvm-ir to " << out_llvm_file << "\n";
+  if (log) std::println("[emit:llvm:{}] emission of the llvm-ir to \"{}\"", count, out_llvm_file.string());
   count++;
 
   return true;
@@ -631,8 +616,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     mod->setDataLayout(compiler::TM->createDataLayout());
 
     if (!mod) {
-      std::cerr << "[llvm-opti:ERROR] module is nullptr!"
-                << "\n";
+      std::println(stderr, "[llvm-opti:ERROR] module is nullptr!");
       success = false;
       return;
     }
@@ -644,8 +628,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     } // auto flush
 
     if (!verif_errs.empty()) {
-      llvm::errs() << "[llvm:ERROR] Module verification failed\n";
-      llvm::errs() << verif_errs << "\n";
+      llvm::errs() << std::format("[llvm:ERROR] Module verification failed\n  {}\n", verif_errs);
       success = false;
       return;
     }
@@ -676,7 +659,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     }
 
     if (mod->empty()) {
-      std::cout << "[llvm-opti] Module is empty, stop generation";
+      std::println("[llvm-opti] Module is empty, stop generation");
       success = true;
       return;
     }
@@ -689,8 +672,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     return;
   });
 
-  if (log)
-    std::cout << color_YELLOW "[llvm-opti:summary] " color_RESET "duration: " color_YELLOW << duration << " ms\n";
+  if (log) std::println("[llvm-opti:summary] duration: {:.2} ms", duration);
 
   return success;
 }
@@ -713,7 +695,7 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
 
     if (err_c) {
-      llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
+      llvm::errs() << std::format("[emitter:ERROR] File error: {}\n", err_c.message());
       return false;
     }
 
@@ -728,7 +710,7 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
+    if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
   }
   // Emit object
   if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::Asm)) {
@@ -740,7 +722,7 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
 
     if (err_c) {
-      llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
+      llvm::errs() << std::format("[emitter:ERROR] File error: {}\n", err_c.message());
       return false;
     }
 
@@ -755,7 +737,7 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
+    if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
   }
 
   return true;
@@ -776,7 +758,7 @@ bool pipeline::Pipeline::engage_general_emitter() noexcept
   llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
 
   if (err_c) {
-    llvm::errs() << "[emitter:ERROR] File error: " << err_c.message() << "\n";
+    llvm::errs() << std::format("[emitter:ERROR] File error:{}\n", err_c.message());
     return false;
   }
 
@@ -791,7 +773,7 @@ bool pipeline::Pipeline::engage_general_emitter() noexcept
   pass.run(*mod);
   dest.flush();
 
-  if (log) std::cout << "[emitter] Object emitted at " << dest_path << "\n";
+  if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
   return true;
 }
 bool pipeline::Pipeline::engage_module_linker() const noexcept
@@ -804,7 +786,7 @@ bool pipeline::Pipeline::engage_module_linker() const noexcept
   assert(main_mod);
 
   if (!main_mod) {
-    std::cerr << "[linker:ERROR] Expected script file named 'main' to start the linking.\n";
+    std::println(stderr, "[linker:ERROR] Expected script file named 'main' to start the linking.");
     return false;
   }
 
@@ -819,11 +801,11 @@ bool pipeline::Pipeline::engage_module_linker() const noexcept
     if (!cu.llvm_module) continue; // safe
 
 
-    if (log) std::cout << "[linker] Linking module: " << cu.llvm_module->getModuleIdentifier() << "\n";
+    if (log) std::println("[linker] Linking module: {}", cu.llvm_module->getModuleIdentifier());
 
     auto module_to_link = std::unique_ptr<llvm::Module>(cu.llvm_module);
     if (llvm::Linker::linkModules(*main_mod, std::move(module_to_link))) {
-      std::cerr << "[linker:ERROR] Link failed on script " << cu.file_info.path << "\n";
+      std::println(stderr, "[linker:ERROR] Link failed on script \"{}\"", cu.file_info.path);
       failed = true;
     }
   }
@@ -846,35 +828,36 @@ bool pipeline::Pipeline::engage_linker() noexcept
 
   // const std::vector<std::string> args = {target_o.string(), "-lc", "-o", out_bin.string()};
   //
-  // std::cout << "[linker] LLD linking command:\n  ld.lld";
-  // for (const auto& arg : args) std::cout << " " << arg;
-  // std::cout << "\n";
+  // std::print("[linker] LLD linking command:\n  ld.lld";
+  // for (const auto& arg : args) std::print(" {}", arg);
+  // std::println();
 
-  std::ostringstream cmd;
-  cmd << "clang " << target_o << " -o " << out_bin;
-  std::cout << "[linker] clang linking command:\n  " << cmd.str() << "\n";
+  std::string cmd = std::format(R"(clang "{}" -o "{}")", target_o.string(), out_bin.string());
+  std::println("[linker] clang linking command:\n  {}", cmd);
 
   // if (auto err_code = llvm::sys::ExecuteAndWait("ld.lld", {target_o.string(), "-lc", "-o", out_bin.string()});
 
   const std::string mode = (compiler::OPTIONS.profile.debug) ? "debug" : "release";
 
-  if (auto err_code = std::system(cmd.str().c_str()); err_code != 0) {
+  if (auto err_code = std::system(cmd.c_str()); err_code != 0) {
     if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
-      std::cerr << "@@VELOX_EXORDIUM_RESULTATI@@\n";
-      std::cerr << R"({success:false,executable:"",mode:")" << mode << "\"}\n";
-      std::cerr << "@@VELOX_CLAUSULA_RESULTATI@@\n";
+      std::println(stderr, R"(@@TOLZA_EXORDIUM_RESULTATI@@
+{{"success":false,"executable":"","mode":"{}"}}
+@@TOLZA_CLAUSULA_RESULTATI@@)",
+                   mode);
     } else {
-      std::cerr << "[linker:ERROR] Linker failed: system code error " << err_code << "\n";
+      std::println(stderr, "[linker:ERROR] Linker failed: system code error {}", err_code);
     }
     return false;
   }
 
   if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
-    std::cout << "@@VELOX_EXORDIUM_RESULTATI@@\n";
-    std::cout << "{success:true,executable:" << out_bin << ",mode:\"" << mode << "\"}\n";
-    std::cout << "@@VELOX_CLAUSULA_RESULTATI@@\n";
+    std::println(R"(@@TOLZA_EXORDIUM_RESULTATI@@
+{{"success":true,"executable":"{}","mode":"{}"}}
+@@TOLZA_CLAUSULA_RESULTATI@@)",
+                 out_bin.string(), mode);
   } else {
-    std::cout << "[linker] Executable created at " << out_bin << "\n";
+    std::println("[linker] Executable created at \"{}\"", out_bin.string());
   }
   return true;
 }

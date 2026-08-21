@@ -5,130 +5,125 @@
 namespace type
 {
 
+#define TYPE_HEADER(name)                                                                                              \
+  static constexpr ETypeKind static_kind = ETypeKind::name;                                                            \
+  TypeHeader                 header      = TypeHeader(ETypeKind::name);                                                \
+  [[nodiscard]] ID           tyid() const noexcept                                                                     \
+  {                                                                                                                    \
+    return header.tyid;                                                                                                \
+  }
 
-struct Type {
-  ID tyid;
-
+struct TypeHeader final {
+  ID        tyid;
   Qualifier qualifier;
+  ETypeKind kind = ETypeKind::NONE;
 
-  [[nodiscard]] definition::ID get_def_id() const noexcept;
-  [[nodiscard]] bool           set_def_id(definition::ID defid) noexcept;
-
-  [[nodiscard]] ETypeKind kind() const noexcept
-  {
-    return _kind;
-  }
-
-  Type(const Type&)            = delete;
-  Type& operator=(const Type&) = delete;
-
-protected:
-  const ETypeKind _kind = ETypeKind::NONE;
-  Type(ETypeKind k)
-    : _kind(k)
-  {
-  }
-
-public:
-  virtual ~Type() = default;
-};
-
-template <ETypeKind K>
-struct TypeBase : Type {
-  static constexpr ETypeKind static_kind = K;
-  TypeBase()
-    : Type(K)
+  explicit TypeHeader(ETypeKind k)
+    : kind(k)
   {
   }
 };
 
-#define DEF_TYPE(name) struct name final : TypeBase<ETypeKind::name>
 
+struct Primitive final {
+  TYPE_HEADER(Primitive);
 
-DEF_TYPE(Primitive)
-{
   EPrimitiveTypeKind primitive;
 };
 
-DEF_TYPE(Ptr)
-{
+struct Ptr final {
+  TYPE_HEADER(Ptr);
+
   ID inner;
 };
 
-DEF_TYPE(String)
-{
+struct String final {
+  TYPE_HEADER(String);
+
   ETextType kind = ETextType::_str;
 };
 
-DEF_TYPE(Array)
-{
+struct Array final {
+  TYPE_HEADER(Array);
+
   ID      inner;
   size_t  size;
   ast::ID size_expression;
 };
 
-DEF_TYPE(Buffer)
-{
+struct Buffer final {
+  TYPE_HEADER(Buffer);
+
   ID inner;
 };
 
-DEF_TYPE(Slice)
-{
+struct Slice final {
+  TYPE_HEADER(Slice);
+
   ID   inner;
   bool is_c_table = false;
 };
 
-DEF_TYPE(Tuple)
-{
+struct Tuple final {
+  TYPE_HEADER(Tuple);
+
   std::vector<ID> elems;
 };
 
-DEF_TYPE(Prototype)
-{
+struct Prototype final {
+  TYPE_HEADER(Prototype);
+
   std::vector<Prototype_Param> params;
   ID                           ret;
   bool                         is_variadic     = false;
   bool                         is_explicit_ret = false;
 };
 
-DEF_TYPE(Enum)
-{
+struct Enum final {
+  TYPE_HEADER(Enum);
+
   std::vector<ID> variants;
   definition::ID  def;
 };
 
-DEF_TYPE(Flag)
-{
+struct Flag final {
+  TYPE_HEADER(Flag);
+
   size_t         size = 1;
   definition::ID def;
 };
 
-DEF_TYPE(Union)
-{
+struct Union final {
+  TYPE_HEADER(Union);
+
   std::vector<ID> variants;
   definition::ID  def;
 };
 
-DEF_TYPE(Facet)
-{
+struct Facet final {
+  TYPE_HEADER(Facet);
+
   std::vector<ID> fields;
   definition::ID  def;
 };
 
-DEF_TYPE(View)
-{
+struct View final {
+  TYPE_HEADER(View);
+
   std::vector<ID> facets;
   definition::ID  def;
 };
 
-DEF_TYPE(Form)
-{
+struct Form final {
+  TYPE_HEADER(Form);
+
   std::vector<ID> facets;
   definition::ID  def;
 };
 
-DEF_TYPE(Identifier)
-{
+struct Identifier final {
+  TYPE_HEADER(Identifier);
+
   ast::ID        nodeid;
   definition::ID def;
   std::string    forward_name;
@@ -144,7 +139,17 @@ DEF_TYPE(Identifier)
 };
 
 
+using Variant = std::variant<Primitive, String, Tuple, Array, Buffer, Slice, Ptr, Prototype, Facet, View, Form, Enum,
+                             Flag, Union, Identifier>;
+
 template <typename T>
-concept IsDataType = std::is_base_of_v<Type, T>;
+concept AllTypes = requires {
+  typename std::variant_size<Variant>;
+  std::variant<T>();
+};
+
+
+#undef TYPE_HEADER
+
 
 } // namespace type

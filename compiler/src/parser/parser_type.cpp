@@ -11,10 +11,8 @@
 #include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_numeric_128_bits.hpp"
-#include "compiler/compiler.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
@@ -85,6 +83,8 @@ type::ID parser::Parser_Type::table(const type::Qualifier& qualifier)
 
     return parser_type_factory.make_static_array(inner, sz, size, dec);
   }
+
+  assert(false);
 }
 
 type::ID parser::Parser_Type::pointer(const type::Qualifier& qualifier)
@@ -117,7 +117,7 @@ type::ID parser::Parser_Type::primitive(const type::Qualifier& qualifier)
     return parser_type_factory.make_string(txt, dec);
   }
 
-  common::compiler::DEBUG_VELOX_ICE("bad token interpreted as type before primitive parsing");
+  common::compiler::DEBUG_TOLZA_ICE("bad token interpreted as type before primitive parsing");
 
   return NO_ID;
 }
@@ -159,7 +159,7 @@ type::ID parser::Parser_Type::function_proto(const type::Qualifier& qualifier)
   auto* proto   = protoid.as<type::Prototype>();
   assert(proto);
 
-  proto->qualifier = qualifier;
+  proto->header.qualifier = qualifier;
 
   return protoid;
 }
@@ -192,7 +192,7 @@ type::ID parser::Parser_Type::parse_type()
 
   if (p.check(token::ETokenKind::IDENTIFIER)) return id_type(qua);
 
-  p.add_error(126, "Unexpected type definition '" + std::string(p.tok_to_str(p.peek().tokid)) + "'.", hint);
+  p.add_error(126, std::format("Unexpected type definition '{}'.", p.tok_to_str(p.peek().tokid)), hint);
   return type::BAD_TYPE_ID;
 };
 

@@ -27,13 +27,13 @@ inline Options OPTIONS;
 
 constexpr std::string_view TOOLCHAIN_CONFIG =
     R"(
-# velox-toolchain config file
+# tolza-toolchain config file
 
 # DO NOT remove or add any section nor field
 
 [compiler]
-custom_compiler_dir     = "%custom_compiler_dir"
-compiler_used           = "%compiler_used"
+custom_compiler_dir     = "{}"
+compiler_used           = "{}"
 
 )";
 } // namespace common::toolchain

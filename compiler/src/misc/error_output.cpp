@@ -1,8 +1,5 @@
 #include "error_output.hpp"
 
-#include "common/utils.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "compiler/compilation_unit.hpp"
@@ -101,24 +98,18 @@ Error_Elem::Error_Elem(cu::ID _cuid, ErrorCode _code, ast::ID nodeid, compiler::
 
 std::string Error_Elem::print_code() const noexcept
 {
-  return "[" + std::string(ESeverity_to_color(error_info.severity)) + compiler::Phase_to_code(error_info.phase)
-         + std::format("{:04}", error_info.code) + color_RESET "] ";
+  return std::format("[{}{:04}]", compiler::Phase_to_code(error_info.phase), error_info.code);
 }
 
 std::string Error_Elem::print_error() const noexcept
 {
-  return print_source() + print_line_cursor() + print_messages();
+  return std::format("{}\n{}\n{}\n", print_source(), print_line_cursor(), print_messages());
 }
 
 std::string Error_Elem::print_messages() const noexcept
 {
-  std::string str_msg;
-  str_msg += "[" + std::string(ESeverity_to_color(error_info.severity))
-             + std::string(ESeverity_to_str(error_info.severity)) + color_RESET "] ";
-  str_msg += print_code() + " " + std::string(error_info.msg);
-  if (!error_info.hint.empty()) str_msg += "\n[hint] " + std::string(error_info.hint);
-
-  return str_msg;
+  return std::format("[{}] {} {}{}", ESeverity_to_str(error_info.severity), print_code(), error_info.msg,
+                     !error_info.hint.empty() ? "\n[hint] " + error_info.hint : "");
 }
 
 std::string Error_Elem::print_cursor() const noexcept
@@ -153,16 +144,13 @@ std::string Error_Elem::print_line() const noexcept
 
   const std::string line_offset_str = std::string(6 - std::to_string(line_pos + 1).size(), ' ');
 
-  return line_offset_str + std::to_string(line_pos + 1) + " | " + std::string(line_str) + "\n";
+  return std::format("{}{} | {}", line_offset_str, std::to_string(line_pos + 1), line_str);
 }
 
 
 std::string Error_Elem::print_line_cursor() const noexcept
 {
-  const std::string line   = print_line();
-  const std::string cursor = print_cursor();
-
-  return line + "       | " color_RED + cursor + color_RESET "\n";
+  return std::format("{}\n       | {}", print_line(), print_cursor());
 }
 
 std::string Error_Elem::print_source() const noexcept
@@ -171,8 +159,7 @@ std::string Error_Elem::print_source() const noexcept
   size_t      column = cu.file_info.get_column_from_pos(start_pos);
   size_t      line   = cu.file_info.get_line_from_pos(start_pos);
 
-  return "[file] " color_MAGENTA + cu.file_info.path + ":" + std::to_string(line + 1) + ":" + std::to_string(column + 1)
-         + "\n" color_RESET;
+  return std::format("[file] {}:{}:{}", cu.file_info.path, std::to_string(line + 1), std::to_string(column + 1));
 }
 
 Error_Diagnostic::Error_Diagnostic(cu::ID _cuid, ErrorCode _code, ast::ID nodeid, compiler::EPhase _phase,
@@ -229,18 +216,11 @@ std::string Error_Diagnostic::print_userfriendly_error() const noexcept
 
   // same file, same line
   if (elem_first.cuid == elem_second.cuid && first_line == second_line) {
-    auto line       = elem_first.print_line();
     auto top_cursor = elem_first.print_cursor();
     std::ranges::replace(top_cursor, '^', 'v');
-    auto down_cursor = elem_second.print_cursor();
 
-    std::string out;
-    out += "       | " color_RED + top_cursor + color_RESET "\n";
-    out += line;
-    out += "       | " color_RED + down_cursor + color_RESET "\n";
-
-    out += elem_first.print_messages() + "\n";
-    return out;
+    return std::format("       | {}\n{}\n       | {}\n{}\n", top_cursor, elem_first.print_line(),
+                       elem_second.print_cursor(), elem_first.print_messages());
   }
 
   // same file
@@ -263,16 +243,8 @@ std::string Error_Diagnostic::print_userfriendly_error() const noexcept
       std::ranges::replace(down_cursor, 'v', '^');
     }
 
-    std::string out;
-    out += elem_first.print_source();
-    out += "       | " color_RED + top_cursor + color_RESET "\n";
-    out += top_line;
-    out += "       | ...\n";
-    out += down_line;
-    out += "       | " color_RED + down_cursor + color_RESET "\n";
-
-    out += elem_first.print_messages() + "\n";
-    return out;
+    return std::format("{}\n       | {}\n{}\n       | ...\n{}\n       | {}\n{}\n", elem_first.print_source(),
+                       top_cursor, top_line, down_line, down_cursor, elem_first.print_messages());
   }
 
   // different files
@@ -282,25 +254,17 @@ std::string Error_Diagnostic::print_userfriendly_error() const noexcept
   auto down_line   = elem_second.print_line();
   auto down_cursor = elem_second.print_cursor();
 
-  std::string out;
-  out += elem_first.print_source();
-  out += "       | " color_RED + top_cursor + color_RESET "\n";
-  out += top_line;
-  out += "       | ...\n";
-  out += down_line;
-  out += "       | " color_RED + down_cursor + color_RESET "\n";
-  out += elem_second.print_source();
-
-  out += elem_first.print_messages() + "\n";
-  return out;
+  return std::format("{}\n       | {}\n{}\n       | ...\n{}\n       | {}\n{}\n{}\n", elem_first.print_source(),
+                     top_cursor, top_line, down_line, down_cursor, elem_second.print_source(),
+                     elem_first.print_messages());
 }
 
 constexpr std::string_view JSON_ERROR_TEMPLATE =
-    R"({"type":"%type","code":"%code","message":"%message","hint":"%hint","file":"%file","start_pos":%start_pos,"end_pos":%end_pos})";
+    R"({{"type":"{}","code":"{}","message":"{}","hint":"{}","file":"{}","start_pos":{},"end_pos":{}}})";
 constexpr std::string_view JSON_MULTIPLEFILES_ERROR_TEMPLATE =
-    R"({"type":"%type","code":"%code","message":"%message","hint":"%hint","file":"%file","start_pos":%start_pos,"end_pos":%end_pos,"related":[%related]})";
+    R"({{"type":"{}","code":"{}","message":"{}","hint":"{}","file":"{}","start_pos":{},"end_pos":{},"related":[{}]}})";
 constexpr std::string_view JSON_RELATED_ERROR_TEMPLATE =
-    R"({"file":"%file","start_pos":%start_pos,"end_pos":%end_pos,"message":"%message"})";
+    R"({{"file":"{}","start_pos":{},"end_pos":{},"message":"{}"}})";
 
 std::string Error_Diagnostic::print_json_error() const noexcept
 {
@@ -320,20 +284,9 @@ std::string Error_Diagnostic::print_json_error() const noexcept
   if (!elem_second.cuid
       || (elem_first.cuid == elem_second.cuid && elem_first.start_pos == elem_second.start_pos
           && elem_first.end_pos == elem_second.end_pos)) {
-    auto str = std::string(JSON_ERROR_TEMPLATE);
 
-    std::map<std::string_view, std::string_view> data = {
-        {"type",      "error"                             },
-        {"code",      code                                },
-        {"message",   msg                                 },
-        {"hint",      hint                                },
-        {"file",      elem_first.cuid.get().file_info.path},
-        {"start_pos", first_start_pos                     },
-        {"end_pos",   first_end_pos                       },
-    };
-    common::utils::fmt_template(str, data);
-
-    return str;
+    return std::format(JSON_ERROR_TEMPLATE, "error", code, msg, hint, elem_first.cuid.get().file_info.path,
+                       first_start_pos, first_end_pos);
   }
 
   // two errors domains
@@ -345,67 +298,28 @@ std::string Error_Diagnostic::print_json_error() const noexcept
   const auto second_start_pos = std::to_string(elem_second.start_pos);
   const auto second_end_pos   = std::to_string(elem_second.end_pos);
 
+  auto str_related = std::format(JSON_RELATED_ERROR_TEMPLATE, elem_second.cuid.get().file_info.path, second_start_pos,
+                                 second_end_pos, "");
 
-  auto str         = std::string(JSON_MULTIPLEFILES_ERROR_TEMPLATE);
-  auto str_related = std::string(JSON_RELATED_ERROR_TEMPLATE);
-
-  std::map<std::string_view, std::string_view> err_related = {
-      {"file",      elem_second.cuid.get().file_info.path},
-      {"start_pos", second_start_pos                     },
-      {"end_pos",   second_end_pos                       },
-      {"message",   ""                                   },
-  };
-  common::utils::fmt_template(str_related, err_related);
-
-  std::map<std::string_view, std::string_view> err_data = {
-      {"type",      "error"                             },
-      {"code",      code                                },
-      {"message",   msg                                 },
-      {"hint",      hint                                },
-      {"file",      elem_first.cuid.get().file_info.path},
-      {"start_pos", first_start_pos                     },
-      {"end_pos",   first_end_pos                       },
-      {"related",   str_related                         },
-  };
-  common::utils::fmt_template(str, err_data);
-
-  return str;
+  return std::format(JSON_MULTIPLEFILES_ERROR_TEMPLATE, "error", code, msg, hint, elem_first.cuid.get().file_info.path,
+                     first_start_pos, first_end_pos, str_related);
 }
 
 constexpr std::string_view GITHUB_ERROR_TEMPLATE =
-    R"({::%type file=%file,line=%line,col=%column,endLine=%endLine,endColumn=%endColumn,title=%title::%msg})";
+    R"({{::{} file={},line={},col={},endLine={},endColumn={},title={}::{}}})";
 
 std::string Error_Diagnostic::print_github_error() const noexcept
 {
-  auto        str = std::string(GITHUB_ERROR_TEMPLATE);
-  const auto& cu  = elem_first.cuid.get();
+  const auto& cu = elem_first.cuid.get();
 
-  auto line_pos = cu.file_info.get_line_from_pos(elem_first.start_pos);
+  auto start_line = cu.file_info.get_line_from_pos(elem_first.start_pos);
+  auto end_line   = cu.file_info.get_line_from_pos(elem_first.end_pos);
+  auto start_col  = cu.file_info.get_column_from_pos(elem_first.start_pos);
+  auto end_col    = cu.file_info.get_column_from_pos(elem_first.end_pos);
 
-  const int start_col =
-      int(elem_first.end_pos) - cu.file_info.get_line_start(line_pos) - (elem_first.end_pos - elem_first.start_pos);
-  int end_col = start_col + (elem_first.end_pos - elem_first.start_pos);
-
-  const auto        line          = std::to_string(line_pos);
-  const auto        str_start_col = std::to_string(start_col);
-  const auto        str_end_col   = std::to_string(end_col);
   const std::string code =
       compiler::Phase_to_code(elem_first.error_info.phase) + std::format("{:04}", elem_first.error_info.code);
 
-
-  const auto msg = escape_json(elem_first.error_info.msg);
-
-  std::map<std::string_view, std::string_view> data = {
-      {"type",      "error"                              },
-      {"file",      elem_second.cuid.get().file_info.path},
-      {"line",      line                                 },
-      {"col",       str_start_col                        },
-      {"endLine",   line                                 },
-      {"endColumn", str_end_col                          },
-      {"title",     code                                 },
-      {"msg",       msg                                  },
-  };
-  common::utils::fmt_template(str, data);
-
-  return str;
+  return std::format(GITHUB_ERROR_TEMPLATE, "error", elem_second.cuid.get().file_info.path, start_line, start_col,
+                     end_line, end_col, code, escape_json(elem_first.error_info.msg));
 }

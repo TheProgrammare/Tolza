@@ -185,8 +185,7 @@ void parser::Parser_Declaration_SFM::parse_form_declaration(ast::SFM_Form& form)
     return;
   }
 
-  p.add_error(21,
-              "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid)) + "' keyword not allowed in form code block.",
+  p.add_error(21, std::format("Unexpected '{}' keyword not allowed in form code block.", p.tok_to_str(p.peek().tokid)),
               "you can define in functions: atribute, method, typealias, operator "
               "overloading, trait extension.");
 }

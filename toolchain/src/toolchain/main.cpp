@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,9 @@
  *  limitations under the License.
  */
 
+#include <exception>
+#include <print>
+
 #include <CLIUtils/CLI11.hpp>
 
 #include <common/common.hpp>
@@ -22,14 +25,13 @@
 #include "toolchain/parser_command.hpp"
 #include "toolchain/toolchain.hpp"
 #include <common/toolchain_options.hpp>
-#include <exception>
 
 
 int run_toolchain(int argc, const char* argv[])
 {
   common::toolchain::init_toolchain_context();
 
-  CLI::App             app{"Velox toolchain (" + common::SOFTWARE_VERSION + ")", "velox"};
+  CLI::App             app{std::format("Tolza toolchain ({})", SOFTWARE_VERSION), "tolza"};
   toolchain::Commander commander(app);
 
   toolchain::link_stdlib();
@@ -44,9 +46,9 @@ int main(int argc, const char* argv[])
   try {
     return run_toolchain(argc, argv);
   } catch (const std::exception& e) {
-    std::cerr << "fatal error: " << e.what() << "\n";
+    std::println(stderr, "fatal error: {}", e.what());
   } catch (...) {
-    std::cerr << "unknown fatal error\n";
+    std::println(stderr, "unknown fatal error");
   }
 
   return 0;

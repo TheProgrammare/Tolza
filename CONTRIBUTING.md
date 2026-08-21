@@ -30,7 +30,7 @@ Before consedering to contribute to this project, please read some documentation
 # Who can contribute ?
 Any volunteer, but here are a few ideas on how you can make yourself useful based on your skills
 
-| my skill | my utility for velox |
+| my skill | my utility for tolza |
 |-|-|
 | junior programmer | better innocent understanding of overly complex concepts, better simplified approach, closer to spontaneous understanding |
 | senior programmer | good for the code review, experience about paradigm and concepts, better user experience approach |
@@ -40,9 +40,9 @@ Any volunteer, but here are a few ideas on how you can make yourself useful base
 | marketing | competent for the language promotion, can create slogans and memory check for the learning | 
 
 # Project Objectives
-**Summary** This project aims to address practical and concrete needs in a reasonable way, through both the Velox language and its toolchain. 
+**Summary** This project aims to address practical and concrete needs in a reasonable way, through both the Tolza language and its toolchain. 
 
-### Language (Velox) 
+### Language (Tolza) 
 - A **deterministic, predictable, and explicit** programming language with a **simple and modern syntax**.
 - The language’s **native paradigms** should be useful without introducing excessive complexity.
 - **Abstraction** is valuable, but programmers must understand broadly what is happening. Abstraction is therefore achieved through **code simplicity and clarity**.
@@ -56,7 +56,7 @@ Any volunteer, but here are a few ideas on how you can make yourself useful base
 ### Toolchain
 - Provide a **ready-to-use language**, suitable for **small projects** as well as **industrial-scale projects**.
 - The toolchain should preferably be used in a **workspace environment**.
-- velox.config is the **reference file**, specifying compiler behavior, target directories, and defining the workspace via folder locations.
+- tolza.config is the **reference file**, specifying compiler behavior, target directories, and defining the workspace via folder locations.
 - The toolchain is not basic but must remain **simple, practical, and intuitive**.
 
 # Project Structure
@@ -70,7 +70,7 @@ This project contains several sub-projects:
 - Toolchain
   - Commands
   - Package Manager
-- Visual studio code plugin: [here](https://github.com/TheProgrammare/Velox-VScode-Plugin)
+- Visual studio code plugin: [here](https://github.com/TheProgrammare/Tolza-VScode-Plugin)
 
 # Governance
 - **Founder**:  

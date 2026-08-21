@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -171,7 +171,7 @@ struct Dir final {
   std::string vendor   = "./vendor";
   std::string binding  = "./binding";
   std::string ffi_json = "./binding/ffi_json";
-  std::string compiler = "~/velox-compiler";
+  std::string compiler = "~/tolza-compiler";
   std::string stdlib;
   std::string packages;
 
@@ -531,7 +531,7 @@ namespace common
 
 extern std::string OPTIONS_TEMPLATE;
 
-constexpr std::string_view VELOX_MAIN_TEMPLATE =
+constexpr std::string_view TOLZA_MAIN_TEMPLATE =
     R"(
 import ext: C::stdio
 
@@ -541,7 +541,7 @@ fn main() {
 
 )";
 
-constexpr std::string_view VELOX_CORE_TEMPLATE =
+constexpr std::string_view TOLZA_CORE_TEMPLATE =
     R"(
 import ext: C::stdio
 import usr: ffi::C

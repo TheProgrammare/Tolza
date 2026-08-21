@@ -2,7 +2,7 @@
 
 🇫🇷 ![Français](docs/README_FR.md)
 
-![Velox logo title](logo/velox-logo-title.svg)
+![Tolza logo title](logo/tolza-logo-title.svg)
 
 **Static composition, dynamic possibilities.**
 
@@ -20,28 +20,35 @@
 </div>
 
 
-Velox is a statically typed, garbage-collector-free systems programming language designed for **deterministic, explicit, and secure code**.
+Tolza is a statically typed, garbage-collector-free systems programming language designed for **deterministic, explicit, and secure code**.
 
 It targets domains where control over memory, data access, and execution costs is critical:
 game engines, simulation, embedded systems, runtimes, and deterministic backends.
 
-Velox deliberately avoids implicit behavior in favor of clarity, predictability, and compile-time guarantees.
+Tolza deliberately avoids implicit behavior in favor of clarity, predictability, and compile-time guarantees.
 
 > For technical implementation details, see the ![MANIFEST](MANIFEST.md)
 
-> For VSCode plugin, see [here](https://github.com/TheProgrammare/Velox-VScode-Plugin)
+> For VSCode plugin, see [here](https://github.com/TheProgrammare/Tolza-VScode-Plugin)
 
-## Why Velox?
+## Why Tolza?
 
 Modern systems languages each make different trade-offs:
 
 - **C / C++** are expressive but unsafe by default and have a heavy legacy
-- **Rust** is safe but relies on a global borrow checker and complex lifetime reasoning  
-- **Zig** is simple and explicit, but largely permissive
+- **Rust** is safe but relies on a global borrow checker and complex lifetime reasoning
+- **Zig** is simple and explicit, but too permissive
 
-Velox explores a different approach:
+Tolza explores a different approach:
 
-> **Safety through explicit capabilities and static composition, without garbage collection or hidden runtime behavior.**
+> **Safety through explicit capabilities and static composition, without garbage collection or hidden heavy runtime behavior.**
+
+## The name Tolza
+
+**Tolza** is an old Occitan derivative of **Tolosa**, the Occitan name for Toulouse (France). Attested as early as the 12th century, *Tolza* could refer to **the land of Toulouse, its inhabitants, or even a Toulouse coin**. It derives from the medieval demonym *Tolosan/Tolosà*, meaning “a person from Tolosa,”. At its origin, **Tolosa** is itself a very ancient pre-Roman place name, predating the development of the Occitan language.
+
+> The Tolza programming language was conceived in Toulouse, bringing this historical name into a modern technological context.
+
 
 ## Core Principles
 
@@ -57,7 +64,7 @@ Nothing “just happens”.
 > But there is some conventions to avoid the syntax boilerplate
 
 ### 2. Memory safety via explicit capabilities
-Velox does not use a garbage collector or a borrow checker.
+Tolza does not use a garbage collector or a borrow checker.
 
 Instead, it relies on a system of **explicit capabilities** that control:
 - read access
@@ -70,7 +77,7 @@ These rules are:
 - enforced at compile time
 
 ### 3. Static composition over inheritance
-Velox does not use classical object-oriented inheritance.
+Tolza does not use classical object-oriented inheritance.
 
 It favors **structural facet model (SFM)**:
 - facets are set of variables
@@ -121,7 +128,7 @@ fn main() {
 ```
 
 ### 4. Strong typing with explicit costs
-Velox makes value semantics explicit by distinguishing between:
+Tolza makes value semantics explicit by distinguishing between:
 - `copy`
 - `ref` (immutable reference)
 - `mut` (mutable reference)
@@ -133,7 +140,7 @@ This makes performance characteristics visible and auditable.
 
 ## A Simple Example
 
-```velox
+```tolza
 faczt Vec2 {
     x: f32 = 0,
     y: f32 = 0,
@@ -152,7 +159,7 @@ In this example:
 
 ## Some Utilities
 ### 1. Async and Messaging (Overview)
-Velox provides an async model designed to remain:
+Tolza provides an async model designed to remain:
 - deterministic
 - capability-safe
 - free of implicit shared state
@@ -163,7 +170,7 @@ Full details are described in the language manifesto.
 
 ### 2. Small and Large Project Support
 
-Velox is designed to scale from small scripts to large projects:
+Tolza is designed to scale from small scripts to large projects:
 
 - Modules can be imported/exported with full namespace isolation  
 - Only the symbols actually used are imported  
@@ -172,17 +179,17 @@ Velox is designed to scale from small scripts to large projects:
 
 ### 3. Native External Module Binder
 
-Velox allows the use of external code with minimal boilerplate and no name collisions:
+Tolza allows the use of external code with minimal boilerplate and no name collisions:
 
 - External functions, globals, and types from an imported library are automatically declared in a binding .json (see [FFI_JSON](docs/FFI_JSON.md)) 
 - All operations on external elements are considered inherently unsafe  
-- Anyone can write a .json binder, allowing other language communities to provide recommended bindings for Velox  
+- Anyone can write a .json binder, allowing other language communities to provide recommended bindings for Tolza  
 - Currently, only C libraries are supported natively (use the ffi .json interface without any .json file)
 
 > Only the C binder is compiler-native. A copy of the C binder script is included to illustrate the binding logic.
 
 ### Example: Using a C Library
-```Velox
+```Tolza
 import bind/C/stdio as C
 
 fn main() {
@@ -197,18 +204,18 @@ Explanation:
 
 > The compiler requires access to the library code to generate the bindings (for C).
 
-# What Velox Is Not
+# What Tolza Is Not
 - ❌ An object-oriented language
 - ❌ A garbage-collected language
 - ❌ A dynamic or scripting language
-- ❌ A language killer (the C language and his lib is the ally of Velox !)
+- ❌ A language killer (the C language and his lib is the ally of Tolza !)
 - ❌ A language optimized for minimal syntax or beginner friendliness (it's depends of the approach)
 
-Velox prioritizes predictability and convenience.
+Tolza prioritizes predictability and convenience.
 
 # Project Status
 
-Velox is currently:
+Tolza is currently:
 - in the design phase
 - unstable and subject to change
 - intended as both a practical language and a research platform

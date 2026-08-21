@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <iostream>
+#include <print>
 #include <ostream>
 #include <string>
 #include <filesystem>
@@ -18,6 +18,7 @@
 
 #include "binder/ffi_c_reader.hpp"
 #include "codegen/codegen_type.hpp"
+#include "misc/notification/notification.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/module.hpp"
@@ -44,8 +45,6 @@ inference::Arena  compiler::inference  = inference::Arena();
 
 compiler::Compiler        compiler::COMPILER = compiler::Compiler();
 common::compiler::Options compiler::OPTIONS  = common::compiler::Options();
-
-const std::string common::SOFTWARE_NAME = "velox-compiler";
 
 namespace fs = std::filesystem;
 
@@ -100,19 +99,19 @@ bool compiler::Compiler::start_compilation()
   auto start = std::chrono::high_resolution_clock::now();
 
   if (compiler::OPTIONS.dir.current_config_file.empty() && !mute) {
-    std::cout << "\n[build:warning] Raw compilation command detected, "
-                 "please use 'velox-toolchain' to develop proprely with the Velox programming language.\n"
-              << "\n";
+    std::println(
+        "\n[build:warning] Raw compilation command detected, "
+        "please use 'tolza-toolchain' to develop proprely with the Tolza programming language.\n");
   }
 
   {
-    auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C.vlx";
+    auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C.tlz";
     /*if (!fs::exists(p)) */ (void)pipeline.generate_libc_wrappers();
   }
 
   if (!mute) {
-    std::cout << "\n[velox-compiler] Compilation Started\n";
-    std::cout << "  Config file used: \"" << compiler::OPTIONS.dir.current_config_file << "\"\n";
+    std::println("\n[tolza-compiler] Compilation Started");
+    std::println("  Config file used: \"{}\'", compiler::OPTIONS.dir.current_config_file);
   }
 
   // filesystem
@@ -121,10 +120,12 @@ bool compiler::Compiler::start_compilation()
 
   if (CUs.empty()) {
     if (!mute) {
-      std::cout << "[build] No files found at the source folder path:\n  " << target_dir << "\n";
-      std::cout << "  Check if the source folder path is correct.\n";
-      std::cout << "  Or start your project by creating your first script in the source folder path.";
-      std::cout << "\n";
+      std::println(
+          R"([build] No files found at the source folder path:
+  "{}"
+  Check if the source folder path is correct.
+  Or start your project by creating your first script in the source folder path.)",
+          target_dir.string());
     }
     return false;
   }
@@ -136,7 +137,7 @@ bool compiler::Compiler::start_compilation()
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
     for (const auto& [cuid, errs] : errors) {
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
-      for (const auto& err : errs) std::cout << err.print_userfriendly_error();
+      for (const auto& err : errs) std::println("{}", err.print_userfriendly_error());
     }
 
     if (compiler::pipeline.unprepared_compilation_units.empty()) {
@@ -163,7 +164,8 @@ bool compiler::Compiler::start_compilation()
     auto end   = std::chrono::high_resolution_clock::now();
     auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-    std::cout << "[velox-compiler] Compilation failed " color_YELLOW << milli << " ms" color_RESET "\n";
+    std::println("[tolza-compiler] Compilation failed {} ms", milli);
+    notification::notify("Tolza-Compiler", std::format("Compilation failed - {:.3f} ms", milli));
     return false;
   }
 
@@ -190,7 +192,8 @@ bool compiler::Compiler::start_compilation()
   auto end   = std::chrono::high_resolution_clock::now();
   auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-  std::cout << "[velox-compiler] Compilation successfully ended " color_YELLOW << milli << " ms" color_RESET "\n";
+  std::println("[tolza-compiler] Compilation successfully ended {} ms", milli);
+  notification::notify("Tolza-Compiler", std::format("Compilation successfully ended - {} ms", milli));
 
   return success;
 }
@@ -198,25 +201,25 @@ bool compiler::Compiler::start_compilation()
 void compiler::Compiler::print_errors() const
 {
   if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
-    std::cerr << "@@VELOX_EXORDIUM_DIAGNOSTICORUM@@\n[\n";
+    std::println(stderr, "@@TOLZA_EXORDIUM_DIAGNOSTICORUM@@\n[");
 
   const auto last_cuid = errors.back().first;
   for (const auto& [cuid, errs] : errors) {
 
     for (size_t i = 0; i < errs.size(); i++) {
       const auto err = errs[i];
-      std::cerr << err.print_error();
+      std::print(stderr, "{}", err.print_error());
       if (i != errs.size() - 1)
-        std::cerr << ",\n";
+        std::println(stderr, ",");
       else
-        std::cerr << "\n";
+        std::println(stderr);
     }
 
-    if (last_cuid != cuid) std::cerr << ",\n";
+    if (last_cuid != cuid) std::println(stderr, ",");
   }
 
   if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
-    std::cerr << "]\n@@VELOX_CLAUSULA_DIAGNOSTICORUM@@";
+    std::print(stderr, "]\n@@TOLZA_CLAUSULA_DIAGNOSTICORUM@@");
 }
 
 

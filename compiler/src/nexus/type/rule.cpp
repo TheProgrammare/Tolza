@@ -35,7 +35,7 @@ bool type::rule::is_facet_subset(const std::vector<type::ID>& base, const std::v
   return true;
 }
 
-template <typename T, typename U>
+template <type::Generic T, type::Generic U>
 std::pair<T*, U*> commutative_cast(type::ID from, type::ID to) noexcept
 {
   T* from_ty1 = from.as<T>();
@@ -55,7 +55,7 @@ std::pair<T*, U*> commutative_cast(type::ID from, type::ID to) noexcept
   return {from_ty1, to_ty1};
 }
 
-template <typename T>
+template <type::Generic T>
 T* commutative_one_cast(type::ID from, type::ID to) noexcept
 {
   T* from_ty1 = from.as<T>();
@@ -79,7 +79,7 @@ bool type::rule::can_explicit_cast(type::ID from, type::ID to) noexcept
   const auto& ty_to   = to.get();
 
   auto commutative_types = [&](type::ETypeKind kind1, type::ETypeKind kind2) -> bool {
-    return (ty_from.kind() == kind1 && ty_to.kind() == kind2) || (ty_from.kind() == kind2 && ty_to.kind() == kind1);
+    return (ty_from.kind == kind1 && ty_to.kind == kind2) || (ty_from.kind == kind2 && ty_to.kind == kind1);
   };
 
   // ==============================
@@ -108,7 +108,7 @@ bool type::rule::can_explicit_cast(type::ID from, type::ID to) noexcept
   // ==============================
   // between form to view
   // ==============================
-  if (ty_from.kind() == type::ETypeKind::Form && ty_from.kind() == type::ETypeKind::View) {
+  if (ty_from.kind == type::ETypeKind::Form && ty_from.kind == type::ETypeKind::View) {
     const auto* form = from.as<type::Form>();
     const auto* view = to.as<type::View>();
     assert(view);
@@ -119,7 +119,7 @@ bool type::rule::can_explicit_cast(type::ID from, type::ID to) noexcept
   // ==============================
   // between cune buffer to cstr or str
   // ==============================
-  if (ty_from.kind() == type::ETypeKind::Array && ty_to.kind() == type::ETypeKind::String) {
+  if (ty_from.kind == type::ETypeKind::Array && ty_to.kind == type::ETypeKind::String) {
     bool valid_to = false;
 
     if (const auto* to_ptr = ty_to.tyid.as<type::String>()) {
@@ -138,10 +138,20 @@ bool type::rule::can_explicit_cast(type::ID from, type::ID to) noexcept
     if (valid_to) return true;
   }
 
+  if (ty_from.kind == type::ETypeKind::String && ty_from.kind == type::ETypeKind::String) {
+    const auto* from_str = ty_from.tyid.as<type::String>();
+    const auto* to_str   = ty_to.tyid.as<type::String>();
+
+    if (from_str->kind == type::ETextType::_str && to_str->kind == type::ETextType::_cstr) return true;
+    if (from_str->kind == type::ETextType::_cstr && to_str->kind == type::ETextType::_str) return true;
+
+    return false;
+  }
+
   // ==============================
   // between rune buffer to text
   // ==============================
-  if (ty_from.kind() == type::ETypeKind::Array && ty_to.kind() == type::ETypeKind::String) {
+  if (ty_from.kind == type::ETypeKind::Array && ty_to.kind == type::ETypeKind::String) {
     bool valid_to = false;
 
     if (const auto* to_ptr = ty_to.tyid.as<type::String>()) {
@@ -186,9 +196,7 @@ bool type::rule::can_explicit_cast(type::ID from, type::ID to) noexcept
 
 bool type::rule::can_implicit_cast(type::ID from, type::ID to) noexcept
 {
-  if (type::ETypeKind_is_iterable(from.kind()) && to.kind() == type::ETypeKind::Slice) return true;
-
-  return false;
+  return type::ETypeKind_is_iterable(from.kind()) && to.kind() == type::ETypeKind::Slice;
 }
 
 

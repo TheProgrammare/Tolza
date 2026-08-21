@@ -74,7 +74,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_fn(type::ID extended_type) 
   n.name = p.parse_name();
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(), "extend " + extended_type.dump() + " fn " + n.name);
+  p.enter_scope(n.nodeid(), std::format("extend {} fn ", extended_type.dump()) + n.name);
 
   (void)p.expect(265, token::ETokenKind::L_PAREN, "Expected start of extension arguments '('", hint);
 
@@ -125,7 +125,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_cast(type::ID extended_type
   n.as_type       = p.p_type->parse_type();
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(), "extend " + extended_type.dump() + " as " + n.as_type.dump());
+  p.enter_scope(n.nodeid(), std::format("extend {} as ", extended_type.dump()) + n.as_type.dump());
 
   {
     auto& self   = p.p_base->inject_parameter(n.nodeid(), 0, "self", ast::EPassMode::ref, extended_type);
@@ -157,7 +157,8 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_bin(type::ID extended_ty
 
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(), "extend " + extended_type.dump() + " op " + std::string(ast::EOp_Bin_to_str(n.bin_op)));
+  p.enter_scope(n.nodeid(),
+                std::format("extend {} op ", extended_type.dump()) + std::string(ast::EOp_Bin_to_str(n.bin_op)));
 
   {
     auto& self   = p.p_base->inject_parameter(n.nodeid(), 0, "self", ast::EPassMode::ref, extended_type);
@@ -191,7 +192,8 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_un(type::ID extended_typ
   n.unary_op      = op;
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(), "extend " + extended_type.dump() + " op " + std::string(ast::EOp_Unary_to_str(n.unary_op)));
+  p.enter_scope(n.nodeid(),
+                std::format("extend {} op ", extended_type.dump()) + std::string(ast::EOp_Unary_to_str(n.unary_op)));
 
   {
     auto& self   = p.p_base->inject_parameter(n.nodeid(), 0, "self", ast::EPassMode::ref, extended_type);
@@ -253,8 +255,8 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_subscript(type::ID exten
   }
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(),
-                "extend " + extended_type.dump() + " op " + std::string(ast::EOp_Subscript_to_str(n.subscript_op)));
+  p.enter_scope(n.nodeid(), std::format("extend {} op ", extended_type.dump())
+                                + std::string(ast::EOp_Subscript_to_str(n.subscript_op)));
 
   {
     auto& self   = p.p_base->inject_parameter(n.nodeid(), 0, "self", ast::EPassMode::ref, extended_type);
@@ -283,8 +285,8 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_transfert(type::ID exten
   n.transfert_op  = op;
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(),
-                "extend " + extended_type.dump() + " op " + std::string(ast::ETransfertType_to_str(n.transfert_op)));
+  p.enter_scope(n.nodeid(), std::format("extend {} op ", extended_type.dump())
+                                + std::string(ast::ETransfertType_to_str(n.transfert_op)));
 
   n.codeblock = p.p_loc->parse_codeblock_instruction();
 
@@ -307,8 +309,8 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_other(type::ID extended_
   n.other_op      = op;
 
   (void)p.add_definition(n.nodeid());
-  p.enter_scope(n.nodeid(),
-                "extend " + extended_type.dump() + " op " + std::string(magic_enum::enum_name(n.other_op)).substr(1));
+  p.enter_scope(n.nodeid(), std::format("extend {} op ", extended_type.dump())
+                                + std::string(magic_enum::enum_name(n.other_op)).substr(1));
 
   // UNUSED
   // forward future grammar

@@ -1,6 +1,6 @@
 /*
  * =============================================================================
- * The Velox programming language (2026.1.1) - Apache License, Version 2.0
+ * The Tolza programming language (2026.1.1) - Apache License, Version 2.0
  * Copyright 2024-2026 Foz Florian
  * =============================================================================
  *
@@ -30,7 +30,6 @@
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/inference.hpp"
-#include "nexus/type/type.hpp"
 
 namespace module
 {
@@ -57,42 +56,20 @@ struct Bind_Package {
   [[nodiscard]] std::string get_file_path() const noexcept;
 };
 
-// to generate a velox file from any ast without any compilation unit creation
 struct AST {
   AST();
+  ~AST();
 
-  static const size_t k_type_offset;
+  Bind_Package bind;
+  const size_t offset;
+  cu::CU*      temp_cu = nullptr;
 
-  Bind_Package            bind;
-  ast::Arena* const       nodes;
-  type::Arena* const      types;
   inference::Arena* const inferences;
+  std::set<std::string>   aliases_defined;
 
-  std::set<std::string> aliases_defined;
-
-  void velox_codegen(std::string_view dest) const;
-
-  template <typename T>
-  [[nodiscard]] T& add_get_node() noexcept;
-
-  template <typename T>
-  [[nodiscard]] T& add_get_type(const type::Qualifier& dec = {}) noexcept;
-
-
-  [[nodiscard]] std::string import_to_str(const ast::Import& p_imp) const noexcept;
-  [[nodiscard]] std::string reexport_to_str(const ast::Global_Reexport& p_imp) const noexcept;
-  [[nodiscard]] std::string typealias_to_str(const ast::Global_Alias_Type& p_ty_alias) const noexcept;
-  [[nodiscard]] std::string facet_to_str(const ast::SFM_Facet& p_facet) const noexcept;
-  [[nodiscard]] std::string form_to_str(const ast::SFM_Form& p_form) const noexcept;
-  [[nodiscard]] std::string union_to_str(const ast::Global_Union& p_union) const noexcept;
-  [[nodiscard]] std::string flag_to_str(const ast::Global_Flag& p_flag) const noexcept;
-  [[nodiscard]] std::string enum_to_str(const ast::Global_Enum& p_enum) const noexcept;
-  [[nodiscard]] std::string func_to_str(const ast::Global_Function& p_func) const noexcept;
-  [[nodiscard]] std::string global_to_str(const ast::Global_Variable& p_glo) const noexcept;
-
-  // necessary because velox_codegen is based on existent compilation unit
-  [[nodiscard]] std::string type_to_str(const type::Type& ty) const noexcept;
+  void tolza_codegen(std::string_view dest);
 };
+
 
 struct FieldLayout {
   size_t offset = 0;
@@ -114,16 +91,16 @@ struct FieldLayout {
 constexpr std::string_view BINDER_FILE_HEADER =
     R"(/*
  * =============================================================================
- *  Velox Compiler - Generated Binding File
+ *  Tolza Compiler - Generated Binding File
  * =============================================================================
  *
- * Velox Compiler Version  : %vc_version
- * Generated on            : %date
+ * Tolza Compiler Version  : {0}
+ * Generated on            : {1}
  * 
- * Source Language         : %language
- * Source Library          : %lib
- * Generation Version      : %g_version
- * Author                  : %author
+ * Source Language         : {2}
+ * Source Library          : {3}
+ * Generation Version      : {4}
+ * Author                  : {5}
  *
  * -----------------------------------------------------------------------------
  * WARNING: This file is auto-generated.
@@ -131,200 +108,142 @@ constexpr std::string_view BINDER_FILE_HEADER =
  * -----------------------------------------------------------------------------
  */
 
-export {
+export {{
 
-extern "%abi" {
+extern "{6}" {{
 )";
 
 
-constexpr std::string_view BINDER_IMPORT_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Import Block
- * ----------------------------------------------------------------------------
- */
-)";
+#define BINDER_HEADER(name)                                                                                            \
+  "\n/*\n"                                                                                                             \
+  " * ----------------------------------------------------------------------------\n"                                  \
+                                                                                                                       \
+  " *  Tolza Binding - " name                                                                                          \
+  "\n"                                                                                                                 \
+                                                                                                                       \
+  " * ----------------------------------------------------------------------------\n"                                  \
+  " */\n"
 
-constexpr std::string_view BINDER_REEXPORT_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Re-export Block
- * ----------------------------------------------------------------------------
- */
-)";
 
-constexpr std::string_view BINDER_ENUM_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Enum Block
- * ----------------------------------------------------------------------------
- */
-)";
+constexpr std::string_view BINDER_IMPORT_HEADER    = BINDER_HEADER("Import Block");
+constexpr std::string_view BINDER_REEXPORT_HEADER  = BINDER_HEADER("Re-export Block");
+constexpr std::string_view BINDER_ENUM_HEADER      = BINDER_HEADER("Enum Block");
+constexpr std::string_view BINDER_FACET_HEADER     = BINDER_HEADER("Facet Block");
+constexpr std::string_view BINDER_UNION_HEADER     = BINDER_HEADER("Union Block");
+constexpr std::string_view BINDER_FLAG_HEADER      = BINDER_HEADER("Flag Block");
+constexpr std::string_view BINDER_GLOBAL_HEADER    = BINDER_HEADER("Global Block");
+constexpr std::string_view BINDER_FUNCTION_HEADER  = BINDER_HEADER("Function Block");
+constexpr std::string_view BINDER_FORM_HEADER      = BINDER_HEADER("Form Block");
+constexpr std::string_view BINDER_TYPEALIAS_HEADER = BINDER_HEADER("Type Block");
 
-constexpr std::string_view BINDER_FACET_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Facet Block
- * ----------------------------------------------------------------------------
- */
-)";
+// {0} extern name
+constexpr std::string_view BINDER_EXTERN_TEMPALTE = "extern \"{0}\" {{\n";
 
-constexpr std::string_view BINDER_UNION_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Union Block
- * ----------------------------------------------------------------------------
- */
-)";
+// {0} name
+// {1} params
+// {2} return
+constexpr std::string_view BINDER_EXTERN_FN_TEMPALTE = "fn {0}({1}) -> {2};\n";
 
-constexpr std::string_view BINDER_FLAG_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Flag Block
- * ----------------------------------------------------------------------------
- */
-)";
+// {0} pass mode
+// {1} name
+// {2} type
+constexpr std::string_view BINDER_EXTERN_PARAM_TEMPALTE = "{0} {1}: {2}";
 
-constexpr std::string_view BINDER_GLOBAL_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Global Block
- * ----------------------------------------------------------------------------
- */
-)";
-
-constexpr std::string_view BINDER_FUNCTION_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Function Block
- * ----------------------------------------------------------------------------
- */
-)";
-
-constexpr std::string_view BINDER_FORM_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Form Block
- * ----------------------------------------------------------------------------
- */
-)";
-
-constexpr std::string_view BINDER_TYPEALIAS_HEADER = R"(
-/*
- * ----------------------------------------------------------------------------
- *  Velox Binding - Type Block
- * ----------------------------------------------------------------------------
- */
-)";
-
-// %0 extern name
-constexpr std::string_view BINDER_EXTERN_TEMPALTE = "extern \"%0\" {\n";
-
-// %0 name
-// %1 params
-// %2 return
-constexpr std::string_view BINDER_EXTERN_FN_TEMPALTE = "fn %0(%1) -> %2;\n";
-
-// %0 pass mode
-// %1 name
-// %2 type
-constexpr std::string_view BINDER_EXTERN_PARAM_TEMPALTE = "%0 %1: %2";
-
-// %0 name
-// %1 underlying_type
-// %2 members
+// {0} name
+// {1} underlying_type
+// {2} members
 constexpr std::string_view BINDER_EXTERN_FLAG_TEMPLATE =
     R"(
-flag %0 : %1 {
-  %2
-}
+flag {0} : {1} {{
+  {2}
+}}
 )";
 
-// %0 name
-// %1 members
+// {0} name
+// {1} members
 constexpr std::string_view BINDER_EXTERN_ENUM_TEMPLATE =
     R"(
-enum %0 {
-  %1
-}
+enum {0} {{
+  {1}
+}}
 )";
 
-// %0 name
-// %1 members
+// {0} name
+// {1} members
 constexpr std::string_view BINDER_EXTERN_UNION_TEMPLATE =
     R"(
-union %0 {
-  %1
-}
+union {0} {{
+  {1}
+}}
 )";
 
-// %0 name
-// %1 type
+// {0} name
+// {1} type
 constexpr std::string_view BINDER_EXTERN_FIELD =
     R"(# no default
-%1: %2,)";
+{0}: {1},)";
 
-// %0 path
-// %1 alias
-constexpr std::string_view BINDER_IMPORT_TEMPLATE   = "import %0 as %1\n";
-// %0 path
-// %1 alias
-constexpr std::string_view BINDER_REEXPORT_TEMPLATE = "reexport %0 as %1\n";
+// {0} path
+// {1} alias
+constexpr std::string_view BINDER_IMPORT_TEMPLATE   = "import {0} as {1}\n";
+// {0} path
+// {1} alias
+constexpr std::string_view BINDER_REEXPORT_TEMPLATE = "reexport {0} as {1}\n";
 
-// %0 name
-// %1 members
+// {0} name
+// {1} members
 constexpr std::string_view BINDER_EXTERN_FACET_TEMPLATE =
     R"(
-facet %0 {
-  %1
-}
+facet {0} {{
+  {1}
+}}
 )";
 
-// %0 name
-// %1 members
+// {0} name
+// {1} members
 constexpr std::string_view BINDER_EXTERN_FORM_TEMPLATE =
     R"(
-form %0 {
-  %1
-}
+form {0} {{
+  {1}
+}}
 )";
 
-// %0 kind
-// %1 name
-// %2 type
-constexpr std::string_view BINDER_EXTERN_GLOBAL_TEMPLATE = "%0 %1: %2\n";
+// {0} kind
+// {1} name
+// {2} type
+constexpr std::string_view BINDER_EXTERN_GLOBAL_TEMPLATE = "{0} {1}: {2}\n";
 
-// %0 name
-// %1 type
-constexpr std::string_view BINDER_EXTERN_TYPEALIAS_TEMPLATE = "type %0 = %1\n";
+// {0} name
+// {1} type
+constexpr std::string_view BINDER_EXTERN_TYPEALIAS_TEMPLATE = "type {0} = {1}\n";
 
-// %0 name
-constexpr std::string_view BINDER_EXTERN_OPAQUE_TEMPLATE = "type %0 = opaque\n";
+// {0} name
+constexpr std::string_view BINDER_EXTERN_OPAQUE_TEMPLATE = "type {0} = opaque\n";
 
-// %0 parameters
-// %1 retuns
-constexpr std::string_view BINDER_PROTOTYPE_TEMPLATE = "fn(%0) -> (%1)";
+// {0} parameters
+// {1} retuns
+constexpr std::string_view BINDER_PROTOTYPE_TEMPLATE = "fn({0}) -> ({1})";
 
-// %0  binding.language
-// %1  target.triple
-// %2  target.arch
-// %3  target.platform
-// %4  target.env
-// %5  libc.kind
-// %6  libc.version
-// %7  compiler.clang_version
-// %8  features.gnu_source
-// %9  features.posix_c_source
-// %10 features.file_offset_bits
-// %11 features.time_bits
-// %12 sysroot.path
-// %13 sysroot.hash
+// {0}  %binding.language
+// {1}  %target.triple
+// {2}  %target.arch
+// {3}  %target.platform
+// {4}  %target.env
+// {5}  %libc.kind
+// {6}  %libc.version
+// {7}  %compiler.clang_version
+// {8}  %features.gnu_source
+// {9}  %features.posix_c_source
+// {10} %features.file_offset_bits
+// {11} %features.time_bits
+// {12} %sysroot.path
+// {13} %sysroot.hash
 constexpr std::string_view BINDER_MANIFEST = R"(
 # ==============================================================================
-#  Velox Compiler - Generated Binding Manifest
+#  Tolza Compiler - Generated Binding Manifest
 # ==============================================================================
 # 
-#  Velox Compiler Version  : %vc_version
+#  Tolza Compiler Version  : %vc_version
 #  Generated on            : %date
 #  
 #  Source Language         : %language

@@ -2,8 +2,6 @@
 
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/ast/data.hpp"
 
 
 namespace ast
@@ -29,6 +27,7 @@ struct Operation_Is final {
 struct Operation_In final {
   NODE_HEADER(Operation_In);
 
+  SET_NODE(left);
   SET_NODE(right);
 };
 

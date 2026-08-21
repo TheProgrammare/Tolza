@@ -44,7 +44,7 @@ llvm::Value* codegen::Insurance::ensure_lvalue(ast::ID expr, bool is_silent_erro
   if (v->getType()->isPointerTy()) return v;
 
   if (!is_silent_error)
-    res.add_error(225, *expr.get(), "Expected a lvalue expression.", "a lvalue is frequently a variable.");
+    res.add_error(225, expr.get(), "Expected a lvalue expression.", "a lvalue is frequently a variable.");
   return nullptr;
 }
 
@@ -63,7 +63,7 @@ llvm::Value* codegen::Insurance::ensure_variadic_arg(ast::ID expr) noexcept
     auto* v = ensure_rvalue(expr);
     return res.tools.primitive_coerce(v, v->getType(), LLVM_TYPEID_s32);
   }
-  if (ty->isFloatingPointTy() && ty->getIntegerBitWidth() < 32) {
+  if (ty->isFloatingPointTy() && ty->getPrimitiveSizeInBits() < 32) {
     auto* v = ensure_rvalue(expr);
     return res.tools.primitive_coerce(v, v->getType(), LLVM_TYPEID_f64);
   }

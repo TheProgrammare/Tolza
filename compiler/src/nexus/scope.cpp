@@ -35,7 +35,7 @@ scope::Scope scope::Scope::make_from_node(ast::ID nodeid) noexcept
 scope::Scope scope::Scope::make_from_script_root(module::ID modid, ast::ID nodeid) noexcept
 {
   return {
-      .debug_name = "root \"" + modid.cu().get().file_info.get_file_name() + "\"",
+      .debug_name = std::format("root \"{}\"", modid.cu().get().file_info.get_file_name()),
       .nodeid     = nodeid,
       .modid      = modid,
   };

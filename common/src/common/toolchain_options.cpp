@@ -1,6 +1,6 @@
 #include "toolchain_options.hpp"
 
-#include <iostream>
+#include <print>
 #include <fstream>
 #include <filesystem>
 #include <string_view>
@@ -15,15 +15,15 @@
 namespace fs = std::filesystem;
 
 
-#define OUT_LOG std::cout << "[velox] "
-#define OUT_ERR std::cerr << "[velox:ERROR] "
+#define HLOG "[tolza] "
+#define HERR "[tolza:ERROR] "
 
 
 common::toolchain::Options common::toolchain::Options::read_config(std::string_view path) noexcept
 {
   toolchain::Options t;
   if (!fs::exists(path)) {
-    OUT_ERR << "File at \"" << path << "\" dosen't exists.";
+    std::println(stderr, HERR "File at \"{}\" dosen't exist.", path);
     return {};
   }
   toml::table tbl = toml::parse_file(path.data());
@@ -33,16 +33,16 @@ common::toolchain::Options common::toolchain::Options::read_config(std::string_v
 
   bool file_valid = true;
   if (t.compiler_used.empty() || !fs::exists(t.compiler_used)) {
-    OUT_ERR << "No valid compiler used path \"" + t.compiler_used + "\"\n";
+    std::println(stderr, HERR "No valid compiler used path \"{}\"", t.compiler_used);
     file_valid = false;
   }
   if (!toolchain::OPTIONS.custom_compiler_dir.empty() && !fs::exists(t.custom_compiler_dir)) {
-    OUT_ERR << "No valid custom compiler dir \"" << t.custom_compiler_dir << "\", it dosen't exist\n";
+    std::println(stderr, HERR "No valid custom compiler dir \"{}\", it dosen't exist\n", t.custom_compiler_dir);
     file_valid = false;
   }
 
   if (!file_valid) {
-    std::cout << "[velox] Please, check the toolchain.toml file at \"" << path << "\"\n";
+    std::println(HLOG "Please, check the toolchain.toml file at \"{}\"", path);
     return {};
   }
 
@@ -52,15 +52,8 @@ common::toolchain::Options common::toolchain::Options::read_config(std::string_v
 
 void common::toolchain::Options::write_config(std::string_view path) noexcept
 {
-  std::string str(TOOLCHAIN_CONFIG);
+  std::string str = std::format(TOOLCHAIN_CONFIG, custom_compiler_dir, compiler_used);
 
-  common::utils::fmt_template(str, {
-                                       {"custom_compiler_dir", custom_compiler_dir},
-                                       {"compiler_used",       compiler_used      }
-  });
-
-  // make sure the toolchain.toml exists
-  init_toolchain_context();
   std::ofstream f(path.data());
   f.clear();
   f << str << std::flush;
@@ -69,12 +62,12 @@ void common::toolchain::Options::write_config(std::string_view path) noexcept
 void common::toolchain::init_toolchain_context() noexcept
 {
   // write config
-  static const fs::path dir  = common::env::get_config_dir();
-  static const fs::path file = dir / "toolchain.toml";
+  static const fs::path dir = common::env::get_config_dir();
+  static const fs::path f   = dir / "toolchain.toml";
 
   fs::create_directories(dir);
 
-  if (!fs::exists(file)) {
+  if (!fs::exists(f)) {
     toolchain::Options t;
 
     std::string compiler;
@@ -87,15 +80,15 @@ void common::toolchain::init_toolchain_context() noexcept
 
     t.custom_compiler_dir = dir;
     t.compiler_used       = compiler;
-    t.write_config(file.string());
+    t.write_config(f.string());
   }
 
-  if (!fs::exists(file)) {
-    OUT_ERR << "File at \"" + file.string() + "\" dosen't exists.\n";
+  if (!fs::exists(f)) {
+    std::println(stderr, HERR "File at \"{}\" dosen't exist.", f.string());
     return;
   }
 
-  toolchain::OPTIONS = common::toolchain::Options::read_config(file.string());
+  toolchain::OPTIONS = common::toolchain::Options::read_config(f.string());
 }
 
 
@@ -103,7 +96,7 @@ void common::toolchain::Options::apply_compiler(std::string_view file) noexcept
 {
   const fs::path f(file);
   if (!fs::exists(f)) {
-    OUT_ERR "The file at " << f << " dosen't exists.";
+    std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());
     return;
   }
 
@@ -122,11 +115,11 @@ void common::toolchain::Options::cogito_compiler(std::string_view file) noexcept
   const fs::path f(file);
 
   if (!fs::exists(f)) {
-    OUT_ERR "The file at " << f << " dosen't exists.\n";
-    OUT_LOG "Please, set a valid path in config at " << fs::path(common::env::get_config_dir()) << "\n";
+    std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());
+    std::println(HLOG, "Please, set a valid path in config at \"{}\"", common::env::get_config_dir());
     return;
   }
 
-  std::string cmd = std::string(file) + " velox-toolchain cogito";
+  std::string cmd = std::format("{} tolza-toolchain cogito", file);
   std::system(cmd.c_str());
 }

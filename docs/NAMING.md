@@ -87,7 +87,7 @@ use this for too long names and for most used local variable or temporary variab
 
 | type | pattern | mangling |
 |-|-|-|
-| velox mangling symbol |                         `_V_` |                                               |
+| tolza mangling symbol |                         `_V_` |                                               |
 | <path> |                                `[<module>]<namespaces>` |
 | <gentys> instance | `<gentys>`: `G<count>_<types>` |           `G2_str_i32` |
 | <gentys> symbol | `<gentys>`: `S<count>_<types>` |           `S2_T_U` |

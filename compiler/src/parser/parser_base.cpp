@@ -89,8 +89,8 @@ ast::ID parser::Parser_Base::parse_import() noexcept
   const bool scp_r = p.get_current_scope().port.import_module(mod, imp.nodeid());
   assert(scp_r && "Importation failed");
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├import: " << imp.alias << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├import: {}", imp.alias);
 #endif
 
   p.CU.imports.insert_or_assign(imp.nodeid(), mod);
@@ -107,8 +107,8 @@ ast::ID parser::Parser_Base::parse_export() noexcept
   auto& exp_node = p.add_get_node<ast::Global_Export>(p.peek().tokid);
 
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├set scope export" << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├set scope export");
 #endif
 
   p.current_visibility = EVisibility::Cross_File_Scope;
@@ -117,8 +117,8 @@ ast::ID parser::Parser_Base::parse_export() noexcept
   p.CU.node_export     = exp_node.nodeid();
 
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├unset scope export" << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├unset scope export");
 #endif
 
   return exp_node.nodeid();
@@ -151,8 +151,8 @@ ast::ID parser::Parser_Base::parse_reexport() noexcept
 
   const bool result = p.get_current_module().port.reexport_item(mod, reexp.nodeid());
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├reexport: " << reexp.alias << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├reexport: {}", reexp.alias);
 #endif
   assert(result && "reexport failed");
 
@@ -175,8 +175,8 @@ ast::ID parser::Parser_Base::parse_extern() noexcept
       p.tok_to_str(p.expect(153, token::ETokenKind::L_TEXTUAL, "Expected literal string to define ABI.", hint).tokid);
 
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├set scope extern" << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├set scope extern");
 #endif
 
   p.extern_abi       = ext_node.abi;
@@ -184,8 +184,8 @@ ast::ID parser::Parser_Base::parse_extern() noexcept
   p.extern_abi.clear();
 
 #ifdef DEBUG
-  for (size_t i = 0; i < p.scope_depth; ++i) std::cout << "│ ";
-  std::cout << "├unset scope extern" << "\n";
+  for (size_t i = 0; i < p.scope_depth; ++i) std::print("│ ");
+  std::println("├unset scope extern");
 #endif
 
   return ext_node.nodeid();
@@ -368,7 +368,7 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
 
     count++;
     if (count > 12) {
-      p.add_error(114, "Explicit path for identifier is too long (> " + std::to_string(12) + ")", hint);
+      p.add_error(114, std::format("Explicit path for identifier is too long (> {})", std::to_string(12)), hint);
       break;
     }
   }

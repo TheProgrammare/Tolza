@@ -86,7 +86,7 @@ ast::ID parser::Parser_Expression::base_expression()
   }
 
 
-  p.add_error(79, "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid)) + "' keyword.", hint);
+  p.add_error(79, std::format("Unexpected '{}' keyword.", p.tok_to_str(p.peek().tokid)), hint);
 
   THROW_BAD_NODE;
 }
@@ -100,10 +100,8 @@ ast::ID parser::Parser_Expression::suffix_expression(ast::ID p_base_expr)
 {
   if (!p_base_expr) THROW_BAD_NODE;
 
-  const auto* node = p_base_expr.get();
-
   // is a literal expression, no suffix allowed
-  if (ast::ENodeKind_is_literal(node->kind)) {
+  if (ast::ENodeKind_is_literal(p_base_expr.kind())) {
     // only range and cast suffix allowed
     if (p.check_any({token::ETokenKind::RANGE, token::ETokenKind::RANGE_INCLUSIVE})) {
       p_base_expr = p.p_lit->literal_range(p_base_expr);

@@ -49,7 +49,7 @@ definition::ID resolver::Symbol::resolve_id_sym(scope::ID ctx, ast::ID nodeid, s
     return sym;
   }
 
-  if (!is_silent_error) add_error(165, *nodeid.get(), "Symbol definition not found!", "");
+  if (!is_silent_error) add_error(165, nodeid.get(), "Symbol definition not found!", "");
   return NO_ID;
 }
 definition::ID resolver::Symbol::resolve_path_sym(module::ID ctx, ast::ID nodeid, std::string_view id,
@@ -61,7 +61,7 @@ definition::ID resolver::Symbol::resolve_path_sym(module::ID ctx, ast::ID nodeid
   const auto defid = module::resolve_path_symbol(ctx, path, anchor, id);
   if (defid) return defid;
 
-  if (!is_silent_error) add_error(165, *nodeid.get(), "Symbol definition not found!", "");
+  if (!is_silent_error) add_error(165, nodeid.get(), "Symbol definition not found!", "");
   return NO_ID;
 }
 
@@ -92,7 +92,7 @@ void resolver::Symbol::resolve_node(ast::ID nodeid) noexcept
 size_t resolver::Symbol::start_resolver() noexcept
 {
   size_t count = 0;
-  for (const auto& node : CU.nodes->nodes) {
+  for (const auto& node : CU.ast->nodes) {
     resolve_node(ast::ID::make(CU.cuid, count++));
   }
 
@@ -105,9 +105,9 @@ size_t resolver::Symbol::start_resolver() noexcept
 void resolver::Symbol::ensure_types_symbols() noexcept
 {
   for (const auto& elem : CU.types->types) {
-    const auto* ty = elem.get();
+    const auto tyid = elem.id;
 
-    if (const auto* array = ty->tyid.as<type::Array>()) {
+    if (const auto* array = tyid.as<type::Array>()) {
       if (array->size_expression) {
         resolve_node(array->size_expression);
         if (auto def = array->size_expression.def()) {
@@ -116,13 +116,13 @@ void resolver::Symbol::ensure_types_symbols() noexcept
 
           if (auto* glo = n.as<ast::Global_Variable>()) {
             if (glo->kind != ast::EVariableKind::_const) {
-              add_error_two_nodes(282, *array->size_expression.get(), glo->header,
+              add_error_two_nodes(282, array->size_expression.get(), glo->header,
                                   "Illegal size definition from a runtime variable",
                                   "define a static size with a compiletime variable like: `const size = 100`");
             }
           } else if (auto* loc = n.as<ast::Local_Variable>()) {
             if (loc->kind != ast::EVariableKind::_const) {
-              add_error_two_nodes(282, *array->size_expression.get(), loc->header,
+              add_error_two_nodes(282, array->size_expression.get(), loc->header,
                                   "Illegal size definition from a runtime variable",
                                   "define a static size with a compiletime variable like: `const size = 100`");
             }
@@ -260,8 +260,8 @@ void resolver::Symbol::resolve_Literal_Record(ast::Literal_Record& n) noexcept
       return def_f->name == fname;
     });
     if (it != def->fields.end()) {
-      add_error_two_nodes(268, *fid.get(), *lit_def.node().get(),
-                          "The field name \"" + fname + "\" for the facet \""
+      add_error_two_nodes(268, fid.get(), lit_def.node().get(),
+                          std::format("The field name \"{}\" for the facet \"", fname)
                               + lit_def.node().as<ast::SFM_Facet>()->name + "\" dosen't exist.",
                           "");
       return;

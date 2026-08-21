@@ -13,10 +13,12 @@
 #include <vector>
 
 
-constexpr uint32_t INVALID_ID = -1;
-constexpr uint32_t WILCARD_ID = -2;
-constexpr uint32_t PARENT_ID  = -3;
-constexpr uint32_t MASK_32    = 0xFFFFFFFFUL;
+constexpr uint32_t INVALID_ID   = -1;
+constexpr uint32_t WILCARD_ID   = -2;
+constexpr uint32_t PARENT_ID    = -3;
+constexpr uint32_t MASK_32      = 0xFFFFFFFFUL;
+constexpr uint32_t FLAG_TEMP_CU = 1U << 31;
+
 
 namespace cu
 {
@@ -220,8 +222,18 @@ DEF_ID(
     [[nodiscard]] cu::CU&             get() noexcept;
     // get compilation unit
     [[nodiscard]] const cu::CU&       get() const noexcept;
+    // check if is a temporary compilation unit
+    [[nodiscard]] bool                is_temp() const noexcept;
     // get the main compilation unit : index 0
     [[nodiscard]] static constexpr ID main() noexcept { return cu::ID::make(0); }
+    // get the cu offset
+    [[nodiscard]] uint32_t            offset() const noexcept { return id & ~FLAG_TEMP_CU; };
+    // set the offset
+    void set_offset(uint32_t offset) noexcept { id = (id & FLAG_TEMP_CU) | (offset & ~FLAG_TEMP_CU); }
+    // set temp
+    void set_temp() noexcept { id |= FLAG_TEMP_CU; };
+    // unset temp
+    void unset_temp() noexcept { id &= ~FLAG_TEMP_CU; };
 
 )
 
@@ -232,6 +244,13 @@ namespace ast
 
 enum class ENodeKind : uint8_t;
 struct NodeHeader;
+
+template <typename T>
+concept Generic = requires(T obj) {
+  obj.header;
+  obj.static_kind;
+  obj.nodeid();
+};
 
 // node identifier
 DEF_COMPOSIT_ID(ID,
@@ -265,12 +284,12 @@ DEF_COMPOSIT_ID(ID,
                 [[nodiscard]] bool is_lvalue() const noexcept;
 
                 // get node reference
-                [[nodiscard]] ast::NodeHeader * get() noexcept;
+                [[nodiscard]] ast::NodeHeader & get() noexcept;
                 // get node reference
-                [[nodiscard]] const ast::NodeHeader* get() const noexcept;
+                [[nodiscard]] const ast::NodeHeader& get() const noexcept;
 
-                template <typename T> [[nodiscard]] T * as() noexcept;
-                template <typename T> [[nodiscard]] const T* as() const noexcept;
+                template <Generic T> [[nodiscard]] T * as() noexcept;
+                template <Generic T> [[nodiscard]] const T* as() const noexcept;
 
 )
 
@@ -325,9 +344,16 @@ DEF_ID(ID)
 namespace type
 {
 
-struct Type;
+struct TypeHeader;
 enum class EPrimitiveTypeKind : uint8_t;
 enum class ETypeKind : uint8_t;
+
+template <typename T>
+concept Generic = requires(T obj) {
+  obj.header;
+  obj.static_kind;
+  obj.tyid();
+};
 
 // type identifier
 DEF_COMPOSIT_ID(
@@ -346,13 +372,13 @@ DEF_COMPOSIT_ID(
     [[nodiscard]] std::string                                       dump() const noexcept;
 
     // get type
-    [[nodiscard]] Type & get() noexcept;
+    [[nodiscard]] TypeHeader & get() noexcept;
     // get type
-    [[nodiscard]] const Type& get() const noexcept;
+    [[nodiscard]] const TypeHeader& get() const noexcept;
     // get type
-    template <typename T> [[nodiscard]] T * as() noexcept;
+    template <Generic T> [[nodiscard]] T * as() noexcept;
     // get type
-    template <typename T> [[nodiscard]] const T* as() const noexcept;
+    template <Generic T> [[nodiscard]] const T* as() const noexcept;
 
     [[nodiscard]] static constexpr ID make_primitive(EPrimitiveTypeKind prim) noexcept {
       auto raw = static_cast<size_t>(prim);

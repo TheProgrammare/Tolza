@@ -10,8 +10,8 @@ namespace ast
 {
 
 #define NODE_HEADER(name)                                                                                              \
-  static constexpr ENodeKind static_kind = ENodeKind::name;                                                            \
   NodeHeader                 header      = NodeHeader(ENodeKind::name);                                                \
+  static constexpr ENodeKind static_kind = ENodeKind::name;                                                            \
   [[nodiscard]] ID           nodeid() const noexcept                                                                   \
   {                                                                                                                    \
     return header.nodeid;                                                                                              \

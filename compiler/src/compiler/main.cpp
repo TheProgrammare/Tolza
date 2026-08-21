@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,16 @@
 
 #include <CLIUtils/CLI11.hpp>
 
+#include <print>
+
 #include "compiler.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
 #include <common/common.hpp>
 
-int run_velox(int argc, const char* argv[])
+int run_tolza(int argc, const char* argv[])
 {
-  CLI::App            app{"Velox compiler (" + common::SOFTWARE_VERSION + ")", common::SOFTWARE_NAME};
+  CLI::App            app{std::format("Tolza compiler ({})", SOFTWARE_VERSION), SOFTWARE_NAME};
   compiler::Commander commander(app, argc, argv);
 
   CLI11_PARSE(app, argc, argv);
@@ -37,11 +39,11 @@ int run_velox(int argc, const char* argv[])
 int main(int argc, const char* argv[])
 {
   try {
-    return run_velox(argc, argv);
+    return run_tolza(argc, argv);
   } catch (const std::exception& e) {
-    std::cerr << "fatal error: " << e.what() << '\n';
+    std::println(stderr, "fatal error: {}", e.what());
   } catch (...) {
-    std::cerr << "unknown fatal error\n";
+    std::println(stderr, "unknown fatal error");
   }
 
   return 1;

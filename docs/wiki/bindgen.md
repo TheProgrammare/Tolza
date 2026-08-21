@@ -5,7 +5,7 @@ The bindgen will store the importations of the external lib and generate all the
 
 user script: 
 ```
-// form_messages.vlx
+// form_messages.tlz
 
 import ext: C::stdio
 
@@ -16,7 +16,7 @@ fn speak(s: str) {
 
 bindgen script:
 ```
-// file: bindings/C/stdio.vlxbind
+// file: bindings/C/stdio.tlzbind
 
 export {
 extern "C" {

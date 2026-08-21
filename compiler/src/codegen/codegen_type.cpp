@@ -15,7 +15,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <iostream>
+#include <print>
 #include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/DerivedTypes.h>
 #include <llvm-19/llvm/IR/Function.h>
@@ -180,7 +180,7 @@ llvm::Type* codegen::Codegen_Type::codegen_type(const type::ID tyid) noexcept
 
   llvm::Type* out   = nullptr;
   const auto  canon = tyid.canonical();
-  const auto  kind  = canon.get().kind();
+  const auto  kind  = canon.get().kind;
 
 #define case_ty(name)                                                                                                  \
   case type::ETypeKind::name: out = codegen_##name(*canon.as<type::name>()); break;
@@ -242,7 +242,7 @@ llvm::Type* codegen::Codegen_Type::codegen_Tuple(const type::Tuple& ty) noexcept
 
 std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const type::Array& ty) noexcept
 {
-  if (auto it = llvm_types.find(ty.tyid); it != llvm_types.end()) {
+  if (auto it = llvm_types.find(ty.tyid()); it != llvm_types.end()) {
     auto* llvm_ty = llvm::cast<llvm::StructType>(it->second);
     return {llvm_ty, ty.size};
   }
@@ -260,8 +260,8 @@ std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const 
     }
 
     if (ty.size_expression.canonical()) {
-      std::cout << ty.size_expression.dump() << "\n";
-      std::cout << ty.size_expression.token().line_str() << "\n";
+      std::println("{}", ty.size_expression.dump());
+      std::println("{}", ty.size_expression.token().line_str());
       compiler::COMPILER.add_error(
           Error_Diagnostic(cu.cuid, 279, ty.size_expression, ty.size_expression.canonical(), compiler::EPhase::llvmir,
                            "Impossible to evaluate the expression for a table size at compilation time.", ""));
@@ -281,7 +281,7 @@ std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const 
   tys[1] = llvm_primitives.at(type::TYPEID_usize);               // size
 
   auto* out_ty = llvm::StructType::create(ctx, tys, "array");
-  llvm_types.try_emplace(ty.tyid, out_ty);
+  llvm_types.try_emplace(ty.tyid(), out_ty);
   return {out_ty, size};
 }
 
@@ -413,7 +413,7 @@ llvm::Type* codegen::Codegen_Type::codegen_Union(const type::Union& ty) noexcept
 
 llvm::Type* codegen::Codegen_Type::codegen_Identifier(const type::Identifier& ty) noexcept
 {
-  return codegen_type(ty.tyid.canonical());
+  return codegen_type(ty.tyid().canonical());
 }
 
 std::pair<size_t, size_t> codegen::Codegen_Type::calculate_payload(const std::vector<llvm::Type*>& tys) const noexcept

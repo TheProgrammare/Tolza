@@ -1,7 +1,7 @@
 #include "command_compiler.hpp"
 
 #include <filesystem>
-#include <iostream>
+#include <print>
 
 #include <common/common.hpp>
 #include <common/environment.hpp>
@@ -9,14 +9,14 @@
 
 namespace fs = std::filesystem;
 
-#define OUT_LOG std::cout << "[compiler] "
-#define OUT_ERR std::cerr << "[compiler:ERROR] "
+#define HLOG "[compiler] "
+#define HERR "[compiler:ERROR] "
 
 void command::compiler::apply_compiler(std::string_view file) noexcept
 {
   const fs::path f(file);
   if (!fs::exists(f)) {
-    OUT_ERR "The file at " << f << " dosen't exists.";
+    std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());
     return;
   }
 
@@ -35,11 +35,11 @@ void command::compiler::cogito_compiler(std::string_view file) noexcept
   const fs::path f(file);
 
   if (!fs::exists(f)) {
-    OUT_ERR "The file at " << f << " dosen't exists.";
-    OUT_LOG "Please, set a valid path in config at " << fs::path(common::env::get_config_dir());
+    std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());
+    std::println(HLOG "Please, set a valid path in config at \"{}\"", common::env::get_config_dir());
     return;
   }
 
-  std::string cmd = std::string(file) + " velox-toolchain cogito";
+  std::string cmd = std::format("{} tolza-toolchain cogito", file);
   std::system(cmd.c_str());
 }

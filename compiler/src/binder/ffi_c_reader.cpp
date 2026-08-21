@@ -8,8 +8,8 @@
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
-#include <iostream>
 #include <memory>
+#include <print>
 #include <unordered_set>
 #include <vector>
 #include <ostream>
@@ -21,14 +21,12 @@
 #include <common/fileutils.hpp>
 
 
-#include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "common/environment.hpp"
 #include "compiler/compiler.hpp"
 #include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/ast/ast.hpp"
 #include "binder/binder_ffi.hpp"
@@ -46,6 +44,7 @@ namespace fs = std::filesystem;
 
 ffi::C_Reader::C_Reader()
   : current_ast(std::make_unique<ffi::AST>())
+  , current_cu(*current_ast->temp_cu)
 {
 }
 
@@ -84,7 +83,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
       ast->bind.lang = "C";
       ast->bind.lib  = header.substr(0, header.size() - 2);
 
-      ast->velox_codegen(ast->bind.get_file_path());
+      ast->tolza_codegen(ast->bind.get_file_path());
     }
   };
 
@@ -145,13 +144,13 @@ void ffi::C_Reader::generate_c_api_wrappers(std::string_view from, std::string_v
     auto ast       = parse_c_compilation_unit(_from.string(), c_ffi_args);
     ast->bind.lang = "C";
     ast->bind.lib  = _from.stem();
-    ast->velox_codegen(_to);
+    ast->tolza_codegen(_to);
     return;
   };
 
   if (fs::is_regular_file(pfrom)) {
-    if (common::fileutils::is_velox_file(to)) {
-      common::FATAL_ERROR("Must be a velox file output when the origin is also a file.");
+    if (common::fileutils::is_tolza_file(to)) {
+      common::FATAL_ERROR("Must be a tolza file output when the origin is also a file.");
     }
 
     generate_wrapper(pfrom, to);
@@ -161,7 +160,7 @@ void ffi::C_Reader::generate_c_api_wrappers(std::string_view from, std::string_v
   for (const auto& entry : fs::recursive_directory_iterator(pto)) {
     if (entry.is_regular_file() && entry.path().extension() == ".h") {
       const std::string out_path =
-          std::string(pto / entry.path().stem()) + std::string(common::fileutils::VELOX_FILE_EXTENSION);
+          std::string(pto / entry.path().stem()) + std::string(common::fileutils::TOLZA_FILE_EXTENSION);
       generate_wrapper(entry.path(), out_path);
     }
   }
@@ -238,7 +237,7 @@ std::unique_ptr<ffi::AST> ffi::C_Reader::parse_c_compilation_unit(std::string_vi
                                                                   const std::vector<std::string>& p_args) noexcept
 {
   if (!fs::exists(p_file_path))
-    common::FATAL_ERROR("[ffi:C::ERROR] The file located at \"" + std::string(p_file_path) + "\" doesn't exists.");
+    common::FATAL_ERROR(std::format("[ffi:C::ERROR] The file located at \"{}\" dosen't exists.", p_file_path));
 
   CXIndex       index = clang_createIndex(0, 0);
   ffi::C_Reader r;
@@ -401,48 +400,41 @@ type::ID ffi::C_Reader::c_type_resolve_ptr(CXType input) noexcept
 {
   size_t pointer_depth = 0;
   CXType t             = input;
+
   while (t.kind == CXType_Pointer) {
-    pointer_depth++;
+    ++pointer_depth;
     t = clang_getPointeeType(t);
   }
 
-  if (pointer_depth > 0) {
-    const bool is_pointer_const    = clang_isConstQualifiedType(input);
-    const bool is_pointer_volatile = clang_isVolatileQualifiedType(input);
+  if (pointer_depth == 0) return NO_ID;
 
-    type::Qualifier dec{.is_volatile = is_pointer_const, .is_constant = is_pointer_volatile};
+  const bool is_pointer_const    = clang_isConstQualifiedType(input);
+  const bool is_pointer_volatile = clang_isVolatileQualifiedType(input);
 
-    auto inner_ty = c_type_to_type(t);
+  type::Qualifier qualifier{
+      .is_volatile = is_pointer_volatile,
+      .is_constant = is_pointer_const,
+  };
 
-    type::Type* final_ty = nullptr;
+  type::ID inner_ty = c_type_to_type(t);
+  type::ID temp_ty  = inner_ty;
 
-    for (size_t i = 0; i < pointer_depth; i++) {
-      auto& ty = current_ast->add_get_type<type::Ptr>(dec);
-      ty.inner = inner_ty;
-
-      if (final_ty != nullptr) {
-        auto* ptr  = static_cast<type::Ptr*>(final_ty);
-        ptr->inner = ty.tyid;
-      }
-
-      final_ty = current_ast->types->types.back().get();
-    }
-
-    // pointer on c char : c string
-    if (pointer_depth == 1 && inner_ty == type::TYPEID_cune) {
-      const auto& inner = current_ast->types->get(inner_ty);
-      if (inner.qualifier.is_constant) {
-        return type::TYPEID_cstr;
-      }
-    }
-
-    auto* final_ptr  = static_cast<type::Ptr*>(final_ty);
-    final_ptr->inner = inner_ty;
-
-    return final_ptr->tyid;
+  for (size_t i = 0; i < pointer_depth; ++i) {
+    temp_ty = current_cu.types->factory.make_ptr(temp_ty, qualifier);
   }
 
-  return NO_ID;
+  // char* / const char* -> cstr
+  if (pointer_depth == 1 && inner_ty == type::TYPEID_cune) {
+    const auto& ptr = temp_ty.as<type::Ptr>();
+
+    if (ptr->header.qualifier.is_constant) return type::TYPEID_cstr;
+  }
+
+  if (pointer_depth == 1 && inner_ty == type::TYPEID_u0) {
+    return current_cu.types->factory.make_ptr(type::TYPEID_opaque, qualifier);
+  }
+
+  return temp_ty;
 }
 
 type::ID ffi::C_Reader::c_type_resolve_atomic(CXType input) noexcept
@@ -456,11 +448,7 @@ type::ID ffi::C_Reader::c_type_resolve_array(CXType input, type::Qualifier& dec)
   CXType elem    = clang_getArrayElementType(input);
   auto   elem_ty = c_type_to_type(elem);
 
-  auto& ty      = current_ast->add_get_type<type::Slice>(dec);
-  ty.inner      = elem_ty;
-  ty.is_c_table = true;
-
-  return ty.tyid;
+  return current_cu.types->factory.make_slice(elem_ty, dec, true);
 }
 
 type::ID ffi::C_Reader::c_type_resolve_proto(CXType input, type::Qualifier& dec) noexcept
@@ -492,15 +480,13 @@ type::ID ffi::C_Reader::c_type_resolve_proto(CXType input, type::Qualifier& dec)
       param.type = type::TYPEID_cstr;
     }
 
+    // no void parameter type -> set to opaque semantic
+    if (param.type == type::TYPEID_u0) param.type = type::TYPEID_opaque;
+
     params.emplace_back(param);
   }
 
-  auto& ty       = current_ast->add_get_type<type::Prototype>(dec);
-  ty.params      = params;
-  ty.ret         = ret;
-  ty.is_variadic = is_variadic;
-
-  return current_ast->types->types.back()->tyid;
+  return current_cu.types->factory.make_prototype(params, ret, is_variadic, dec);
 }
 
 type::ID ffi::C_Reader::c_type_resolve_typedef(CXCursor decl, type::Qualifier& dec) noexcept
@@ -508,14 +494,12 @@ type::ID ffi::C_Reader::c_type_resolve_typedef(CXCursor decl, type::Qualifier& d
   CXType underlying = clang_getTypedefDeclUnderlyingType(decl);
   underlying        = c_type_normalize(underlying);
 
-  auto& alias_node = current_ast->add_get_node<ast::Global_Alias_Type>();
+  auto& alias_node = current_cu.ast->add_get<ast::Global_Alias_Type>();
   alias_node.alias = clang_getCString(clang_getCursorSpelling(decl));
   alias_node.type  = c_type_to_type(underlying);
 
-  auto& ty        = current_ast->add_get_type<type::Identifier>(dec);
-  ty.forward_name = alias_node.alias;
-
-  return ty.tyid;
+  return current_cu.types->factory.make_identifier(alias_node.alias, alias_node.nodeid(), alias_node.nodeid().def(),
+                                                   dec);
 }
 
 type::ID ffi::C_Reader::c_type_resolve_opaque(CXCursor decl, type::Qualifier& dec) noexcept
@@ -526,7 +510,7 @@ type::ID ffi::C_Reader::c_type_resolve_opaque(CXCursor decl, type::Qualifier& de
   if (!current_ast->aliases_defined.contains(name)) {
     current_ast->aliases_defined.insert(name);
 
-    auto& node = current_ast->add_get_node<ast::Global_Alias_Type>();
+    auto& node = current_cu.ast->add_get<ast::Global_Alias_Type>();
     node.alias = name;
 
     // safe expansion
@@ -539,10 +523,7 @@ type::ID ffi::C_Reader::c_type_resolve_opaque(CXCursor decl, type::Qualifier& de
     }
   }
 
-  auto& opaque        = current_ast->add_get_type<type::Identifier>(dec);
-  opaque.forward_name = name;
-
-  return opaque.tyid;
+  return current_cu.types->factory.make_forward_identifier(name, dec);
 }
 
 type::ID ffi::C_Reader::c_type_resolve_struct(CXCursor decl, type::Qualifier& dec) noexcept
@@ -733,7 +714,7 @@ ast::ID ffi::C_Reader::c_nodecl_to_opaque_facet(CXCursor cur) noexcept
 {
   const auto name = clang_getCursorSpelling(cur);
 
-  auto& node = current_ast->add_get_node<ast::SFM_Facet>();
+  auto& node = current_cu.ast->add_get<ast::SFM_Facet>();
 
   node.name = clang_getCString(name);
   clang_disposeString(name);
@@ -750,7 +731,7 @@ ast::ID ffi::C_Reader::c_struct_to_facet(CXCursor cur) noexcept
 {
   const auto name = clang_getCursorSpelling(cur);
 
-  auto& node = current_ast->add_get_node<ast::SFM_Facet>();
+  auto& node = current_cu.ast->add_get<ast::SFM_Facet>();
 
   node.name = clang_getCString(name);
   clang_disposeString(name);
@@ -761,12 +742,12 @@ ast::ID ffi::C_Reader::c_struct_to_facet(CXCursor cur) noexcept
       cur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* inject = static_cast<Visit_Injector*>(client_data);
-        auto* n_ptr  = inject->reader.current_ast->nodes->as<ast::SFM_Facet>(inject->nodeid);
+        auto* n_ptr  = inject->nodeid.as<ast::SFM_Facet>();
 
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
           const auto name = clang_getCursorSpelling(cur);
           const auto tyid = inject->reader.c_type_to_type(clang_getCursorType(cur));
-          auto&      node = inject->reader.current_ast->add_get_node<ast::SFM_Facet_Field>();
+          auto&      node = inject->reader.current_cu.ast->add_get<ast::SFM_Facet_Field>();
           node.name       = clang_getCString(name);
           clang_disposeString(name);
 
@@ -782,10 +763,7 @@ ast::ID ffi::C_Reader::c_struct_to_facet(CXCursor cur) noexcept
     tys.emplace_back(field.type());
   }
 
-  auto* c_ty   = new type::Facet();
-  c_ty->fields = tys;
-
-  auto ty = current_ast->types->intern(std::unique_ptr<type::Facet>(c_ty));
+  auto ty = current_cu.types->factory.make_facet(tys, node.nodeid().def());
   current_ast->inferences->add(node.nodeid(), ty);
 
   return node.nodeid();
@@ -794,7 +772,7 @@ ast::ID ffi::C_Reader::c_struct_to_facet(CXCursor cur) noexcept
 ast::ID ffi::C_Reader::c_union_to_union(CXCursor cur) noexcept
 {
   const auto name = clang_getCursorSpelling(cur);
-  auto&      node = current_ast->add_get_node<ast::Global_Union>();
+  auto&      node = current_cu.ast->add_get<ast::Global_Union>();
   node.name       = clang_getCString(name);
   clang_disposeString(name);
 
@@ -804,12 +782,12 @@ ast::ID ffi::C_Reader::c_union_to_union(CXCursor cur) noexcept
       cur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* inject = static_cast<Visit_Injector*>(client_data);
-        auto* n_ptr  = inject->reader.current_ast->nodes->as<ast::Global_Union>(inject->nodeid);
+        auto* n_ptr  = inject->nodeid.as<ast::Global_Union>();
 
         if (clang_getCursorKind(cur) == CXCursor_FieldDecl) {
           const auto name = clang_getCursorSpelling(cur);
           const auto tyid = inject->reader.c_type_to_type(clang_getCursorType(cur));
-          auto&      node = inject->reader.current_ast->add_get_node<ast::Union_Field>();
+          auto&      node = inject->reader.current_cu.ast->add_get<ast::Union_Field>();
           node.name       = clang_getCString(name);
           node.type       = tyid;
           clang_disposeString(name);
@@ -826,10 +804,7 @@ ast::ID ffi::C_Reader::c_union_to_union(CXCursor cur) noexcept
     tys.emplace_back(field.type());
   }
 
-  auto* u_ty     = new type::Union();
-  u_ty->variants = tys;
-
-  auto ty = current_ast->types->intern(std::unique_ptr<type::Union>(u_ty));
+  auto ty = current_cu.types->factory.make_union(tys, node.nodeid().def());
   current_ast->inferences->add(node.nodeid(), ty);
 
   return node.nodeid();
@@ -838,7 +813,7 @@ ast::ID ffi::C_Reader::c_union_to_union(CXCursor cur) noexcept
 ast::ID ffi::C_Reader::c_enum_to_flag(CXCursor cur) noexcept
 {
   const auto cur_name = clang_getCursorSpelling(cur);
-  auto&      node     = current_ast->add_get_node<ast::Global_Flag>();
+  auto&      node     = current_cu.ast->add_get<ast::Global_Flag>();
   node.name           = clang_getCString(cur_name);
   clang_disposeString(cur_name);
 
@@ -848,12 +823,12 @@ ast::ID ffi::C_Reader::c_enum_to_flag(CXCursor cur) noexcept
       cur,
       [](CXCursor cur, CXCursor parent, CXClientData client_data) {
         auto* inject = static_cast<Visit_Injector*>(client_data);
-        auto* n_ptr  = inject->reader.current_ast->nodes->as<ast::Global_Flag>(inject->nodeid);
+        auto* n_ptr  = inject->nodeid.as<ast::Global_Flag>();
 
         if (clang_getCursorKind(cur) == CXCursor_EnumConstantDecl) {
           const auto name = clang_getCursorSpelling(cur);
           const auto tyid = inject->reader.c_type_to_type(clang_getCursorType(cur));
-          auto&      node = inject->reader.current_ast->add_get_node<ast::Flag_Field>();
+          auto&      node = inject->reader.current_cu.ast->add_get<ast::Flag_Field>();
           node.name       = clang_getCString(name);
           clang_disposeString(name);
 
@@ -863,10 +838,7 @@ ast::ID ffi::C_Reader::c_enum_to_flag(CXCursor cur) noexcept
       },
       &data);
 
-  auto* f_ty = new type::Flag();
-  f_ty->size = node.flags.size();
-
-  auto ty = current_ast->types->intern(std::unique_ptr<type::Flag>(f_ty));
+  auto ty = current_cu.types->factory.make_flag(node.flags.size(), node.nodeid().def());
   current_ast->inferences->add(node.nodeid(), ty);
 
   return node.nodeid();
@@ -876,7 +848,7 @@ ast::ID ffi::C_Reader::c_global_to_global(CXCursor cur) noexcept
 {
   const auto cur_name = clang_getCursorSpelling(cur);
   const auto cur_ty   = clang_getCursorType(cur);
-  auto&      node     = current_ast->add_get_node<ast::Global_Variable>();
+  auto&      node     = current_cu.ast->add_get<ast::Global_Variable>();
   node.name           = clang_getCString(cur_name);
   clang_disposeString(cur_name);
 
@@ -885,8 +857,7 @@ ast::ID ffi::C_Reader::c_global_to_global(CXCursor cur) noexcept
   else
     node.kind = ast::EVariableKind::_var;
 
-  const auto tyid = c_type_to_type(cur_ty);
-  node.type       = tyid;
+  node.type = c_type_to_type(cur_ty);
 
   return node.nodeid();
 }
@@ -895,12 +866,12 @@ ast::ID ffi::C_Reader::c_function_to_func(CXCursor cur) noexcept
 {
   const auto cur_name = clang_getCursorSpelling(cur);
   const auto cur_ty   = clang_getCursorType(cur);
-  auto&      node     = current_ast->add_get_node<ast::Global_Function>();
+  auto&      node     = current_cu.ast->add_get<ast::Global_Function>();
   node.name           = clang_getCString(cur_name);
   clang_disposeString(cur_name);
 
   node.prototype = c_type_to_type(cur_ty);
-  auto* proto_ty = current_ast->types->as<type::Prototype>(node.prototype);
+  auto* proto_ty = node.prototype.as<type::Prototype>();
   assert(proto_ty && "Must be a proto type");
 
   const int            n = clang_getNumArgTypes(cur_ty);
@@ -914,13 +885,13 @@ ast::ID ffi::C_Reader::c_function_to_func(CXCursor cur) noexcept
     auto arg_ty   = clang_getCursorType(arg);
     auto arg_name = clang_getCursorSpelling(arg);
 
-    auto& n_param    = current_ast->add_get_node<ast::Local_Parameter>();
+    auto& n_param    = current_cu.ast->add_get<ast::Local_Parameter>();
     n_param.type     = proto_arg_id;
     n_param.passmode = c_type_to_pass_mode(arg_ty);
     n_param.name     = clang_getCString(arg_name);
 
     if (n_param.name.empty()) {
-      n_param.name = "__param_" + std::string(1, 'a' + i);
+      n_param.name = std::format("__param_{}", char('a' + i));
     }
 
     params.emplace_back(n_param.nodeid());
@@ -1035,17 +1006,17 @@ std::vector<std::string> ffi::BindManifest::to_clang_args() const noexcept
 
   // POSIX level
   if (features_posix_c_source) {
-    out.emplace_back("-D_POSIX_C_SOURCE=" + std::to_string(features_posix_c_source));
+    out.emplace_back(std::format("-D_POSIX_C_SOURCE={}", features_posix_c_source));
   }
 
   // File offset bits
   if (features_file_offset_bits != 0) {
-    out.emplace_back("-D_FILE_OFFSET_BITS=" + std::to_string(features_file_offset_bits));
+    out.emplace_back(std::format("-D_FILE_OFFSET_BITS={}", features_file_offset_bits));
   }
 
   // Time bits
   if (features_time_bits != 0) {
-    out.emplace_back("-D_TIME_BITS=" + std::to_string(features_time_bits));
+    out.emplace_back(std::format("-D_TIME_BITS={}", features_time_bits));
   }
 
   // -------------------------

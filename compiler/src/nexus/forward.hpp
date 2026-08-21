@@ -8,7 +8,6 @@
 
 #include "ids.hpp"
 
-
 using ErrorCode = short;
 enum class EVisibility : uint8_t { Lexical_Scope, File_Scope, Cross_File_Scope };
 
@@ -49,8 +48,8 @@ enum class EPathAnchor : uint8_t {
 namespace common::compiler
 {
 
-// velox compiler invariant violation : Internal Compiler Error
-[[noreturn]] void DEBUG_VELOX_ICE(std::string_view msg);
+// tolza compiler invariant violation : Internal Compiler Error
+[[noreturn]] void DEBUG_TOLZA_ICE(std::string_view msg);
 
 } // namespace common::compiler
 
@@ -123,7 +122,7 @@ enum class ETypeKind : uint8_t;
 struct Arena;
 struct Dispatcher;
 struct Qualifier;
-struct Type;
+struct TypeHeader;
 
 
 struct Prototype_Param final {
@@ -246,9 +245,10 @@ static std::string mangle_id(std::string_view id)
 
 // llvm convention (dot separation)
 // { hello, world } -> hello.world
-static std::string mangle_path(const std::vector<std::string_view>& id)
+static std::string mangle_path(const std::vector<std::string_view>& ids)
 {
   std::string out;
-  for (auto elem : id) out += std::string(elem) + ".";
+  out.reserve(ids.size() * 12);
+  for (auto elem : ids) std::format_to(std::back_inserter(out), "{}.", elem);
   return out.substr(0, out.size() - 1);
 }

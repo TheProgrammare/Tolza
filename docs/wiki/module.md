@@ -4,7 +4,7 @@ Modules are namespace and script interface representation.
 
 There are two types of modules:
 - inline module: `mod <name> {...}`
-- file module: `my_script.vlx`
+- file module: `my_script.tlz`
 
 # Access logic
 

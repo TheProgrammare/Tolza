@@ -1,6 +1,6 @@
 /*
  * =============================================================================
- * The Velox programming language (2026.1.1) - Apache License, Version 2.0
+ * The Tolza programming language (2026.1.1) - Apache License, Version 2.0
  * Copyright 2024-2026 Foz Florian
  * =============================================================================
  *
@@ -65,6 +65,7 @@ struct JSON_Reader {
 
 private:
   std::unique_ptr<ffi::AST> current_ast = nullptr;
+  cu::CU&                   current_cu;
 };
 
 } // namespace ffi

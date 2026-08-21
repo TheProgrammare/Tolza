@@ -12,7 +12,7 @@
 
 ## 1. Context and Motivation
 - What problem or limitation of the current language does this proposal address?  
-- Why is this important for Velox and its users?  
+- Why is this important for Tolza and its users?  
 
 Example:  
 > Currently, variables are mutable by default, which can lead to bugs in multithreaded scripts.  
@@ -22,7 +22,7 @@ Example:
 - Include usage examples, pseudocode, or small diagrams if needed.  
 
 Example:  
-```velox
+```tolza
 let x: const deci = 42  // Variables are immutable by default
 ```
 
@@ -56,7 +56,7 @@ let x: const deci = 42  // Variables are immutable by default
 
 ## 9. Conclusion
 - Summarize why this proposal should be integrated or discussed.
-- Highlight the overall benefit for Velox and the community.
+- Highlight the overall benefit for Tolza and the community.
 
 ## 💡 Contributor Notes:
 - Use this template for all “philosophical” proposals without code.

@@ -37,10 +37,12 @@ cu::FileInfo::FileInfo(cu::ID _cuid, std::string_view _path, const std::string& 
   , data(_data)
   , last_offset_line(_last_offset_line)
   , source(file_path_to_EFileSource(_path))
-  , path(common::fileutils::get_velox_file(_path))
+  , path(common::fileutils::get_tolza_file(_path))
   , tokens(new token::Arena(_cuid))
   , is_mod_dir(fs::path(_path).stem() == "mod")
 {
+  if (cuid.is_temp()) return;
+
   assert(!path.empty());
   assert(fs::exists(path));
 }
@@ -49,14 +51,14 @@ cu::FileInfo::FileInfo(cu::ID _cuid, std::string_view _path, const std::string& 
 cu::CU::~CU()
 {
   delete metacodes;
-  delete nodes;
+  delete ast;
   delete file_info.tokens;
 }
 
 cu::CU::CU()
   : cuid(cu::ID::main())
   , metacodes(new metacode::Graph())
-  , nodes(new ast::Arena(cuid))
+  , ast(new ast::Arena(cuid))
   , types(new type::Arena(cuid))
   , scopes(new scope::Graph(cuid))
   , definitions(new definition::Arena(cuid))
@@ -65,7 +67,8 @@ cu::CU::CU()
 {
   auto&       root_mod  = modules->get_file_root();
   auto&       root_scp  = scopes->get_file_root();
-  const auto* root_node = nodes->get_file_root();
+  const auto* root_node = ast->get_file_root();
+  assert(root_node);
 
   // init scope of file module
   root_mod.scpid      = root_scp.scpid;
@@ -84,7 +87,7 @@ cu::CU::CU(cu::ID _parent_cuid, cu::ID _cuid, std::string_view _file_path, const
   , parent_cuid(_parent_cuid)
   , cuid(_cuid)
   , metacodes(new metacode::Graph())
-  , nodes(new ast::Arena(cuid))
+  , ast(new ast::Arena(cuid))
   , types(new type::Arena(cuid))
   , scopes(new scope::Graph(cuid))
   , definitions(new definition::Arena(cuid))
@@ -93,16 +96,49 @@ cu::CU::CU(cu::ID _parent_cuid, cu::ID _cuid, std::string_view _file_path, const
 {
   auto&       root_mod  = modules->get_file_root();
   auto&       root_scp  = scopes->get_file_root();
-  const auto* root_node = nodes->get_file_root();
+  const auto* root_node = ast->get_file_root();
 
   // init scope of file module
   root_mod.scpid      = root_scp.scpid;
   root_mod.nodeid     = root_node->nodeid();
-  root_mod.debug_name = "root \"" + file_info.get_file_name() + "\"";
+  root_mod.debug_name = std::format("root \"{}\"", file_info.get_file_name());
   root_scp.modid      = root_mod.modid;
   root_scp.nodeid     = root_node->nodeid();
-  root_scp.debug_name = "root \"" + file_info.get_file_name() + "\"";
+  root_scp.debug_name = std::format("root \"{}\"", file_info.get_file_name());
 }
+
+cu::CU::CU(cu::ID _cuid)
+  : cuid(_cuid)
+  , metacodes(new metacode::Graph())
+  , ast(new ast::Arena(cuid))
+  , types(new type::Arena(cuid))
+  , scopes(new scope::Graph(cuid))
+  , definitions(new definition::Arena(cuid))
+  , modules(new module::Graph(NO_ID, cuid))
+  , extensions(new extension::Arena())
+{
+  auto&       root_mod  = modules->get_file_root();
+  const auto* root_node = ast->get_file_root();
+
+  // init scope of file module
+  root_mod.nodeid     = root_node->nodeid();
+  root_mod.debug_name = std::format("root \"{}\"", file_info.get_file_name());
+}
+
+
+cu::TEMP_CU::TEMP_CU(cu::ID _cuid, metacode::Graph* _metacode, ast::Arena* _ast, type::Arena* _type,
+                     scope::Graph* _scope, definition::Arena* _def, module::Graph* _module, extension::Arena* _ext)
+  : CU(_cuid)
+{
+  metacodes   = _metacode;
+  ast         = _ast;
+  types       = _type;
+  scopes      = _scope;
+  definitions = _def;
+  modules     = _module;
+  extensions  = _ext;
+}
+
 
 std::string cu::FileInfo::get_module_name() const
 {

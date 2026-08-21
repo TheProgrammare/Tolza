@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,6 @@
 
 #pragma once
 
-#define VELOX_TOOLCHAIN
-
 #include <string_view>
 
 namespace toolchain
@@ -28,10 +26,19 @@ namespace toolchain
 void              link_stdlib();
 [[nodiscard]] int exec_compiler_cmd(std::string_view cmd) noexcept;
 
+constexpr std::string_view SOFTWARE_ABOUT =
+    "Tolza-Toolchain\n"
+    "  Version: " SOFTWARE_VERSION
+    "\n"
+    "  Tolza version: " TOLZA_VERSION
+    "\n"
+    "  License: Apache License, Version 2.0\n"
+    "  Author: Florian Foz\n"
+    "  Source: https://github.com/TheProgrammare/Tolza";
 
-constexpr std::string_view VELOX_CONFIG_TEMPLATE =
+constexpr std::string_view TOLZA_CONFIG_TEMPLATE =
     R"(
-# main velox toolchain config
+# main tolza toolchain config
 # it's the default configuration
 # set config field to specify a sub configuration to compile (use his name in sub_configs)
 
@@ -39,7 +46,7 @@ constexpr std::string_view VELOX_CONFIG_TEMPLATE =
 
 
 # ======================
-# velox-compiler section 
+# tolza-compiler section 
 # ======================
 
 [target]
@@ -128,7 +135,7 @@ packages            = "%dir_packages"
 # LLVM section
 # ============
 # This configuration is strictly for LLVM passes and code generation.
-# It does not affect your Velox preprocessor.
+# It does not affect your Tolza preprocessor.
 
 [llvm]
 # override triple, else auto-generated from target
@@ -141,7 +148,7 @@ args = [
 ]
 )";
 
-constexpr std::string_view VELOX_MAIN_TEMPLATE =
+constexpr std::string_view TOLZA_MAIN_TEMPLATE =
     R"(
 import ext: C::stdio
 
@@ -151,7 +158,7 @@ fn main() {
 
 )";
 
-constexpr std::string_view VELOX_CORE_TEMPLATE =
+constexpr std::string_view TOLZA_CORE_TEMPLATE =
     R"(
 import ext: C::stdio
 import usr: ffi::C

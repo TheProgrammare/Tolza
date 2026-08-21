@@ -499,7 +499,7 @@ ast::ID parser::Parser_Literal::format_specifier()
   }
 
   if (!p.check(token::ETokenKind::S_INTERPOLATION_END)) {
-    p.add_error(88, "Unexpected token '" + std::string(p.tok_to_str(p.peek().tokid)) + "' in format specifier.", hint);
+    p.add_error(88, std::format("Unexpected token '{}' in format specifier.", p.tok_to_str(p.peek().tokid)), hint);
   }
 
   return format.nodeid();

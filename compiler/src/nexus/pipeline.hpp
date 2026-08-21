@@ -42,13 +42,14 @@ namespace pipeline
 struct Pipeline {
   Pipeline();
 
-  StringMap<cu::ID>                        path_generated;
+  StringMap<cu::ID>                         path_generated;
   // paths
-  std::vector<std::unique_ptr<cu::CU>>     compilation_units;
-  std::set<std::string>                    binding_compilation_units_to_prepare;
-  std::unordered_set<cu::ID, cu::ID::Hash> unprepared_compilation_units;
-  std::unordered_set<cu::ID, cu::ID::Hash> prepared_compilation_units;
-  std::unordered_set<cu::ID, cu::ID::Hash> analyzed_compilation_units;
+  std::vector<std::unique_ptr<cu::CU>>      compilation_units;
+  std::vector<std::unique_ptr<cu::TEMP_CU>> temp_compilation_units;
+  std::set<std::string>                     binding_compilation_units_to_prepare;
+  std::unordered_set<cu::ID, cu::ID::Hash>  unprepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash>  prepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash>  analyzed_compilation_units;
 
   // push to prepared_compilation_units
   [[nodiscard]] std::vector<cu::ID> query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept;

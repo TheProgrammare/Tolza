@@ -3,7 +3,8 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <print>
+#include <format>
 
 #include "common.hpp"
 #include "time.hpp"
@@ -61,45 +62,45 @@ std::string common::fileutils::resolve_path(std::string_view s, std::string_view
 }
 
 
-bool common::fileutils::is_velox_file(std::string_view file_path) noexcept
+bool common::fileutils::is_tolza_file(std::string_view file_path) noexcept
 {
   fs::path f(file_path);
-  return f.extension() == VELOX_FILE_EXTENSION;
+  return f.extension() == TOLZA_FILE_EXTENSION;
 }
 
-std::string common::fileutils::get_velox_file(std::string_view path) noexcept
+std::string common::fileutils::get_tolza_file(std::string_view path) noexcept
 {
   auto p = fs::weakly_canonical(path);
 
-  if (p.has_extension() && p.extension() != VELOX_FILE_EXTENSION) return "";
+  if (p.has_extension() && p.extension() != TOLZA_FILE_EXTENSION) return "";
   if (!p.has_extension()) {
-    p.replace_extension(VELOX_FILE_EXTENSION);
+    p.replace_extension(TOLZA_FILE_EXTENSION);
   }
 
   return fs::exists(p) ? p : "";
 }
 
-std::set<std::string> common::fileutils::find_velox_files(std::string_view target_dir, bool is_recursive) noexcept
+std::set<std::string> common::fileutils::find_tolza_files(std::string_view target_dir, bool is_recursive) noexcept
 {
   std::set<std::string> out;
   fs::path              dir(target_dir);
 
-  assert(fs::exists(target_dir) && "Target directory dosen't exists");
+  assert(fs::exists(target_dir) && "Target directory dosen't exist");
 
   try {
     if (is_recursive) {
       for (const auto& entry : fs::recursive_directory_iterator(dir)) {
-        if (fs::is_regular_file(entry) && entry.path().extension() == VELOX_FILE_EXTENSION)
+        if (fs::is_regular_file(entry) && entry.path().extension() == TOLZA_FILE_EXTENSION)
           out.insert(entry.path().string());
       }
     } else {
       for (const auto& entry : fs::directory_iterator(dir)) {
-        if (fs::is_regular_file(entry) && entry.path().extension() == VELOX_FILE_EXTENSION)
+        if (fs::is_regular_file(entry) && entry.path().extension() == TOLZA_FILE_EXTENSION)
           out.insert(entry.path().string());
       }
     }
   } catch (const std::runtime_error& err) {
-    std::cerr << err.what() << "\n";
+    std::println("{}", err.what());
     return {};
   }
 
@@ -109,7 +110,7 @@ std::set<std::string> common::fileutils::find_velox_files(std::string_view targe
 
 bool common::fileutils::is_barrel_file(std::string_view file_path) noexcept
 {
-  if (!fs::exists(file_path)) FATAL_ERROR("File path at \"" + std::string(file_path) + "\" dosen't exists");
+  if (!fs::exists(file_path)) FATAL_ERROR("File path at \"" + std::string(file_path) + "\" dosen't exist");
 
   std::ifstream f(file_path.data());
   std::string   line;
@@ -138,7 +139,7 @@ void common::fileutils::write_barrel(std::string_view target_dir, std::string_vi
     if (entry.is_directory()) write_barrel(entry.path().string(), common_alias);
   }
 
-  auto files = common::fileutils::find_velox_files(target_dir, false);
+  auto files = common::fileutils::find_tolza_files(target_dir, false);
 
   std::string out_str;
   out_str.reserve(60 * files.size());
@@ -152,47 +153,41 @@ void common::fileutils::write_barrel(std::string_view target_dir, std::string_vi
 
 
   fs::path p = fs::path(target_dir).parent_path() / fs::path(target_dir).stem();
-  p.replace_extension(VELOX_FILE_EXTENSION);
+  p.replace_extension(TOLZA_FILE_EXTENSION);
 
 
   // if file already exists and is not a barrel file : it's some user code !
   if (fs::exists(p) && !is_barrel_file(p.string())) {
-    std::cout << "[velox] Barrel creation: user code detected at barrel path " << p << "\n";
+    std::println("[tolza] Barrel creation: user code detected at barrel path {}", p.string());
 
     // get barrel usercode standard location
     fs::path barrel_usercode = p.parent_path() / p.stem() / "mod";
-    barrel_usercode.replace_extension(VELOX_FILE_EXTENSION);
+    barrel_usercode.replace_extension(TOLZA_FILE_EXTENSION);
 
     // barrel usercode already exists, do not modify any existing usercode !
-    // move code to ./.current.vlx
+    // move code to ./.current.tlz
     if (fs::exists(barrel_usercode)) {
       // create temporary file of the user to let him decide
-      std::string temp_name     = "." + p.stem().string() + "." + std::string(VELOX_FILE_EXTENSION);
+      std::string temp_name     = "." + p.stem().string() + "." + std::string(TOLZA_FILE_EXTENSION);
       fs::path    temp_usercode = p.parent_path() / temp_name;
 
       fs::copy_file(p, temp_usercode, fs::copy_options::overwrite_existing);
-      std::cout << "[velox] User code moved to " << temp_usercode << "\n";
+      std::println("[tolza] User code moved to {}", temp_usercode.string());
     }
-    // move code to ./current/mod.vlx
+    // move code to ./current/mod.tlz
     else {
       fs::copy_file(p, barrel_usercode, fs::copy_options::overwrite_existing);
       std::string alias = common_alias.empty() ? std::string(p.stem()) : std::string(common_alias);
 
       out_str += "reexport self::mod as " + alias + "\n";
 
-      std::cout << "[velox] User code moved to " << barrel_usercode << "\n";
+      std::println("[tolza] User code moved to {}", barrel_usercode.string());
     }
   }
 
   std::string date = time::now_datetime();
 
-  std::map<std::string_view, std::string_view> header_fmt = {
-      {"vc_version", common::VELOX_COMMON_VERSION},
-      {"date",       date                        },
-  };
-
-  std::string header(BARREL_FILE_HEADER);
-  common::utils::fmt_template(header, header_fmt);
+  std::string   header = std::format(BARREL_FILE_HEADER, common::TOLZA_VERSION, date);
   std::ofstream f(p);
   f << header;
   f << out_str;

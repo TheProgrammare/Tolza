@@ -39,6 +39,13 @@ Velox a une approche différente:
 
 > **Sécurité au traver de capacité explicite et d'une composition statique, sans ramasse-miette ou comportement implicite à l'exécution.**
 
+## Le nom Tolza
+
+**Tolza** est un ancien dérivé occitan de **Tolosa**, le nom occitan de Toulouse. Attesté dès le XIIᵉ siècle, *Tolza* pouvait désigner **le pays de Toulouse, ses habitants, ou encore une monnaie toulousaine**. Le terme est issu du gentilé médiéval *Tolosan/Tolosà*, signifiant « originaire de Tolosa ». À l’origine, **Tolosa** est elle-même un très ancien toponyme pré-roman, antérieur à la formation de la langue occitane. 
+
+> Le langage de programmation Tolza a été conçu à Toulouse, donnant ainsi à ce nom historique une nouvelle dimension, tournée vers la technologie.
+
+
 ## Les Principes Fondamentaux
 
 ### 1. Pas de comportement implicite

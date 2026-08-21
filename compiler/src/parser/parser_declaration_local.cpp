@@ -35,7 +35,7 @@ ast::ID parser::Parser_Declaration_Local::parse_local(bool silent_error)
   }
 
   if (!silent_error) {
-    p.add_error(40, "Illegal instruction '" + std::string(p.tok_to_str(p.peek().tokid)) + "' in local.",
+    p.add_error(40, std::format("Illegal instruction '{}' in local.", p.tok_to_str(p.peek().tokid)),
                 "you can define in local: variable, lambda, call, operation, assignation, statement");
     THROW_BAD_NODE;
   }
@@ -260,7 +260,7 @@ ast::ID parser::Parser_Declaration_Local::lambda()
     lam.name = p.parse_name();
 
     (void)p.add_definition(lam.nodeid());
-    p.enter_scope(lam.nodeid(), "lambda \"" + std::string(lam.name) + "\"");
+    p.enter_scope(lam.nodeid(), std::format("lambda \"{}\"", lam.name));
   } else {
     p.enter_scope(lam.nodeid(), "lambda");
   }
@@ -297,7 +297,7 @@ ast::ID parser::Parser_Declaration_Local::parse_codeblock_instruction()
     if (auto instruction = p.p_base->parse_instruction())
       cb.elements.emplace_back(instruction);
     else
-      p.add_error(255, "Unexpected token '" + std::string(p.peek().tokid.str()) + "' inside codeblock.",
+      p.add_error(255, std::format("Unexpected token '{}' inside codeblock.", p.peek().tokid.str()),
                   "A codeblock is ended by '}' or a new line if linecode.");
 
     // one instruction
@@ -334,9 +334,7 @@ ast::ID parser::Parser_Declaration_Local::facet_pattern(ast::ECapability p_capa,
       R"(define facet mapping like:
   - `[ref/mut] CFacet{.field1: [ref/mut/copy]'a, .field2: 10} = val`)";
 
-  const auto* facet_node = p_facet_id.get();
-
-  assert(ast::ENodeKind_is_symbol(facet_node->kind));
+  assert(ast::ENodeKind_is_symbol(p_facet_id.kind()));
   // Illegal identifier, impossible to use a type
 
   auto& facet_pat = p.add_get_node<ast::Local_Pattern_Facet>(p.peek().tokid);
@@ -384,9 +382,7 @@ ast::ID parser::Parser_Declaration_Local::form_pattern(ast::ECapability p_capa, 
   (void)p.match(token::ETokenKind::STATIC_ACCESS);
   (void)p.match(token::ETokenKind::L_ANGLE);
 
-  const auto* form_node = p_form_id.get();
-
-  assert(ast::ENodeKind_is_symbol(form_node->kind));
+  assert(ast::ENodeKind_is_symbol(p_form_id.kind()));
   // Illegal identifier, impossible to use a type
 
   auto& form_pat      = p.add_get_node<ast::Local_Pattern_Form>(p.peek().tokid);
@@ -473,9 +469,7 @@ ast::ID parser::Parser_Declaration_Local::enum_pattern(ast::ECapability p_capa, 
   - binding pattern conditionnal `if [ref/mut] Some(10) = value {...}`                            
   - check only indexation `[if/elif/while] value == Some`)";
 
-  const auto* enum_node = p_enum_id.get();
-
-  assert(ast::ENodeKind_is_symbol(enum_node->kind));
+  assert(ast::ENodeKind_is_symbol(p_enum_id.kind()));
   // Illegal identifier, impossible to use a type
 
   auto& pat = p.add_get_node<ast::Local_Pattern_Enum>(p.peek().tokid);

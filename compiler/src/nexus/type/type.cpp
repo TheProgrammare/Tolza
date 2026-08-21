@@ -39,135 +39,154 @@ type::ID type::Arena::Factory::make_primitive(EPrimitiveTypeKind p, Qualifier qu
     return main_ty;
   }
 
-  auto t       = std::make_unique<type::Primitive>();
-  t->qualifier = qualifier;
-  t->primitive = p;
-  return arena.intern(std::move(t));
+  type::Primitive t;
+  t.header.qualifier = qualifier;
+  t.primitive        = p;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_ptr(type::ID inner, Qualifier qualifier)
 {
   assert(inner && "Invalid identifier");
 
-  auto t       = std::make_unique<type::Ptr>();
-  t->qualifier = qualifier;
-  t->inner     = inner;
-  return arena.intern(std::move(t));
+  Ptr t;
+  t.header.qualifier = qualifier;
+  t.inner            = inner;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_static_array(type::ID inner, size_t size, ast::ID size_expr, Qualifier qualifier)
 {
   assert(inner && "Invalid identifier");
+  assert(size != 0 || size_expr && "Impossible static size");
 
-  auto t             = std::make_unique<type::Array>();
-  t->qualifier       = qualifier;
-  t->inner           = inner;
-  t->size            = size;
-  t->size_expression = size_expr;
-  return arena.intern(std::move(t));
+  Array t;
+  t.header.qualifier = qualifier;
+  t.inner            = inner;
+  t.size             = size;
+  t.size_expression  = size_expr;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_dynamic_array(type::ID inner, Qualifier qualifier)
 {
   assert(inner && "Invalid identifier");
 
-  auto t       = std::make_unique<type::Buffer>();
-  t->qualifier = qualifier;
-  t->inner     = inner;
-  return arena.intern(std::move(t));
+  Buffer t;
+  t.header.qualifier = qualifier;
+  t.inner            = inner;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_slice(type::ID inner, Qualifier qualifier, bool is_c_table)
 {
   assert(inner && "Invalid identifier");
 
-  auto t        = std::make_unique<type::Slice>();
-  t->qualifier  = qualifier;
-  t->inner      = inner;
-  t->is_c_table = is_c_table;
-  return arena.intern(std::move(t));
+  Slice t;
+  t.header.qualifier = qualifier;
+  t.inner            = inner;
+  t.is_c_table       = is_c_table;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_tuple(const std::vector<type::ID>& elems, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Tuple>();
-  t->qualifier = qualifier;
-  t->elems     = elems;
-  return arena.intern(std::move(t));
+  assert(!elems.empty() && "Illegal empty tuple");
+
+  Tuple t;
+  t.header.qualifier = qualifier;
+  t.elems            = elems;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_prototype(const std::vector<type::Prototype_Param>& params, type::ID ret,
                                               bool is_variadic, Qualifier qualifier)
 {
-  auto t         = std::make_unique<type::Prototype>();
-  t->qualifier   = qualifier;
-  t->params      = params;
-  t->ret         = ret;
-  t->is_variadic = is_variadic;
-  return arena.intern(std::move(t));
+  assert(ret && "Return must have a type or u0");
+  assert(params.size() != std::numeric_limits<size_t>::max() && "params corrupted");
+  assert(params.capacity() != std::numeric_limits<size_t>::max() && "params corrupted");
+
+  Prototype t;
+  t.header.qualifier = qualifier;
+  t.params           = params;
+  t.ret              = ret;
+  t.is_variadic      = is_variadic;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_enum(const std::vector<type::ID>& variants, definition::ID sym, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Enum>();
-  t->qualifier = qualifier;
-  t->variants  = variants;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  assert(!variants.empty() && "Illegal empty enum");
+
+  Enum t;
+  t.header.qualifier = qualifier;
+  t.variants         = variants;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_flag(size_t size, definition::ID sym, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Flag>();
-  t->qualifier = qualifier;
-  t->size      = size;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  assert(size != 0 && "Illegal empty flag");
+
+  Flag t;
+  t.header.qualifier = qualifier;
+  t.size             = size;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_union(const std::vector<type::ID>& variants, definition::ID sym,
                                           Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Union>();
-  t->qualifier = qualifier;
-  t->variants  = variants;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  assert(!variants.empty() && "Illegal empty union");
+
+  Union t;
+  t.header.qualifier = qualifier;
+  t.variants         = variants;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_facet(const std::vector<type::ID>& fields, definition::ID sym, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Facet>();
-  t->qualifier = qualifier;
-  t->fields    = fields;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  Facet t;
+  t.header.qualifier = qualifier;
+  t.fields           = fields;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_view(const std::vector<type::ID>& facets, definition::ID sym, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::View>();
-  t->qualifier = qualifier;
-  t->facets    = facets;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  assert(!facets.empty() && "Illegal empty view");
+
+  View t;
+  t.header.qualifier = qualifier;
+  t.facets           = facets;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_form(const std::vector<type::ID>& facets, definition::ID sym, Qualifier qualifier)
 {
-  auto t       = std::make_unique<type::Form>();
-  t->qualifier = qualifier;
-  t->facets    = facets;
-  t->def       = sym;
-  return arena.intern(std::move(t));
+  Form t;
+  t.header.qualifier = qualifier;
+  t.facets           = facets;
+  t.def              = sym;
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_forward_identifier(std::string_view name, Qualifier qualifier)
 {
-  auto t          = std::make_unique<type::Identifier>();
-  t->qualifier    = qualifier;
-  t->forward_name = std::string(name);
-  return arena.intern(std::move(t));
+  assert(!name.empty() && "Illegal empty identifier name");
+
+  Identifier t;
+  t.header.qualifier = qualifier;
+  t.forward_name     = std::string(name);
+  return arena.intern(t);
 }
 type::ID type::Arena::Factory::make_identifier(std::string_view name, ast::ID nodeid, definition::ID sym,
                                                Qualifier qualifier)
 {
+  assert(!name.empty() && "Illegal empty identifier name");
+
   auto it = arena.resolved_identifiers.find(std::string(name));
   if (it != arena.resolved_identifiers.end()) return it->second;
 
-  auto t          = std::make_unique<type::Identifier>();
-  t->qualifier    = qualifier;
-  t->forward_name = std::string(name);
-  t->nodeid       = nodeid;
-  t->def          = sym;
-  auto tyid       = arena.intern(std::move(t));
+  Identifier t;
+  t.header.qualifier = qualifier;
+  t.forward_name     = std::string(name);
+  t.nodeid           = nodeid;
+  t.def              = sym;
+  auto tyid          = arena.intern(t);
   return tyid;
 }
 type::ID type::Arena::Factory::make_string(ETextType txt_ty, Qualifier qualifier)
@@ -185,231 +204,249 @@ type::ID type::Arena::Factory::make_string(ETextType txt_ty, Qualifier qualifier
     }
   }
 
-  auto t       = std::make_unique<type::String>();
-  t->qualifier = qualifier;
-  t->kind      = txt_ty;
-  return arena.intern(std::move(t));
+  String t;
+  t.header.qualifier = qualifier;
+  t.kind             = txt_ty;
+  return arena.intern(t);
 }
 
-
-size_t type::Arena::hash_type(Type const& t) noexcept
+size_t type::Arena::hash_type(type::Primitive const& d) noexcept
 {
-  size_t h = hash_val(static_cast<uint8_t>(t.kind()));
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Primitive));
+  h        = hash_combine(h, static_cast<size_t>(d.primitive));
+  return h;
+}
 
-  switch (t.kind()) {
-  case ETypeKind::Primitive: {
-    const auto* d = static_cast<const type::Primitive*>(&t);
-    h             = hash_combine(h, static_cast<size_t>(d->primitive));
-    break;
-  }
+size_t type::Arena::hash_type(type::Ptr const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Ptr));
+  h        = hash_combine(h, d.inner.index());
+  return h;
+}
 
-  case ETypeKind::Ptr: {
-    const auto* d = static_cast<const type::Ptr*>(&t);
-    h             = hash_combine(h, d->inner.index());
-    break;
-  }
+size_t type::Arena::hash_type(type::Array const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Array));
+  h        = hash_combine(h, d.inner.index());
+  h        = hash_combine(h, d.size);
+  return h;
+}
 
-  case ETypeKind::Array: {
-    const auto* d = static_cast<const type::Array*>(&t);
-    h             = hash_combine(h, d->inner.index());
-    h             = hash_combine(h, d->size);
-    break;
-  }
+size_t type::Arena::hash_type(type::Buffer const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Buffer));
+  h        = hash_combine(h, d.inner.index());
+  return h;
+}
 
-  case ETypeKind::Buffer: {
-    const auto* d = static_cast<const type::Buffer*>(&t);
-    h             = hash_combine(h, d->inner.index());
-    break;
-  }
+size_t type::Arena::hash_type(type::Slice const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Slice));
+  h        = hash_combine(h, d.inner.index());
+  h        = hash_combine(h, d.is_c_table);
+  return h;
+}
 
-  case ETypeKind::Slice: {
-    const auto* d = static_cast<const type::Slice*>(&t);
-    h             = hash_combine(h, d->inner.index());
-    h             = hash_combine(h, d->is_c_table);
-    break;
-  }
+size_t type::Arena::hash_type(type::Tuple const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Tuple));
 
-  case ETypeKind::Tuple: {
-    const auto* d = static_cast<const type::Tuple*>(&t);
-    for (auto const& e : d->elems) h = hash_combine(h, e.index());
-    break;
-  }
-
-  case ETypeKind::Prototype: {
-    const auto* d = static_cast<const type::Prototype*>(&t);
-
-    for (auto const& p : d->params) h = hash_combine(h, p.type.index());
-
-    h = hash_combine(h, d->ret.index());
-    h = hash_combine(h, d->is_variadic);
-    break;
-  }
-
-  case ETypeKind::Enum: {
-    const auto* d = static_cast<const type::Enum*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::Flag: {
-    const auto* d = static_cast<const type::Flag*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::Union: {
-    const auto* d = static_cast<const type::Union*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::Facet: {
-    const auto* d = static_cast<const type::Facet*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::Form: {
-    const auto* d = static_cast<const type::Form*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::View: {
-    const auto* d = static_cast<const type::View*>(&t);
-    h             = hash_combine(h, d->def.index());
-    break;
-  }
-
-  case ETypeKind::Identifier: {
-    auto const&            d = static_cast<const type::Identifier*>(&t);
-    std::hash<std::string> hasher;
-    auto                   h2 = hasher(d->forward_name);
-
-    h = hash_combine(h, h2);
-    h = hash_combine(h, d->tyid.index());
-    break;
-  }
-
-  case ETypeKind::String: {
-    const auto* d = static_cast<const type::String*>(&t);
-    h             = hash_combine(h, static_cast<uint8_t>(d->kind));
-    break;
-  }
-
-  case ETypeKind::NONE: {
-    assert(false);
-  }
-  }
+  for (auto const& e : d.elems) h = hash_combine(h, e.index());
 
   return h;
 }
 
-definition::ID type::Type::get_def_id() const noexcept
+size_t type::Arena::hash_type(type::Prototype const& d) noexcept
 {
-  switch (kind()) {
-  case ETypeKind::Facet:      return static_cast<const type::Facet*>(this)->def;
-  case ETypeKind::Form:       return static_cast<const type::Form*>(this)->def;
-  case ETypeKind::Enum:       return static_cast<const type::Enum*>(this)->def;
-  case ETypeKind::Flag:       return static_cast<const type::Flag*>(this)->def;
-  case ETypeKind::Union:      return static_cast<const type::Union*>(this)->def;
-  case ETypeKind::Identifier: return static_cast<const type::Identifier*>(this)->def;
-  default:                    return NO_ID;
-  }
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Prototype));
+
+  for (auto const& p : d.params) h = hash_combine(h, p.type.index());
+
+  h = hash_combine(h, d.ret.index());
+  h = hash_combine(h, d.is_variadic);
+
+  return h;
 }
 
-bool type::Type::set_def_id(definition::ID defid) noexcept
+size_t type::Arena::hash_type(type::Enum const& d) noexcept
 {
-  switch (kind()) {
-  case ETypeKind::Facet:      static_cast<type::Facet*>(this)->def = defid; return true;
-  case ETypeKind::Form:       static_cast<type::Form*>(this)->def = defid; return true;
-  case ETypeKind::Enum:       static_cast<type::Enum*>(this)->def = defid; return true;
-  case ETypeKind::Flag:       static_cast<type::Flag*>(this)->def = defid; return true;
-  case ETypeKind::Union:      static_cast<type::Union*>(this)->def = defid; return true;
-  case ETypeKind::Identifier: static_cast<type::Identifier*>(this)->def = defid; return true;
-  default:                    return false;
-  }
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Enum));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::Flag const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Flag));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::Union const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Union));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::Facet const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Facet));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::Form const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Form));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::View const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::View));
+  h        = hash_combine(h, d.def.index());
+  return h;
+}
+
+size_t type::Arena::hash_type(type::Identifier const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::Identifier));
+
+  std::hash<std::string> hasher;
+  h = hash_combine(h, hasher(d.forward_name));
+  h = hash_combine(h, d.tyid().index());
+
+  return h;
+}
+
+size_t type::Arena::hash_type(type::String const& d) noexcept
+{
+  size_t h = hash_val(static_cast<uint8_t>(ETypeKind::String));
+  h        = hash_combine(h, static_cast<uint8_t>(d.kind));
+  return h;
 }
 
 
-bool type::TypeEq::operator()(Type const& a, Type const& b) const noexcept
+bool type::is_same_type(type::Primitive const& t, ID tyid) noexcept
 {
-  if (a.kind() != b.kind()) return false;
+  if (t.header.kind != tyid.kind()) return false;
 
-  switch (a.kind()) {
-  case ETypeKind::Primitive: {
-    const auto* pa = static_cast<const type::Primitive*>(&a);
-    const auto* pb = static_cast<const type::Primitive*>(&b);
-    return pa->primitive == pb->primitive;
-  }
+  auto const* d = tyid.as<type::Primitive>();
+  return t.primitive == d->primitive;
+}
 
-  case ETypeKind::Ptr: {
-    return static_cast<const type::Ptr*>(&a)->inner == static_cast<const type::Ptr*>(&b)->inner;
-  }
+bool type::is_same_type(type::Ptr const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Array: {
-    auto const& da = static_cast<const type::Array*>(&a);
-    auto const& db = static_cast<const type::Array*>(&b);
+  auto const* d = tyid.as<type::Ptr>();
+  return t.inner == d->inner;
+}
 
-    return da->inner == db->inner && da->size == db->size;
-  }
+bool type::is_same_type(type::Array const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Buffer: {
-    return static_cast<const type::Buffer*>(&a)->inner == static_cast<const type::Buffer*>(&b)->inner;
-  }
+  auto const* d = tyid.as<type::Array>();
+  return t.inner == d->inner && t.size == d->size;
+}
 
-  case ETypeKind::Slice: {
-    return static_cast<const type::Slice*>(&a)->inner == static_cast<const type::Slice*>(&b)->inner;
-  }
+bool type::is_same_type(type::Buffer const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Tuple: {
-    return static_cast<const type::Tuple*>(&a)->elems == static_cast<const type::Tuple*>(&b)->elems;
-  }
+  auto const* d = tyid.as<type::Buffer>();
+  return t.inner == d->inner;
+}
 
-  case ETypeKind::Prototype: {
-    auto const& da = static_cast<const type::Prototype*>(&a);
-    auto const& db = static_cast<const type::Prototype*>(&b);
+bool type::is_same_type(type::Slice const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-    return da->params == db->params && da->ret == db->ret;
-  }
+  auto const* d = tyid.as<type::Slice>();
+  return t.inner == d->inner && t.is_c_table == d->is_c_table;
+}
 
-  case ETypeKind::Enum: {
-    return static_cast<const type::Enum*>(&a)->def == static_cast<const type::Enum*>(&b)->def;
-  }
+bool type::is_same_type(type::Tuple const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Flag: {
-    return static_cast<const type::Flag*>(&a)->def == static_cast<const type::Flag*>(&b)->def;
-  }
+  auto const* d = tyid.as<type::Tuple>();
+  return t.elems == d->elems;
+}
 
-  case ETypeKind::Union: {
-    return static_cast<const type::Union*>(&a)->def == static_cast<const type::Union*>(&b)->def;
-  }
+bool type::is_same_type(type::Prototype const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Facet: {
-    return static_cast<const type::Facet*>(&a)->def == static_cast<const type::Facet*>(&b)->def;
-  }
+  auto const* d = tyid.as<type::Prototype>();
+  return t.params == d->params && t.ret == d->ret && t.is_variadic == d->is_variadic;
+}
 
-  case ETypeKind::View: {
-    return static_cast<const type::View*>(&a)->def == static_cast<const type::View*>(&b)->def;
-  }
+bool type::is_same_type(type::Enum const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::Form: {
-    return static_cast<const type::Form*>(&a)->def == static_cast<const type::Form*>(&b)->def;
-  }
+  auto const* d = tyid.as<type::Enum>();
+  return t.def == d->def;
+}
 
-  case ETypeKind::Identifier: {
-    const auto* a_id = static_cast<const type::Identifier*>(&a);
-    const auto* b_id = static_cast<const type::Identifier*>(&b);
-    return a_id->tyid == b_id->tyid && a_id->forward_name == b_id->forward_name;
-  }
+bool type::is_same_type(type::Flag const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
 
-  case ETypeKind::String: break;
-  case ETypeKind::NONE:   {
-    assert(false);
-  }
-  }
+  auto const* d = tyid.as<type::Flag>();
+  return t.def == d->def;
+}
 
-  return false;
+bool type::is_same_type(type::Union const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::Union>();
+  return t.def == d->def;
+}
+
+bool type::is_same_type(type::Facet const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::Facet>();
+  return t.def == d->def;
+}
+
+bool type::is_same_type(type::Form const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::Form>();
+  return t.def == d->def;
+}
+
+bool type::is_same_type(type::View const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::View>();
+  return t.def == d->def;
+}
+
+bool type::is_same_type(type::Identifier const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::Identifier>();
+  return t.header.tyid == tyid && t.forward_name == d->forward_name;
+}
+
+bool type::is_same_type(type::String const& t, ID tyid) noexcept
+{
+  if (t.header.kind != tyid.kind()) return false;
+
+  auto const* d = tyid.as<type::String>();
+  return t.kind == d->kind;
 }
 
 
@@ -636,10 +673,11 @@ void type::initialization() noexcept
 {
   primitives.reserve(TYPEID_USER_START);
 #define prim(prim_ty)                                                                                                  \
-  auto* name##prim_ty         = new type::Primitive();                                                                 \
-  name##prim_ty->tyid         = TYPEID##prim_ty;                                                                       \
-  name##prim_ty->primitive    = EPrimitiveTypeKind::prim_ty;                                                           \
-  primitives[TYPEID##prim_ty] = std::unique_ptr<type::Primitive>(name##prim_ty);
+  ;                                                                                                                    \
+  auto name##prim_ty        = type::Primitive();                                                                       \
+  name##prim_ty.header.tyid = TYPEID##prim_ty;                                                                         \
+  name##prim_ty.primitive   = EPrimitiveTypeKind::prim_ty;                                                             \
+  primitives.emplace(TYPEID##prim_ty, TypeEntry(TYPEID##prim_ty, ETypeKind::Primitive, std::move(name##prim_ty)));
 
   prim(_u0);
   prim(_bool);
@@ -683,10 +721,10 @@ void type::initialization() noexcept
 #undef prim
 
 #define prim_txt(prim_ty)                                                                                              \
-  auto* name##prim_ty               = new type::String();                                                              \
-  name##prim_ty->tyid               = TYPEID##prim_ty;                                                                 \
-  name##prim_ty->kind               = ETextType::prim_ty;                                                              \
-  primitives[type::TYPEID##prim_ty] = std::unique_ptr<type::String>(name##prim_ty);
+  auto name##prim_ty        = type::String();                                                                          \
+  name##prim_ty.header.tyid = TYPEID##prim_ty;                                                                         \
+  name##prim_ty.kind        = ETextType::prim_ty;                                                                      \
+  primitives.emplace(type::TYPEID##prim_ty, TypeEntry(TYPEID##prim_ty, ETypeKind::String, std::move(name##prim_ty)));
 
   prim_txt(_cstr);
   prim_txt(_str);
@@ -705,63 +743,63 @@ std::string type::dump(ID tyid) noexcept
   case ETypeKind::String:    return std::string(magic_enum::enum_name(tyid.as<type::String>()->kind).substr(1));
   case ETypeKind::Tuple:     {
     std::string out;
-    const auto* tu = static_cast<const type::Tuple*>(&ptr_ty);
+    const auto* tu = tyid.as<type::Tuple>();
+    out.reserve(tu->elems.size() * 32);
     for (const auto& tyid : tu->elems) {
-      out += tyid.dump();
-      out += ", ";
+      std::format_to(std::back_inserter(out), "{}, ", tyid.dump());
     }
 
-    return "(" + out.substr(0, out.size() - 2) + ")";
+    return std::format("({})", out.substr(0, out.size() - 2));
   }
   case ETypeKind::Array: {
-    const auto* ptr = static_cast<const type::Array*>(&ptr_ty);
-    return "[" + ptr->inner.dump() + "; " + std::to_string(ptr->size) + "]";
+    const auto* ptr = tyid.as<type::Array>();
+    return std::format("[{}; {}]", ptr->inner.dump(), std::to_string(ptr->size));
   }
   case ETypeKind::Buffer: {
-    const auto* ptr = static_cast<const type::Buffer*>(&ptr_ty);
-    return "[" + ptr->inner.dump() + "; _]";
+    const auto* ptr = tyid.as<type::Buffer>();
+    return std::format("[{}; _]", ptr->inner.dump());
   }
   case ETypeKind::Slice: {
-    const auto*       ptr  = static_cast<const type::Slice*>(&ptr_ty);
-    const std::string mode = ptr->is_c_table ? "c" : "..";
-    return "[" + ptr->inner.dump() + "; " + mode + "]";
+    const auto* ptr = tyid.as<type::Slice>();
+    return std::format("[{}; {}]", ptr->inner.dump(), ptr->is_c_table ? "c" : "..");
   }
   case ETypeKind::Ptr: {
-    const auto* ptr = static_cast<const type::Ptr*>(&ptr_ty);
-    return "ptr'" + ptr->inner.dump();
+    const auto* ptr = tyid.as<type::Ptr>();
+    return std::format("ptr'{}", ptr->inner.dump());
   }
   case ETypeKind::Prototype: {
     std::string params;
-    const auto* proto = static_cast<const type::Prototype*>(&ptr_ty);
+    params.reserve(params.size() * 32);
+    const auto* proto = tyid.as<type::Prototype>();
     for (const auto& param : proto->params) {
-      params += param.type.dump();
-      params += ", ";
+      std::format_to(std::back_inserter(params), "{} {}, ", magic_enum::enum_name(param.passmode), param.type.dump());
     }
     params = params.substr(0, params.size() - 2);
 
-    return "fn(" + params + ") -> " + proto->ret.dump();
+    return std::format("fn({}) -> {}", params, proto->ret.dump());
   }
   case ETypeKind::Facet: {
-    const auto* facet = static_cast<const type::Facet*>(&ptr_ty);
+    const auto* facet = tyid.as<type::Facet>();
     const auto* node  = facet->def.node().as<ast::SFM_Facet>();
     assert(node && "type node must be a facet");
 
     std::string fields;
+    fields.reserve(node->fields.size() * 32);
     for (const auto& field : node->fields) {
       const auto* f_node = field.as<ast::SFM_Facet_Field>();
       assert(f_node && "a facet must have field nodes");
 
-      fields += std::string(f_node->name) + ": " + f_node->type.dump() + "\n";
+      std::format_to(std::back_inserter(fields), "{}: {}\n", f_node->name, f_node->type.dump());
     }
 
-    return "facet" + std::string(node->name) + " {\n" + fields + "}\n";
+    return std::format("facet {}{{\n{}}}\n", node->name, fields);
   }
   case ETypeKind::View: {
-    const auto* view = static_cast<const type::View*>(&ptr_ty);
+    const auto* view = tyid.as<type::View>();
     assert(view->def && "a view type must refer to a symbol");
   }
   case ETypeKind::Identifier: {
-    const auto* id = static_cast<const type::Identifier*>(&ptr_ty);
+    const auto* id = tyid.as<type::Identifier>();
     return id->forward_name;
   }
   case ETypeKind::Form:
@@ -794,10 +832,29 @@ std::vector<type::Prototype_Param> type::to_proto_params(const std::vector<ast::
 }
 
 
-type::Type& type::Arena::get(ID id) noexcept
+type::TypeHeader& type::Arena::get(ID id) noexcept
 {
   size_t index = id.index();
-  if (index >= 0 && index < TYPEID_USER_START) return *type::primitives.at(type::ID::make(cu::ID::main(), index)).get();
+  if (index >= 0 && index < TYPEID_USER_START) {
+    auto& data = type::primitives.at(type::ID::make(cu::ID::main(), index)).data;
+    return std::visit([](auto& value) -> TypeHeader& { return value.header; }, data);
+  }
+  // canonical
+  auto it = canon_identifier.find(id);
+  if (it != canon_identifier.end()) return get(it->second);
+
+  index -= TYPEID_USER_START;
+
+  assert(index < types.size());
+  return std::visit([](auto& value) -> TypeHeader& { return value.header; }, types[index].data);
+}
+const type::TypeHeader& type::Arena::get(ID id) const noexcept
+{
+  size_t index = id.index();
+  if (index >= 0 && index < TYPEID_USER_START) {
+    auto& data = type::primitives.at(type::ID::make(cu::ID::main(), index)).data;
+    return std::visit([](auto& value) -> const TypeHeader& { return value.header; }, data);
+  }
 
   // canonical
   auto it = canon_identifier.find(id);
@@ -806,48 +863,5 @@ type::Type& type::Arena::get(ID id) noexcept
   index -= TYPEID_USER_START;
 
   assert(index < types.size());
-  return *types[index];
+  return std::visit([](auto& value) -> const TypeHeader& { return value.header; }, types[index].data);
 }
-const type::Type& type::Arena::get(ID id) const noexcept
-{
-  size_t index = id.index();
-  if (index >= 0 && index < TYPEID_USER_START) return *type::primitives.at(type::ID::make(cu::ID::main(), index)).get();
-
-  // canonical
-  auto it = canon_identifier.find(id);
-  if (it != canon_identifier.end()) return get(it->second);
-
-  index -= TYPEID_USER_START;
-
-  assert(index < types.size());
-  return *types[index];
-}
-
-type::Type& type::get(ID id) noexcept
-{
-  size_t offset = id.index();
-  if (offset >= 0 && offset < TYPEID_USER_START) return *primitives.at(type::ID::make(cu::ID::main(), offset)).get();
-
-  auto& cu = id.cu().get();
-  return cu.types->get(id);
-}
-
-#define TYPE_GET_INSTANCE(T) template T* type::as<T>(ID id) noexcept;
-
-TYPE_GET_INSTANCE(type::Primitive);
-TYPE_GET_INSTANCE(type::String);
-TYPE_GET_INSTANCE(type::Tuple);
-TYPE_GET_INSTANCE(type::Array);
-TYPE_GET_INSTANCE(type::Buffer);
-TYPE_GET_INSTANCE(type::Slice);
-TYPE_GET_INSTANCE(type::Ptr);
-TYPE_GET_INSTANCE(type::Prototype);
-TYPE_GET_INSTANCE(type::Facet);
-TYPE_GET_INSTANCE(type::View);
-TYPE_GET_INSTANCE(type::Form);
-TYPE_GET_INSTANCE(type::Enum);
-TYPE_GET_INSTANCE(type::Flag);
-TYPE_GET_INSTANCE(type::Union);
-TYPE_GET_INSTANCE(type::Identifier);
-
-#undef TYPE_GET_INSTANCE

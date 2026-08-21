@@ -1,8 +1,8 @@
 <div align="center">
 
-![Velox logo](logo/velox-logo-128.svg) 
+![Tolza logo](logo/tolza-logo-128.svg) 
 
-# Velox</br> TECHNICAL IMPLEMENTATION
+# Tolza</br> TECHNICAL IMPLEMENTATION
 
 </div>
 
@@ -11,12 +11,12 @@ A hybrid-level programming language designed to emphasize safety and simplicity 
 This project has been under design and experimentation since 2024.  
 The public repository reflects the current implementation.
 
-Velox is currently in an experimental stage and should be considered a work in progress.
+Tolza is currently in an experimental stage and should be considered a work in progress.
 
 This TECHNICAL IMPLEMENTATION presents the vision and core ideas behind the language.  
 Some features and syntax are still under development.
 
-Velox is a next-generation programming language. Inspired by modern systems programming practices and component-oriented architectures, Velox enables developers to write efficient, maintainable, and scalable code with minimal boilerplate and minimal undefined behaviour through memory and code logic.
+Tolza is a next-generation programming language. Inspired by modern systems programming practices and component-oriented architectures, Tolza enables developers to write efficient, maintainable, and scalable code with minimal boilerplate and minimal undefined behaviour through memory and code logic.
 
 > Explicit Inspirations: ![Rust](https://github.com/rust-lang/rust) - ![C](https://github.com/llvm/llvm-project) - ![C++](https://github.com/llvm/llvm-project) - ![Python](https://github.com/python) - ![COBOL](https://github.com/dscobol/Cobol-Projects) - ![FORTAN](https://github.com/fortran-lang) - ![Lisp](https://github.com/topics/common-lisp?l=scheme&o=desc&s=) - ![Zen-C](https://github.com/z-libs/Zen-C)</br>
 The Zen-C programming language demonstrates a clear commitment to modernizing C, offering a safer language that aligns with modern programming practices. We are following the progress of this project with great interest, as it shares some of the goals we are pursuing in our own language.

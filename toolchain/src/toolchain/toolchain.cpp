@@ -1,10 +1,9 @@
 #include "toolchain/toolchain.hpp"
 
 #include <filesystem>
-#include <fstream>
+#include <print>
 #include <string>
 #include <expected>
-#include <iostream>
 
 #include <common/common.hpp>
 #include <common/environment.hpp>
@@ -15,8 +14,6 @@
 #include <marzer/toml++.hpp>
 
 namespace fs = std::filesystem;
-
-extern const std::string common::SOFTWARE_NAME = "velox-toolchain";
 
 void toolchain::link_stdlib()
 {
@@ -32,19 +29,19 @@ void toolchain::link_stdlib()
   if (fs::exists(stdpath, ec)) {
     fs::remove(stdpath, ec);
     if (ec) {
-      std::cerr << "Cannot delete old symlink : " << ec.message() << "\n";
+      std::println(stderr, "Cannot delete old symlink : {}", ec.message());
       return;
     }
   }
 
 #if defined(_WIN32)
   if (!fs::create_directory_symlink(fs::absolute(source), stdpath, ec)) {
-    std::cerr << "Cannot create the symlink: " << ec.message() << "\n";
+    std::println(stderr, "Cannot create the symlink : {}", ec.message());
   }
 #elif __unix__
   fs::create_symlink(fs::absolute(source), stdpath, ec);
   if (ec) {
-    std::cerr << "cannot create the symlink : " << ec.message() << "\n";
+    std::println(stderr, "Cannot create the symlink : {}", ec.message());
   }
 #endif
 }
@@ -54,9 +51,9 @@ int toolchain::exec_compiler_cmd(std::string_view cmd) noexcept
   const fs::path compiler_path = common::toolchain::OPTIONS.compiler_used;
 
   if (!fs::exists(compiler_path))
-    common::FATAL_ERROR("The compiler located at \"" + compiler_path.string()
-                        + "\" dosen't exists. Please, change the compiler used.");
+    common::FATAL_ERROR(std::format("The compiler located at \"{}\" dosen't exist. Please, change the compiler used.",
+                                    compiler_path.string()));
 
-  const std::string final_cmd = std::string(compiler_path) + " " + std::string(cmd);
+  const std::string final_cmd = std::format("{} {}", compiler_path.string(), cmd);
   return std::system(final_cmd.data());
 }

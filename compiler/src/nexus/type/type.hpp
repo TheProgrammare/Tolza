@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,32 +20,53 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <print>
+#include <memory_resource>
 #include <string_view>
 #include <unordered_map>
+
 
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 
 #include "nexus/type/definition.hpp"
 
-
 namespace type
 {
 
 // start of user type
 constexpr size_t TYPEID_USER_START = 42;
+constexpr size_t TYPEID_FFI_START  = std::numeric_limits<size_t>::max() / 2;
 
-struct TypeEq final {
-  bool operator()(Type const& a, Type const& b) const noexcept;
-};
+struct TypeEntry final {
+  ID        id;
+  ETypeKind kind;
+  Variant   data;
 
-struct Factory final {
-  template <IsDataType T, typename... Args>
-  [[nodiscard]] T make_type(Args&&... args) const
+  explicit TypeEntry(ID p_id, ETypeKind p_kind, Variant p_data)
+    : id(p_id)
+    , kind(p_kind)
+    , data(std::move(p_data))
   {
-    return T(args...);
   }
 };
+
+
+[[nodiscard]] bool is_same_type(type::Primitive const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Ptr const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Array const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Buffer const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Slice const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Tuple const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Prototype const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Enum const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Flag const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Union const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Facet const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Form const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::View const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::Identifier const& t, ID tyid) noexcept;
+[[nodiscard]] bool is_same_type(type::String const& t, ID tyid) noexcept;
 
 ID   get_prototype(ast::ID nodeid) noexcept;
 ID   get_inner(type::ID tyid) noexcept;
@@ -53,17 +74,7 @@ ID   get_inner(type::ID tyid) noexcept;
 // ID   get_val(ast::ID nodeid) noexcept;
 void initialization() noexcept;
 
-inline std::unordered_map<ID, std::unique_ptr<Type>, ID::Hash> primitives;
-
-[[nodiscard]] Type& get(ID tyid) noexcept;
-
-template <IsDataType T>
-[[nodiscard]] T* as(ID tyid) noexcept
-{
-  auto* ty = &get(tyid);
-  if (ty->kind() == T::static_kind) return static_cast<T*>(ty);
-  return nullptr;
-}
+inline std::unordered_map<ID, TypeEntry, ID::Hash> primitives;
 
 [[nodiscard]] std::string dump(ID tyid) noexcept;
 
@@ -102,7 +113,7 @@ struct Arena final {
   cu::ID cuid;
 
   // arena storage
-  std::vector<std::unique_ptr<Type>>                     types;
+  std::vector<TypeEntry>                                 types;
   std::unordered_map<std::string, type::ID>              resolved_identifiers;
   std::unordered_map<type::ID, type::ID, type::ID::Hash> canon_identifier;
 
@@ -110,16 +121,58 @@ struct Arena final {
   std::unordered_map<size_t, std::vector<ID>> buckets;
 
   // returns the canonical type
-  [[nodiscard]] Type&       get(ID tyid) noexcept;
+  [[nodiscard]] TypeHeader&       get(ID tyid) noexcept;
   // returns the canonical type
-  [[nodiscard]] const Type& get(ID tyid) const noexcept;
+  [[nodiscard]] const TypeHeader& get(ID tyid) const noexcept;
 
-  template <IsDataType T>
+  template <type::Generic T>
   [[nodiscard]] T* as(ID tyid) noexcept
   {
-    auto* ty = &get(tyid);
-    if (ty->kind() == T::static_kind) return static_cast<T*>(ty);
-    return nullptr;
+    assert(tyid.cu() == cuid);
+    size_t index = tyid.index();
+
+    if (index < TYPEID_USER_START)
+      return std::get_if<T>(&type::primitives.at(type::ID::make(cu::ID::main(), index)).data);
+
+    index -= TYPEID_USER_START;
+
+    // canonical
+    auto it = canon_identifier.find(tyid);
+    if (it != canon_identifier.end()) return as<T>(it->second);
+
+    assert(index < types.size());
+    auto& entry = types[index];
+
+    return std::get_if<T>(&entry.data);
+  }
+
+  template <type::Generic T>
+  [[nodiscard]] const T* as(ID tyid) const noexcept
+  {
+    assert(tyid.cu() == cuid);
+    size_t index = tyid.index();
+    if (index < TYPEID_USER_START)
+      return std::get_if<const T>(&type::primitives.at(type::ID::make(cu::ID::main(), index)).data);
+
+    index -= TYPEID_USER_START;
+
+    // canonical
+    auto it = canon_identifier.find(tyid);
+    if (it != canon_identifier.end()) return as<T>(it->second);
+
+    assert(index < types.size());
+    const auto& entry = types[index];
+
+    T* out = nullptr;
+    if (entry.kind == T::static_kind) out = std::get_if<const T>(&entry.data);
+
+    if constexpr (std::same_as<T, type::Prototype>) {
+      std::println("AS proto requested={} entry={} ptr={} params={} size={} capa={}", tyid.dump(), entry.id.dump(),
+                   static_cast<void*>(out), static_cast<void*>(out->params.data()), out->params.size(),
+                   out->params.capacity());
+    }
+
+    return out;
   }
 
   [[nodiscard]] bool is_canonical(std::string_view str) const noexcept
@@ -137,37 +190,59 @@ struct Arena final {
     canon_identifier.insert_or_assign(tyid, canon);
   }
 
-  [[nodiscard]] ID intern(std::unique_ptr<Type> t) noexcept
+  template <type::Generic T>
+  [[nodiscard]] ID intern(T&& t) noexcept
   {
-    const size_t h = hash_type(*t);
+    const size_t h = hash_type(t);
 
     auto& bucket = buckets[h];
 
     // is type already exists
     for (ID id : bucket) {
-      const auto offset = id.index() - TYPEID_USER_START;
-      assert(offset >= 0 && offset < types.size() && "offset is out of bounds");
-      const auto* ty = types[offset].get();
-      assert(ty && "type not found");
-      if (TypeEq{}(*ty, *t)) return id;
+      if (is_same_type(t, id)) {
+        return id;
+      }
     }
 
-    return add(std::move(t), bucket);
+    const auto id = add(std::forward<T>(t), bucket);
+    return id;
   }
 
 
 private:
-  [[nodiscard]] ID add(std::unique_ptr<Type> t, std::vector<ID>& bucket) noexcept
+  template <type::Generic T>
+  [[nodiscard]] ID add(T&& t, std::vector<ID>& bucket) noexcept
   {
     assert(!freeze && "Pool is immutable after parsing pass");
 
+    using U = std::remove_cvref_t<T>;
+
     ID new_id = ID::make(cuid, types.size() + TYPEID_USER_START);
-    t->tyid   = new_id;
-    types.emplace_back(std::move(t));
+
+    types.emplace_back(TypeEntry(new_id, U::static_kind, Variant(std::forward<T>(t))));
+
+    std::visit([&](auto& obj) { obj.header.tyid = new_id; }, types.back().data);
+
     bucket.emplace_back(new_id);
+
     return new_id;
   }
-  [[nodiscard]] static size_t hash_type(const Type& t) noexcept;
+
+  size_t hash_type(type::Primitive const& d) noexcept;
+  size_t hash_type(type::Ptr const& d) noexcept;
+  size_t hash_type(type::Array const& d) noexcept;
+  size_t hash_type(type::Buffer const& d) noexcept;
+  size_t hash_type(type::Slice const& d) noexcept;
+  size_t hash_type(type::Tuple const& d) noexcept;
+  size_t hash_type(type::Prototype const& d) noexcept;
+  size_t hash_type(type::Enum const& d) noexcept;
+  size_t hash_type(type::Flag const& d) noexcept;
+  size_t hash_type(type::Union const& d) noexcept;
+  size_t hash_type(type::Facet const& d) noexcept;
+  size_t hash_type(type::Form const& d) noexcept;
+  size_t hash_type(type::View const& d) noexcept;
+  size_t hash_type(type::Identifier const& d) noexcept;
+  size_t hash_type(type::String const& d) noexcept;
 };
 
 constexpr ID BAD_TYPE_ID = ID::invalid();

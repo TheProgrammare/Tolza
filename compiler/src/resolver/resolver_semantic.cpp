@@ -25,7 +25,7 @@
 
 bool resolver::Semantic::start_resolver()
 {
-  resolve_node(CU.nodes->get_file_root()->nodeid());
+  resolve_node(CU.ast->get_file_root()->nodeid());
 
   return true;
 }
@@ -128,18 +128,18 @@ void resolver::Semantic::resolve_Operation_Binary(ast::Operation_Binary& n)
   resolve_node(n.right);
 
   if (n.left.type() != n.right.type()) {
-    add_error(205, n.header,
-              "Invalid binary operation on two differents types:\n  - left type: \"" + n.left.type().dump()
-                  + "\"\n  - right type: \"" + n.right.type().dump() + "\"",
-              "");
+    add_error(
+        205, n.header,
+        std::format("Invalid binary operation on two differents types:\n  - left type: \"{}\"\n  - right type: \"{}\"",
+                    n.left.type().dump(), n.right.type().dump()),
+        "");
     return;
   }
 
   if (const auto* prim = n.left.type().as<type::Primitive>()) {
     if (!type::rule::can_op_primitive(prim->primitive, n.op_ty)) {
       add_error(206, n.header,
-                "Invalid operation \"" + std::string(EOp_Bin_to_str(n.op_ty)) + "\" on " + n.left.type().dump()
-                    + " type.",
+                std::format("Invalid operation \"{}\" on ", EOp_Bin_to_str(n.op_ty)) + n.left.type().dump() + " type.",
                 "");
       return;
     }
@@ -181,6 +181,6 @@ void resolver::Semantic::resolve_Expression_Invocation(ast::Expression_Invocatio
 
     const auto argid = n.arguments[count++];
 
-    if (argid.type() != param->type) add_error_two_nodes(214, *argid.get(), param->header, "Invalid argument type", "");
+    if (argid.type() != param->type) add_error_two_nodes(214, argid.get(), param->header, "Invalid argument type", "");
   }
 }

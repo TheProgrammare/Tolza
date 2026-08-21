@@ -5,64 +5,100 @@
             "name": "Debug project creation",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["create", "workspace", "${workspaceFolder}/../../velox-workspace", "--name", "velox-example", "-f"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "create",
+                "workspace",
+                "${workspaceFolder}/../../tolza-workspace",
+                "--name",
+                "tolza-example",
+                "-f"
+            ],
             "env": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
         },
-           {
+        {
             "name": "Debug config creation",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["create", "config", "${workspaceFolder}/../../velox-workspace", "--name", "template"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "create",
+                "config",
+                "${workspaceFolder}/../../tolza-workspace",
+                "--name",
+                "template"
+            ],
             "env": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
         },
         {
             "name": "Debug audit",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["audit", "${workspaceFolder}/../../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "audit",
+                "${workspaceFolder}/../../tolza-workspace/tolza-example"
+            ],
             "env": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
         },
         {
             "name": "Debug check",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["check", "workspace", "${workspaceFolder}/../../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "check",
+                "workspace",
+                "${workspaceFolder}/../../tolza-workspace/tolza-example"
+            ],
             "env": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
         },
         {
             "name": "Debug gui",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["gui", "${workspaceFolder}/../../velox-workspace/velox-example"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "gui",
+                "${workspaceFolder}/../../tolza-workspace/tolza-example"
+            ],
             "env": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
         },
         {
             "name": "Debug build",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox",
-            "args": ["build", "--path", "${workspaceFolder}/../../velox-workspace/velox-example/velox.toml"],
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "build",
+                "--path",
+                "${workspaceFolder}/../../tolza-workspace/tolza-example/tolza.toml"
+            ],
             "env": [],
             "cwd": "${workspaceFolder}",
-            
+            "preLaunchTask": "build-debug"
         },
         {
             "name": "Release",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/build/release/velox",
-            "args": ["build", "${workspaceFolder}/../../velox-workspace/velox-example"],
-            "cwd": "${workspaceFolder}"
+            "program": "${workspaceFolder}/build/release/tolza",
+            "args": [
+                "build",
+                "${workspaceFolder}/../../tolza-workspace/tolza-example"
+            ],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-release"
         }
     ]
 }

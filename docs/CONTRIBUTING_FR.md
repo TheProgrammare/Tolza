@@ -22,7 +22,7 @@ Avant de considérer de contribuer à ce projet, veuillez lire quelques document
 # Qui peut contribuer ?
 N'importe quel volontaire, mais il y a quelques suggestions sur comment vous pouvez vous rendre utile selon vos compétences
 
-| mes compétences | mon utilité pour velox |
+| mes compétences | mon utilité pour tolza |
 |-|-|
 | jeunes développeur | une meilleur compréhension innocente sur les conceptes trop complexe, une meilleure approche simplifiée, proche d'une compréhension spontanée |
 | développeur expérimentés | bon pour la revue de code, expérience sur les paradigmes et concepts, meilleur expérence dans les apporches |
@@ -34,9 +34,9 @@ N'importe quel volontaire, mais il y a quelques suggestions sur comment vous pou
 # Objectifs du Projet
 **Résumé**
 
-Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas concrets et pratiques, à la fois via le langage Velox et sa toolchain.  
+Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas concrets et pratiques, à la fois via le langage Tolza et sa toolchain.  
 
-### Langage (Velox)
+### Langage (Tolza)
 - Langage de programmation **déterministe, prévisible et explicite**, avec une **syntaxe simple et moderne**.
 - Les **paradigmes natifs** du langage doivent être utiles sans introduire une complexité excessive.
 - L’**abstraction** est appréciée, mais le programmeur doit pouvoir comprendre globalement ce qui se passe. L’abstraction passe donc par la **simplicité et la clarté du code**.
@@ -51,7 +51,7 @@ Ce projet a pour objectif de répondre à des besoins raisonnables sur des cas c
 ### Toolchain
 - Fournir un langage **clé en main**, adapté autant aux **petits projets** qu’aux **projets industriels**.
 - La toolchain est à utiliser de préférence dans un **espace de travail**.
-- `velox.config` est le **fichier de référence**, indiquant le comportement du compilateur, les dossiers cibles, et définissant l’espace de travail par la localisation des dossiers.
+- `tolza.config` est le **fichier de référence**, indiquant le comportement du compilateur, les dossiers cibles, et définissant l’espace de travail par la localisation des dossiers.
 - La toolchain n’est pas basique mais doit demeurer **simple, pratique et intuitive**.
 
 # Structure du projet

@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,6 @@
  */
 
 #pragma once
-
-#define VELOX_COMPILER
 
 #include <string>
 #include <string_view>
@@ -55,13 +53,24 @@ struct Options;
 }
 
 constexpr std::string_view k_facet_abort =
-    R"([velox-compiler] Compilation aborted
+    R"([tolza-compiler] Compilation aborted
   [note] You must resolve all stage errors before to pass to the next stage!"
   Please see above to locate all errors.
 )";
 
 namespace compiler
 {
+
+
+constexpr std::string_view SOFTWARE_ABOUT =
+    "Tolza-Compiler\n"
+    "  Version: " SOFTWARE_VERSION
+    "\n"
+    "  Tolza version: " TOLZA_VERSION
+    "\n"
+    "  License: Apache License, Version 2.0\n"
+    "  Author: Florian Foz\n"
+    "  Source: https://github.com/TheProgrammare/Tolza";
 
 
 enum class EPhase : uint8_t {

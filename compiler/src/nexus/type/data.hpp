@@ -146,7 +146,7 @@ enum class EPtrType : uint8_t {
 [[nodiscard]] bool is_cast_implicit(EPrimitiveTypeKind src, EPrimitiveTypeKind target) noexcept;
 
 
-template <class T>
+template <typename T>
 [[nodiscard]] inline size_t hash_val(T const& v) noexcept
 {
   return std::hash<T>{}(v);

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <iostream>
+#include <print>
 #include <string>
 #include <filesystem>
 
@@ -31,21 +31,21 @@ std::vector<std::string> common::env::find_all_compilers(std::string_view dir_se
   std::vector<std::string> compilers;
 
   if (!fs::exists(dir_search)) {
-    std::cerr << "[velox:ERROR] File at \"" + std::string(dir_search) + "\" dosen't exists.";
+    std::println(stderr, "[tolza:ERROR] File at \"{}\" dosen't exist.", dir_search);
     return {};
   }
 
   for (const auto& entry : fs::directory_iterator(dir_search)) {
-    if (!entry.is_directory() && entry.path().filename().string().starts_with("velox-compiler"))
+    if (!entry.is_directory() && entry.path().filename().string().starts_with("tolza-compiler"))
       compilers.emplace_back(entry.path().string());
   }
 
   if (compilers.empty()) {
-    std::cerr << "[velox:ERROR] No velox-compiler found.";
+    std::println(stderr, "[tolza:ERROR] No tolza-compiler found.");
     return compilers;
   }
 
-  for (auto& compiler : compilers) std::cout << compiler << "\n";
+  for (auto& compiler : compilers) std::println("{}", compiler);
   return compilers;
 }
 
@@ -60,11 +60,11 @@ std::string common::env::find_latest_compiler(std::string_view dir_search) noexc
   auto latest = std::ranges::max_element(compilers, [](const auto& a, const auto& b) { return a < b; });
 
   if (latest != compilers.end()) {
-    std::cout << *latest;
+    std::print("{}", *latest);
     return *latest;
   }
 
-  std::cerr << "[velox:ERROR] No compiler found.";
+  std::println(stderr, "[tolza:ERROR] No compiler found.");
   return "";
 }
 
@@ -77,13 +77,13 @@ std::string common::env::find_compiler_version(std::string_view dir_search, std:
 
 
   for (auto& compiler : compilers) {
-    if (fs::path(compiler).stem().string().starts_with("velox-compiler-" + std::string(version))) {
-      std::cout << compiler << "\n";
+    if (fs::path(compiler).stem().string().starts_with("tolza-compiler-" + std::string(version))) {
+      std::println("{}", compiler);
       return compiler;
     }
   }
 
-  std::cerr << "No velox-compiler found for the version " << version;
+  std::println(stderr, "No tolza-compiler found for the version {}", version);
   return "";
 }
 
@@ -96,17 +96,17 @@ std::string_view common::env::get_local_data_dir() noexcept
 #ifdef _WIN32
   const char* appdatalocal = std::getenv("APPDATALOCAL"); // C:\Users\Alice\AppData\Local
   if (!appdatalocal) FATAL_ERROR("The appdata local environment is not defined");
-  return path = std::string(appdatalocal) + "\\velox";
+  return path = std::string(appdatalocal) + "\\tolza";
 #elif __APPLE__
   const char* home = std::getenv("HOME"); // /Users/Alice
   if (!home) FATAL_ERROR("The home environment is not defined");
-  return path = std::string(home) + "/Library/Application Support/velox";
+  return path = std::string(home) + "/Library/Application Support/tolza";
 #else // Linux / UNIX
   const char* xdg = std::getenv("XDG_DATA_HOME");
-  if (xdg) return path = std::string(xdg) + "/velox";
+  if (xdg) return path = std::string(xdg) + "/tolza";
   const char* home = std::getenv("HOME"); // /home/alice
   if (!home) FATAL_ERROR("The home environment is not defined");
-  return path = std::string(home) + "/.local/share/velox";
+  return path = std::string(home) + "/.local/share/tolza";
 #endif
 }
 
@@ -118,21 +118,21 @@ std::string_view common::env::get_cache_dir() noexcept
 #ifdef _WIN32
   const char* appdatalocal = std::getenv("APPDATALOCAL"); // C:\Users\Alice\AppData\Local
   if (!appdatalocal) FATAL_ERROR("The appdata local environment is not defined");
-  return path = std::string(appdatalocal) + "\\velox\\cache";
+  return path = std::string(appdatalocal) + "\\tolza\\cache";
 #elif __APPLE__
   const char* home = std::getenv("HOME"); // /Users/Alice
   if (!home) FATAL_ERROR("The home environment is not defined");
-  return path = std::string(home) + "/Library/Caches/velox";
+  return path = std::string(home) + "/Library/Caches/tolza";
 #else // Linux / UNIX
   const char* xdg = std::getenv("XDG_CACHE_HOME");
-  if (xdg) return path = std::string(xdg) + "/velox";
+  if (xdg) return path = std::string(xdg) + "/tolza";
   const char* home = std::getenv("HOME"); // /home/alice
   if (!home) FATAL_ERROR("The home environment is not defined");
-  return path = std::string(home) + "/.cache/velox";
+  return path = std::string(home) + "/.cache/tolza";
 #endif
 }
 
-// ... /velox
+// ... /tolza
 // - toolchain.config
 std::string_view common::env::get_config_dir() noexcept
 {
@@ -142,19 +142,19 @@ std::string_view common::env::get_config_dir() noexcept
 #ifdef _WIN32
   const char* appdata = std::getenv("APPDATA"); // C:\Users\Alice\AppData\Romaning
   if (!appdata) FATAL_ERROR("The appdata environment is not defined");
-  return path = std::string(appdata) + "\\velox";
+  return path = std::string(appdata) + "\\tolza";
 #elif __APPLE__
   const char* home = std::getenv("HOME");
   if (!home) FATAL_ERROR("The home environment is not defined");
-  return path = std::string(home) + "/Library/Preferences/velox";
+  return path = std::string(home) + "/Library/Preferences/tolza";
 #else // Linux / UNIX
   const char* xdg = std::getenv("XDG_CONFIG_HOME");
-  if (xdg) return path = std::string(xdg) + "/velox";
+  if (xdg) return path = std::string(xdg) + "/tolza";
   const char* home = std::getenv("HOME");
 
   if (!home) FATAL_ERROR("The home environment is not defined");
 
-  return path = std::string(home) + "/.config/velox";
+  return path = std::string(home) + "/.config/tolza";
 #endif
 }
 
@@ -174,7 +174,7 @@ std::string_view common::env::get_exe_dir() noexcept
 #endif
 }
 
-// ... /velox/lib/packages
+// ... /tolza/lib/packages
 // - package name
 // -- versions
 // --- package
@@ -190,7 +190,7 @@ std::string_view common::env::get_packages_dir() noexcept
 #endif
 }
 
-// ... /velox/lib/compiler
+// ... /tolza/lib/compiler
 // - versions
 // -- executable
 std::string_view common::env::get_compilers_dir() noexcept
@@ -205,7 +205,7 @@ std::string_view common::env::get_compilers_dir() noexcept
 #endif
 }
 
-// ... /velox/lib/std
+// ... /tolza/lib/std
 // - versions
 // -- lib
 std::string_view common::env::get_stdlib_dir() noexcept
@@ -220,7 +220,7 @@ std::string_view common::env::get_stdlib_dir() noexcept
 #endif
 }
 
-// ... /velox/templates
+// ... /tolza/templates
 // - some template files
 std::string_view common::env::get_templates_dir() noexcept
 {
@@ -244,13 +244,13 @@ std::vector<std::string> common::env::get_compiler_dirs() noexcept
   fs::path bin = get_exe_dir();
   search_dir.emplace_back(bin.parent_path());
 #ifdef _WIN32
-  search_dir.emplace_back(fs::path("C:/Program Files/Velox"));
-  search_dir.emplace_back(fs::path("C:/Program Files (x86)/Velox"));
+  search_dir.emplace_back(fs::path("C:/Program Files/Tolza"));
+  search_dir.emplace_back(fs::path("C:/Program Files (x86)/Tolza"));
 #elif __APPLE__
-  search_dir.emplace_back({fs::path("/Applications/Velox")});
+  search_dir.emplace_back({fs::path("/Applications/Tolza")});
 #else
-  search_dir.emplace_back(fs::path("/usr/local/velox"));
-  search_dir.emplace_back(fs::path("/opt/velox"));
+  search_dir.emplace_back(fs::path("/usr/local/tolza"));
+  search_dir.emplace_back(fs::path("/opt/tolza"));
 #endif
   return search_dir;
 }

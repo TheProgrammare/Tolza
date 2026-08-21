@@ -4,14 +4,9 @@
 #include <common/common.hpp>
 
 #include <filesystem>
-#include <initializer_list>
-#include <ios>
-#include <iomanip>
-#include <iostream>
+#include <print>
 #include <fstream>
 #include <mutex>
-#include <ostream>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -110,33 +105,22 @@ void command::audit::audit_workspace(std::string_view root) noexcept
   constexpr std::string_view str_template = R"(
 =============================================================================== 
  [Audit]             Files        Lines         Code     Comments       Blanks
- Source Code     %0    %1    %2    %3    %4
- Third Party     %5    %6    %7    %8    %9
- Binder         %10   %11   %12   %13   %14
+ Source Code     {0:09}    {1:09}    {2:09}    {3:09}    {4:09}
+ Third Party     {5:09}    {6:09}    {7:09}    {8:09}    {9:09}
+ Binder         {10:09}   {11:09}   {12:09}   {13:09}   {14:09}
 =============================================================================== 
- [Total]        %15   %16   %17   %18   %19
+ [Total]        {15:09}   {16:09}   {17:09}   {18:09}   {19:09}
 =============================================================================== 
  [Population]        Roles     Entities   Components      Systems      Imports
-   %32   %20   %21   %22   %23   %24
+   {32:09}   {20:09}   {21:09}   {22:09}   {23:09}   {24:09}
  Enumerations    Functions     Generics       Unions        Flags      Exports
-   %25   %26   %27   %28   %29   %30
+   {25:09}   {26:09}   {27:09}   {28:09}   {29:09}   {30:09}
 =============================================================================== 
- [Disk Size]   %31 Ko
+ [Disk Size]   {31:09.2f} Ko
 ===============================================================================
   )";
 
-  auto fmt_number = [&](size_t num) {
-    std::ostringstream os;
-    os << std::setfill(' ') << std::setw(9) << num;
-    return os.str();
-  };
-
-  auto fmt_dbl = [&](double num) {
-    std::ostringstream os;
-    os << std::fixed << std::setfill(' ') << std::setprecision(2) << std::setw(9) << num;
-    return os.str();
-  };
-  std::cout << "[velox] Starting audit...\n";
+  std::println("[tolza] Starting audit...");
 
   auto source_code = CategoryStats();
   auto vendor      = CategoryStats();
@@ -156,7 +140,7 @@ void command::audit::audit_workspace(std::string_view root) noexcept
     if (!entry.is_regular_file()) continue;
 
     auto ext = entry.path().extension().string();
-    if (ext != ".vlx" && ext != ".vlxbind" && ext != ".vlxlib") continue;
+    if (ext != ".tlz" && ext != ".tlzbind" && ext != ".tlzlib") continue;
 
     std::string relative_path = entry.path().lexically_relative(root).string();
 
@@ -174,13 +158,14 @@ void command::audit::audit_workspace(std::string_view root) noexcept
 
   // Thread progression
   std::atomic<bool> done{false};
-  std::thread       progress_thread([&]() {
+  std::thread       progress_thread([&done, &processed, &total_files]() {
     while (!done) {
       size_t p       = processed.load();
-      double percent = total_files == 0 ? 100.0 : (100.0 * p) / total_files;
+      double percent = total_files == 0 ? 1.0 : static_cast<double>(p) / static_cast<double>(total_files);
 
-      std::cout << "\r\033[K[velox] auditing: " << p << "/" << total_files << " (" << std::fixed << std::setprecision(1)
-                << percent << "%)" << std::flush;
+      // strange compilation error on thread when the formatter {:.2%} is used
+      // std::print("\r\033[K[tolza] auditing files: {} ({:.2%})", total_files, percent);
+      std::print("\r\033[K[tolza] auditing files: {} ({:.2f}%)", total_files, percent * 100);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -230,7 +215,7 @@ void command::audit::audit_workspace(std::string_view root) noexcept
   done = true;
   progress_thread.join();
 
-  std::cout << "\r\033[K\n[velox] audit complete.";
+  std::println("\r\033[K\n[tolza] audit complete.");
 
   global.global_cat.lines         = source_code.lines + vendor.lines + binder.lines;
   global.global_cat.code_lines    = source_code.code_lines + vendor.code_lines + binder.code_lines;
@@ -244,52 +229,16 @@ void command::audit::audit_workspace(std::string_view root) noexcept
                       + global.generics + global.imports + global.roles + global.sys + global.unions;
 
 
-  std::string out(str_template);
+  std::print(str_template, source_code.files, source_code.lines, source_code.code_lines, source_code.comment_lines,
+             source_code.blank_lines,
 
-  std::initializer_list<std::string> vars = {
+             vendor.files, vendor.lines, vendor.code_lines, vendor.comment_lines, vendor.blank_lines,
 
-      fmt_number(source_code.files),
-      fmt_number(source_code.lines),
-      fmt_number(source_code.code_lines),
-      fmt_number(source_code.comment_lines),
-      fmt_number(source_code.blank_lines),
+             binder.files, binder.lines, binder.code_lines, binder.comment_lines, binder.blank_lines,
 
-      fmt_number(vendor.files),
-      fmt_number(vendor.lines),
-      fmt_number(vendor.code_lines),
-      fmt_number(vendor.comment_lines),
-      fmt_number(vendor.blank_lines),
+             global.global_cat.files, global.global_cat.lines, global.global_cat.code_lines,
+             global.global_cat.comment_lines, global.global_cat.blank_lines,
 
-      fmt_number(binder.files),
-      fmt_number(binder.lines),
-      fmt_number(binder.code_lines),
-      fmt_number(binder.comment_lines),
-      fmt_number(binder.blank_lines),
-
-      fmt_number(global.global_cat.files),
-      fmt_number(global.global_cat.lines),
-      fmt_number(global.global_cat.code_lines),
-      fmt_number(global.global_cat.comment_lines),
-      fmt_number(global.global_cat.blank_lines),
-
-      fmt_number(global.roles),
-      fmt_number(global.entities),
-      fmt_number(global.comps),
-      fmt_number(global.sys),
-      fmt_number(global.imports),
-      fmt_number(global.enums),
-      fmt_number(global.functions),
-      fmt_number(global.generics),
-      fmt_number(global.unions),
-      fmt_number(global.flags),
-      fmt_number(global.exports),
-      fmt_dbl(file_size),
-      fmt_number(population)
-
-  };
-
-
-  common::utils::fmt_template(out, vars);
-
-  std::cout << out;
+             global.roles, global.entities, global.comps, global.sys, global.imports, global.enums, global.functions,
+             global.generics, global.unions, global.flags, global.exports, file_size, population);
 }

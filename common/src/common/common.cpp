@@ -2,7 +2,7 @@
 
 #include "utils.hpp"
 
-#include <iostream>
+#include <print>
 #include <random>
 #include <string_view>
 
@@ -12,6 +12,6 @@ common::utils::FastRNG common::utils::RAND = common::utils::FastRNG(std::random_
 
 void common::FATAL_ERROR(std::string_view msg) noexcept
 {
-  std::cerr << "[velox:ERROR] Fatal error: " << msg << "\n";
+  std::println(stderr, "[tolza:ERROR] Fatal error: {}", msg);
   std::abort();
 }

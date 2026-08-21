@@ -3,8 +3,6 @@
 #include <initializer_list>
 #include <string_view>
 
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
@@ -98,7 +96,7 @@ struct Parser_Context final {
   [[nodiscard]] token::Token& peek(size_t offset = 0) const noexcept;
   void                        rewind(size_t pos) const noexcept;
 
-  template <typename T>
+  template <ast::Generic T>
   [[nodiscard]] T& add_get_node(token::ID tokid) noexcept;
 
   [[nodiscard]] definition::ID add_definition(ast::ID nodeid);

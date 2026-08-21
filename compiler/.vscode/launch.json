@@ -5,7 +5,7 @@
             "name": "Debug about",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "--about"
             ],
@@ -16,7 +16,7 @@
             "name": "Debug cogito",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "cogito"
             ],
@@ -27,22 +27,22 @@
             "name": "Debug build classic",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "build",
-                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml"
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
         },
-                {
+        {
             "name": "Debug check classic",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/debug/velox-compiler",
+            "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "check",
-                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml"
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
@@ -51,13 +51,13 @@
             "name": "Release build",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/build/release/velox-compiler",
+            "program": "${workspaceFolder}/build/release/tolza-compiler",
             "args": [
                 "build",
-                "${workspaceFolder}/../../velox-workspace/example-project/velox.toml",
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml",
             ],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "build-debug"
+            "preLaunchTask": "build-release"
         }
     ]
 }

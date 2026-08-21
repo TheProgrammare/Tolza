@@ -13,14 +13,14 @@ namespace common::fileutils
 
 [[nodiscard]] std::string resolve_path(std::string_view s, std::string_view relative = "") noexcept;
 
-constexpr std::string_view VELOX_FILE_EXTENSION = ".vlx";
+constexpr std::string_view TOLZA_FILE_EXTENSION = ".tlz";
 
-// check if extension is "vlx", "vlxbind", "vlxlib"
-[[nodiscard]] bool                  is_velox_extension(std::string_view extension) noexcept;
-// check if file exists then has a velox extension (or attribute .vlx for no extension)
-[[nodiscard]] bool                  is_velox_file(std::string_view file_path) noexcept;
-[[nodiscard]] std::string           get_velox_file(std::string_view path) noexcept;
-[[nodiscard]] std::set<std::string> find_velox_files(std::string_view target_dir, bool is_recursive) noexcept;
+// check if extension is "tlz", "tlzbind", "tlzlib"
+[[nodiscard]] bool                  is_tolza_extension(std::string_view extension) noexcept;
+// check if file exists then has a tolza extension (or attribute .tlz for no extension)
+[[nodiscard]] bool                  is_tolza_file(std::string_view file_path) noexcept;
+[[nodiscard]] std::string           get_tolza_file(std::string_view path) noexcept;
+[[nodiscard]] std::set<std::string> find_tolza_files(std::string_view target_dir, bool is_recursive) noexcept;
 
 [[nodiscard]] bool is_barrel_file(std::string_view file_path) noexcept;
 [[nodiscard]] bool is_barrel_usercode(std::string_view file_path) noexcept;
@@ -35,11 +35,11 @@ constexpr std::string_view BARREL_FILE_HEADER =
 
 /*
  * =============================================================================
- *  Velox Compiler - Generated Barrel File
+ *  Tolza - Generated Barrel File
  * =============================================================================
  *
- * Velox Compiler Version  : %vc_version
- * Generated on            : %date
+ * Tolza Version           : {0}
+ * Generated on            : {1}
  * 
  * -----------------------------------------------------------------------------
  * WARNING: This file is auto-generated.

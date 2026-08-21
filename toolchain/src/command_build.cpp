@@ -13,8 +13,7 @@
 #include <cstdlib>
 #include <expected>
 #include <string>
-#include <iostream>
-#include <filesystem>
+#include <print>
 #include <string_view>
 #include <sys/types.h>
 #include <unistd.h>
@@ -26,10 +25,8 @@
 #include <common/compiler_options.hpp>
 #include <common/toolchain_options.hpp>
 
-namespace fs = std::filesystem;
-
-#define OUT_LOG std::cout << "[velox] "
-#define OUT_ERR std::cerr << "[velox:ERROR] "
+#define HLOG "[tolza] "
+#define HERR "[tolza:ERROR] "
 
 
 std::string remove_quotes(std::string_view s)
@@ -43,14 +40,14 @@ std::string remove_quotes(std::string_view s)
 
 bool command::build::generate_ffi_json(std::string_view from, std::string_view to)
 {
-  std::string cmd = "ffi --json \"" + std::string(from) + "\" \"" + std::string(to) + "\"";
+  const auto cmd = std::format(R"(ffi --json "{}" "{}")", from, to);
 
   return toolchain::exec_compiler_cmd(cmd) > 0;
 }
 
 bool command::build::generate_ffi_c(std::string_view from, std::string_view to)
 {
-  std::string cmd = "ffi --c \"" + std::string(from) + "\" \"" + std::string(to) + "\"";
+  const auto cmd = std::format(R"(ffi --c "{}" "{}")", from, to);
 
   return toolchain::exec_compiler_cmd(cmd) > 0;
 }
@@ -58,12 +55,9 @@ bool command::build::generate_ffi_c(std::string_view from, std::string_view to)
 bool command::build::start_compilation(int argc, const char* argv[])
 {
   std::string cmd = "build ";
-  for (size_t i = 0; i < argc; i++) {
-    cmd += argv[i];
-    cmd += " ";
-  }
+  for (size_t i = 0; i < argc; i++) std::format_to(std::back_inserter(cmd), "{} ", argv[i]);
 
-  OUT_LOG "Compiler command launched: \n  " << common::toolchain::OPTIONS.compiler_used << " " << cmd;
+  std::println("Compiler command launched: \n  {} {}", common::toolchain::OPTIONS.compiler_used, cmd);
 
   return toolchain::exec_compiler_cmd(cmd) > 0;
 }

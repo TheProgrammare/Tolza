@@ -102,7 +102,7 @@ size_t codegen::Codegen_AST::start_codegen() noexcept
 
   //(void)codegen_node(CU.nodes->get_file_root()->nodeid());
 
-  (void)codegen_node(CU.nodes->get_file_root()->nodeid());
+  (void)codegen_node(CU.ast->get_file_root()->nodeid());
 
   finalize_globals_ctor();
 
@@ -1013,8 +1013,8 @@ llvm::Value* codegen::Codegen_AST::codegen_Literal_Record(const ast::Literal_Rec
     offsets.emplace_back(offset);
 
     if (it == def->fields.end())
-      add_error_two_nodes(171, *field.get(), def->header,
-                          "The field \"" + name + "\" dosen't exists in type \"" + def->name + "\".", "");
+      add_error_two_nodes(171, field.get(), def->header,
+                          std::format("The field \"{}\" dosen't exists in type \"", name) + def->name + "\".", "");
 
     auto n_found = *it;
     vals.emplace_back(codegen_node(n_found));

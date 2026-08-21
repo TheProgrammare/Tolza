@@ -905,7 +905,7 @@ bool common::compiler::Options::write_config(std::string_view path) noexcept
 
 
 std::string common::OPTIONS_TEMPLATE = R"(
-# main velox toolchain config
+# main tolza toolchain config
 # it's the default configuration
 # set config field to specify a sub configuration to compile (use his name in sub_configs)
 
@@ -913,7 +913,7 @@ std::string common::OPTIONS_TEMPLATE = R"(
 
 
 # ======================
-# velox-compiler section 
+# tolza-compiler section 
 # ======================
 
 # if empty, the workspace file name will be used
@@ -1021,7 +1021,7 @@ packages                     = "%dir.packages"
 # LLVM section
 # ============
 # This configuration is strictly for LLVM passes and code generation.
-# It does not affect your Velox preprocessor.
+# It does not affect your Tolza preprocessor.
 
 [llvm]
 # verify before AND after passes

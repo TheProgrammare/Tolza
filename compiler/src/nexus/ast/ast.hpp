@@ -1,5 +1,5 @@
 /*
- *	The Velox programming language - Apache License, Version 2.0
+ *	The Tolza programming language - Apache License, Version 2.0
  *  Copyright 2024-2026 Foz Florian
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <memory_resource>
 #include <vector>
 
 #include "nexus/forward.hpp"
@@ -43,24 +44,16 @@
 namespace ast
 {
 
-struct NodeEntry {
-private:
-  uint32_t  _offset;
-  ENodeKind _kind;
+struct NodeEntry final {
+  void*     ptr;
+  ID        id;
+  ENodeKind kind;
 
-public:
-  NodeEntry(uint32_t p_offset, ENodeKind p_kind)
-    : _offset(p_offset)
-    , _kind(p_kind)
+  explicit NodeEntry(void* p_ptr, ID p_id, ENodeKind p_kind)
+    : ptr(p_ptr)
+    , id(p_id)
+    , kind(p_kind)
   {
-  }
-  [[nodiscard]] ENodeKind kind() const noexcept
-  {
-    return _kind;
-  }
-  [[nodiscard]] uint32_t offset() const noexcept
-  {
-    return _offset;
   }
 };
 
@@ -75,41 +68,32 @@ struct Arena final {
 
   cu::ID cuid;
 
-  std::vector<std::byte> storage;
   std::vector<NodeEntry> nodes;
 
-  template <typename T>
+  template <Generic T>
   [[nodiscard]] T& add_get() noexcept
   {
     assert(!freeze && "Pool is immutable after parsing pass");
 
-    uint32_t mem_offset = allocate(sizeof(T), alignof(T));
-
-    T* node = new (&storage[mem_offset]) T();
-
-    ID id = get_next_id();
-
-    node->header.nodeid = id;
-
-    nodes.emplace_back(NodeEntry(mem_offset, T::static_kind));
+    ID id = add<T>();
 
     return *as<T>(id);
   }
 
-  template <typename T>
+  template <Generic T>
   [[nodiscard]] ID add() noexcept
   {
     assert(!freeze && "Pool is immutable after parsing pass");
 
-    uint32_t mem_offset = allocate(sizeof(T), alignof(T));
+    void* mem = resource.allocate(sizeof(T), alignof(T));
 
-    T* node = new (&storage[mem_offset]) T();
+    T* node = new (mem) T();
 
     ID id = get_next_id();
 
     node->header.nodeid = id;
 
-    nodes.emplace_back(NodeEntry(mem_offset, T::static_kind));
+    nodes.emplace_back(NodeEntry(mem, id, T::static_kind));
 
     return id;
   }
@@ -120,36 +104,36 @@ struct Arena final {
   {
     auto& entry = nodes[id.index()];
 
-    return *reinterpret_cast<NodeHeader*>(&storage[entry.offset()]);
+    return *static_cast<NodeHeader*>(entry.ptr);
   }
 
   [[nodiscard]] const NodeHeader& get(ID id) const noexcept
   {
+    assert(id.index() < nodes.size());
     const auto& entry = nodes[id.index()];
 
-    return *reinterpret_cast<const NodeHeader*>(&storage[entry.offset()]);
+    return *static_cast<const NodeHeader*>(entry.ptr);
   }
 
 
-  template <typename T>
+  template <Generic T>
   [[nodiscard]] T* as(ID id)
   {
     assert(id.index() < nodes.size());
     auto& entry = nodes[id.index()];
+    if (entry.kind == T::static_kind) return static_cast<T*>(entry.ptr);
 
-    if (entry.kind() != T::static_kind) return nullptr;
-
-    return reinterpret_cast<T*>(&storage[entry.offset()]);
+    return nullptr;
   }
 
-  template <typename T>
+  template <Generic T>
   [[nodiscard]] const T* as(ID id) const
   {
+    assert(id.index() < nodes.size());
     const auto& entry = nodes[id.index()];
+    if (entry.kind == T::static_kind) return static_cast<T*>(entry.ptr);
 
-    if (entry.kind() != T::static_kind) return nullptr;
-
-    return reinterpret_cast<const T*>(&storage[entry.offset()]);
+    return nullptr;
   }
 
 
@@ -159,18 +143,7 @@ struct Arena final {
   }
 
 private:
-  [[nodiscard]] uint32_t allocate(size_t size, size_t alignment)
-  {
-    const auto current = reinterpret_cast<uintptr_t>(storage.data() + storage.size());
-
-    const auto aligned = (current + alignment - 1) & ~(alignment - 1);
-
-    const auto padding = aligned - current;
-
-    storage.resize(storage.size() + padding + size);
-
-    return static_cast<uint32_t>(storage.size() - size);
-  }
+  std::pmr::monotonic_buffer_resource resource;
 };
 
 
