@@ -16,7 +16,7 @@ define some base data
 
 use a specific extension for some facets logics
 ```
-  extend Velocity::calculate_speed(mut pos1: Position, mut pos2: Position) {
+  extend Velocity fn calculate_speed(mut pos1: Position, mut pos2: Position) {
     self.speed = ((pos1.x - pos2.x) + (pos1.y - pos2.y) + (pos1.z - pos2.z)) / 3
   }
 ```
