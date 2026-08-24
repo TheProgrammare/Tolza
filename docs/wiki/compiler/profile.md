@@ -17,9 +17,9 @@ e.g. `profile = "windows"` -> `my_app-windows`, `profile = "linux|arm"`, `my_app
 ## Profile composition
 
 ```mermaid
-flowchart LR
+flowchart TD
   AA[my_app] --> A[tolza.toml]
-  A --> B[profile/]
+  A --> B["/profile"]
   B --> C[debug.toml]
   B --> C1[release.toml]
   B --> C2[windows.toml]
@@ -31,5 +31,7 @@ flowchart LR
   C1 .-> E
   C3 .-> E
 
-  E -- build --> F["my_app-linux-release"]
+  E --> F["/build"]
+  F --> G["/linux-release"]
+  G --> H["/my_app-linux-release.x86_64"]
 ```
