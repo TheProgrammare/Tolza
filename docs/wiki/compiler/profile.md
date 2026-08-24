@@ -25,7 +25,7 @@ flowchart TD
   B --> C2[windows.toml]
   B --> C3[linux.toml]
 
-  A -. profile .-> D["linux|release"]
+  A -. profile .-> D["'linux|release'"]
   D --> E[compilation options]
   A -- default options --> E
   C1 .-> E
