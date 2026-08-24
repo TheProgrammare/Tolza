@@ -56,7 +56,7 @@ Any volunteer, but here are a few ideas on how you can make yourself useful base
 ### Toolchain
 - Provide a **ready-to-use language**, suitable for **small projects** as well as **industrial-scale projects**.
 - The toolchain should preferably be used in a **workspace environment**.
-- tolza.config is the **reference file**, specifying compiler behavior, target directories, and defining the workspace via folder locations.
+- `tolza.toml` is the **reference file**, specifying compiler behavior, target directories, profiles composition, and defining the workspace via folder locations.
 - The toolchain is not basic but must remain **simple, practical, and intuitive**.
 
 # Project Structure
@@ -64,13 +64,22 @@ This project contains several sub-projects:
 - Compiler
   - Lexer
   - Parser
-  - FFI Binder (and FFI JSON Reader)
+  - FFI Binder
   - Resolver
   - Codegen
 - Toolchain
   - Commands
   - Package Manager
+  - Workspace Manager
+- Common
+  - Compiler Options
+  - utils functions
+  - some CLI commands
+  - filesystem
+  - some conventions
 - Visual studio code plugin: [here](https://github.com/TheProgrammare/Tolza-VScode-Plugin)
+
+Check documentation [here](/docs/wiki) for more information and schematic representation
 
 # Governance
 - **Founder**:  
