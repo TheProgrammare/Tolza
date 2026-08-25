@@ -4,7 +4,7 @@ Profiles are located at `profile/` folder
 
 Profiles are composition of compilation options
 
-The `main` profile is `your_project/tolza.toml`
+The project's base configuration is `your_project/tolza.toml`. It defines the default compilation options and the project's configuration. Profiles located in `profile/` override or extend these defaults.
 
 Define build profiles inside `your_project/tolza.toml` at root section `profile`. Set only the profile filename contained inside `profile/` folder
 
@@ -13,6 +13,10 @@ Define build profiles inside `your_project/tolza.toml` at root section `profile`
 The composition will impact the build file name and executable file name :
 
 e.g. `profile = "windows"` -> `my_app-windows`, `profile = "linux|arm"`, `my_app-linux-arm`
+
+> the composition order impact the final result `profile = "windows|release"`: first windows then release ...
+
+> for fine profile combine, define inside profiles fields overrided by enable them (uncomment), and set merge mode for some sets 
 
 ## Profile composition
 
