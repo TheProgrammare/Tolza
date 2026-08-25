@@ -3,7 +3,7 @@ All primitive tables are fat pointers, there is no raw table like in C
 
 | type | syntax | literal |  info |
 |-|-|-|-|
-| static array | `[T; N]` | `[ 1, 2, 3, 4 }`,<br> `[ 0..4 => 8 ]` (4 elements equals to 8) | compile time table size
+| static array | `[T; N]` | `[ 1, 2, 3, 4 ]`,<br> `[ 0..4 => 8 ]` (4 elements equals to 8) | compile time table size
 | dynamic array | `[T; _]` | `[ 1, 2, 3, 4 ]d`,<br> `[ 0..4 = 8 ]_` | dynamic table size
 | static tensor | `[T; N, N, ...]`,<br> `[T; N]*D` | `[0,0,0;0,0,0;0,0,0]` | compile time dimension size
 | dynamic tensor | `[T; _, ...]` | `[0,0,0;0,0,0;0,0,0]_` | dynamic dimension size
@@ -34,8 +34,8 @@ when you create a table instance `[ a, b, ... ]` you can avoid the explicit valu
 |-|-|-|-|-|
 | table population | `<range> => <expression>` | `[ 0..3 => 5 ]`,<br> `[ 0..3 => rand::uniform() ]` | `[ 5, 5, 5 ]`,<br> `[ 0.25f, 0.777f, 0.05f ]` | the most simple case |
 | table population index relative | `start..end(i)`, `start..end(j)`, ... | `[ 0..3(i) => i + 10 ]` | `[ 10, 11, 12 ]` | useful for position aware in population | 
-| map population index relative | `<range> => <expression_keys> : <expression_values>` | `[ 0..3(i) => [i: number_text[i]] }` | `[ 0: "zero", 1: "one", 2; "two" ]` |  | 
-| matrix population | `{ <range1>, <range2>, ... => <expression> }`, | `{ 0..3(i), 0..3(j) => i + j + 10 }` | `[10,11,12;11,12,13]` | a good level of abstraction |
+| map population index relative | `<range> => <expression_keys> : <expression_values>` | `[ 0..3(i) => [i: number_text[i]] ]` | `[ 0: "zero", 1: "one", 2; "two" ]` |  | 
+| matrix population | `[ <range1>, <range2>, ... => <expression> ]`, | `[ 0..3(i), 0..3(j) => i + j + 10 ]` | `[10,11,12;11,12,13]` | a good level of abstraction |
 
 # Range
 Borned with a start integral, end integral (and optional step only for `for` loop).
