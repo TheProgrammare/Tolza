@@ -146,7 +146,7 @@ void ffi::AST::tolza_codegen(std::string_view dest)
 
 std::string ffi::Bind_Package::get_file_path() const noexcept
 {
-  fs::path path = compiler::OPTIONS.dir.get_dir_binding();
+  fs::path path = compiler::OPTIONS.get_dir_binding_profile();
   if (!lang.empty()) path /= lang;
   if (!lib.empty()) path /= lib;
   path.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);

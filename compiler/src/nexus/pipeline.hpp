@@ -97,6 +97,9 @@ private:
   [[nodiscard]] bool        pass_llvm_optimization(cu::ID cuid) const noexcept;
   [[nodiscard]] static bool pass_llvm_emitter(cu::ID cuid) noexcept;
   [[nodiscard]] bool        pass_script_emitter(cu::ID cuid) const noexcept;
+
+  void static print_log(common::compiler::FPass phase, std::string_view sub_phase, std::string_view msg) noexcept;
+  void static print_err(common::compiler::FPass phase, std::string_view sub_phase, std::string_view msg) noexcept;
 };
 
 

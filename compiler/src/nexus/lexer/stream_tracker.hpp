@@ -18,7 +18,6 @@ class StreamTracker
 public:
   StreamTracker(const std::string_view& s)
     : text(std::string(s))
-    , cur(0)
   {
   }
 

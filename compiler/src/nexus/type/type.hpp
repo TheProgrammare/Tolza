@@ -131,8 +131,10 @@ struct Arena final {
     assert(tyid.cu() == cuid);
     size_t index = tyid.index();
 
-    if (index < TYPEID_USER_START)
-      return std::get_if<T>(&type::primitives.at(type::ID::make(cu::ID::main(), index)).data);
+    if (index < TYPEID_USER_START) {
+      auto& data = type::primitives.at(type::ID::make(cu::ID::main(), index)).data;
+      return std::get_if<T>(&data);
+    }
 
     index -= TYPEID_USER_START;
 
@@ -151,8 +153,10 @@ struct Arena final {
   {
     assert(tyid.cu() == cuid);
     size_t index = tyid.index();
-    if (index < TYPEID_USER_START)
-      return std::get_if<const T>(&type::primitives.at(type::ID::make(cu::ID::main(), index)).data);
+    if (index < TYPEID_USER_START) {
+      const auto& data = type::primitives.at(type::ID::make(cu::ID::main(), index)).data;
+      return std::get_if<const T>(&data);
+    }
 
     index -= TYPEID_USER_START;
 
@@ -165,12 +169,6 @@ struct Arena final {
 
     T* out = nullptr;
     if (entry.kind == T::static_kind) out = std::get_if<const T>(&entry.data);
-
-    if constexpr (std::same_as<T, type::Prototype>) {
-      std::println("AS proto requested={} entry={} ptr={} params={} size={} capa={}", tyid.dump(), entry.id.dump(),
-                   static_cast<void*>(out), static_cast<void*>(out->params.data()), out->params.size(),
-                   out->params.capacity());
-    }
 
     return out;
   }

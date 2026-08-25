@@ -544,9 +544,9 @@ ast::ID parser::Parser_Literal::literal_table()
 {
   constexpr std::string_view hint =
       R"(define literal table like:
-  - table { 1, 2, 3, 4 }
-  - table population { 0..4 => @i + 1 }
-  - matrix { 1, 2, 3, 4 }*3
+  - table: [ 1, 2, 3, 4 ]
+  - table population [ 0..4 => @i + 1 ]
+  - matrix [ 1, 2, 3, 4; 3 ]
   - matrix {{ 1, 2 },{ 3, 4 }}
   - matrix population { [0..4] => @i + 1 }*3
   - matrix population { [0..4, 0..4] => @i + 1 + @j }

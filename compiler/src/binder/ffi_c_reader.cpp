@@ -126,7 +126,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
     wrap_headers(HEADERS_C_ISO);
   }
 
-  std::string c_bindings_path = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C";
+  std::string c_bindings_path = fs::path(compiler::OPTIONS.get_dir_binding_profile()) / "C";
   common::fileutils::write_barrel(c_bindings_path, "C");
 
   fs::remove(tmp_path);

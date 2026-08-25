@@ -31,7 +31,7 @@ namespace fs = std::filesystem;
 compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
   : common::Commander(_app)
   , args(argv, argv + argc)
-  , opt(*new common::compiler::Sub_Compiler_Options())
+  , opt(*new common::compiler::Sub_Options())
 {
   init_commands();
 }
@@ -65,10 +65,11 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
   add_opt_path("path", opt.current_config_file, "Path to the .toml project file to get the compilation context");
 
   new_flag("--mute", mute, "Mute any output log");
+  new_flag("--check", is_check_mode, "Will compile without any emit");
 
   // base
   new_opt("--project-name", project_name, "Set the target project name");
-  new_opt("--sub-config", sub_configs, "Set the sub config to apply after main config");
+  new_opt("--sub-config", profiles, "Set the sub config to apply after main config");
 
   // preset
   build
@@ -111,6 +112,7 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
 
 
   new_opt("--logs", log.logs, "e.g. " + common::compiler::FPass_names());
+  new_opt("--log-level", log.level, "e.g. " + common::compiler::ELogLevel_names());
 
   new_opt("--warns", warn.warns, "e.g. " + common::compiler::FWarnMode_names());
   new_opt("--warning,-W", warn.level, "Warn level 0, 1, 2, 3");
@@ -167,32 +169,11 @@ void compiler::Commander::init_command_build() noexcept
   compilation_args(build);
 
   build->callback([&]() {
-    compiler::OPTIONS = common::compiler::Options::read_config(opt.current_config_file);
+    auto f = common::fileutils::find_tolza_toml(opt.current_config_file);
 
-    if (!compiler::OPTIONS.mute) {
-      std::println("[tolza] Command executed:");
-      for (const auto& arg : args) std::print("{} ", arg);
-      std::println();
-    }
+    compiler::OPTIONS = common::compiler::Options::read_config(f);
 
-    compiler::COMPILER.run_requested = true;
-  });
-}
-
-void compiler::Commander::init_command_check() noexcept
-{
-  auto* check = app.add_subcommand("check", "Check Tolza code");
-
-  compilation_args(check);
-
-  check->callback([&]() {
-    compiler::OPTIONS.mute = true;
-    compiler::OPTIONS      = common::compiler::Options::read_config(opt.current_config_file);
-
-    compiler::OPTIONS.is_check_mode         = true;
-    compiler::OPTIONS.diagnostic.out_format = common::compiler::EDiagnosticFormat::json;
-
-    if (!compiler::OPTIONS.mute) {
+    if (compiler::OPTIONS.log.level != common::compiler::ELogLevel::quiet) {
       std::println("[tolza] Command executed:");
       for (const auto& arg : args) std::print("{} ", arg);
       std::println();
@@ -215,7 +196,6 @@ void compiler::Commander::init_commands() noexcept
       "Show detailed software info");
 
   init_command_build();
-  init_command_check();
   init_command_cogito();
 }
 

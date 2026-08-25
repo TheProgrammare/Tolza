@@ -208,7 +208,7 @@ std::string token::Viewer::match_any_val(const std::initializer_list<std::string
     }
   }
 
-  return "";
+  return {};
 }
 
 bool token::Viewer::match_val(std::string_view val) noexcept

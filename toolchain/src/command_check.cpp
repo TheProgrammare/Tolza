@@ -83,7 +83,7 @@ bool command::check::check_workspace(std::string_view ws_path, bool verbose) noe
 {
   const fs::path p(ws_path);
 
-  std::println("Checking workspace check...");
+  std::println("Checking workspace ...");
 
   if (!fs::exists(p)) {
     std::println(stderr, HERR "The directory at \"{}\" dosen't exist.", p.string());
@@ -103,7 +103,7 @@ bool command::check::check_workspace(std::string_view ws_path, bool verbose) noe
     config_found = false;
   } else {
     if (!check_tolza_config(std::string(p / "tolza.toml"), true, verbose)) {
-      std::println(stderr, HERR R"(The config at "" /tolza.toml is invalid.)", p.string());
+      std::println(stderr, HERR R"(The config at "{}" /tolza.toml is invalid.)", p.string());
       config_healthy = false;
     }
   }

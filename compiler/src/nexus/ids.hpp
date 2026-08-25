@@ -290,6 +290,8 @@ DEF_COMPOSIT_ID(ID,
 
                 template <Generic T> [[nodiscard]] T * as() noexcept;
                 template <Generic T> [[nodiscard]] const T* as() const noexcept;
+                // is node
+                template <Generic T> [[nodiscard]] bool     is() const noexcept;
 
 )
 
@@ -379,6 +381,8 @@ DEF_COMPOSIT_ID(
     template <Generic T> [[nodiscard]] T * as() noexcept;
     // get type
     template <Generic T> [[nodiscard]] const T* as() const noexcept;
+    // is type
+    template <Generic T> [[nodiscard]] bool     is() const noexcept;
 
     [[nodiscard]] static constexpr ID make_primitive(EPrimitiveTypeKind prim) noexcept {
       auto raw = static_cast<size_t>(prim);

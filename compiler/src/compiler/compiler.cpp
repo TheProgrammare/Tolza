@@ -78,9 +78,13 @@ void compiler::Compiler::add_error(const Error_Diagnostic& error)
     errors.emplace_back(error.elem_first.cuid, std::vector({error}));
   }
 
-  print_errors();
 
   if (compiler::OPTIONS.diagnostic.error_mode == common::compiler::EErrorMode::fail_fatal) {
+    print_errors();
+    if (!compiler::OPTIONS.is_check_mode) {
+      std::println("[tolza-compiler] Compilation failed");
+      notification::notify("Tolza-Compiler", "Compilation failed", false);
+    }
     std::exit(1);
   }
 }
@@ -98,20 +102,40 @@ bool compiler::Compiler::start_compilation()
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (compiler::OPTIONS.dir.current_config_file.empty() && !mute) {
-    std::println(
-        "\n[build:warning] Raw compilation command detected, "
-        "please use 'tolza-toolchain' to develop proprely with the Tolza programming language.\n");
-  }
+  // if (compiler::OPTIONS.dir.current_profile.empty() && !mute) {
+  //   std::println(
+  //       "\n[build:warning] Raw compilation command detected, "
+  //       "please use 'tolza-toolchain' to develop proprely with the Tolza programming language.\n");
+  // }
 
   {
-    auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C.tlz";
-    /*if (!fs::exists(p)) */ (void)pipeline.generate_libc_wrappers();
+    auto p = fs::path(compiler::OPTIONS.get_dir_binding_profile()) / "C.tlz";
+    if (!fs::exists(p)) {
+      (void)pipeline.generate_libc_wrappers();
+    } else {
+      auto binding_time = fs::last_write_time(p);
+
+      auto newest_profile = fs::last_write_time(fs::path(compiler::OPTIONS.dir.get_dir_project()) / "tolza.toml");
+      for (const auto& profile : compiler::OPTIONS.profiles) {
+        auto profile_t =
+            fs::last_write_time(fs::path(compiler::OPTIONS.dir.get_dir_profile()) / std::string(profile + ".toml"));
+
+        newest_profile = std::max(newest_profile, profile_t);
+      }
+
+      if (newest_profile > binding_time) {
+        (void)pipeline.generate_libc_wrappers();
+      }
+    }
   }
 
   if (!mute) {
     std::println("\n[tolza-compiler] Compilation Started");
-    std::println("  Config file used: \"{}\'", compiler::OPTIONS.dir.current_config_file);
+    size_t count = 1;
+    for (auto& profile_name : compiler::OPTIONS.profiles) {
+      auto p = (fs::path(compiler::OPTIONS.dir.get_dir_profile()) / profile_name).string();
+      std::println("  Profile {}: \"{}\'", count++, p);
+    }
   }
 
   // filesystem
@@ -135,9 +159,9 @@ bool compiler::Compiler::start_compilation()
 
     for (auto cuid : compiler::pipeline.prepared_compilation_units)
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
+
     for (const auto& [cuid, errs] : errors) {
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
-      for (const auto& err : errs) std::println("{}", err.print_userfriendly_error());
     }
 
     if (compiler::pipeline.unprepared_compilation_units.empty()) {
@@ -164,8 +188,8 @@ bool compiler::Compiler::start_compilation()
     auto end   = std::chrono::high_resolution_clock::now();
     auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-    std::println("[tolza-compiler] Compilation failed {} ms", milli);
-    notification::notify("Tolza-Compiler", std::format("Compilation failed - {:.3f} ms", milli));
+    std::println("[tolza-compiler] Compilation failed {:.3f} ms", milli);
+    notification::notify("Tolza-Compiler", std::format("Compilation failed - {:.3f} ms", milli), false);
     return false;
   }
 
@@ -177,9 +201,10 @@ bool compiler::Compiler::start_compilation()
   }
 
   fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
-  fs::create_directories(compiler::OPTIONS.dir.get_debug_graph_dir());
-  fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
-  fs::create_directories(compiler::OPTIONS.dir.get_preprocess_dir());
+  fs::create_directories(compiler::OPTIONS.get_dir_debug_graph());
+  fs::create_directories(compiler::OPTIONS.get_dir_llvmir());
+  fs::create_directories(compiler::OPTIONS.get_dir_preprocess());
+  fs::create_directories(compiler::OPTIONS.get_dir_binding_profile());
 
   if (!pipeline::Pipeline::engage_general_emitter()) {
     return false;
@@ -192,14 +217,16 @@ bool compiler::Compiler::start_compilation()
   auto end   = std::chrono::high_resolution_clock::now();
   auto milli = std::chrono::duration<double, std::milli>(end - start).count();
 
-  std::println("[tolza-compiler] Compilation successfully ended {} ms", milli);
-  notification::notify("Tolza-Compiler", std::format("Compilation successfully ended - {} ms", milli));
+  std::println("[tolza-compiler] Compilation successfully ended {:.3f} ms", milli);
+  notification::notify("Tolza-Compiler", std::format("Compilation successfully ended - {:.3f} ms", milli), true);
 
   return success;
 }
 
 void compiler::Compiler::print_errors() const
 {
+  if (errors.empty()) return;
+
   if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
     std::println(stderr, "@@TOLZA_EXORDIUM_DIAGNOSTICORUM@@\n[");
 
@@ -209,13 +236,12 @@ void compiler::Compiler::print_errors() const
     for (size_t i = 0; i < errs.size(); i++) {
       const auto err = errs[i];
       std::print(stderr, "{}", err.print_error());
-      if (i != errs.size() - 1)
+      if (i != errs.size() - 1 && compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
         std::println(stderr, ",");
-      else
-        std::println(stderr);
     }
 
-    if (last_cuid != cuid) std::println(stderr, ",");
+    if (last_cuid != cuid && compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)
+      std::println(stderr, ",");
   }
 
   if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json)

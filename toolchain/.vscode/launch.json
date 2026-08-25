@@ -2,13 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug project creation",
+            "name": "Debug workspace creation",
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/tolza",
             "args": [
-                "create",
                 "workspace",
+                "create",
                 "${workspaceFolder}/../../tolza-workspace",
                 "--name",
                 "tolza-example",
@@ -19,13 +19,13 @@
             "preLaunchTask": "build-debug"
         },
         {
-            "name": "Debug config creation",
+            "name": "Debug profile creation",
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/tolza",
             "args": [
                 "create",
-                "config",
+                "profile",
                 "${workspaceFolder}/../../tolza-workspace",
                 "--name",
                 "template"
@@ -87,18 +87,6 @@
             "env": [],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
-        },
-        {
-            "name": "Release",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/release/tolza",
-            "args": [
-                "build",
-                "${workspaceFolder}/../../tolza-workspace/tolza-example"
-            ],
-            "cwd": "${workspaceFolder}",
-            "preLaunchTask": "build-release"
         }
     ]
 }

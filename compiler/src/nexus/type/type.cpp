@@ -738,7 +738,7 @@ std::string type::dump(ID tyid) noexcept
   const auto& ptr_ty = tyid.get();
 
   switch (tyid.kind()) {
-  case ETypeKind::NONE:      return "";
+  case ETypeKind::NONE:      return {};
   case ETypeKind::Primitive: return std::string(magic_enum::enum_name(tyid.as<type::Primitive>()->primitive).substr(1));
   case ETypeKind::String:    return std::string(magic_enum::enum_name(tyid.as<type::String>()->kind).substr(1));
   case ETypeKind::Tuple:     {
@@ -808,7 +808,7 @@ std::string type::dump(ID tyid) noexcept
   case ETypeKind::Union: break;
   }
 
-  return "";
+  return {};
 }
 
 std::vector<type::Prototype_Param> type::to_proto_params(const std::vector<ast::ID>& params) noexcept

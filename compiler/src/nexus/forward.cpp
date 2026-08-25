@@ -9,8 +9,9 @@
 void common::compiler::DEBUG_TOLZA_ICE(std::string_view msg)
 {
 #ifdef TOLZA_CODE_VALID
-  std::println(stderr, R"([tolza] Assume tolza code is valid
-[tolza:ICE] Internal compiler error: {})",
+  std::println(stderr,
+               "[tolza] Assume tolza code is valid\n"
+               "[tolza:ICE] Internal compiler error: {})",
                msg);
   ::compiler::COMPILER.print_errors();
   std::abort();

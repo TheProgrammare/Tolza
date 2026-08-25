@@ -29,7 +29,7 @@ std::string_view ESeverity_to_str(EErrorSeverity severity) noexcept
 std::string_view ESeverity_to_color(EErrorSeverity severity) noexcept
 {
   switch (severity) {
-  case EErrorSeverity::debug:   return "";
+  case EErrorSeverity::debug:   return {};
   case EErrorSeverity::warning: return color_YELLOW;
   case EErrorSeverity::error:
   case EErrorSeverity::fatal:   return color_RED;
@@ -68,7 +68,7 @@ std::string_view trim(std::string_view str) noexcept
   size_t start = str.find_first_not_of(whitespace);
   if (start == std::string::npos) {
     // string is null or contains only spaces
-    return "";
+    return {};
   }
 
   // Find the last position who is not white space
@@ -120,9 +120,8 @@ std::string Error_Elem::print_cursor() const noexcept
 
   const size_t      size              = end_pos - start_pos == 0 ? 1 : end_pos - start_pos;
   const std::string cursor            = std::string(size, '^');
-  const int         dist              = int(end_pos) - cu.file_info.get_line_start(line) - cursor.size();
-  const size_t      cursor_offset     = dist < 0 ? 0 : dist;
-  const std::string cursor_offset_str = std::string(cursor_offset, ' ');
+  const int         dist              = int(end_pos) - cu.file_info.get_line_start(line) - 1 - size;
+  const std::string cursor_offset_str = dist <= 0 ? "" : std::string(dist, ' ');
 
   return cursor_offset_str + cursor;
 }

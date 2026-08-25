@@ -1,5 +1,3 @@
-#include "notification.hpp"
-
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -25,7 +23,7 @@ static std::wstring utf8_to_wide(std::string_view str)
   return result;
 }
 
-void win_notify(std::string_view title, std::string_view msg) noexcept
+void win_notify(std::string_view title, std::string_view msg, bool success) noexcept
 {
   try {
     winrt::init_apartment();
@@ -34,8 +32,10 @@ void win_notify(std::string_view title, std::string_view msg) noexcept
     using namespace Windows::Data::Xml::Dom;
     using namespace Windows::UI::Notifications;
 
-    const auto wtitle = utf8_to_wide(title);
-    const auto wmsg   = utf8_to_wide(msg);
+    const auto         wtitle = utf8_to_wide(title);
+    const std::wstring prefix = success ? L"✓ " : L"✕ ";
+    const auto         wmsg   = utf8_to_wide(msg);
+
 
     XmlDocument xml;
 
@@ -53,18 +53,18 @@ void win_notify(std::string_view title, std::string_view msg) noexcept
 
     auto textNodes = xml.GetElementsByTagName(L"text");
 
-    textNodes.Item(0).AppendChild(xml.CreateTextNode(wtitle));
+    textNodes.Item(0).AppendChild(xml.CreateTextNode(prefix + wtitle));
 
     textNodes.Item(1).AppendChild(xml.CreateTextNode(wmsg));
 
     ToastNotification toast{xml};
 
     // Ton AppUserModelID
-    auto notifier = ToastNotificationManager::CreateToastNotifier(L"MonCompiler");
+    auto notifier = ToastNotificationManager::CreateToastNotifier(L"TolzaCompiler");
 
     notifier.Show(toast);
   } catch (...) {
-    // Une notification ne doit jamais faire échouer le compilateur.
+    // Never failed
   }
 }
 } // namespace notification

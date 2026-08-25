@@ -26,14 +26,14 @@ bool common::fileutils::is_sub_path(std::string_view base, std::string_view path
 }
 
 
-std::string common::fileutils::resolve_path(std::string_view s, std::string_view relative) noexcept
+std::string common::fileutils::resolve_path(std::string_view current, std::string_view relative) noexcept
 {
-  if (s.empty()) return std::string(s);
+  if (current.empty()) return std::string(current);
 
-  std::string path_str(s);
+  std::string path_str(current);
 
   // Expand tilde
-  if (s[0] == '~') {
+  if (current[0] == '~') {
     const char* home =
 #if __unix__
         std::getenv("HOME");
@@ -45,7 +45,7 @@ std::string common::fileutils::resolve_path(std::string_view s, std::string_view
 
     if (!home) FATAL_ERROR("The home environment is not defined");
 
-    path_str = std::string(home) + std::string(s.substr(1));
+    path_str = std::string(home) + std::string(current.substr(1));
   }
 
   fs::path p(path_str);
@@ -107,10 +107,37 @@ std::set<std::string> common::fileutils::find_tolza_files(std::string_view targe
   return out;
 }
 
+std::string common::fileutils::find_tolza_toml(std::string_view file_path) noexcept
+{
+  std::error_code ec;
+  fs::path        p(resolve_path(file_path));
+
+  if (p.empty()) return {};
+
+  if (!fs::is_directory(p, ec)) {
+    if (ec) return {};
+    p = p.parent_path();
+  }
+
+  if (p.empty()) return {};
+
+  for (const auto& entry : fs::directory_iterator(p, ec)) {
+    if (ec) return {};
+
+    if (!entry.is_regular_file(ec) || ec) continue;
+
+    const auto& path = entry.path();
+
+    if (path.filename() == "tolza.toml") return path.string();
+  }
+
+  return {};
+}
+
 
 bool common::fileutils::is_barrel_file(std::string_view file_path) noexcept
 {
-  if (!fs::exists(file_path)) FATAL_ERROR("File path at \"" + std::string(file_path) + "\" dosen't exist");
+  if (!fs::exists(file_path)) FATAL_ERROR(std::format("File path at \"{}\" dosen't exists", file_path));
 
   std::ifstream f(file_path.data());
   std::string   line;
@@ -148,7 +175,7 @@ void common::fileutils::write_barrel(std::string_view target_dir, std::string_vi
     std::string name  = fs::path(file).stem();
     std::string alias = common_alias.empty() ? name : std::string(common_alias);
 
-    out_str += "reexport self::" + name + " as " + alias + "\n";
+    out_str += std::format("reexport self::{} as {}\n", name, alias);
   }
 
 
@@ -168,7 +195,7 @@ void common::fileutils::write_barrel(std::string_view target_dir, std::string_vi
     // move code to ./.current.tlz
     if (fs::exists(barrel_usercode)) {
       // create temporary file of the user to let him decide
-      std::string temp_name     = "." + p.stem().string() + "." + std::string(TOLZA_FILE_EXTENSION);
+      std::string temp_name     = std::format(".{}.{}", p.stem().string(), TOLZA_FILE_EXTENSION);
       fs::path    temp_usercode = p.parent_path() / temp_name;
 
       fs::copy_file(p, temp_usercode, fs::copy_options::overwrite_existing);
@@ -179,7 +206,7 @@ void common::fileutils::write_barrel(std::string_view target_dir, std::string_vi
       fs::copy_file(p, barrel_usercode, fs::copy_options::overwrite_existing);
       std::string alias = common_alias.empty() ? std::string(p.stem()) : std::string(common_alias);
 
-      out_str += "reexport self::mod as " + alias + "\n";
+      out_str += std::format("reexport self::mod as {}", alias);
 
       std::println("[tolza] User code moved to {}", barrel_usercode.string());
     }

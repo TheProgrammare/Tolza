@@ -30,7 +30,7 @@
             "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "build",
-                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
+                "${workspaceFolder}/../../tolza-workspace/example-project"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
@@ -46,18 +46,6 @@
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
-        },
-        {
-            "name": "Release build",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/release/tolza-compiler",
-            "args": [
-                "build",
-                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml",
-            ],
-            "cwd": "${workspaceFolder}",
-            "preLaunchTask": "build-release"
         }
     ]
 }

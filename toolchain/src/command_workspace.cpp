@@ -58,10 +58,10 @@ std::string command::workspace::generate_tolza_workspace(std::string_view projec
   if (!dir_create(project_path / "build")) success = false;
   if (!dir_create(project_path / "build" / "debug")) success = false;
   if (!dir_create(project_path / "build" / "release")) success = false;
-  if (!dir_create(project_path / "config")) success = false;
+  if (!dir_create(project_path / "profile")) success = false;
 
   if (common::compiler::Options("tolza").write_config((project_path / "tolza").string())) success = false;
-  if (common::compiler::Options("debug").write_config((project_path / "config").string())) success = false;
+  if (common::compiler::Options("debug").write_config((project_path / "profile").string())) success = false;
 
   if (write_file((project_path / "src" / "main.tlz").string(), toolchain::TOLZA_MAIN_TEMPLATE).empty()) success = false;
 

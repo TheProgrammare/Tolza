@@ -34,11 +34,10 @@ private:
   void init_commands() noexcept;
 
   void init_command_package() noexcept;
-  void init_command_workspace() noexcept;
-  void init_command_workspace_create(CLI::App* workspace) noexcept;
-  void init_command_workspace_check(CLI::App* workspace) noexcept;
+  void init_command_toolchain() noexcept;
+  void init_command_new() noexcept;
+  void init_command_check() noexcept;
   void init_command_build() noexcept override;
-  void init_command_check() noexcept override;
 
   void exec_ffi_command() noexcept override;
 };

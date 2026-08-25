@@ -41,6 +41,8 @@
 
 #include <Neargye/magic_enum.hpp>
 
+#define NOT_DEFINED assert(false);
+
 
 codegen::Tools::Tools(codegen::Codegen_AST& p_res)
   : res(p_res)
@@ -59,10 +61,7 @@ llvm::Value* codegen::Tools::engage_move_semantic(ast::ID p_target) noexcept
   auto* dest = builder.CreateAlloca(ty, nullptr, "tmp_moved");
   return dest;
 }
-llvm::Value* codegen::Tools::engage_copy_semantic(ast::ID target) noexcept
-{
-  return nullptr;
-}
+llvm::Value* codegen::Tools::engage_copy_semantic(ast::ID target) noexcept {NOT_DEFINED}
 
 
 std::expected<llvm::Constant*, std::string> codegen::Tools::create_constant(ast::ID lit_id) noexcept
@@ -80,11 +79,10 @@ std::expected<llvm::Constant*, std::string> codegen::Tools::create_constant(ast:
 
   if (const auto* ptr = lit_id.as<ast::Literal_Boolean>()) return get_int_constant(1, ptr->val);
 
-  if (const auto* ptr = lit_id.as<ast::Literal_NullPtr>())
-    return llvm::ConstantPointerNull::getNullValue(res.get_type(lit_id.type()));
+  if (lit_id.is<ast::Literal_NullPtr>()) return llvm::ConstantPointerNull::getNullValue(res.get_type(lit_id.type()));
 
   if (const auto* ptr = lit_id.as<ast::Literal_Text_Pure>()) {
-    switch (ptr->text_type) {
+    switch (lit_id.type().as<type::String>()->kind) {
     case type::ETextType::_cstr: return get_cstr_constant(ptr->val);
     case type::ETextType::_cune:
     case type::ETextType::_str:  return get_str_constant(ptr->val);
@@ -333,11 +331,16 @@ llvm::Value* codegen::Tools::codegen_explicit_cast(ast::ID from, type::ID to) co
   auto  from_ty = from.type();
   auto* from_v  = res.insurance.ensure_rvalue(from);
 
+  if (from_ty == to) return from_v;
+
   if (from_ty.as<type::Primitive>() && to.as<type::Primitive>()) {
     auto* cast = res.tools.primitive_coerce(from_v, res.get_type(from_ty), res.get_type(to));
     return res.add_generation(from, cast);
   }
-  if (from_ty.as<type::Array>() && to.as<type::String>()) {
+
+  if (from_ty.is<type::Array>() && to.is<type::String>()) {
+    std::println("test");
+    std::cout << std::flush;
     const auto* buffer  = from_ty.as<type::Array>();
     const auto* out_str = to.as<type::String>();
 
@@ -371,6 +374,14 @@ llvm::Value* codegen::Tools::codegen_explicit_cast(ast::ID from, type::ID to) co
       }
     }
   }
+
+  if (from_ty.is<type::String>() && to.is<type::String>()) {
+    if (from_ty == type::TYPEID_str && to == type::TYPEID_cstr) {
+      return builder.CreateExtractValue(from_v, 0);
+    }
+  }
+
+  return nullptr;
 }
 
 llvm::Value* codegen::Tools::make_struct(llvm::Type* ty, std::vector<llvm::Value*> fields) const noexcept

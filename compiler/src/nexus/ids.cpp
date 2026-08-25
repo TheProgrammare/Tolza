@@ -157,16 +157,22 @@ const ast::NodeHeader& ast::ID::get() const noexcept
   return cu().get().ast->get(*this);
 }
 template <ast::Generic T>
-[[nodiscard]] T* ast::ID::as() noexcept
+T* ast::ID::as() noexcept
 {
   assert(*this && "Must be valid id");
   return cu().get().ast->as<T>(*this);
 }
 template <ast::Generic T>
-[[nodiscard]] const T* ast::ID::as() const noexcept
+const T* ast::ID::as() const noexcept
 {
   assert(*this && "Must be valid id");
   return cu().get().ast->as<T>(*this);
+}
+template <ast::Generic T>
+bool ast::ID::is() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return cu().get().ast->get(*this).kind == T::static_kind;
 }
 
 
@@ -261,6 +267,13 @@ const T* type::ID::as() const noexcept
 {
   assert(*this && "Must be valid id");
   return cu().get().types->as<T>(*this);
+}
+
+template <type::Generic T>
+bool type::ID::is() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return cu().get().types->get(*this).kind == T::static_kind;
 }
 
 
@@ -441,7 +454,8 @@ const definition::Definition& definition::ID::get() const noexcept
 
 #define AST_GET_INSTANCE(T)                                                                                            \
   template T*       ast::ID::as<T>() noexcept;                                                                         \
-  template const T* ast::ID::as<T>() const noexcept;
+  template const T* ast::ID::as<T>() const noexcept;                                                                   \
+  template bool     ast::ID::is<T>() const noexcept;
 
 
 AST_GET_INSTANCE(ast::Unknown)
@@ -576,7 +590,8 @@ AST_GET_INSTANCE(ast::Memory_Drop)
 
 #define TYPE_GET_INSTANCE(T)                                                                                           \
   template T*       type::ID::as<T>() noexcept;                                                                        \
-  template const T* type::ID::as<T>() const noexcept;
+  template const T* type::ID::as<T>() const noexcept;                                                                  \
+  template bool     type::ID::is<T>() const noexcept;
 
 TYPE_GET_INSTANCE(type::Primitive)
 TYPE_GET_INSTANCE(type::String)

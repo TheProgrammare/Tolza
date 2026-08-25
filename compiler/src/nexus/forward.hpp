@@ -49,7 +49,8 @@ namespace common::compiler
 {
 
 // tolza compiler invariant violation : Internal Compiler Error
-[[noreturn]] void DEBUG_TOLZA_ICE(std::string_view msg);
+void DEBUG_TOLZA_ICE(std::string_view msg);
+enum class FPass : uint16_t;
 
 } // namespace common::compiler
 

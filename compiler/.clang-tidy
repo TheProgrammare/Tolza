@@ -17,7 +17,9 @@ Checks: >
   -readability-use-anyofallof,
   -bugprone-reserved-identifier,
   -readability-convert-member-functions-to-static,
-  -bugprone-unhandled-exception-at-new
+  -bugprone-unhandled-exception-at-new,
+  -readability-function-cognitive-complexity,
+  -readability-avoid-nested-conditional-operator
 
 WarningsAsErrors: >
   clang-analyzer-*

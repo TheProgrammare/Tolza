@@ -1,4 +1,5 @@
 #include "command_compiler.hpp"
+#include "common/fileutils.hpp"
 
 #include <filesystem>
 #include <print>
@@ -32,11 +33,11 @@ void command::compiler::apply_compiler(std::string_view file) noexcept
 
 void command::compiler::cogito_compiler(std::string_view file) noexcept
 {
-  const fs::path f(file);
+  const fs::path f(common::fileutils::resolve_path(file));
 
   if (!fs::exists(f)) {
     std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());
-    std::println(HLOG "Please, set a valid path in config at \"{}\"", common::env::get_config_dir());
+    std::println(HLOG "Please, set a valid path in toolchain config at \"{}\"", common::env::get_config_dir());
     return;
   }
 

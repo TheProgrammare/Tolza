@@ -73,6 +73,7 @@ llvm::Value* codegen::Insurance::ensure_variadic_arg(ast::ID expr) noexcept
 
 llvm::Constant* codegen::Insurance::ensure_constant(ast::ID expr) noexcept
 {
+  return nullptr;
 }
 
 

@@ -251,7 +251,7 @@ std::string metacode::Generator::eval_expr(metacode::ID id) noexcept
       auto err = Error_Diagnostic(CU.cuid, 248, m.position, line_end_pos, compiler::EPhase::preprosessor,
                                   "Illegal placeholder outside an expand preprocessor instruction.", "");
       compiler::COMPILER.add_error(err);
-      return "";
+      return {};
     }
 
     assert(p_id < current_placeholder_env.size() && "Placeholder index out of bound");

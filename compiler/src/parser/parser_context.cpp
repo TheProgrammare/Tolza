@@ -412,18 +412,25 @@ void parser::Parser_Context::add_error(ErrorCode code, std::string_view msg, std
 {
   static size_t count = 0;
   tok_v->add_error(code, msg, hint);
-  if (count++ > MAX_ERRORS) throw std::runtime_error("Too many errors emitted. Parser aborted.");
 
-  common::compiler::DEBUG_TOLZA_ICE(msg);
+  if (count++ > MAX_ERRORS) {
+    std::println(stderr, "[tolza:ERROR] Too many errors emitted. Parser aborted.");
+    std::abort();
+  }
+
+  // common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 void parser::Parser_Context::add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg,
                                            std::string_view hint) const
 {
   static size_t count = 0;
   tok_v->add_error_tok(code, tok, msg, hint);
-  if (count++ > MAX_ERRORS) throw std::runtime_error("Too many errors emitted. Parser aborted.");
+  if (count++ > MAX_ERRORS) {
+    std::println(stderr, "[tolza:ERROR] Too many errors emitted. Parser aborted.");
+    std::abort();
+  }
 
-  common::compiler::DEBUG_TOLZA_ICE(msg);
+  // common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 
 

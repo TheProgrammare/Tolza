@@ -48,7 +48,6 @@ public:
   void                 rewind(size_t pos) noexcept;
 
   void add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept;
-
   void add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg, std::string_view hint) noexcept;
 
   void synchronize() noexcept;

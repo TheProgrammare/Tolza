@@ -52,7 +52,7 @@ size_t common::compiler::Target::get_arch_size() const noexcept
 
 std::string common::compiler::Dir::get_dir_project() const noexcept
 {
-  return common::fileutils::resolve_path(project, fs::path(current_config_file).parent_path().string());
+  return common::fileutils::resolve_path(project);
 }
 std::string common::compiler::Dir::get_dir_build() const noexcept
 {
@@ -61,6 +61,10 @@ std::string common::compiler::Dir::get_dir_build() const noexcept
 std::string common::compiler::Dir::get_dir_source() const noexcept
 {
   return common::fileutils::resolve_path(source, get_dir_project());
+}
+std::string common::compiler::Dir::get_dir_profile() const noexcept
+{
+  return common::fileutils::resolve_path(profile, get_dir_project());
 }
 std::string common::compiler::Dir::get_dir_vendor() const noexcept
 {
@@ -87,19 +91,24 @@ std::string common::compiler::Dir::get_dir_packages() const noexcept
   return common::fileutils::resolve_path(packages, get_dir_project());
 }
 
-std::string common::compiler::Dir::get_preprocess_dir() const noexcept
+std::string common::compiler::Options::get_dir_preprocess() const noexcept
 {
-  return (fs::path(build) / "preprocess").string();
+  return (fs::path(get_dir_build_profile()) / "preprocess").string();
 }
 
-std::string common::compiler::Dir::get_debug_graph_dir() const noexcept
+std::string common::compiler::Options::get_dir_debug_graph() const noexcept
 {
-  return (fs::path(build) / "graph").string();
+  return (fs::path(get_dir_build_profile()) / "graph").string();
 }
 
-std::string common::compiler::Dir::get_llvmir_dir() const noexcept
+std::string common::compiler::Options::get_dir_llvmir() const noexcept
 {
-  return (fs::path(build) / "llvm-ir").string();
+  return (fs::path(get_dir_build_profile()) / "llvm-ir").string();
+}
+
+std::string common::compiler::Options::get_dir_binding_profile() const noexcept
+{
+  return (fs::path(get_dir_build_profile()) / "binding").string();
 }
 
 std::string common::compiler::Options::get_project_name() const noexcept
@@ -108,21 +117,24 @@ std::string common::compiler::Options::get_project_name() const noexcept
   return project_name;
 }
 
-std::string_view common::compiler::Options::get_out_name() const noexcept
+std::string common::compiler::Options::get_out_name() const noexcept
 {
-  static auto out = fs::path(dir.current_config_file).stem().string();
+  static auto out = std::format("{}-{}", project_name, get_profile_filename());
   return out;
 }
 
-std::string_view common::compiler::Options::get_config_file() const noexcept
+std::string common::compiler::Options::get_profile_filename() const noexcept
 {
   static std::string out;
   if (!out.empty()) return out;
 
-  if (dir.current_config_file.empty() || dir.current_config_file == "self") return out = dir.current_config_file;
-  if (auto find = sub_configs.find(dir.current_config_file); find != sub_configs.end()) return out = find->second;
-
-  return out = dir.current_config_file;
+  for (const auto& elem : profiles) std::format_to(std::back_inserter(out), "{}-", elem);
+  return out = out.substr(0, out.size() - 1);
+}
+std::string common::compiler::Options::get_dir_build_profile() const noexcept
+{
+  return common::fileutils::resolve_path((fs::path(dir.get_dir_build()) / get_profile_filename()).string(),
+                                         dir.get_dir_project());
 }
 
 common::compiler::TargetTriple common::compiler::TargetTriple::parse(std::string_view s) noexcept
@@ -265,6 +277,7 @@ const std::map<std::string, std::string>& common::compiler::Options::generate_pr
   build_arg(GET_ENUM_NAME(profile.optimization), "optimization");
 
   for (auto& log : common::utils::split_flags(magic_enum::enum_flags_name(log.logs, ','))) build_arg(log, "log");
+  build_arg(GET_ENUM_NAME(log.level), "log.level");
 
   for (auto& warn : common::utils::split_flags(magic_enum::enum_flags_name(warn.warns)))
     build_arg("true", "warning." + warn);
@@ -286,48 +299,54 @@ const std::vector<std::string>& common::compiler::Options::to_args() const noexc
   if (!out.empty()) return out;
   std::vector<std::string> llvm_out;
 
-  out.emplace_back("--project-name=\"" + project_name + "\"");
+  out.emplace_back(std::format(R"(--project-name="{}")", project_name));
+  if (is_check_mode) out.emplace_back("--check");
 
   // target
-  out.emplace_back("--arch=\"" + GET_ENUM_NAME(target.triple.arch) + "\"");
-  out.emplace_back("--platform=\"" + GET_ENUM_NAME(target.triple.platform) + "\"");
-  out.emplace_back("--vendor=\"" + GET_ENUM_NAME(target.triple.vendor) + "\"");
-  out.emplace_back("--abi=\"" + GET_ENUM_NAME(target.triple.abi) + "\"");
-  out.emplace_back("--cpu=\"" + target.cpu + "\"");
-  out.emplace_back("--features=\"" + GET_FLAGS_NAME(target.features) + "\"");
-  out.emplace_back("--calling_convention=\"" + GET_ENUM_NAME(target.call_convention) + "\"");
-  out.emplace_back("--reloc-model=\"" + GET_ENUM_NAME(target.reloc_model) + "\"");
-  out.emplace_back("--code-model=\"" + GET_ENUM_NAME(target.code_model) + "\"");
-  out.emplace_back("--emits=\"" + GET_FLAGS_NAME(target.emits) + "\"");
+  out.emplace_back(std::format(R"(--arch="{}")", GET_ENUM_NAME(target.triple.arch)));
+  out.emplace_back(std::format(R"(--platform="{}")", GET_ENUM_NAME(target.triple.platform)));
+  out.emplace_back(std::format(R"(--vendor="{}")", GET_ENUM_NAME(target.triple.vendor)));
+  out.emplace_back(std::format(R"(--abi="{}")", GET_ENUM_NAME(target.triple.abi)));
+  out.emplace_back(std::format(R"(--cpu="{}")", target.cpu));
+  out.emplace_back(std::format(R"(--features="{}")", GET_FLAGS_NAME(target.features)));
+  out.emplace_back(std::format(R"(--calling_convention="{}")", GET_ENUM_NAME(target.call_convention)));
+  out.emplace_back(std::format(R"(--reloc-model="{}")", GET_ENUM_NAME(target.reloc_model)));
+  out.emplace_back(std::format(R"(--code-model="{}")", GET_ENUM_NAME(target.code_model)));
+  out.emplace_back(std::format(R"(--emits="{}")", GET_FLAGS_NAME(target.emits)));
 
-  out.emplace_back("--libc=\"" + GET_ENUM_NAME(c_ffi.libc) + "\"");
+  out.emplace_back(std::format(R"(--libc="{}")", GET_ENUM_NAME(c_ffi.libc)));
 
-  if (sub_config != "self") out.emplace_back("--sub-config=\"" + sub_config + "\"");
+  std::string _profile;
+  for (const auto& elem : profiles) std::format_to(std::back_inserter(_profile), "{}|", elem);
+  _profile = _profile.substr(0, _profile.size() - 1);
+  out.emplace_back(std::format(R"(--profile="{}")", _profile));
 
   out.emplace_back(profile.debug ? "--debug" : "--release");
   out.emplace_back("-" + GET_ENUM_NAME(profile.optimization));
 
-  out.emplace_back("--logs=\"" + GET_FLAGS_NAME(log.logs) + "\"");
-  out.emplace_back("--warns=\"" + GET_FLAGS_NAME(warn.warns) + "\"");
+  out.emplace_back(std::format(R"(--logs="{}")", GET_FLAGS_NAME(log.logs)));
+  out.emplace_back(std::format(R"(--log-level="{}")", GET_ENUM_NAME(log.level)));
+  out.emplace_back(std::format(R"(--warns="{}")", GET_FLAGS_NAME(warn.warns)));
   out.emplace_back("-" + GET_ENUM_NAME(warn.level));
-  out.emplace_back("--debugs=\"" + GET_FLAGS_NAME(debug.debugs) + "\"");
+  out.emplace_back(std::format(R"(--debugs="{}")", GET_FLAGS_NAME(debug.debugs)));
 
   for (const auto& [name, val] : preprocessor.defines) out.emplace_back("-D" + name + "=" + val);
 
   for (const auto& udef : preprocessor.undefines) out.emplace_back("-U" + std::string(udef));
 
-  out.emplace_back("--dir-project=\"" + dir.project + "\"");
-  out.emplace_back("--dir-build=\"" + dir.build + "\"");
-  out.emplace_back("--dir-src=\"" + dir.source + "\"");
-  out.emplace_back("--dir-vendor=\"" + dir.vendor + "\"");
-  out.emplace_back("--dir-ffi-json=\"" + dir.ffi_json + "\"");
-  out.emplace_back("--dir-binding=\"" + dir.binding + "\"");
-  out.emplace_back("--dir-compiler=\"" + dir.compiler + "\"");
-  out.emplace_back("--dir-stdlib=\"" + dir.stdlib + "\"");
-  out.emplace_back("--dir-packages=\"" + dir.packages + "\"");
+  out.emplace_back(std::format(R"(--dir-project="{}")", dir.project));
+  out.emplace_back(std::format(R"(--dir-build="{}")", dir.build));
+  out.emplace_back(std::format(R"(--dir-src="{}")", dir.source));
+  out.emplace_back(std::format(R"(--dir-profile="{}")", dir.profile));
+  out.emplace_back(std::format(R"(--dir-vendor="{}")", dir.vendor));
+  out.emplace_back(std::format(R"(--dir-ffi-json="{}")", dir.ffi_json));
+  out.emplace_back(std::format(R"(--dir-binding="{}")", dir.binding));
+  out.emplace_back(std::format(R"(--dir-compiler="{}")", dir.compiler));
+  out.emplace_back(std::format(R"(--dir-stdlib="{}")", dir.stdlib));
+  out.emplace_back(std::format(R"(--dir-packages="{}")", dir.packages));
 
-  out.emplace_back("--error-mode=\"" + GET_ENUM_NAME(diagnostic.error_mode) + "\"");
-  out.emplace_back("--diagnostic-format=\"" + GET_ENUM_NAME(diagnostic.out_format) + "\"");
+  out.emplace_back(std::format(R"(--error-mode="{}")", GET_ENUM_NAME(diagnostic.error_mode)));
+  out.emplace_back(std::format(R"(--diagnostic-format="{}")", GET_ENUM_NAME(diagnostic.out_format)));
 
   if (llvm.verify_module) out.emplace_back("--verify-module");
 
@@ -533,7 +552,7 @@ common::compiler::Options common::compiler::Options::get_preset(const TargetTrip
 }
 
 template <typename Enum>
-void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Sub_Compiler_Options::EMergeMode mode) noexcept
+void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Sub_Options::EMergeMode mode) noexcept
 {
   using _underlying = std::underlying_type_t<Enum>;
 
@@ -544,15 +563,15 @@ void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Sub_Compiler_Option
   _underlying out;
 
   switch (mode) {
-  case common::compiler::Sub_Compiler_Options::EMergeMode::_union: {
+  case common::compiler::Sub_Options::EMergeMode::_union: {
     out = d | v;
     break;
   }
-  case common::compiler::Sub_Compiler_Options::EMergeMode::_intersection: {
+  case common::compiler::Sub_Options::EMergeMode::_intersection: {
     out = d & v;
     break;
   }
-  case common::compiler::Sub_Compiler_Options::EMergeMode::_anti_intersection: {
+  case common::compiler::Sub_Options::EMergeMode::_anti_intersection: {
     out = d & ~v;
     break;
   }
@@ -561,7 +580,7 @@ void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Sub_Compiler_Option
   _dest = static_cast<Enum>(out);
 }
 
-common::compiler::Options common::compiler::Sub_Compiler_Options::merge_context(const Options& base_ctx) const noexcept
+common::compiler::Options common::compiler::Sub_Options::merge_context(const Options& base_ctx) const noexcept
 {
   auto apply_str = [&](std::string& _dest, std::string_view _str) {
     if (_str.empty()) return;
@@ -606,6 +625,34 @@ common::compiler::Options common::compiler::Sub_Compiler_Options::merge_context(
     }
     }
   };
+  auto merge_list_str = [&](std::vector<std::string>& _dest, const std::vector<std::string>& _val, EMergeMode mode) {
+    switch (mode) {
+    case EMergeMode::_union: {
+      _dest.insert(_dest.end(), _val.begin(), _val.end());
+      break;
+    }
+    case EMergeMode::_intersection: {
+      std::vector<std::string> tmp;
+      tmp.reserve(_dest.size());
+      auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
+      for (const auto& elem : _dest) {
+        if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
+      }
+      _dest = tmp;
+      break;
+    }
+    case EMergeMode::_anti_intersection: {
+      std::vector<std::string> tmp;
+      tmp.reserve(_dest.size());
+      auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
+      for (const auto& elem : _dest) {
+        if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
+      }
+      _dest = tmp;
+      break;
+    }
+    }
+  };
 
   auto merge_map = [&](std::map<std::string, std::string>& _dest, const std::map<std::string, std::string>& _val,
                        EMergeMode mode) {
@@ -637,7 +684,7 @@ common::compiler::Options common::compiler::Sub_Compiler_Options::merge_context(
 
   Options out = base_ctx;
 
-  apply_str(out.sub_config, sub_config);
+  merge_list_str(out.profiles, profiles, COMPILATION_ARGS_merge_mode);
 
   merge_map(out.PREPROCESSOR_ARGS, PREPROCESSOR_ARGS, COMPILATION_ARGS_merge_mode);
 
@@ -661,6 +708,7 @@ common::compiler::Options common::compiler::Sub_Compiler_Options::merge_context(
 
   // logs
   merge_bitwise(out.log.logs, log.logs, logs_merge_mode);
+  if (log.level != ELogLevel::DEFAULT) out.log.level = log.level;
 
   // warns
   merge_bitwise(out.warn.warns, warn.warns, warnings_merge_mode);
@@ -670,10 +718,10 @@ common::compiler::Options common::compiler::Sub_Compiler_Options::merge_context(
   merge_bitwise(out.debug.debugs, debug.debugs, debug_merge_mode);
 
   // dirs
-  out.dir.current_config_file = dir.current_config_file;
   apply_str(out.dir.project, dir.project);
   apply_str(out.dir.build, dir.build);
   apply_str(out.dir.source, dir.source);
+  apply_str(out.dir.profile, dir.profile);
   apply_str(out.dir.vendor, dir.vendor);
   apply_str(out.dir.binding, dir.binding);
   apply_str(out.dir.ffi_json, dir.ffi_json);
@@ -732,14 +780,12 @@ common::compiler::Options common::compiler::Options::read_config(std::string_vie
 
   auto out = common::compiler::Options::invalid();
 
-
   toml::table tbl;
   tbl = toml::parse_file(path);
 
   out.project_name = get_str("project_name");
 
-  out.dir.current_config_file = path;
-  out.sub_config              = get_str("sub_config");
+  out.profiles = utils::split_flags(get_str("profiles"));
 
   // target
   out.target.triple.arch     = get_enum("target.arch", env::EArch, unknown);
@@ -757,7 +803,8 @@ common::compiler::Options common::compiler::Options::read_config(std::string_vie
   out.profile.optimization = get_enum("profile.optimization", EOptimization, O0);
 
   // log
-  out.log.logs = get_flags("log.logs", FPass, NONE);
+  out.log.logs  = get_flags("log.logs", FPass, NONE);
+  out.log.level = get_enum("log.level", ELogLevel, DEFAULT);
 
   // warn
   out.warn.warns = get_flags("warning.warnings", FWarnMode, NONE);
@@ -777,6 +824,7 @@ common::compiler::Options common::compiler::Options::read_config(std::string_vie
   out.dir.project  = resolve_path(get_str("directory.project"));
   out.dir.build    = resolve_path(get_str("directory.build"));
   out.dir.source   = resolve_path(get_str("directory.source"));
+  out.dir.profile  = resolve_path(get_str("directory.profile"));
   out.dir.vendor   = resolve_path(get_str("directory.vendor"));
   out.dir.binding  = resolve_path(get_str("directory.binding"));
   out.dir.ffi_json = resolve_path(get_str("directory.ffi_json"));
@@ -796,10 +844,6 @@ common::compiler::Options common::compiler::Options::read_config(std::string_vie
     for (const auto& key : *clang_args) out.c_ffi.args.emplace_back(key.value_or(""));
   }
 
-  if (const toml::table* sub_configs = tbl.at_path("config").as_table()) {
-    for (const auto& [key, val] : *sub_configs) out.sub_configs[std::string(key)] = val.value_or("./");
-  }
-
   return out;
 
 #undef get_enum
@@ -807,7 +851,7 @@ common::compiler::Options common::compiler::Options::read_config(std::string_vie
 #undef get_bool
 }
 
-bool common::compiler::Options::write_config(std::string_view path) noexcept
+bool common::compiler::Options::write_config(std::string_view path, bool is_debug) noexcept
 {
   fs::path p = path;
 
@@ -816,77 +860,78 @@ bool common::compiler::Options::write_config(std::string_view path) noexcept
   std::string config_txt(common::OPTIONS_TEMPLATE);
 
   std::string _defines;
-  for (auto& [key, val] : preprocessor.defines) _defines += key + " = \"" + val + "\"\n";
+  for (auto& [key, val] : preprocessor.defines) std::format_to(std::back_inserter(_defines), "= \"{}\"\n", val);
   std::string _undefines;
-  for (auto& val : preprocessor.undefines) _undefines += "\"" + std::string(val) + "\n";
-  std::string _sub_configs;
-  for (auto& [key, val] : sub_configs) _defines += key + " = \"" + val + "\"\n";
-  std::string _llvm_args;
-  for (auto& val : llvm.args) _llvm_args += "\"" + std::string(val) + "\",\n";
-  std::string _clang_args;
-  for (auto& val : c_ffi.args) _clang_args += "\"" + std::string(val) + "\",\n";
+  for (auto& val : preprocessor.undefines) std::format_to(std::back_inserter(_undefines), "\"{}\"\n", val);
+  std::string _profiles;
+  for (auto& elem : profiles) std::format_to(std::back_inserter(_profiles), "{}|", elem);
+  _profiles = _profiles.substr(0, _profiles.size() - 1);
 
-  const std::string _libc_version =
-      std::to_string(c_ffi.libc_version.major) + "." + std::to_string(c_ffi.libc_version.minor);
+  std::string _llvm_args;
+  for (auto& val : llvm.args) std::format_to(std::back_inserter(_llvm_args), "\"{}\",\n", val);
+  std::string _clang_args;
+  for (auto& val : c_ffi.args) std::format_to(std::back_inserter(_clang_args), "\"{}\",\n", val);
+
+  const std::string _libc_version = std::format("{}.{}", c_ffi.libc_version.major, c_ffi.libc_version.minor);
 
   const auto _c_source = GET_FLAGS_NAME(c_ffi.c_source);
 
   std::map<std::string_view, std::string_view> config_params = {
       // project
-      {"project_name",           project_name                               },
+      {"project_name",           project_name                                                                     },
       // target
-      {"sub_config",             sub_config                                 },
-      {"target.arch",            GET_ENUM_NAME(target.triple.arch)          },
-      {"target.platform",        GET_ENUM_NAME(target.triple.platform)      },
-      {"target.vendor",          GET_ENUM_NAME(target.triple.vendor)        },
-      {"target.abi",             GET_ENUM_NAME(target.triple.abi)           },
-      {"target.call_convention", GET_ENUM_NAME(target.call_convention)      },
-      {"target.cpu",             target.cpu                                 },
-      {"target.features",        GET_FLAGS_NAME(target.features)            },
-      {"target.code_model",      GET_ENUM_NAME(target.code_model)           },
-      {"target.reloc_model",     GET_ENUM_NAME(target.reloc_model)          },
-      {"target.emits",           GET_FLAGS_NAME(target.emits)               },
+      {"profiles",               _profiles                                                                        },
+      {"target.arch",            GET_ENUM_NAME(target.triple.arch)                                                },
+      {"target.platform",        GET_ENUM_NAME(target.triple.platform)                                            },
+      {"target.vendor",          GET_ENUM_NAME(target.triple.vendor)                                              },
+      {"target.abi",             GET_ENUM_NAME(target.triple.abi)                                                 },
+      {"target.call_convention", GET_ENUM_NAME(target.call_convention)                                            },
+      {"target.cpu",             target.cpu                                                                       },
+      {"target.features",        GET_FLAGS_NAME(target.features)                                                  },
+      {"target.code_model",      GET_ENUM_NAME(target.code_model)                                                 },
+      {"target.reloc_model",     GET_ENUM_NAME(target.reloc_model)                                                },
+      {"target.emits",           GET_FLAGS_NAME(target.emits)                                                     },
       // profile
-      {"profile.debug",          btos(profile.debug)                        },
-      {"profile.optimization",   GET_ENUM_NAME(profile.optimization)        },
+      {"profile.debug",          is_debug ? "true" : btos(profile.debug)                                          },
+      {"profile.optimization",   is_debug ? GET_ENUM_NAME(EOptimization::O3) : GET_ENUM_NAME(profile.optimization)},
       // logs
-      {"log.logs",               GET_FLAGS_NAME(log.logs)                   },
+      {"log.logs",               is_debug ? GET_FLAGS_NAME(FPass::all) : GET_FLAGS_NAME(log.logs)                 },
+      {"log.level",              is_debug ? GET_ENUM_NAME(ELogLevel::normal) : GET_ENUM_NAME(log.level)           },
       // warnings
-      {"warn.warnings",          GET_FLAGS_NAME(warn.warns)                 },
-      {"warn.level",             magic_enum::enum_name(warn.level).substr(1)},
-      {"diagnostic.error.mode",  GET_ENUM_NAME(diagnostic.error_mode)       },
-      {"diagnostic.out.format",  GET_ENUM_NAME(diagnostic.out_format)       },
+      {"warn.warnings",          GET_FLAGS_NAME(warn.warns)                                                       },
+      {"warn.level",             magic_enum::enum_name(warn.level).substr(1)                                      },
+      {"diagnostic.error.mode",  GET_ENUM_NAME(diagnostic.error_mode)                                             },
+      {"diagnostic.out.format",  GET_ENUM_NAME(diagnostic.out_format)                                             },
       // debug printer
-      {"debug.debugs",           GET_FLAGS_NAME(debug.debugs)               },
+      {"debug.debugs",           GET_FLAGS_NAME(debug.debugs)                                                     },
       // defines
-      {"preprocessor.defines",   _defines                                   },
+      {"preprocessor.defines",   _defines                                                                         },
       // undefines
-      {"preprocessor.undefines", _undefines                                 },
+      {"preprocessor.undefines", _undefines                                                                       },
       // directories
-      {"dir.project",            dir.project                                },
-      {"dir.build",              dir.build                                  },
-      {"dir.source",             dir.source                                 },
-      {"dir.vendor",             dir.vendor                                 },
-      {"dir.ffi_json",           dir.ffi_json                               },
-      {"dir.binding",            dir.binding                                },
-      {"dir.compiler",           common::env::get_compilers_dir()           },
-      {"dir.stdlib",             common::env::get_stdlib_dir()              },
-      {"dir.packages",           common::env::get_packages_dir()            },
-      // sub_configs
-      {"config.sub_configs",     _sub_configs                               },
+      {"dir.project",            dir.project                                                                      },
+      {"dir.build",              dir.build                                                                        },
+      {"dir.source",             dir.source                                                                       },
+      {"dir.profile",            dir.profile                                                                      },
+      {"dir.vendor",             dir.vendor                                                                       },
+      {"dir.ffi_json",           dir.ffi_json                                                                     },
+      {"dir.binding",            dir.binding                                                                      },
+      {"dir.compiler",           common::env::get_compilers_dir()                                                 },
+      {"dir.stdlib",             common::env::get_stdlib_dir()                                                    },
+      {"dir.packages",           common::env::get_packages_dir()                                                  },
       // llvm
-      {"llvm.verify_module",     btos(llvm.verify_module)                   },
-      {"llvm.args",              _llvm_args                                 },
+      {"llvm.verify_module",     btos(llvm.verify_module)                                                         },
+      {"llvm.args",              _llvm_args                                                                       },
       // c_ffi
-      {"c_ffi.libc",             GET_ENUM_NAME(c_ffi.libc)                  },
-      {"c_ffi.libc_version",     _libc_version                              },
-      {"c_ffi.std",              GET_ENUM_NAME(c_ffi.std)                   },
-      {"c_ffi.c_source",         _c_source                                  },
-      {"c_ffi.environment",      GET_ENUM_NAME(c_ffi.env)                   },
-      {"c_ffi.disable_builtins", btos(c_ffi.disable_builtins)               },
-      {"c_ffi.strict_aliasing",  btos(c_ffi.strict_aliasing)                },
-      {"c_ffi.sysroot",          c_ffi.sysroot                              },
-      {"c_ffi.args",             _clang_args                                },
+      {"c_ffi.libc",             GET_ENUM_NAME(c_ffi.libc)                                                        },
+      {"c_ffi.libc_version",     _libc_version                                                                    },
+      {"c_ffi.std",              GET_ENUM_NAME(c_ffi.std)                                                         },
+      {"c_ffi.c_source",         _c_source                                                                        },
+      {"c_ffi.environment",      GET_ENUM_NAME(c_ffi.env)                                                         },
+      {"c_ffi.disable_builtins", btos(c_ffi.disable_builtins)                                                     },
+      {"c_ffi.strict_aliasing",  btos(c_ffi.strict_aliasing)                                                      },
+      {"c_ffi.sysroot",          c_ffi.sysroot                                                                    },
+      {"c_ffi.args",             _clang_args                                                                      },
   };
 
   common::utils::fmt_template(config_txt, config_params);
@@ -918,8 +963,9 @@ std::string common::OPTIONS_TEMPLATE = R"(
 
 # if empty, the workspace file name will be used
 project_name                 = "%project_name"
-# sub .toml name to apply after this .toml 
-sub_config                   = "%sub_config"  
+# at ./profile/*.toml name to apply after this
+# e.g. "debug", "release", "windows|debug", "linux|posix|release",
+profiles                      = "%profiles"  
     
 [target]
 # enum: )" + env::EArch_names() +
@@ -969,7 +1015,10 @@ optimization                 = "%profile.optimization"
 [log]
 # flags: )" + compiler::FPass_names() +
                                        R"( ...
-logs                         = "%log.logs"                             
+logs                         = "%log.logs"        
+# enum: )" + compiler::ELogLevel_names()
+                                       + R"( ...
+level                        = "%log.level"
 
 [warning]
 # flags: )" + compiler::FWarnMode_names()
@@ -1005,17 +1054,13 @@ undefines = [
 project                      = "%dir.project"
 build                        = "%dir.build"  
 source                       = "%dir.source"  
+profile                      = "%dir.profile"  
 vendor                       = "%dir.vendor"  
 ffi_json                     = "%dir.ffi_json"  
 binding                      = "%dir.binding"  
 compiler                     = "%dir.compiler"  
 stdlib                       = "%dir.stdlib"  
 packages                     = "%dir.packages"
-
-[config]
-# designed to target a sub configuration parameters
-# map : config_name = "config_path"
-%config.sub_configs
 
 # ============
 # LLVM section

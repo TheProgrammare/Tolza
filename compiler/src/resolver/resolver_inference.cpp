@@ -159,10 +159,12 @@ void resolver::Inference::ensure_primitive_literal(ast::ID lit, type::ID ty_infe
       assert(false && "Illegal type inference reached");
     }
   } else if (const auto* inf_text = ty_inference.as<type::String>()) {
-    if (auto* ptr = lit.as<ast::Literal_Text_Pure>())
+    if (auto* ptr = lit.as<ast::Literal_Text_Pure>()) {
+      assert(inf_text->kind != type::ETextType::NONE);
       ptr->text_type = inf_text->kind;
-    else
+    } else {
       assert(false && "Illegal type inference reached");
+    }
 
   } else if (const auto* inf_tbl = ty_inference.as<type::Array>()) {
     if (auto* ptr = lit.as<ast::Literal_Table>()) {

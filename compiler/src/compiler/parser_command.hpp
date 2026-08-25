@@ -39,7 +39,7 @@ class App;
 
 namespace common::compiler
 {
-struct Sub_Compiler_Options;
+struct Sub_Options;
 }
 
 namespace compiler
@@ -50,7 +50,7 @@ class Commander : common::Commander
 public:
   Commander(CLI::App& _app, int argc, const char* argv[]);
 
-  common::compiler::Sub_Compiler_Options& opt;
+  common::compiler::Sub_Options& opt;
 
   std::vector<std::string> args;
 
@@ -63,7 +63,6 @@ private:
   void compilation_args(CLI::App* build) noexcept;
 
   void init_command_build() noexcept override;
-  void init_command_check() noexcept override;
   void exec_ffi_command() noexcept override;
 };
 

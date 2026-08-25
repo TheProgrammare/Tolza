@@ -45,6 +45,12 @@ enum class FWarnMode : uint8_t {
   dead_code = 1ULL << 4,
   as_error  = 1ULL << 5
 };
+enum class ELogLevel : uint8_t {
+  DEFAULT,
+  quiet,
+  normal,
+  verbose,
+};
 enum class FEmit : uint8_t {
   NONE        = 0,
   bin         = 1ULL << 0,
@@ -164,10 +170,10 @@ struct Cffi final {
 
 struct Dir final {
   // directories
-  std::string current_config_file;
   std::string project  = "./";
   std::string build    = "./build";
   std::string source   = "./src";
+  std::string profile  = "./profile";
   std::string vendor   = "./vendor";
   std::string binding  = "./binding";
   std::string ffi_json = "./binding/ffi_json";
@@ -178,15 +184,13 @@ struct Dir final {
   [[nodiscard]] std::string get_dir_project() const noexcept;
   [[nodiscard]] std::string get_dir_build() const noexcept;
   [[nodiscard]] std::string get_dir_source() const noexcept;
+  [[nodiscard]] std::string get_dir_profile() const noexcept;
   [[nodiscard]] std::string get_dir_vendor() const noexcept;
   [[nodiscard]] std::string get_dir_binding() const noexcept;
   [[nodiscard]] std::string get_dir_ffi_json() const noexcept;
   [[nodiscard]] std::string get_dir_compiler() const noexcept;
   [[nodiscard]] std::string get_dir_stdlib() const noexcept;
   [[nodiscard]] std::string get_dir_packages() const noexcept;
-  [[nodiscard]] std::string get_preprocess_dir() const noexcept;
-  [[nodiscard]] std::string get_debug_graph_dir() const noexcept;
-  [[nodiscard]] std::string get_llvmir_dir() const noexcept;
 };
 
 struct Profile final {
@@ -195,7 +199,8 @@ struct Profile final {
 };
 
 struct Log final {
-  FPass logs = FPass::NONE;
+  FPass     logs  = FPass::NONE;
+  ELogLevel level = ELogLevel::DEFAULT;
 };
 
 struct Warn final {
@@ -226,10 +231,11 @@ struct Diagnostic final {
 
 struct Options {
   [[nodiscard]] static Options read_config(std::string_view path) noexcept;
-  [[nodiscard]] bool           write_config(std::string_view path) noexcept;
+  [[nodiscard]] bool           write_config(std::string_view path, bool is_debug = false) noexcept;
 
-  std::string project_name;
-  std::string sub_config;
+  std::string              project_name;
+  // name, path
+  std::vector<std::string> profiles;
 
   std::map<std::string, std::string> PREPROCESSOR_ARGS;
 
@@ -251,21 +257,20 @@ struct Options {
   LLVM llvm;
   Cffi c_ffi;
 
-
-  // sub_configs
-  // key, path
-  std::map<std::string, std::string> sub_configs;
-
   bool valid = true;
 
 
   [[nodiscard]] std::string get_project_name() const noexcept;
 
   // object, executable, ...
-  // name from .config file name
-  [[nodiscard]] std::string_view get_out_name() const noexcept;
+  [[nodiscard]] std::string get_out_name() const noexcept;
 
-  [[nodiscard]] std::string_view get_config_file() const noexcept;
+  [[nodiscard]] std::string get_profile_filename() const noexcept;
+  [[nodiscard]] std::string get_dir_build_profile() const noexcept;
+  [[nodiscard]] std::string get_dir_preprocess() const noexcept;
+  [[nodiscard]] std::string get_dir_debug_graph() const noexcept;
+  [[nodiscard]] std::string get_dir_llvmir() const noexcept;
+  [[nodiscard]] std::string get_dir_binding_profile() const noexcept;
 
   [[nodiscard]] const std::map<std::string, std::string>& generate_preprocessor_args() const noexcept;
 
@@ -297,7 +302,7 @@ inline Options OPTIONS = Options::invalid();
 
 
 // for sub configuration
-struct Sub_Compiler_Options : Options {
+struct Sub_Options : Options {
   enum class EMergeMode : uint8_t { _union, _intersection, _anti_intersection };
 
   std::string current_config_file;
@@ -412,6 +417,11 @@ constexpr std::string& EOptimization_names()
   static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EOptimization);
   return s;
 }
+constexpr std::string& ELogLevel_names()
+{
+  static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::ELogLevel);
+  return s;
+}
 constexpr std::string& EWarnLevel_names()
 {
   static auto s = GET_ENUM_NAMES_TO_STRING(common::compiler::EWarnLevel);
@@ -476,7 +486,7 @@ namespace common
   case common::env::ECStandard::gnu17: return "-std=gnu17";
   case common::env::ECStandard::gnu23: return "-std=gnu23";
 
-  default:                             return "";
+  default:                             return {};
   }
 }
 
@@ -486,12 +496,12 @@ namespace common
   case common::env::EEnvironment::gnu:       return "-D_GNU_SOURCE";
   case common::env::EEnvironment::musl:      return "-D_MUSL_SOURCE";
   case common::env::EEnvironment::msvc:      return "-fms-compatibility";
-  case common::env::EEnvironment::gnuabi:    return "";
+  case common::env::EEnvironment::gnuabi:    return {};
   case common::env::EEnvironment::mingw:     return "-D__MINGW32__";
   case common::env::EEnvironment::darwin:    return "-D_DARWIN_C_SOURCE";
   case common::env::EEnvironment::baremetal: return "-ffreestanding";
   case common::env::EEnvironment::wasi:      return "-D__wasi__";
-  default:                                   return "";
+  default:                                   return {};
   }
 }
 
@@ -506,7 +516,7 @@ namespace common
   case common::env::ELibC::mingw_libc: return "-D__MINGW32__";
   case common::env::ELibC::bionic:     return "-D__ANDROID_API__";
   case common::env::ELibC::bsd_libc:   return "-D__BSD_VISIBLE";
-  default:                             return "";
+  default:                             return {};
   }
 }
 

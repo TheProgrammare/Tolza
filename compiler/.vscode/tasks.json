@@ -63,6 +63,17 @@
             "problemMatcher": []
         },
         {
+            "label": "Run Release",
+            "dependsOn": "build-release",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/release/tolza-compiler",
+            "args": [
+                "build",
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
+            ],
+            "problemMatcher": []
+        },
+        {
             "label": "Tolza Install",
             "dependsOn": "build-release",
             "type": "shell",

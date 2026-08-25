@@ -71,6 +71,8 @@
 #include "ast/ast_expression.hpp"
 
 
+#define NOT_DEFINED assert(false);
+
 #define GENERATION_GUARD                                                                                               \
   if (auto it = generation.find(n.nodeid()); it != generation.end()) return it->second;
 
@@ -252,12 +254,16 @@ llvm::Type* codegen::Codegen_AST::get_type(type::ID tyid) noexcept
 }
 llvm::Value* codegen::Codegen_AST::add_generation(ast::ID nodeid, llvm::Value* v) noexcept
 {
+  assert(v && "Invalid llvm value");
+
   generation.try_emplace(nodeid, v);
   llvm_item_count++;
   return v;
 }
 llvm::Constant* codegen::Codegen_AST::add_generation(ast::ID nodeid, llvm::Constant* v) noexcept
 {
+  assert(v && "Invalid llvm constant");
+
   generation.try_emplace(nodeid, v);
   llvm_item_count++;
   return v;
@@ -548,26 +554,19 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Function(const ast::Global_Fun
   return fn;
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Cast(const ast::Global_Extend_Cast&
+                                                                                   n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Bin(const ast::Global_Extend_Op_Bin&
+                                                                                     n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Un(const ast::Global_Extend_Op_Un&
+                                                                                    n) noexcept {NOT_DEFINED} llvm::
+    Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Subscript(const ast::Global_Extend_Op_Subscript& n) noexcept {
+        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::
+        codegen_Global_Extend_Op_Transfert(const ast::Global_Extend_Op_Transfert& n) noexcept {NOT_DEFINED} llvm::
+            Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Other(const ast::Global_Extend_Op_Other& n) noexcept
 {
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Cast(const ast::Global_Extend_Cast& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Bin(const ast::Global_Extend_Op_Bin& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Un(const ast::Global_Extend_Op_Un& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Subscript(const ast::Global_Extend_Op_Subscript& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Transfert(const ast::Global_Extend_Op_Transfert& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Other(const ast::Global_Extend_Op_Other& n) noexcept
-{
+  NOT_DEFINED
 }
 
 void codegen::Codegen_AST::codegen_Global_Module(const ast::Global_Module& n) noexcept
@@ -616,6 +615,8 @@ llvm::Function* codegen::Codegen_AST::codegen_SFM_Facet(const ast::SFM_Facet& n)
   }
 
   builder.CreateRetVoid();
+
+  return ctor;
 }
 
 llvm::Function* codegen::Codegen_AST::codegen_SFM_Form(const ast::SFM_Form& n) noexcept
@@ -657,11 +658,10 @@ llvm::Function* codegen::Codegen_AST::codegen_SFM_Form(const ast::SFM_Form& n) n
 }
 
 
-llvm::Function* codegen::Codegen_AST::codegen_SFM_Rule(const ast::SFM_Rule& n) noexcept
+llvm::Function* codegen::Codegen_AST::codegen_SFM_Rule(const ast::SFM_Rule& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_SFM_Rule_Case(const ast::SFM_Rule_Case& n) noexcept
 {
-}
-llvm::Value* codegen::Codegen_AST::codegen_SFM_Rule_Case(const ast::SFM_Rule_Case& n) noexcept
-{
+  NOT_DEFINED
 }
 
 
@@ -671,13 +671,10 @@ void codegen::Codegen_AST::codegen_CodeBlock(const ast::CodeBlock& n) noexcept
   for (auto elem : n.elements) (void)codegen_node(elem);
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda(const ast::Local_Lambda& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda_Capture(const ast::Local_Lambda_Capture& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Parameter(const ast::Local_Parameter& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda(const ast::Local_Lambda& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda_Capture(const ast::Local_Lambda_Capture&
+                                                                                     n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Parameter(const ast::Local_Parameter& n) noexcept
 {
   GENERATION_GUARD
 
@@ -689,39 +686,27 @@ llvm::Value* codegen::Codegen_AST::codegen_Local_Parameter(const ast::Local_Para
   return add_generation(n.nodeid(), arg);
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Param_Elem(const ast::Local_Gen_Param_Elem& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Param_Elem(const ast::Local_Gen_Param_Elem& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Params(const ast::Local_Gen_Params& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Element(const ast::Local_Pattern_Element&
+                                                                                      n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Enum(const ast::Local_Pattern_Enum&
+                                                                                   n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Tuple(const ast::Local_Pattern_Tuple&
+                                                                                    n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Form(const ast::Local_Pattern_Form&
+                                                                                   n) noexcept {NOT_DEFINED} llvm::
+    Value* codegen::Codegen_AST::codegen_Local_Pattern_Rule_Facet(const ast::Local_Pattern_Rule_Facet& n) noexcept {
+        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Facet(const ast::Local_Pattern_Facet&
+                                                                                        n) noexcept {
+        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Binding(const ast::Local_Binding& n) noexcept
 {
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Params(const ast::Local_Gen_Params& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Element(const ast::Local_Pattern_Element& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Enum(const ast::Local_Pattern_Enum& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Tuple(const ast::Local_Pattern_Tuple& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Form(const ast::Local_Pattern_Form& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Rule_Facet(const ast::Local_Pattern_Rule_Facet& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Facet(const ast::Local_Pattern_Facet& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Binding(const ast::Local_Binding& n) noexcept
-{
+  NOT_DEFINED
 }
 
 
-void codegen::Codegen_AST::codegen_Local_Tuple_Destructuring(const ast::Local_Tuple_Destructuring& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Local_Variable(const ast::Local_Variable& n) noexcept
+void codegen::Codegen_AST::codegen_Local_Tuple_Destructuring(const ast::Local_Tuple_Destructuring& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Variable(const ast::Local_Variable& n) noexcept
 {
   GENERATION_GUARD
 
@@ -1075,6 +1060,8 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation(const ast::Expr
     auto* call = builder.CreateCall(callee, args);
     return add_generation(n.nodeid(), call);
   }
+
+  NOT_DEFINED
 }
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Arg(const ast::Expression_Invocation_Arg& n) noexcept
 {
@@ -1113,10 +1100,9 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Arg(const ast::
   }
 }
 llvm::Value*
-codegen::Codegen_AST::codegen_Expression_Invocation_Extend(const ast::Expression_Invocation_Extend& n) noexcept
-{
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n) noexcept
+codegen::Codegen_AST::codegen_Expression_Invocation_Extend(const ast::Expression_Invocation_Extend& n) noexcept {
+    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::
+    codegen_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n) noexcept
 {
   return nullptr;
 }
@@ -1179,9 +1165,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Move_Of(const ast::Express
   return nullptr;
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept
-{
-}
+llvm::Value* codegen::Codegen_AST::codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept {NOT_DEFINED}
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_New_Ptr(const ast::Expression_New_Ptr& n) noexcept
 {
@@ -1190,6 +1174,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_New_Ptr(const ast::Express
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Get_Type(const ast::Expression_Get_Type& n) noexcept
 {
+  NOT_DEFINED
 }
 
 void codegen::Codegen_AST::codegen_Statement_If(const ast::Statement_If& n, llvm::BasicBlock* bb_parent_merge) noexcept
@@ -1589,10 +1574,9 @@ llvm::BranchInst* codegen::Codegen_AST::codegen_Statement_Continue(const ast::St
 
 void codegen::Codegen_AST::codegen_Statement_Match(const ast::Statement_Match& n) noexcept
 {
+  NOT_DEFINED
 }
-void codegen::Codegen_AST::codegen_Statement_Match_Case(const ast::Statement_Match_Case& n) noexcept
-{
-}
+void codegen::Codegen_AST::codegen_Statement_Match_Case(const ast::Statement_Match_Case& n) noexcept {NOT_DEFINED}
 
 // ============ OPERATION ============
 llvm::Value* codegen::Codegen_AST::codegen_Operation_Cast_As(const ast::Operation_Cast_As& n) noexcept
@@ -1607,7 +1591,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Operation_Cast_As(const ast::Operatio
   case ast::Operation_Cast_As::ECastType::AS: {
     if (auto* cast = tools.codegen_explicit_cast(n.expression, n.type)) return cast;
 
-    assert(false);
+    common::compiler::DEBUG_TOLZA_ICE("Unimplemented legal explicit cast");
   }
   case ast::Operation_Cast_As::ECastType::AS_REINTERPRET: {
     auto* expr = codegen_node(n.expression);

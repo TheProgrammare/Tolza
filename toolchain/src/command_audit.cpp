@@ -105,18 +105,18 @@ void command::audit::audit_workspace(std::string_view root) noexcept
   constexpr std::string_view str_template = R"(
 =============================================================================== 
  [Audit]             Files        Lines         Code     Comments       Blanks
- Source Code     {0:09}    {1:09}    {2:09}    {3:09}    {4:09}
- Third Party     {5:09}    {6:09}    {7:09}    {8:09}    {9:09}
- Binder         {10:09}   {11:09}   {12:09}   {13:09}   {14:09}
+ Source Code     {0:9}    {1:9}    {2:9}    {3:9}    {4:9}
+ Third Party     {5:9}    {6:9}    {7:9}    {8:9}    {9:9}
+ Binder          {10:9}    {11:9}    {12:9}    {13:9}    {14:9}
 =============================================================================== 
- [Total]        {15:09}   {16:09}   {17:09}   {18:09}   {19:09}
+ [Total]         {15:9}    {16:9}    {17:9}    {18:9}    {19:9}
 =============================================================================== 
- [Population]        Roles     Entities   Components      Systems      Imports
-   {32:09}   {20:09}   {21:09}   {22:09}   {23:09}   {24:09}
+ [Population]        Views        Forms       Facets        Rules      Imports
+    {32:9}    {20:9}    {21:9}    {22:9}    {23:9}    {24:9}
  Enumerations    Functions     Generics       Unions        Flags      Exports
-   {25:09}   {26:09}   {27:09}   {28:09}   {29:09}   {30:09}
+    {25:9}    {26:9}    {27:9}    {28:9}    {29:9}    {30:9}
 =============================================================================== 
- [Disk Size]   {31:09.2f} Ko
+ [Disk Size]     {31:9.2f} Ko
 ===============================================================================
   )";
 
@@ -144,11 +144,11 @@ void command::audit::audit_workspace(std::string_view root) noexcept
 
     std::string relative_path = entry.path().lexically_relative(root).string();
 
-    if (relative_path.find("src/") == 0)
+    if (relative_path.starts_with("src/"))
       tasks.push_back({entry.path(), Task::ECat::SRC});
-    else if (relative_path.find("vendor/") == 0)
+    else if (relative_path.starts_with("vendor/"))
       tasks.push_back({entry.path(), Task::ECat::VENDOR});
-    else if (relative_path.find("bind/") == 0)
+    else if (relative_path.starts_with("bind/"))
       tasks.push_back({entry.path(), Task::ECat::BIND});
   }
 

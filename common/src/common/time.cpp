@@ -14,7 +14,7 @@ std::string common::time::now_datetime() noexcept
 
     return std::format("{0:%Y-%m-%d %H:%M:%S}", zt);
   } catch (...) {
-    return "";
+    return {};
   }
 }
 
@@ -29,7 +29,7 @@ std::string common::time::now_date() noexcept
 
     return std::format("{:%Y-%m-%d}", zt);
   } catch (...) {
-    return "";
+    return {};
   }
 }
 
@@ -44,6 +44,6 @@ std::string common::time::now_time() noexcept
 
     return std::format("{:%H:%M:%S}", zt);
   } catch (...) {
-    return "";
+    return {};
   }
 }

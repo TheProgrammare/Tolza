@@ -9,7 +9,7 @@
 #include <string>
 
 
-#define NOT_DEFINED return "";
+#define NOT_DEFINED return {};
 #define PROHIBIED   assert(false && "dump on this node is prohibied");
 
 std::string utils::Dump::dump_node(ast::ID nodeid) noexcept

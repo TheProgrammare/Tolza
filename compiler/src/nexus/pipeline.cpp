@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <common/common.hpp>
+#include <common/compiler_options.hpp>
 #include <common/fileutils.hpp>
 
 // LLVM core
@@ -80,10 +81,6 @@
 
 namespace fs = std::filesystem;
 
-#define can_log(_pass)                                                                                                 \
-  magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, common::compiler::FPass::_pass)                              \
-      || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, common::compiler::FPass::all)
-
 
 pipeline::Pipeline::Pipeline()
 {
@@ -109,8 +106,8 @@ std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cui
   size_t offset = 0;
 
   for (char c : data) {
-    offset++;
     if (c == '\n') last_offset_line.emplace_back(offset);
+    offset++;
   }
 
   auto cuid = cu::ID::make(compiler::pipeline.compilation_units.size());
@@ -173,19 +170,16 @@ double pipeline::Pipeline::timing(const std::function<void()>& f) noexcept
 
 bool pipeline::Pipeline::generate_libc_wrappers() noexcept
 {
-  auto p = fs::path(compiler::OPTIONS.dir.get_dir_binding()) / "C";
+  auto p = fs::path(compiler::OPTIONS.get_dir_binding_profile()) / "C";
   fs::remove_all(p);
   p = common::fileutils::get_tolza_file(p.string());
   fs::remove(p);
 
-  static bool log = can_log(binder);
-
   // native C language lib handler
   auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });
 
-  if (log) {
-    std::println("[binder:C] C wrappers generation completed | {:.2f} ms", duration);
-  }
+  print_log(::common::compiler::FPass::binder, "C",
+            std::format("C wrappers generation completed | {:.2f} ms", duration));
 
   return true;
 }
@@ -204,13 +198,12 @@ bool pipeline::Pipeline::engage_preparer(cu::ID cuid) noexcept
 
 bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
 {
-  static bool log = can_log(lexer);
-
   auto& cu = cuid.get();
 
   static size_t count = 1;
   if (cu.file_info.data.empty()) {
-    std::println(stderr, "[lexer:{}:error] the file \"{}\" is empty.", count, cu.file_info.path);
+    print_err(common::compiler::FPass::lexer, std::format("{}:error", count),
+              std::format("the file \"{}\" is empty.", cu.file_info.path));
     return false;
   }
 
@@ -219,12 +212,13 @@ bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
 
   auto duration = timing([&]() { success = lex.tokenize(); });
 
-  if (log && success) {
-    std::println("[lexer:{}] \"{}\" | {} characters | {:.2} ms", count, cu.file_info.path, lex.stream.data().size(),
-                 duration);
+  if (success) {
+    print_log(::common::compiler::FPass::lexer, std::format("{}", count),
+              std::format("\"{}\" | {} characters | {:.2} ms", cu.file_info.path, lex.stream.data().size(), duration));
   }
   if (!success) {
-    std::println(stderr, "[lexer:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, duration);
+    print_err(common::compiler::FPass::lexer, std::format("{}:error", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, duration));
   }
 
   count++;
@@ -233,8 +227,6 @@ bool pipeline::Pipeline::pass_lexer(cu::ID cuid) noexcept
 }
 bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid) noexcept
 {
-  static bool log = can_log(preprocessor);
-
   auto& cu = cuid.get();
 
   bool                   pre_success = false;
@@ -249,15 +241,18 @@ bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid) noexcept
   cu.file_info.tokens->tokens = gen.tokens_generated;
 
   static size_t count = 1;
-  if (log && pre_success && gen_success) {
-    std::println("[preprocessor:{}] \"{}\" | {} tokens | {:.2} ms", count, cu.file_info.path,
-                 gen.tokens_generated.size(), pre_duration + gen_duration);
+  if (pre_success && gen_success) {
+    print_log(common::compiler::FPass::preprocessor, std::format("{}", count),
+              std::format("\"{}\" | {} tokens | {:.2} ms", cu.file_info.path, gen.tokens_generated.size(),
+                          pre_duration + gen_duration));
   }
   if (!pre_success) {
-    std::println(stderr, "[preprocessor:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, pre_duration);
+    print_err(common::compiler::FPass::preprocessor, std::format("{}", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, pre_duration));
   }
   if (!gen_success) {
-    std::println(stderr, "[preprocessor:generator:{}:error] \"{}\" {:.2}", count, cu.file_info.path, gen_duration);
+    print_err(common::compiler::FPass::preprocessor, std::format("generator:{}", count),
+              std::format("\"{}\" {:.2}", cu.file_info.path, gen_duration));
   }
 
   count++;
@@ -266,8 +261,6 @@ bool pipeline::Pipeline::pass_preprocessor(cu::ID cuid) noexcept
 }
 bool pipeline::Pipeline::pass_parser(cu::ID cuid) noexcept
 {
-  static bool log = can_log(parser);
-
   bool                   success = false;
   parser::Parser_Context parser(cuid);
 
@@ -279,12 +272,14 @@ bool pipeline::Pipeline::pass_parser(cu::ID cuid) noexcept
   auto& cu = cuid.get();
 
   static size_t count = 1;
-  if (log && success) {
-    std::println("[parser:{}] \"{}\" {} nodes | {:.2} ms", count, cu.file_info.path, parser.node_count, duration);
+  if (success) {
+    print_log(common::compiler::FPass::parser, std::format("{}", count),
+              std::format("\"{}\" {} nodes | {:.2} ms", cu.file_info.path, parser.node_count, duration));
   }
 
   if (!success) {
-    std::println(stderr, "[parser:{}:error] \"{}\" {:.2} ms", count, cu.file_info.path, duration);
+    print_err(common::compiler::FPass::parser, std::format("{}", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, duration));
   }
 
   count++;
@@ -293,11 +288,9 @@ bool pipeline::Pipeline::pass_parser(cu::ID cuid) noexcept
 }
 bool pipeline::Pipeline::pass_binding_generation(const std::vector<std::string>& path, std::string_view alias) noexcept
 {
-  static bool log = can_log(binder);
-
   // path must specify the language, then the file
   assert(path.size() >= 2);
-  fs::create_directories(compiler::OPTIONS.dir.get_dir_binding());
+  fs::create_directories(compiler::OPTIONS.get_dir_binding_profile());
   size_t bind_count = 0;
 
   ffi::Bind_Package bind;
@@ -406,10 +399,6 @@ bool pipeline::Pipeline::engage_bindings() noexcept
 
 bool pipeline::Pipeline::engage_analyzer(cu::ID cuid) noexcept
 {
-  static bool log_sym = can_log(resolver_symbol);
-  static bool log_ty  = can_log(resolver_type);
-  static bool log_sem = can_log(resolver_semantic);
-
   size_t err_count  = compiler::COMPILER.errors.size();
   auto   have_error = [&]() { return compiler::COMPILER.errors.size() > err_count; };
 
@@ -422,28 +411,29 @@ bool pipeline::Pipeline::engage_analyzer(cu::ID cuid) noexcept
   static size_t count = 1;
 
   auto sym_duration = timing([&]() { sym = pass_resolution_symbol(cuid); });
-  if (log_sym) {
-    std::println("[resolver:symbol:{}] \"{}\" | {} references resolved | {:.2} ms", count, cu.file_info.path, sym,
-                 sym_duration);
-  } else if (have_error()) {
-    std::println(stderr, "[resolver:symbol:{}] \"{}\" {:.2} ms", count, cu.file_info.path, sym_duration);
+  print_log(common::compiler::FPass::resolver_symbol, std::format("{}", count),
+            std::format("\"{}\" | {} references resolved | {:.2} ms", cu.file_info.path, sym, sym_duration));
+  if (have_error()) {
+    print_err(common::compiler::FPass::resolver_symbol, std::format("{}", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, sym_duration));
     compiler::COMPILER.print_errors();
     return false;
   }
   auto ty_duration = timing([&]() { ty = pass_resolution_inference(cuid); });
-  if (log_ty) {
-    std::println("[resolver:inference:{}] \"{}\" | {} inferences resolved | {:.2} ms", count, cu.file_info.path, ty,
-                 ty_duration);
-  } else if (have_error()) {
-    std::println(stderr, "[resolver:inference:{}] \"{}\" {:.2} ms", count, cu.file_info.path, ty_duration);
+  print_log(common::compiler::FPass::resolver_type, std::format("{}", count),
+            std::format("\"{}\" | {} inferences resolved | {:.2} ms", cu.file_info.path, ty, ty_duration));
+  if (have_error()) {
+    print_err(common::compiler::FPass::resolver_type, std::format("{}", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, ty_duration));
     compiler::COMPILER.print_errors();
     return false;
   }
   auto sem_duration = timing([&]() { sem = pass_resolution_semantic(cuid); });
-  if (log_sem) {
-    std::println("[resolver:semantic:{}] \"{}\" | {:.2} ms", count, cu.file_info.path, sem_duration);
-  } else if (have_error()) {
-    std::println(stderr, "[resolver:semantic:{}] \"{}\" {:.2} ms", count, cu.file_info.path, sem_duration);
+  print_log(common::compiler::FPass::resolver_semantic, std::format("{}", count),
+            std::format("\"{}\" | {:.2} ms", cu.file_info.path, sem_duration));
+  if (have_error()) {
+    print_err(common::compiler::FPass::resolver_semantic, std::format("{}", count),
+              std::format("\"{}\" {:.2} ms", cu.file_info.path, sem_duration));
     compiler::COMPILER.print_errors();
     return false;
   }
@@ -526,7 +516,6 @@ void pipeline::Pipeline::generate_target() noexcept
 
 bool pipeline::Pipeline::pass_code_generation(cu::ID cuid) noexcept
 {
-  static bool              log = can_log(codegen);
   static llvm::LLVMContext ctx = llvm::LLVMContext();
 
   static bool once = true;
@@ -550,9 +539,9 @@ bool pipeline::Pipeline::pass_code_generation(cu::ID cuid) noexcept
   });
 
   static size_t count = 1;
-  if (log)
-    std::println("[codegen:{}:{}] \"{}\" | {:.2} ms", count, compiler::pipeline.analyzed_compilation_units.size(),
-                 cu.file_info.path, duration);
+  print_log(common::compiler::FPass::codegen,
+            std::format("{}:{}", count, compiler::pipeline.analyzed_compilation_units.size()),
+            std::format("\"{}\" | {:.2} ms", cu.file_info.path, duration));
 
   count++;
 
@@ -560,20 +549,17 @@ bool pipeline::Pipeline::pass_code_generation(cu::ID cuid) noexcept
 }
 bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
 {
-  static bool log = can_log(emit);
-
-
   auto& cu = cuid.get();
 
   try {
-    fs::create_directories(compiler::OPTIONS.dir.get_llvmir_dir());
+    fs::create_directories(compiler::OPTIONS.get_dir_llvmir());
   } catch (const std::runtime_error& e) {
-    std::println(stderr, "[emit:ERROR] Directory creation failed: {}", e.what());
+    print_err(common::compiler::FPass::emit, "", std::format("Directory creation failed: {}", e.what()));
     return false;
   }
 
 
-  fs::path out_llvm_file(compiler::OPTIONS.dir.get_llvmir_dir());
+  fs::path out_llvm_file(compiler::OPTIONS.get_dir_llvmir());
   fs::create_directories(out_llvm_file);
   out_llvm_file /= cu.file_info.get_file_name();
   out_llvm_file.replace_extension("ll");
@@ -584,14 +570,15 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (EC) {
-    llvm::errs() << std::format("[emit:llvm:{}] Error cannot open the file: {}\n", count, EC.message());
+    llvm::errs() << std::format("[emit:llvm:{}::ERROR] Cannot open the file: {}\n", count, EC.message());
     count++;
     return false;
   }
 
   cu.llvm_module->print(out_f, nullptr);
 
-  if (log) std::println("[emit:llvm:{}] emission of the llvm-ir to \"{}\"", count, out_llvm_file.string());
+  print_log(common::compiler::FPass::emit, std::format("llvm:{}", count),
+            std::format("IR emission at \"{}\"", out_llvm_file.string()));
   count++;
 
   return true;
@@ -599,8 +586,6 @@ bool pipeline::Pipeline::pass_llvm_emitter(cu::ID cuid) noexcept
 
 bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
 {
-  static bool log = can_log(optimization);
-
   if (analyzed_compilation_units.empty()) return true;
 
   llvm::Module* mod = cuid.get().llvm_module;
@@ -616,7 +601,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     mod->setDataLayout(compiler::TM->createDataLayout());
 
     if (!mod) {
-      std::println(stderr, "[llvm-opti:ERROR] module is nullptr!");
+      print_err(common::compiler::FPass::optimization, "", "Module is nullptr!");
       success = false;
       return;
     }
@@ -659,7 +644,7 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     }
 
     if (mod->empty()) {
-      std::println("[llvm-opti] Module is empty, stop generation");
+      print_log(common::compiler::FPass::optimization, "", "Module is empty, stop generation");
       success = true;
       return;
     }
@@ -672,14 +657,12 @@ bool pipeline::Pipeline::pass_llvm_optimization(cu::ID cuid) const noexcept
     return;
   });
 
-  if (log) std::println("[llvm-opti:summary] duration: {:.2} ms", duration);
+  print_log(common::compiler::FPass::optimization, "summary", std::format("duration: {:.2} ms", duration));
 
   return success;
 }
 bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
 {
-  static bool log = can_log(emit);
-
   if (compilation_units.empty()) return true;
 
   auto* mod = cu::ID::main().get().llvm_module;
@@ -710,9 +693,9 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
+    print_log(common::compiler::FPass::emit, "", std::format("Object emitted at \"{}\"", dest_path.string()));
   }
-  // Emit object
+  // Emit asm
   if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::Asm)) {
     fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
     std::error_code err_c;
@@ -737,15 +720,13 @@ bool pipeline::Pipeline::pass_script_emitter(cu::ID cuid) const noexcept
     pass.run(*mod);
     dest.flush();
 
-    if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
+    print_log(common::compiler::FPass::emit, "", std::format("Assembly emitted at \"{}\"", dest_path.string()));
   }
 
   return true;
 }
 bool pipeline::Pipeline::engage_general_emitter() noexcept
 {
-  static bool log = can_log(emit);
-
   auto* mod = cu::ID::main().get().llvm_module;
   assert(mod);
 
@@ -758,7 +739,7 @@ bool pipeline::Pipeline::engage_general_emitter() noexcept
   llvm::raw_fd_ostream dest(dest_path.string(), err_c, llvm::sys::fs::OF_None);
 
   if (err_c) {
-    llvm::errs() << std::format("[emitter:ERROR] File error:{}\n", err_c.message());
+    llvm::errs() << std::format("[emitter:ERROR] File error: {}\n", err_c.message());
     return false;
   }
 
@@ -773,20 +754,18 @@ bool pipeline::Pipeline::engage_general_emitter() noexcept
   pass.run(*mod);
   dest.flush();
 
-  if (log) std::println("[emitter] Object emitted at \"{}\"", dest_path.string());
+  print_log(common::compiler::FPass::emit, "", std::format("Program emitted at \"{}\"", dest_path.string()));
   return true;
 }
 bool pipeline::Pipeline::engage_module_linker() const noexcept
 {
-  static bool log = can_log(linker);
-
   if (compilation_units.empty()) return true;
 
   auto* main_mod = cu::ID::main().get().llvm_module;
   assert(main_mod);
 
   if (!main_mod) {
-    std::println(stderr, "[linker:ERROR] Expected script file named 'main' to start the linking.");
+    print_err(common::compiler::FPass::linker, "", "Expected script file named 'main' to start the linking.");
     return false;
   }
 
@@ -800,12 +779,12 @@ bool pipeline::Pipeline::engage_module_linker() const noexcept
     auto& cu = cu::ID::make(i).get();
     if (!cu.llvm_module) continue; // safe
 
-
-    if (log) std::println("[linker] Linking module: {}", cu.llvm_module->getModuleIdentifier());
+    print_log(common::compiler::FPass::linker, "",
+              std::format("Linking module: {}", cu.llvm_module->getModuleIdentifier()));
 
     auto module_to_link = std::unique_ptr<llvm::Module>(cu.llvm_module);
     if (llvm::Linker::linkModules(*main_mod, std::move(module_to_link))) {
-      std::println(stderr, "[linker:ERROR] Link failed on script \"{}\"", cu.file_info.path);
+      print_err(common::compiler::FPass::linker, "", std::format("Link failed on script \"{}\"", cu.file_info.path));
       failed = true;
     }
   }
@@ -833,7 +812,7 @@ bool pipeline::Pipeline::engage_linker() noexcept
   // std::println();
 
   std::string cmd = std::format(R"(clang "{}" -o "{}")", target_o.string(), out_bin.string());
-  std::println("[linker] clang linking command:\n  {}", cmd);
+  print_log(common::compiler::FPass::linker, "", std::format("Clang linking command:\n  {}", cmd));
 
   // if (auto err_code = llvm::sys::ExecuteAndWait("ld.lld", {target_o.string(), "-lc", "-o", out_bin.string()});
 
@@ -846,7 +825,7 @@ bool pipeline::Pipeline::engage_linker() noexcept
 @@TOLZA_CLAUSULA_RESULTATI@@)",
                    mode);
     } else {
-      std::println(stderr, "[linker:ERROR] Linker failed: system code error {}", err_code);
+      print_err(common::compiler::FPass::linker, "", std::format("Linker failed: system code error {}", err_code));
     }
     return false;
   }
@@ -857,10 +836,39 @@ bool pipeline::Pipeline::engage_linker() noexcept
 @@TOLZA_CLAUSULA_RESULTATI@@)",
                  out_bin.string(), mode);
   } else {
-    std::println("[linker] Executable created at \"{}\"", out_bin.string());
+    print_log(common::compiler::FPass::linker, "", std::format("Executable created at \"{}\"", out_bin.string()));
   }
   return true;
 }
 
 
-#undef can_log
+void pipeline::Pipeline::print_log(common::compiler::FPass phase, std::string_view sub_phase,
+                                   std::string_view msg) noexcept
+{
+  const bool can_log = magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, phase)
+                       || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, common::compiler::FPass::all);
+
+  if (!can_log) return;
+
+  switch (compiler::OPTIONS.log.level) {
+  case common::compiler::ELogLevel::quiet:   return;
+  case common::compiler::ELogLevel::DEFAULT:
+  case common::compiler::ELogLevel::normal:  {
+    std::print("\033[1A");   // cursor up line
+    std::print("\r\033[2K"); // cursor start line and clear line
+    std::println("[{}{}] {}", magic_enum::enum_flags_name(phase),
+                 sub_phase.empty() ? "" : std::format(":{}", sub_phase), msg);
+    return;
+  }
+  case common::compiler::ELogLevel::verbose:
+    std::println("[{}{}] {}", magic_enum::enum_flags_name(phase),
+                 sub_phase.empty() ? "" : std::format(":{}", sub_phase), msg);
+    return;
+  }
+}
+void pipeline::Pipeline::print_err(common::compiler::FPass phase, std::string_view sub_phase,
+                                   std::string_view msg) noexcept
+{
+  std::println(stderr, "[{}{}:ERROR] {}", magic_enum::enum_flags_name(phase),
+               sub_phase.empty() ? "" : std::format(":{}", sub_phase), msg);
+}

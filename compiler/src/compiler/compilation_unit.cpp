@@ -35,7 +35,7 @@ cu::FileInfo::FileInfo(cu::ID _cuid, std::string_view _path, const std::string& 
                        const std::vector<size_t>& _last_offset_line)
   : cuid(_cuid)
   , data(_data)
-  , last_offset_line(_last_offset_line)
+  , line_end_offset(_last_offset_line)
   , source(file_path_to_EFileSource(_path))
   , path(common::fileutils::get_tolza_file(_path))
   , tokens(new token::Arena(_cuid))
@@ -154,34 +154,36 @@ std::string cu::FileInfo::get_file_extension() const
 }
 size_t cu::FileInfo::get_line_from_pos(size_t pos) const
 {
-  return std::ranges::lower_bound(last_offset_line, pos) - last_offset_line.begin();
+  return std::ranges::lower_bound(line_end_offset, pos) - line_end_offset.begin();
 }
 std::string_view cu::FileInfo::get_line(size_t p_line) const
 {
-  assert(p_line < last_offset_line.size());
+  assert(p_line < line_end_offset.size());
 
-  size_t line_size = get_line_size(p_line) - 1; // -1 to avoid \n
+  size_t line_size = get_line_size(p_line);
 
-  return {data.data() + get_line_start(p_line), line_size};
+  return {data.data() + get_line_start(p_line) + 1, line_size - 1}; // + 1 and - 1 to avoid \n
 }
 size_t cu::FileInfo::get_line_start(size_t line) const
 {
   if (line == 0) return 0;
 
-  assert(line < last_offset_line.size());
+  assert(line < line_end_offset.size());
 
-  return last_offset_line[line];
+  return line_end_offset[line - 1];
 }
 
 // line -> end (\n)
 size_t cu::FileInfo::get_line_end(size_t line) const
 {
-  assert(line < last_offset_line.size());
+  assert(line < line_end_offset.size());
 
-  return last_offset_line[line + 1];
+  return line_end_offset[line];
 }
 size_t cu::FileInfo::get_line_size(size_t line) const
 {
+  if (line == 0) return get_line_end(line);
+
   size_t start = get_line_start(line);
   size_t end   = get_line_end(line);
   return end - start;
@@ -192,7 +194,7 @@ size_t cu::FileInfo::get_column_from_pos(size_t pos) const
 
   if (line == 0) return pos;
 
-  return pos - last_offset_line[line - 1] - 1;
+  return pos - line_end_offset[line - 1] - 1;
 }
 std::string cu::FileInfo::get_module_path() const
 {
@@ -204,7 +206,8 @@ std::string cu::FileInfo::get_module_path() const
 cu::EFileSource cu::file_path_to_EFileSource(std::string_view p_file)
 {
   if (common::fileutils::is_sub_path(compiler::OPTIONS.dir.get_dir_source(), p_file)) return cu::EFileSource::src;
-  if (common::fileutils::is_sub_path(compiler::OPTIONS.dir.get_dir_binding(), p_file)) return cu::EFileSource::binding;
+  if (common::fileutils::is_sub_path(compiler::OPTIONS.get_dir_binding_profile(), p_file))
+    return cu::EFileSource::binding;
   if (common::fileutils::is_sub_path(compiler::OPTIONS.dir.get_dir_vendor(), p_file))
     return cu::EFileSource::vendor_lib;
   if (common::fileutils::is_sub_path(common::env::get_stdlib_dir(), p_file)) return cu::EFileSource::stdlib;
@@ -220,8 +223,8 @@ std::string cu::EFileSource_to_dir(EFileSource p_file_source)
   case cu::EFileSource::vendor_lib: return compiler::OPTIONS.dir.get_dir_vendor();
   case cu::EFileSource::stdlib:     return compiler::OPTIONS.dir.get_dir_stdlib();
   case cu::EFileSource::pkg_lib:    return compiler::OPTIONS.dir.get_dir_packages();
-  case cu::EFileSource::binding:    return compiler::OPTIONS.dir.get_dir_binding();
-  case cu::EFileSource::relative:   return "";
+  case cu::EFileSource::binding:    return compiler::OPTIONS.get_dir_binding_profile();
+  case cu::EFileSource::relative:   return {};
   }
 }
 

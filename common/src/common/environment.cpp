@@ -54,7 +54,7 @@ std::string common::env::find_latest_compiler(std::string_view dir_search) noexc
 {
   std::vector<std::string> compilers = find_all_compilers(dir_search);
 
-  if (compilers.empty()) return "";
+  if (compilers.empty()) return {};
 
 
   auto latest = std::ranges::max_element(compilers, [](const auto& a, const auto& b) { return a < b; });
@@ -65,7 +65,7 @@ std::string common::env::find_latest_compiler(std::string_view dir_search) noexc
   }
 
   std::println(stderr, "[tolza:ERROR] No compiler found.");
-  return "";
+  return {};
 }
 
 
@@ -73,7 +73,7 @@ std::string common::env::find_compiler_version(std::string_view dir_search, std:
 {
   std::vector<std::string> compilers = find_all_compilers(dir_search);
 
-  if (compilers.empty()) return "";
+  if (compilers.empty()) return {};
 
 
   for (auto& compiler : compilers) {
@@ -84,7 +84,7 @@ std::string common::env::find_compiler_version(std::string_view dir_search, std:
   }
 
   std::println(stderr, "No tolza-compiler found for the version {}", version);
-  return "";
+  return {};
 }
 
 
@@ -249,8 +249,12 @@ std::vector<std::string> common::env::get_compiler_dirs() noexcept
 #elif __APPLE__
   search_dir.emplace_back({fs::path("/Applications/Tolza")});
 #else
-  search_dir.emplace_back(fs::path("/usr/local/tolza"));
-  search_dir.emplace_back(fs::path("/opt/tolza"));
+  search_dir.emplace_back(fs::path(std::format("{}/{}", getenv("HOME"), "/.local/bin")));
+  search_dir.emplace_back(fs::path(std::format("{}/{}", getenv("HOME"), "/bin")));
+  search_dir.emplace_back(fs::path("/usr/local/bin"));
+  search_dir.emplace_back(fs::path("/usr/bin"));
+  search_dir.emplace_back(fs::path("/opt/bin"));
+  search_dir.emplace_back(fs::path("/opt/tolza/"));
 #endif
   return search_dir;
 }

@@ -70,38 +70,40 @@ void toolchain::Commander::init_command_package() noexcept
   }
 }
 
-
-void toolchain::Commander::init_command_workspace() noexcept
+void toolchain::Commander::init_command_toolchain() noexcept
 {
-  auto* workspace = app.add_subcommand("workspace", "Operations on Tolza project level");
-  workspace->alias("ws");
-  init_command_workspace_check(workspace);
-  init_command_workspace_create(workspace);
+  auto* cogito = app.add_subcommand("cogito", "Ask if the compiler is detected");
+
+  cogito->callback([&]() { command::compiler::cogito_compiler(common::toolchain::OPTIONS.compiler_used); });
 }
 
-void toolchain::Commander::init_command_workspace_check(CLI::App* workspace) noexcept
+
+void toolchain::Commander::init_command_check() noexcept
 {
-  auto* check =
-      workspace->add_subcommand("check", "Check tolza workspace if contains all necessary files and directories");
-
   {
-    auto* check_ws = check->add_subcommand("workspace", "Check workspace directory");
-    check_ws->add_option("path", from_path, "If no path provided, the current directory will be used");
-    check_ws->callback([&]() {
-      if (from_path.empty()) from_path = fs::current_path();
+    auto* check = app.add_subcommand("check", "Check tolza files");
 
-      (void)command::check::check_workspace(common::fileutils::resolve_path(from_path));
-    });
-  }
-  {
-    auto* check_conf = check->add_subcommand("config", "Check .toml file");
-    check_conf->add_option("path", from_path, "If no path provided, the current directory will be used");
-    check_conf->add_option("--full,-f", full, "Set the checker in full mode");
-    check_conf->callback([&]() {
-      if (from_path.empty()) from_path = fs::current_path();
+    {
+      auto* check_ws = check->add_subcommand("workspace", "Check workspace directory");
+      check_ws->alias("ws");
+      check_ws->add_option("path", from_path, "If no path provided, the current directory will be used");
+      check_ws->callback([&]() {
+        if (from_path.empty()) from_path = fs::current_path();
 
-      (void)command::check::check_tolza_config(common::fileutils::resolve_path(from_path), full);
-    });
+        (void)command::check::check_workspace(common::fileutils::resolve_path(from_path));
+      });
+    }
+    {
+      auto* check_profile = check->add_subcommand("profile", "Check .toml profile file");
+      check_profile->alias("p");
+      check_profile->add_option("path", from_path, "If no path provided, the current directory will be used");
+      check_profile->add_option("--full,-f", full, "Set the checker in full mode");
+      check_profile->callback([&]() {
+        if (from_path.empty()) from_path = fs::current_path();
+
+        (void)command::check::check_tolza_config(common::fileutils::resolve_path(from_path), full);
+      });
+    }
   }
   {
     auto* audit = app.add_subcommand("audit", "Produce an audit report of your tolza project");
@@ -113,7 +115,7 @@ void toolchain::Commander::init_command_workspace_check(CLI::App* workspace) noe
     });
   }
   {
-    auto* sync = workspace->add_subcommand("sync", "Synchronize the workspace module tree with the filesystem");
+    auto* sync = app.add_subcommand("sync", "Synchronize the workspace module tree with the filesystem");
     sync->add_option("path", from_path, "If no path provided, the current directory will be used");
     sync->callback([&]() {
       if (from_path.empty()) from_path = fs::current_path();
@@ -123,16 +125,17 @@ void toolchain::Commander::init_command_workspace_check(CLI::App* workspace) noe
   }
 }
 
-void toolchain::Commander::init_command_workspace_create(CLI::App* workspace) noexcept
+void toolchain::Commander::init_command_new() noexcept
 {
-  auto* create = workspace->add_subcommand("create", "Create a new tolza workspace to start your project");
+  auto* _new = app.add_subcommand("new", "Create a new tolza workspace to start your project");
 
   {
-    auto* create_ws = create->add_subcommand("workspace", "Create a new workspace directory with name");
-    create_ws->add_option("path", from_path, "If no path provided, the current directory will be used");
-    create_ws->add_option("--name,-n", name, "If no project name provided, a input prompt will appear");
-    create_ws->add_flag("-f", force, "Force the creation");
-    create_ws->callback([&]() {
+    auto* _new_ws = _new->add_subcommand("workspace", "Create a new workspace directory with name");
+    _new_ws->alias("ws");
+    _new_ws->add_option("path", from_path, "If no path provided, the current directory will be used");
+    _new_ws->add_option("--name,-n", name, "If no project name provided, a input prompt will appear");
+    _new_ws->add_flag("-f", force, "Force the creation");
+    _new_ws->callback([&]() {
       from_path = common::fileutils::resolve_path(from_path);
       if (fs::is_regular_file(from_path)) {
         std::println("[tolza] The path provided \"{}\" must be a directory.", from_path);
@@ -146,36 +149,41 @@ void toolchain::Commander::init_command_workspace_create(CLI::App* workspace) no
     });
   }
   {
-    auto* create_conf = create->add_subcommand("config", "Create a new .toml file");
-    create_conf->add_option("path", from_path, "If no path provided, the current directory will be used");
-    create_conf->add_option("--name,-n", name, "If no project name provided, a input prompt will appear");
-    create_conf->callback([&]() {
-      from_path = common::fileutils::resolve_path(from_path);
+    auto* _new_profile = _new->add_subcommand("profile", "Create a new .toml profile file");
+    _new_profile->alias("p");
+    _new_profile->add_option("path", from_path, "If no path provided, the current directory will be used");
+    _new_profile->add_option("--name,-n", name, "If no profile name provided, a input prompt will appear");
+    _new_profile->add_flag("--release,-r", is_release,
+                           "Default profile preset. Will config the profile to a release build");
+    _new_profile->add_flag("--debug,-d", is_debug, "Will config the profile to a debug build");
+    _new_profile->callback([&]() {
       if (fs::exists(from_path) && fs::is_regular_file(from_path)) {
-        std::println("[tolza] The tolza.toml at \"{}\" already exists.", from_path);
+        std::println("[tolza] The profile file at \"{}\" already exists.", from_path);
         if (!cli::yes_no_question("Do you want to override it ?")) return;
       }
 
       if (name.empty()) {
-        name = cli::ask_text("Write down the project name");
+        name = cli::ask_text("Write down the profile name");
         if (name.empty()) return;
       }
       if (from_path.empty()) {
         from_path = fs::current_path();
       }
 
-      auto c    = common::compiler::Options::get_current(name);
-      from_path = (fs::is_regular_file(from_path)) ? from_path : std::string(fs::path(from_path) / "tolza.toml");
+      auto c = common::compiler::Options::get_current(name);
+      from_path =
+          (fs::is_regular_file(from_path)) ? from_path : (fs::path(from_path) / std::string(name + ".toml")).string();
+      from_path = common::fileutils::resolve_path(from_path);
 
-      if (c.write_config(from_path)) {
-        std::println("[tolza] config file has been created at \"{}\"", from_path);
+      if (c.write_config(from_path, is_debug)) {
+        std::println("[tolza] profile file has been created at \"{}\"", from_path);
       } else {
-        std::println("[tolza:ERROR] config file cannot be created at \"{}\"", from_path);
+        std::println("[tolza:ERROR] profile file cannot be created at \"{}\"", from_path);
       }
     });
   }
   {
-    auto* gui = create->add_subcommand("gui", "Open the toolchain interface");
+    auto* gui = _new->add_subcommand("gui", "Open the toolchain interface");
     gui->alias("ui");
     gui->add_option("path", from_path, "If no path provided, the current directory will be used");
     gui->callback([&]() {
@@ -216,35 +224,6 @@ void toolchain::Commander::init_command_build() noexcept
   });
 }
 
-void toolchain::Commander::init_command_check() noexcept
-{
-  auto* check = app.add_subcommand("check", "Analyze Tolza code");
-  check->alias("c");
-  check->add_option("path", from_path, "Path to the .toml project file to get the compilation context")
-      ->type_name("<config path>");
-
-  check->callback([&]() {
-    from_path = common::fileutils::resolve_path(from_path);
-
-    if (!fs::exists(from_path)) {
-      std::println("[check:Error] The file path dosen't exist.");
-      exit(1);
-    }
-
-    if (!fs::is_regular_file(from_path)) {
-      std::println("[check:Error] The path is not a tolza.toml file.");
-      exit(1);
-    }
-
-    auto        ctx = common::compiler::Options::read_config(from_path);
-    std::string cmd = std::format("check {}", from_path);
-    for (const auto& arg : ctx.to_args()) std::format_to(std::back_inserter(cmd), "{} ", arg);
-    cmd += "\n";
-
-    (void)toolchain::exec_compiler_cmd(cmd);
-  });
-}
-
 
 void toolchain::Commander::init_commands() noexcept
 {
@@ -258,9 +237,11 @@ void toolchain::Commander::init_commands() noexcept
       },
       "Show detailed software info");
 
+  init_command_toolchain();
+  init_command_check();
+  init_command_new();
   init_command_build();
   init_command_package();
-  init_command_workspace();
 }
 
 void toolchain::Commander::exec_ffi_command() noexcept

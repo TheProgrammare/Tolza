@@ -54,7 +54,7 @@ struct FileInfo {
   const EFileSource         source = EFileSource::src;
   const std::string         path;
   const std::string         data;
-  const std::vector<size_t> last_offset_line;
+  const std::vector<size_t> line_end_offset;
   token::Arena* const       tokens     = nullptr;
   const bool                is_mod_dir = false;
   const bool                is_barrel  = false;

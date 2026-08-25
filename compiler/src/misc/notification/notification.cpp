@@ -9,12 +9,12 @@
 
 #endif
 
-void notification::notify(std::string_view title, std::string_view msg) noexcept
+void notification::notify(std::string_view title, std::string_view msg, bool success) noexcept
 {
   try {
 #ifdef _WIN32
 
-    win_notify(title, msg);
+    win_notify(title, msg, success);
 
 #elif defined(__APPLE__)
 
@@ -24,7 +24,8 @@ void notification::notify(std::string_view title, std::string_view msg) noexcept
 
 #elif defined(__linux__)
 
-    const std::string command = std::format(R"(notify-send "{}" "{}" -a "Tolza-Compiler")", title, msg);
+    const std::string command = std::format(R"(notify-send "{}" "{}" -a "Tolza-Compiler" -i {})", title, msg,
+                                            success ? "emblem-checked" : "emblem-error");
 
     std::system(command.c_str());
 

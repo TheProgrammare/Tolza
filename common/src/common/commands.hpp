@@ -35,11 +35,11 @@ protected:
   bool        compiler_all  = false;
   std::string compiler_version;
   bool        compiler_latest = false;
-
+  bool        is_release      = true;
+  bool        is_debug        = false;
 
   void         init_command_compiler() noexcept;
   virtual void init_command_build() noexcept = 0;
-  virtual void init_command_check() noexcept = 0;
   void         init_command_ffi() noexcept;
 
   virtual void exec_ffi_command() noexcept = 0;
