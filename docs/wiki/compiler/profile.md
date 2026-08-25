@@ -6,13 +6,13 @@ Profiles are collections of compilation options.
 
 The project's base configuration is `your_project/tolza.toml`. It defines the default compilation options and the project's configuration. Profiles located in `profile/` override or extend these defaults.
 
-Define build profiles inside `your_project/tolza.toml` at root section `profile`. Set the profile names defined by files in the `profile/` folder.
+Define build profile composition in the root `profile` field of `your_project/tolza.toml`. Profiles names must correspond to files in the `profile/` folder.
 
 > It's possible to define a composition of profiles: `profile = "linux|posix|release"`
 
-The composition will impact the build file name and executable file name :
+The composition affects the build file name and executable file name :
 
-e.g. `profile = "windows"` -> `my_app-windows`, `profile = "linux|arm"`, `my_app-linux-arm`
+e.g. `profile = "windows"` -> `my_app-windows`, `profile = "linux|arm"` -> `my_app-linux-arm`
 
 > The composition order affects the final configuration. Profiles are applied from left to right. When multiple profiles override the same option, the value from the last applied profile takes precedence.
 
@@ -35,5 +35,5 @@ flowchart TD
   D -. merge .-> C3
   C3 -. merge .-> C1
   C1 .-> E[Final compilation options]
-  E -. compilation .-> G["build at /build/linux-release/my_app-linux-release.x86_64"]
+  E -. compilation .-> G["/build/linux-release/my_app-linux-release.x86_64"]
 ```
