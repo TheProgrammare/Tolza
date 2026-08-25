@@ -4,9 +4,12 @@ All primitive tables are fat pointers, there is no raw table like in C
 | type | syntax | literal |  info |
 |-|-|-|-|
 | static array | `[T; N]` | `[ 1, 2, 3, 4 }`,<br> `[ 0..4 => 8 ]` (4 elements equals to 8) | compile time table size
-| dynamic array | `[T; _]` | `[ 1, 2, 3, 4 ]d`,<br> `[ 0..4 = 8 ]d` | dynamic table size
+| dynamic array | `[T; _]` | `[ 1, 2, 3, 4 ]d`,<br> `[ 0..4 = 8 ]_` | dynamic table size
 | static tensor | `[T; N, N, ...]`,<br> `[T; N]*D` | `[0,0,0;0,0,0;0,0,0]` | compile time dimension size
-| dynamic tensor | `[T; _, ...]` | `[0,0,0;0,0,0;0,0,0]d` | dynamic dimension size
+| dynamic tensor | `[T; _, ...]` | `[0,0,0;0,0,0;0,0,0]_` | dynamic dimension size
+| slice | `[T; ..]` | `ref'<variable>[]` `mut'<variable>[]` or standard literal array | view of any table
+| static map | `[T: U; N]` | `[a: 0, b: 1, ...]` | 
+| dynamic map | `[T: U; _]` | `[a: 0, b: 1, ...]_` | 
 
 ## Primitive table fields
 Access to any table field by the suffix operator like `my_table'size` 
