@@ -1,9 +1,9 @@
 # Format String
 formatted text literal:
 ```
-"text{variable} and other {variable}"
+"text ${variable} and other ${variable}"
 ```
-same as: "text" + variable + "and other" + variable
+same as: `"text " + variable.str() + "and other" + variable.str()`
 
 ## Format Specifier
 you can use some parameter to specify the out formatation of variable formatted
@@ -14,7 +14,7 @@ you can use some parameter to specify the out formatation of variable formatted
 
 use in format string like:
 ```
-"duration {<expression>:<format_specifier>} s"
+"duration ${<expression>:<format_specifier>} s"
 ```
 
 ## Format Conditional (experimental)
@@ -29,15 +29,15 @@ special comparison operator:
 
 In format string:
 ```
-"Gender: {lerp}:<format_conditional>"
+"Gender: ${lerp}:<format_conditional>"
 ```
 
 e.g.
 ```
 var messages = 3
-"You have {messages}:(0:"no messages",1:"one message",_:{messages} "messages")"
+"You have ${messages}:(0:"no messages",1:"one message",_:${messages} "messages")"
 var gender = "F"
-"{gender}:("F":"She is online", "M":"He is online", _:"online")"
+"${gender}:("F":"She is online", "M":"He is online", _:"online")"
 var account_balance = -2.0f
-"{balance}:(+:"no depts", -:"some depts")"
+"${balance}:(+:"no depts", -:"some depts")"
 ```
