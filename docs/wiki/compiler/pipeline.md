@@ -1,48 +1,50 @@
 # Pipeline graph
 
 ```mermaid
-flowchart TD
+flowchart TB
     A[Toolchain] --> B[Configuration]
-    B --> C[Preparer]
+    B --> FS[File System]
+    FS --> C
+    subgraph E[Module Resolver]
+        E2[Resolve Exports]
+        E3[Resolve Imports]
+        E3 --> E4[Binding Generation]
+        E2 --> E4
+    end
+    subgraph C[Preparer]
+        C2[Lexer]
+        C2 --> C3[Preprocessor]
+        C3 --> C4[Parser]
+    end
 
-    C --> C1[Filesystem]
-    C1 --> C2[Lexer]
-    C2 --> C3[Preprocessor]
-    C3 --> C4[Parser]
-    C4 --> D[Prepared Compilation Units]
+    C --> E
+    E -- Prepare binding --> C
 
-    D --> E[Shipowner]
+    E --> F[all compilation units found]
+    F -- IF ERROR --> X[Compilation Failed]
+    F --> H
 
-    E --> E1[Binding Generation]
-    E1 --> E2[New Compilation Units]
-    E2 --> C
+     subgraph H[Analyzer]
+        H1[Symbol Resolution]
+        H1 --> H2[Type Resolution / Inference]
+        H2 --> H3[Semantic Analysis]
+    end
 
-    E --> F[Bindings]
-    F --> G{Errors?}
+    H --> J
+    H -- IF ERROR --> X1[Compilation Failed]
 
-    G -- YES --> X[Compilation Failed]
-    G -- NO --> H[Analyzer]
+    subgraph J[Code Generation]
+        J1[LLVM IR]
+        J1 --> J2[Optimisation]
+    end
 
-    H --> H1[Symbol Resolution]
-    H1 --> H2[Type Resolution / Inference]
-    H2 --> H3[Semantic Analysis]
-    H3 --> I[Analyzed Compilation Units]
-    I --> P{Errors?}
+    J --> L
+    J -- IF ERROR --> X2[Compilation Failed]
     
-    P -- YES --> O1[Compilation Failed]
-    P -- NO --> J[Generator]
-
-    J --> J1[Code Generation]
-    J1 --> J2[LLVM IR]
-    J2 --> Q{Errors?}
-
-    Q -- YES --> J3[Optimisation]
-    Q -- NO --> J4[Compilation Failed]
-
-    J3 --> K[Module Linker]
-    K --> L[General Emitter]
-    L --> M[Linker]
-    M --> N[Executable / Final Artifact]
-
-    J -. Check Mode .-> O[STOP: successful validation]
+    subgraph K[Linker]
+        L[Link llvm modules]
+        L .-> L1[emit artefacts]
+        L --> L2[Link object]
+        L2 --> L3[emit executable]
+    end
 ```
