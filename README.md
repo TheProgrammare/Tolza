@@ -245,15 +245,22 @@ git clone https://github.com/TheProgrammare/Tolza.git
 ```
 
 2 - install dependencies
-check [dependencies](CONTRIBUTING_CODE.md#install-dependencies)
 
-or
+check [dependencies](/docs/CONTRIBUTING_CODE.md#install-dependencies)
 
-linux debian command
+or linux debian command
 ```bash
 sudo apt install llvm cmake clang
 ```
 
 3 - install command
-- install toolchain `cd REPO_LOCATION/tolza/toolchain && cmake --preset release && cmake --install build/release`
-- install compiler `cd REPO_LOCATION/tolza/compiler && cmake --preset release && cmake --install build/release`
+
+install toolchain: 
+```
+cd REPO_LOCATION/tolza/toolchain && cmake --preset release && cmake --install build/release
+```
+
+install compiler:
+```
+cd REPO_LOCATION/tolza/compiler && cmake --preset release && cmake --install build/release
+```
