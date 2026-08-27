@@ -18,6 +18,7 @@ Tolza generates LLVM IR and uses Clang for C language inspection during automati
 This project depends on:
 - `llvm` **version 19**
 - `clang` **version 19**
+- `cmake`
 
 If you have some troubles to install from this document, please, visit official websites:
 - clangd: https://clangd.llvm.org/
