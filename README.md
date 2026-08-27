@@ -248,11 +248,6 @@ git clone https://github.com/TheProgrammare/Tolza.git
 
 check [dependencies](/docs/CONTRIBUTING_CODE.md#install-dependencies)
 
-or linux debian command
-```bash
-sudo apt install llvm cmake clang
-```
-
 3 - install command
 
 install toolchain: 
