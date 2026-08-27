@@ -21,6 +21,7 @@ This project depends on:
 
 If you have some troubles to install from this document, please, visit official websites:
 - clangd: https://clangd.llvm.org/
+- clang-tidy: https://clang.llvm.org/extra/clang-tidy/
 - ninja: https://ninja-build.org/
 - cmake: https://cmake.org/
 - llvm: https://github.com/llvm/llvm-project/releases/tag/llvmorg-19.1.7
@@ -37,15 +38,15 @@ Install the `.exe` installer and **make sure to check**:
 
 **Debian-based**
 ```
-sudo apt install llvm-19 llvm-19-dev clang-19 clangd ninja-build cmake
+sudo apt install llvm-19 llvm-19-dev clang-19 clangd clang-tidy ninja-build cmake
 ```
 **Fedora-based**
 ```
-sudo dnf install llvm19 llvm19-devel clang19 clangd ninja-build cmake
+sudo dnf install llvm19 llvm19-devel clang19 clangd clang-tidy ninja-build cmake
 ```
 **Arch-based**
 ```
-sudo pacman -S llvm clang clangd ninja cmake
+sudo pacman -S llvm clang clangd clang-tidy ninja cmake
 ```
 
 > Arch Linux provides a single system-wide LLVM version
@@ -56,7 +57,7 @@ sudo pacman -S llvm clang clangd ninja cmake
 ### I.C Install on macOS (Homebrew)
 **brew-command**
 ```
-brew install llvm@19 clang@19 clangd ninja cmake 
+brew install llvm@19 clang@19 clangd clang-tidy ninja cmake 
 ```
 
 Or download LLVM 19 for macOS
@@ -91,8 +92,8 @@ Ensure LLVM include paths and libraries are visible to the IDE
 Go to File > Preferences > Settings</br>
 or go to down-left cogwheel > Settings
 
-- "editor.formatOnSave": true
-- "editor.defaultFormatter": "xaver.clang-format"
+- `"editor.formatOnSave": true`
+- `"editor.defaultFormatter": "xaver.clang-format"`
 
 # Pull Request Rules
 
@@ -134,33 +135,13 @@ Any pull request must be made with some minimal requirements:
 - `constexpr` or `static const` constants: prefix `k_` + snake_case
 - macros: UPPER_CASE
 - Types: PascalCase, and _ for distinct logic
-- parameters: prefix `p_` + snake_case
+- parameters (for complex functions): prefix `p_` + snake_case
 - generic types: `T` `U` `V`
 
-## Error Handlers
-The project have some error handling
-
-The error diagnostic is effective but imperfect
-
-> Note: most of the time, an error contains a error code, message, hint, code localisation (from line+column or from a token)
-
-- lexer: use `add_error`
-- parser: use `ctx.tok_v`, the token checking can handle error, you can add errors directly from current token `ctx.tok_v.add_error` or specific token `ctx.tok_v.add_error_tok`
-- visitors: use `add_error` for classic visitor error or `add_error_two_nodes` for visitor error on two scripts (e.g. when a imported function is called with wrong arguments)
-
-For custom error report on code, use the class `Error_Diagnostic` `Error_Diagnostic_Two` from the script `error_output.hpp`
-> Any error reported on code must have a unique error code
-
-Keep in mind, that the toolchain and the compiler must never failed, they reports only the errors
-
-To see how the pipeline manage errors, check ![Compiler Pipeline](Compiler_Pipeline.md)
-
-### Errors Currently
-Currently, any error added will throw a runtime error to inspect any possible error misinterpretation
-
-# Project Coding Pattern
-There is some convention to code properly.
-
-To build `tolza-toolchain` or `tolza-compiler`, please use the  designed bash script `build-debug.sh` or `build-release.sh` for debug or release build. Located at the root of each sub-project.
-
-To test your code, please use the designed `launch.json` script, or create your custom `.json` launch event.
+# Workflow
+Please, follow this to coding properly:
+- don't pay attention to the code visual disposition, use `clang-format`
+- before PR, use `clang-tidy` to avoid bad coding habits / errors
+- arrange `.vscode/launch.json` `.vscode/tasks.json` commands and PATH if you can't modify your own PATH
+- never PR with configuration files (or must be justified)
+- to install your own local version, use (in VSCode) : launch command on top `> Tasks: Run Task` -> `Tolza Install` cmake will install the executable at your standard user space check console out e.g. `-- Installing: /home/USER/.local/bin/tolza-compiler`
