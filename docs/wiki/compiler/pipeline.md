@@ -24,7 +24,7 @@ flowchart TB
     F -- IF ERROR --> X[Compilation Failed]
     F --> H
 
-     subgraph H[Analyzer]
+     subgraph H[Resolver]
         H1[Symbol Resolution]
         H1 --> H2[Type Resolution / Inference]
         H2 --> H3[Semantic Analysis]
