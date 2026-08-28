@@ -34,6 +34,10 @@ flowchart TD
   A -. base options .-> D["profile = 'linux|release'"]
   D -. merge .-> C3
   C3 -. merge .-> C1
-  C1 .-> E[Final compilation options]
+  C1 -. merge .-> C5[profiles command]
+  C5 -. merge .-> C4[Command args other options]
+  C4 .->|--profiles '...'| C5
+
+  C4 .-> E[Final compilation options]
   E -. compilation .-> G["/build/linux-release/my_app-linux-release.x86_64"]
 ```
