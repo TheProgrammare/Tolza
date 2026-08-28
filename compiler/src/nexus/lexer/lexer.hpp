@@ -17,14 +17,14 @@
 
 #pragma once
 
+#include "nexus/forward.hpp"
+#include "stream_tracker.hpp"
+
 #include <cstddef>
 #include <cstdint>
+#include <set>
 #include <string_view>
 #include <vector>
-#include <set>
-
-#include "stream_tracker.hpp"
-#include "nexus/forward.hpp"
 
 
 class Lexer

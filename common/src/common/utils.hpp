@@ -98,6 +98,7 @@ static std::string str_to_snake(std::string_view s) noexcept
 void fmt_template(std::string& template_str, const std::initializer_list<std::string>& args) noexcept;
 void fmt_template(std::string& template_str, const std::initializer_list<std::string_view>& args) noexcept;
 void fmt_template(std::string& template_str, const std::map<std::string_view, std::string_view>& args) noexcept;
+void fmt_template(std::string& template_str, const std::map<std::string, std::string>& args) noexcept;
 
 
 struct FastRNG {

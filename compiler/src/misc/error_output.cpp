@@ -1,19 +1,18 @@
 #include "error_output.hpp"
 
-#include "nexus/ast/forward.hpp"
-#include "nexus/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
 
 #include <algorithm>
-#include <sstream>
-#include <iomanip>
+#include <common/compiler_options.hpp>
 #include <format>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <string_view>
-
-#include <common/compiler_options.hpp>
 
 
 std::string_view ESeverity_to_str(EErrorSeverity severity) noexcept
@@ -189,7 +188,7 @@ std::string Error_Diagnostic::print_error() const noexcept
 {
   static const auto mode = compiler::OPTIONS.diagnostic.out_format;
   switch (mode) {
-  case common::compiler::EDiagnosticFormat::DEFAULT:
+  case common::compiler::EDiagnosticFormat::NONE:
   case common::compiler::EDiagnosticFormat::userfriendly: return print_userfriendly_error();
   case common::compiler::EDiagnosticFormat::json:         return print_json_error();
   case common::compiler::EDiagnosticFormat::github:       return print_github_error();

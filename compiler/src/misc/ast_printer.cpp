@@ -1,30 +1,27 @@
 #include "ast_printer.hpp"
 
-#include <print>
-#include <fstream>
-#include <filesystem>
-
-#include <common/compiler_options.hpp>
-
 #include "ast/ast_base.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_declaration_sfm.hpp"
+#include "ast/ast_expression.hpp"
 #include "ast/ast_generic.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_memory.hpp"
 #include "ast/ast_operation.hpp"
 #include "ast/ast_statement.hpp"
-#include "ast/ast_expression.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/ast/definition.hpp"
+#include "nexus/ast/forward.hpp"
 #include "nexus/type/type.hpp"
 
-#include "compiler/compiler.hpp"
-#include "compiler/compilation_unit.hpp"
-
 #include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <filesystem>
+#include <fstream>
+#include <print>
 
 #define OUT_ELEM(elem) out_print += std::format("<li class='node'>{}<ul class='children'>\n", elem);
 #define OUT_START      out_print += OUT_ELEM(n.debug_str());

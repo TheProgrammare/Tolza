@@ -1,10 +1,11 @@
 #pragma once
 
+#include "ast_numeric_128_bits.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/type/type.hpp"
-#include "ast_numeric_128_bits.hpp"
+
 #include <vector>
 
 namespace ast

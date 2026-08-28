@@ -1,21 +1,18 @@
 #include "lexer.hpp"
 
-
-#include <initializer_list>
-#include <queue>
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "misc/error_output.hpp"
+#include "nexus/ids.hpp"
+#include "token.hpp"
 
 #include <common/common.hpp>
 #include <common/utils.hpp>
-
-#include "nexus/ids.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "compiler/compiler.hpp"
-#include "token.hpp"
-
-#include "misc/error_output.hpp"
+#include <initializer_list>
+#include <queue>
 
 Lexer::DFANode::DFANode()
-  : kind(token::ETokenKind::UNKNOWN)
+  : kind(token::ETokenKind::NONE)
 {
 }
 
@@ -58,7 +55,7 @@ constexpr Lexer::DFA Lexer::build_DFA()
   // 3. Build tables
   DFA dfa;
   dfa.transition.resize(nodes.size());
-  dfa.accept.resize(nodes.size(), token::ETokenKind::UNKNOWN);
+  dfa.accept.resize(nodes.size(), token::ETokenKind::NONE);
 
   for (auto* n : nodes) {
     auto& row = dfa.transition[n->id];
@@ -211,7 +208,7 @@ bool Lexer::tokenize_DFA() noexcept
 
     state = next;
 
-    if (dfa.accept[state] != token::ETokenKind::UNKNOWN) {
+    if (dfa.accept[state] != token::ETokenKind::NONE) {
       last_accept_state = state;
       last_accept_pos   = stream.position();
     }

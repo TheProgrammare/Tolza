@@ -27,9 +27,9 @@
 #pragma once
 
 #include "common/compiler_options.hpp"
-#include <string>
 
 #include <common/commands.hpp>
+#include <string>
 #include <vector>
 
 namespace CLI
@@ -39,7 +39,7 @@ class App;
 
 namespace common::compiler
 {
-struct Sub_Options;
+struct Profile;
 }
 
 namespace compiler
@@ -50,7 +50,7 @@ class Commander : common::Commander
 public:
   Commander(CLI::App& _app, int argc, const char* argv[]);
 
-  common::compiler::Sub_Options& opt;
+  common::compiler::Profile& opt;
 
   std::vector<std::string> args;
 

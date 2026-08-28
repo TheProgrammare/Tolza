@@ -3,8 +3,8 @@
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
+
 #include <cstddef>
 #include <string>
 #include <vector>

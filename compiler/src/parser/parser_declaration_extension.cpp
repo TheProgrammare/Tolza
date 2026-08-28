@@ -1,23 +1,20 @@
 #include "parser_declaration_extension.hpp"
 
-#include <string_view>
-
 #include "Neargye/magic_enum.hpp"
 #include "ast/ast_declaration_extension.hpp"
-
 #include "ast/ast_declaration_local.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/extension.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/type/type.hpp"
-
-#include "compiler/compilation_unit.hpp"
-
-#include "parser/parser_declaration_local.hpp"
 #include "parser/parser_base.hpp"
+#include "parser/parser_declaration_local.hpp"
 #include "parser/parser_type.hpp"
 #include "parser_context.hpp"
+
+#include <string_view>
 
 
 constexpr std::string_view hint = R"(define a extension like:

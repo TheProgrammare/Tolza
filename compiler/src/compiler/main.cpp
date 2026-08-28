@@ -15,14 +15,13 @@
  *  limitations under the License.
  */
 
-#include <CLIUtils/CLI11.hpp>
-
-#include <print>
-
 #include "compiler.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
+
+#include <CLIUtils/CLI11.hpp>
 #include <common/common.hpp>
+#include <print>
 
 int run_tolza(int argc, const char* argv[])
 {
@@ -31,7 +30,7 @@ int run_tolza(int argc, const char* argv[])
 
   CLI11_PARSE(app, argc, argv);
 
-  if (compiler::COMPILER.run_requested) return compiler::COMPILER.start_compilation();
+  if (compiler::COMPILER.run_requested) return compiler::COMPILER.start_compilation() ? 0 : 1;
 
   return 0;
 }

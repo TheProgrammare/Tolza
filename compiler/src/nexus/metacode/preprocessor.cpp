@@ -1,18 +1,18 @@
 #include "preprocessor.hpp"
 
-#include <cassert>
-#include <string_view>
-
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "misc/error_output.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/metacode/token_generator.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "compiler/compiler.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/lexer/token_viewer.hpp"
-#include "misc/error_output.hpp"
+#include "nexus/metacode/metacode.hpp"
+#include "nexus/metacode/token_generator.hpp"
+
+#include <cassert>
+#include <string_view>
 
 
 metacode::Preprocessor::Preprocessor(cu::CU& CU) noexcept

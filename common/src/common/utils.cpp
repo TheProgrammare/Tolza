@@ -65,42 +65,119 @@ bool common::utils::is_valid_identifier(std::string_view s, bool path_possible) 
 }
 
 
-void common::utils::fmt_template(std::string& template_str, const std::initializer_list<std::string>& args) noexcept
+namespace
 {
-  size_t count = 0;
-  for (const auto& arg : args) {
-    std::string placeholder = "%" + std::to_string(count++);
-    size_t      pos         = 0;
-    while ((pos = template_str.find(placeholder, pos)) != std::string::npos) {
-      template_str.replace(pos, placeholder.length(), arg);
-      pos += arg.length();
-    }
-  }
+constexpr bool is_key_char(const char c) noexcept
+{
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '-';
 }
 
-void common::utils::fmt_template(std::string&                                   template_str,
-                                 const std::initializer_list<std::string_view>& args) noexcept
+template <typename Lookup>
+void fmt_template_impl(std::string& s, Lookup&& lookup) noexcept
 {
-  size_t count = 0;
-  for (const auto& arg : args) {
-    std::string placeholder = "%" + std::to_string(count++);
-    size_t      pos         = 0;
-    while ((pos = template_str.find(placeholder, pos)) != std::string::npos) {
-      template_str.replace(pos, placeholder.length(), arg);
-      pos += arg.length();
+  const size_t size = s.size();
+  if (size < 2 || s.find('%') == std::string::npos) return;
+
+  std::string out;
+  out.reserve(size);
+
+  const char* data = s.data();
+  size_t      pos  = 0;
+  size_t      copy = 0;
+
+  while (pos < size) {
+    const size_t percent = s.find('%', pos);
+    if (percent == std::string::npos) break;
+
+    const size_t begin = percent + 1;
+    if (begin >= size) {
+      out.append(data + copy, percent - copy + 1);
+      copy = size;
+      break;
     }
+
+    size_t end = begin;
+    while (end < size && is_key_char(data[end])) ++end;
+
+    if (end == begin) {
+      pos = begin;
+      continue;
+    }
+
+    const std::string key(data + begin, end - begin);
+
+    if (const auto* value = lookup(key)) {
+      out.append(data + copy, percent - copy);
+      out.append(*value);
+      copy = end;
+    }
+
+    pos = end;
   }
+
+  if (copy < size) out.append(data + copy, size - copy);
+
+  s = std::move(out);
+}
+} // namespace
+
+void common::utils::fmt_template(std::string& s, const std::initializer_list<std::string>& args) noexcept
+{
+  fmt_template_impl(s, [&args](const std::string_view key) -> const std::string* {
+    if (key.empty()) return nullptr;
+
+    size_t index = 0;
+    for (const auto& arg : args) {
+      if (std::to_string(index++) == key) return &arg;
+    }
+
+    return nullptr;
+  });
 }
 
-void common::utils::fmt_template(std::string&                                        template_str,
-                                 const std::map<std::string_view, std::string_view>& args) noexcept
+void common::utils::fmt_template(std::string& s, const std::initializer_list<std::string_view>& args) noexcept
 {
-  for (const auto& [key, val] : args) {
-    std::string placeholder = "%" + std::string(key);
-    size_t      pos         = 0;
-    while ((pos = template_str.find(placeholder, pos)) != std::string::npos) {
-      template_str.replace(pos, placeholder.length(), val);
-      pos += key.length();
+  fmt_template_impl(s, [&args](const std::string_view key) -> const std::string_view* {
+    if (key.empty()) return nullptr;
+
+    size_t index = 0;
+    for (const auto& arg : args) {
+      // Matching exact de l'index sans construire "%N".
+      size_t n      = index++;
+      size_t digits = 1;
+      for (size_t x = n; x >= 10; x /= 10) ++digits;
+
+      if (digits != key.size()) continue;
+
+      bool match = true;
+      for (size_t i = digits; i-- > 0; n /= 10) {
+        if (key[i] != static_cast<char>('0' + (n % 10))) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) return &arg;
     }
-  }
+
+    return nullptr;
+  });
+}
+
+void common::utils::fmt_template(std::string& s, const std::map<std::string_view, std::string_view>& args) noexcept
+{
+  fmt_template_impl(s, [&args](const std::string_view key) -> const std::string_view* {
+    if (const auto it = args.find(key); it != args.end()) return &it->second;
+
+    return nullptr;
+  });
+}
+
+void common::utils::fmt_template(std::string& s, const std::map<std::string, std::string>& args) noexcept
+{
+  fmt_template_impl(s, [&args](const std::string& key) -> const std::string* {
+    if (const auto it = args.find(key); it != args.end()) return &it->second;
+
+    return nullptr;
+  });
 }

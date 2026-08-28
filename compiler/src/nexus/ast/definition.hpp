@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
+
+#include <vector>
 
 
 namespace ast
@@ -47,7 +47,7 @@ struct NodeHeader final {
   scope::ID scpid;
   token::ID start_tokid;
   token::ID end_tokid;
-  ENodeKind kind = ENodeKind::Unknown;
+  ENodeKind kind = ENodeKind::NONE;
 
   explicit NodeHeader(ENodeKind k)
     : kind(k)
@@ -57,7 +57,7 @@ struct NodeHeader final {
 
 
 struct Unknown final {
-  NODE_HEADER(Unknown);
+  NODE_HEADER(NONE);
 
   Unknown()
   {

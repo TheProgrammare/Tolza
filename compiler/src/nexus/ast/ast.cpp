@@ -1,25 +1,23 @@
 #include "ast.hpp"
 
-#include <cstdint>
-
-#include <Neargye/magic_enum.hpp>
-#include <string>
-#include <print>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "binder/binder_ffi.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/module.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/type/definition.hpp"
 
+#include <Neargye/magic_enum.hpp>
 #include <common/utils.hpp>
+#include <cstdint>
+#include <print>
+#include <string>
 
 
 std::vector<ast::ID> ast::get_parameters(ast::ID nodeid) noexcept

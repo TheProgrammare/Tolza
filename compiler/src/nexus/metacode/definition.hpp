@@ -1,10 +1,10 @@
 #pragma once
 
+#include "nexus/lexer/token.hpp"
+
 #include <cstdint>
 #include <limits>
 #include <string_view>
-
-#include "nexus/lexer/token.hpp"
 
 
 namespace metacode

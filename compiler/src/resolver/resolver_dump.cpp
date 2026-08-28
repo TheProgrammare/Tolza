@@ -1,11 +1,11 @@
 #include "resolver_dump.hpp"
+
 #include "Neargye/magic_enum.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-
 #include "nexus/ast/ast.hpp" // is mandatory, do not remove
-
+#include "nexus/ast/data.hpp"
 #include "nexus/type/definition.hpp"
+
 #include <string>
 
 

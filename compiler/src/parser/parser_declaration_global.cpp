@@ -1,32 +1,28 @@
 
 #include "parser_declaration_global.hpp"
 
-#include <string>
-#include <string_view>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_generic.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
-#include "nexus/type/type.hpp"
 #include "nexus/metacode/metacode.hpp"
-
+#include "nexus/type/type.hpp"
+#include "parser_base.hpp"
 #include "parser_context.hpp"
-#include "parser_type.hpp"
-
-#include "ast/ast_generic.hpp"
-
-#include "parser_expression.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_declaration_sfm.hpp"
-#include "parser_base.hpp"
+#include "parser_expression.hpp"
+#include "parser_type.hpp"
+
+#include <string>
+#include <string_view>
 
 
 ast::ID parser::Parser_Declaration::parse_declaration()

@@ -1,33 +1,31 @@
 #include "nexus/module.hpp"
 
-#include <llvm-19/llvm/Analysis/ScalarEvolutionExpressions.h>
-#include <llvm/Analysis/LoopNestAnalysis.h>
-
-#include <cassert>
-#include <expected>
-#include <filesystem>
-#include <stack>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_global.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/pipeline.hpp"
 #include "nexus/scope.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "compiler/compiler.hpp"
+#include "pipeline/pipeline.hpp"
+
+#include <cassert>
+#include <common/common.hpp>
+#include <common/fileutils.hpp>
+#include <expected>
+#include <filesystem>
+#include <llvm-19/llvm/Analysis/ScalarEvolutionExpressions.h>
+#include <llvm/Analysis/LoopNestAnalysis.h>
+#include <stack>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 
 namespace fs = std::filesystem;

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
+
+#include <string>
+#include <vector>
 
 namespace ast
 {

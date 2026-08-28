@@ -30,7 +30,7 @@
             "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
                 "build",
-                "${workspaceFolder}/../../tolza-workspace/example-project"
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"
@@ -41,8 +41,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/tolza-compiler",
             "args": [
-                "check",
-                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml"
+                "build",
+                "${workspaceFolder}/../../tolza-workspace/example-project/tolza.toml",
+                "--check",
             ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "build-debug"

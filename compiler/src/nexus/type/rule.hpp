@@ -1,8 +1,9 @@
 #pragma once
 
+#include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/type/forward.hpp"
-#include "nexus/forward.hpp"
+
 #include <vector>
 
 namespace type::rule

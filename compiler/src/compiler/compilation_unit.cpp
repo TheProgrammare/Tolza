@@ -1,32 +1,28 @@
 #include "compiler/compilation_unit.hpp"
 
-#include <cassert>
-#include <cstddef>
-#include <filesystem>
-
-#include <llvm/IR/Module.h>
-
 #include "compiler/compiler.hpp"
-
-#include "nexus/extension.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/module.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/definition.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
+#include "nexus/definition.hpp"
+#include "nexus/extension.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/token.hpp"
+#include "nexus/metacode/metacode.hpp"
+#include "nexus/module.hpp"
+#include "nexus/scope.hpp"
 #include "nexus/type/type.hpp"
 
+#include <cassert>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
+#include <cstddef>
+#include <filesystem>
+#include <llvm/IR/Module.h>
 #include <string>
 #include <string_view>
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-
-#include <common/compiler_options.hpp>
 
 
 namespace fs = std::filesystem;

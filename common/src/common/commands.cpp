@@ -4,7 +4,6 @@
 
 #include <CLIUtils/CLI11.hpp>
 
-#include "common/common.hpp"
 #include "common/environment.hpp"
 #include "common/toolchain_options.hpp"
 #include "fileutils.hpp"

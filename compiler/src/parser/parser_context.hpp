@@ -1,12 +1,12 @@
 #pragma once
 
-#include <initializer_list>
-#include <string_view>
-
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "parser/parser_declaration_extension.hpp"
+
+#include <initializer_list>
+#include <string_view>
 
 namespace parser
 {

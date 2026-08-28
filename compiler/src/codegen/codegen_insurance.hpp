@@ -1,10 +1,9 @@
 #pragma once
 
-#include <llvm/IR/IRBuilder.h>
-
-
-#include "nexus/forward.hpp"
 #include "llvm_forward.hpp"
+#include "nexus/forward.hpp"
+
+#include <llvm/IR/IRBuilder.h>
 
 namespace codegen
 {

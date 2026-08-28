@@ -15,16 +15,15 @@
  *  limitations under the License.
  */
 
-#include <exception>
-#include <print>
-
-#include <CLIUtils/CLI11.hpp>
-
-#include <common/common.hpp>
-#include "common/environment.hpp"
 #include "toolchain/parser_command.hpp"
 #include "toolchain/toolchain.hpp"
+
+#include <CLIUtils/CLI11.hpp>
+#include <common/common.hpp>
+#include <common/environment.hpp>
 #include <common/toolchain_options.hpp>
+#include <exception>
+#include <print>
 
 
 int run_toolchain(int argc, const char* argv[])

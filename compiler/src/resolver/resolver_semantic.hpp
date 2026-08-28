@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include "resolver_base.hpp"
 #include "nexus/ast/forward.hpp"
+#include "resolver_base.hpp"
 
 namespace resolver
 {

@@ -5,9 +5,9 @@
 #include "ast/ast_declaration_global.hpp"
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
-
 #include "nexus/ids.hpp"
 #include "resolver_base.hpp"
+
 #include <bits/types/clockid_t.h>
 #include <cstddef>
 

@@ -1,21 +1,21 @@
 #include "ids.hpp"
 
 #include "compiler/compiler.hpp"
-
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
-#include "nexus/extension.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/module.hpp"
-#include "nexus/pipeline.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/resolved.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/definition.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
+#include "nexus/definition.hpp"
+#include "nexus/extension.hpp"
+#include "nexus/inference.hpp"
+#include "nexus/lexer/token.hpp"
+#include "nexus/module.hpp"
+#include "nexus/resolved.hpp"
+#include "nexus/scope.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
+#include "pipeline/pipeline.hpp"
+
 #include <cstdint>
 
 
@@ -133,7 +133,7 @@ bool ast::ID::is_rvalue() const noexcept
 
   const auto k = kind();
 
-  assert(k != ENodeKind::Unknown && "invalid node facial kind");
+  assert(k != ENodeKind::NONE && "invalid node facial kind");
   if (k == ENodeKind::Expression_Table_Access) return false;
   if (k >= ENodeKind::Literal_Boolean && k <= ENodeKind::Literal_Record) return true;
   if (k >= ENodeKind::Expression_If_Ternary && k <= ENodeKind::Expression_Get_Type) return true;

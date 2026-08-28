@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <iostream>
-#include <regex>
 #include <print>
+#include <regex>
 
 
 bool cli::is_valid_filename(std::string_view name) noexcept

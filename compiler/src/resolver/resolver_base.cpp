@@ -1,12 +1,11 @@
 #include "resolver_base.hpp"
 
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
-
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/lexer/token.hpp"
 
 

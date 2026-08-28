@@ -1,23 +1,21 @@
 #include "parser_expression.hpp"
 
-#include <vector>
-
+#include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"
+#include "ast/ast_operation.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_operation.hpp"
-
-#include "nexus/ast/data.hpp"
-#include "nexus/lexer/token.hpp"
 #include "nexus/forward.hpp"
+#include "nexus/lexer/token.hpp"
 #include "parser/parser_base.hpp"
 #include "parser_context.hpp"
-#include "parser_literal.hpp"
 #include "parser_declaration_local.hpp"
-#include "parser_type.hpp"
+#include "parser_literal.hpp"
 #include "parser_operation.hpp"
+#include "parser_type.hpp"
+
+#include <vector>
 
 
 ast::ID parser::Parser_Expression::parse_expression()

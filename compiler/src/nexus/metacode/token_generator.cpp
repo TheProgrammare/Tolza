@@ -1,15 +1,16 @@
 #include "token_generator.hpp"
 
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include <common/compiler_options.hpp>
 #include "misc/error_output.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
 #include "nexus/metacode/metacode.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/metacode/preprocessor.hpp"
+
 #include <cassert>
+#include <common/compiler_options.hpp>
 #include <cstddef>
 #include <string_view>
 

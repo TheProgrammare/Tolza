@@ -1,5 +1,7 @@
 #pragma once
 
+#include "nexus/forward.hpp"
+
 #include <cassert>
 #include <cstdint>
 #include <initializer_list>
@@ -7,8 +9,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-
-#include "nexus/forward.hpp"
 
 
 namespace token
@@ -19,7 +19,7 @@ constexpr uint16_t INVALID_LEN = -1;
 
 // T_ = Type L_ = Literal S_ = Special (no text key representation)
 enum class ETokenKind : uint8_t {
-  UNKNOWN,
+  NONE,
   S_END_OF_FILE,
   // end of metacode (end of line)
   S_METACODE_END,
@@ -602,7 +602,7 @@ struct Token final {
   ID         tokid;
   uint32_t   begin  = INVALID_POS;
   uint16_t   length = INVALID_LEN;
-  ETokenKind kind   = ETokenKind::UNKNOWN;
+  ETokenKind kind   = ETokenKind::NONE;
 #ifdef DEBUG
   std::string debug_val;
 #endif
@@ -664,7 +664,7 @@ struct Arena final {
 [[nodiscard]] inline ETokenKind str_to_ETokenKind(std::string_view str)
 {
   if (auto it = k_keywords.find(str); it != k_keywords.end()) return it->second;
-  return ETokenKind::UNKNOWN;
+  return ETokenKind::NONE;
 }
 
 } // namespace token

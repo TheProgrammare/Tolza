@@ -1,20 +1,20 @@
 #include "nexus/scope.hpp"
 
-#include <cassert>
-#include <set>
-#include <string_view>
-#include <utility>
-
 #include "ast/ast_base.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "nexus/forward.hpp"
-#include "nexus/module.hpp"
 #include "nexus/definition.hpp"
+#include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+#include "nexus/module.hpp"
+
+#include <cassert>
+#include <set>
+#include <string_view>
+#include <utility>
 
 
 scope::Scope scope::Scope::make_from_module(module::ID modid, ast::ID nodeid) noexcept

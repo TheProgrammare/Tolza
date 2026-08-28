@@ -58,7 +58,9 @@ DerivePointerAlignment: false
 SpaceAfterCStyleCast: false
 
 AllowAllParametersOfDeclarationOnNextLine: true
-SortIncludes: false
 MaxEmptyLinesToKeep: 2
 
 ConstructorInitializerIndentWidth: 2
+
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive

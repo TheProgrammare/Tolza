@@ -1,15 +1,13 @@
 
 #include "parser_operation.hpp"
 
+#include "ast/ast_operation.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
-#include "ast/ast_operation.hpp"
-
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 

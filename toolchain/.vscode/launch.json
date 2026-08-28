@@ -7,8 +7,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/tolza",
             "args": [
+                "new",
                 "workspace",
-                "create",
                 "${workspaceFolder}/../../tolza-workspace",
                 "--name",
                 "tolza-example",
@@ -24,11 +24,27 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/debug/tolza",
             "args": [
-                "create",
+                "new",
                 "profile",
-                "${workspaceFolder}/../../tolza-workspace",
+                "${workspaceFolder}/../../tolza-workspace/profile",
                 "--name",
                 "template"
+            ],
+            "env": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug"
+        },
+        {
+            "name": "Debug manifest creation",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/tolza",
+            "args": [
+                "new",
+                "manifest",
+                "~",
+                "--name",
+                "test"
             ],
             "env": [],
             "cwd": "${workspaceFolder}",
@@ -81,7 +97,6 @@
             "program": "${workspaceFolder}/build/debug/tolza",
             "args": [
                 "build",
-                "--path",
                 "${workspaceFolder}/../../tolza-workspace/tolza-example/tolza.toml"
             ],
             "env": [],

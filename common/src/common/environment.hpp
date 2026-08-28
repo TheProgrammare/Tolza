@@ -20,7 +20,7 @@ namespace common::env
 
 
 enum class EArch : uint8_t {
-  DEFAULT,
+  NONE,
   x86_64,
   x86_32,
 
@@ -41,7 +41,6 @@ enum class EArch : uint8_t {
 
   sparc64,
 
-  unknown,
   custom
 };
 
@@ -60,7 +59,7 @@ constexpr bool is_32bit(EArch arch) noexcept
 }
 
 enum class EPlatform : uint8_t {
-  DEFAULT,
+  NONE,
   linux, // yes linux is a kernel
   macos,
   windows,
@@ -76,7 +75,6 @@ enum class EPlatform : uint8_t {
 
   solaris,
 
-  unknown,
   custom
 };
 
@@ -132,7 +130,7 @@ enum class EPlatform : uint8_t {
   }
 }
 enum class EABI : uint8_t {
-  DEFAULT,
+  NONE,
   sysv,  // System V ABI (x86_64 Linux/BSD default)
   win64, // Windows x86_64 ABI
 
@@ -151,13 +149,12 @@ enum class EABI : uint8_t {
 
   wasm32, // WebAssembly 32-bit ABI
 
-  unknown,
-  custom
+  custom,
 };
 
 
 enum class ECallConvention : uint8_t {
-  DEFAULT,
+  NONE,
   cdecl,
   stdcall,
   fastcall,
@@ -181,7 +178,6 @@ enum class ECallConvention : uint8_t {
   wasm32,
 
   custom,
-  unknown
 };
 
 
@@ -210,7 +206,7 @@ enum class ECallConvention : uint8_t {
       // cdecl est le comportement C par défaut.
       return ECallConvention::cdecl;
 
-    default: return ECallConvention::unknown;
+    default: return ECallConvention::NONE;
     }
 
   case EABI::sysv:
@@ -228,12 +224,11 @@ enum class ECallConvention : uint8_t {
     case EArch::aarch64: return ECallConvention::aapcs64;
     case EArch::riscv32: return ECallConvention::riscv_ilp32;
     case EArch::riscv64: return ECallConvention::riscv_lp64;
-    default:             return ECallConvention::unknown;
+    default:             return ECallConvention::NONE;
     }
 
-  case EABI::unknown:
   case EABI::custom:
-  case EABI::DEFAULT: break;
+  case EABI::NONE:   break;
   }
 
 
@@ -244,7 +239,7 @@ enum class ECallConvention : uint8_t {
     switch (arch) {
     case EArch::x86_64: return ECallConvention::win64;
     case EArch::x86_32: return ECallConvention::cdecl;
-    default:            return ECallConvention::unknown;
+    default:            return ECallConvention::NONE;
     }
 
 
@@ -266,13 +261,12 @@ enum class ECallConvention : uint8_t {
     case EArch::riscv32: return ECallConvention::riscv_ilp32;
     case EArch::riscv64: return ECallConvention::riscv_lp64;
     case EArch::wasm32:  return ECallConvention::wasm32;
-    default:             return ECallConvention::unknown;
+    default:             return ECallConvention::NONE;
     }
 
 
-  case EPlatform::unknown:
   case EPlatform::custom:
-  default:                 return ECallConvention::unknown;
+  default:                return ECallConvention::NONE;
   }
 }
 
@@ -331,15 +325,15 @@ enum class FCSource : uint16_t {
 }
 
 
-enum class EVendor : uint8_t { DEFAULT, apple, pc, w64, unknown };
+enum class EVendor : uint8_t { NONE, apple, pc, w64 };
 
 
-enum class ECStandard : uint8_t { DEFAULT, c89, c99, c11, c17, c23, gnu89, gnu99, gnu11, gnu17, gnu23, unknown };
+enum class ECStandard : uint8_t { NONE, c89, c99, c11, c17, c23, gnu89, gnu99, gnu11, gnu17, gnu23 };
 
-enum class EEnvironment : uint8_t { DEFAULT, gnu, musl, msvc, gnuabi, mingw, darwin, baremetal, wasi, custom, unknown };
+enum class EEnvironment : uint8_t { NONE, gnu, musl, msvc, gnuabi, mingw, darwin, baremetal, wasi, custom };
 
 enum class ELibC : uint8_t {
-  DEFAULT,
+  NONE,
   glibc,
   musl,
   libsystem,
@@ -349,7 +343,6 @@ enum class ELibC : uint8_t {
   bionic,
   bsd_libc,
   custom,
-  unknown
 };
 
 [[nodiscard]] constexpr size_t file_offset_bits(ELibC libc, env::EArch arch)
@@ -435,7 +428,7 @@ inline constexpr EPlatform PLATFORM =
 #elif defined(__sun)
     EPlatform::solaris;
 #else
-    EPlatform::unknown;
+    EPlatform::NONE;
 #endif
 
 inline constexpr EArch ARCH =
@@ -470,7 +463,7 @@ inline constexpr EArch ARCH =
 #elif defined(__sparc__)
         EArch::sparc32;
 #else
-        EArch::unknown;
+        EArch::NONE;
 #endif
 
 inline constexpr EVendor VENDOR =
@@ -484,7 +477,7 @@ inline constexpr EVendor VENDOR =
     || defined(__DragonFly__)
     EVendor::pc;
 #else
-    EVendor::unknown;
+    EVendor::NONE;
 #endif
 
 inline constexpr EABI ABI =
@@ -514,7 +507,7 @@ inline constexpr EABI ABI =
     || defined(__NetBSD__) || defined(__DragonFly__)
         EABI::gnu;
 #else
-        EABI::unknown;
+        EABI::NONE;
 #endif
 
 inline constexpr size_t ARCH_SIZE = sizeof(void*) * 8;
@@ -538,7 +531,7 @@ inline constexpr ELibC LIBC =
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     ELibC::bsd_libc;
 #else
-    ELibC::unknown;
+    ELibC::NONE;
 #endif
 
 inline constexpr EEnvironment ENVIRONMENT =
@@ -561,7 +554,7 @@ inline constexpr EEnvironment ENVIRONMENT =
 #elif (__STDC_HOSTED__ == 0)
     EEnvironment::baremetal;
 #else
-        EEnvironment::unknown;
+        EEnvironment::NONE;
 #endif
 
 
@@ -593,7 +586,7 @@ inline constexpr ECStandard C_STANDARD =
 #endif
 #endif
 #else
-    ECStandard::unknown;
+    ECStandard::NONE;
 #endif
 
 inline constexpr ECallConvention CALL_CONVENTION = call_convention(PLATFORM, ARCH, ABI);

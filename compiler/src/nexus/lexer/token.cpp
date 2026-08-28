@@ -1,7 +1,8 @@
 #include "token.hpp"
 
-#include <string_view>
 #include "compiler/compilation_unit.hpp"
+
+#include <string_view>
 
 token::ID token::Arena::add(Token& tok) noexcept
 {

@@ -1,5 +1,7 @@
 #include "parser_statement.hpp"
 
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_statement.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
@@ -7,19 +9,11 @@
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
-
-#include "ast/ast_statement.hpp"
-
 #include "nexus/type/type.hpp"
+#include "parser_base.hpp"
 #include "parser_context.hpp"
-
-
-#include "ast/ast_declaration_local.hpp"
-
-
 #include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
-#include "parser_base.hpp"
 #include "parser_operation.hpp"
 
 

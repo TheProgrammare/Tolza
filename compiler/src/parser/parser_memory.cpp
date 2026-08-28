@@ -1,15 +1,12 @@
 #include "parser_memory.hpp"
 
-#include "nexus/lexer/token.hpp"
+#include "ast/ast_memory.hpp"
 #include "compiler/compilation_unit.hpp"
-
+#include "nexus/lexer/token.hpp"
 #include "parser_context.hpp"
-
 #include "parser_expression.hpp"
 #include "parser_operation.hpp"
 #include "parser_type.hpp"
-
-#include "ast/ast_memory.hpp"
 
 ast::ID parser::Parser_Memory::align()
 {

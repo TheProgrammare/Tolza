@@ -8,22 +8,21 @@
  */
 
 #include "command_build.hpp"
+
 #include "toolchain/toolchain.hpp"
 
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/toolchain_options.hpp>
+#include <common/utils.hpp>
 #include <cstdlib>
 #include <expected>
-#include <string>
+#include <marzer/toml++.hpp>
 #include <print>
+#include <string>
 #include <string_view>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <marzer/toml++.hpp>
-
-#include <common/common.hpp>
-#include <common/utils.hpp>
-#include <common/compiler_options.hpp>
-#include <common/toolchain_options.hpp>
 
 #define HLOG "[tolza] "
 #define HERR "[tolza:ERROR] "

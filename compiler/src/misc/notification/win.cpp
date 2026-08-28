@@ -1,10 +1,9 @@
 #ifdef _WIN32
 
 #include <Windows.h>
-
-#include <winrt/base.h>
 #include <winrt/Windows.Data.Xml.Dom.h>
 #include <winrt/Windows.UI.Notifications.h>
+#include <winrt/base.h>
 
 namespace notification
 {

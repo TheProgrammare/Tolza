@@ -1,17 +1,8 @@
 #include "type.hpp"
 
-#include <cassert>
-#include <cstdlib>
-#include <functional>
-#include <memory>
-#include <string_view>
-
-#include <common/compiler_options.hpp>
-#include <common/utils.hpp>
-
-#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "nexus/forward.hpp"
@@ -20,8 +11,14 @@
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
 
-
 #include <Neargye/magic_enum.hpp>
+#include <cassert>
+#include <common/compiler_options.hpp>
+#include <common/utils.hpp>
+#include <cstdlib>
+#include <functional>
+#include <memory>
+#include <string_view>
 
 
 type::Arena::Arena(cu::ID _cuid)

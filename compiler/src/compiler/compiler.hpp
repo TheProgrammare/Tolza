@@ -17,12 +17,12 @@
 
 #pragma once
 
+#include "misc/error_output.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+
 #include <string>
 #include <string_view>
-
-#include "nexus/forward.hpp"
-#include "misc/error_output.hpp"
-#include "nexus/ids.hpp"
 
 // log color
 #define color_RESET   "\033[0m"
@@ -49,7 +49,7 @@ class TargetMachine;
 
 namespace common::compiler
 {
-struct Options;
+struct Manifest;
 }
 
 constexpr std::string_view k_facet_abort =
@@ -91,7 +91,8 @@ enum class EPhase : uint8_t {
 struct Compiler {
   Compiler();
 
-  bool run_requested = false;
+  bool run_requested          = false;
+  long start_compilation_time = 0;
 
   // vector to keep the chronology
   std::vector<std::pair<cu::ID, std::vector<Error_Diagnostic>>> errors;
@@ -112,8 +113,9 @@ extern unresolved::Arena  unresolved;
 extern resolved::Arena    resolved;
 extern inference::Arena   inference;
 
-extern Compiler                  COMPILER;
-extern common::compiler::Options OPTIONS;
-inline llvm::TargetMachine*      TM = nullptr;
+extern Compiler                   COMPILER;
+extern common::compiler::Manifest OPTIONS;
+inline llvm::TargetMachine*       TM = nullptr;
+
 
 } // namespace compiler

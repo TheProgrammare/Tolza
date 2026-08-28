@@ -3,6 +3,7 @@
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
+
 #include <string>
 
 namespace ast

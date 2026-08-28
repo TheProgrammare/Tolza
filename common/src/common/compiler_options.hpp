@@ -32,10 +32,10 @@
 namespace common::compiler
 {
 
-enum class ERelocModel : uint8_t { DEFAULT, STATIC, PIC, PIE, ROPI, RWPI, ROPI_RWPI };
-enum class ECodeModel : uint8_t { DEFAULT, tiny, small, kernel, medium, large };
-enum class EOptimization : uint8_t { DEFAULT, O0, O1, O2, O3, Os, Oz };
-enum class EWarnLevel : uint8_t { DEFAULT, W0, W1, W2, W3 };
+enum class ERelocModel : uint8_t { NONE, STATIC, PIC, PIE, ROPI, RWPI, ROPI_RWPI };
+enum class ECodeModel : uint8_t { NONE, tiny, small, kernel, medium, large };
+enum class EOptimization : uint8_t { NONE, O0, O1, O2, O3, Os, Oz };
+enum class EWarnLevel : uint8_t { NONE, W0, W1, W2, W3 };
 enum class FWarnMode : uint8_t {
   NONE      = 0,
   all       = 1ULL << 0,
@@ -46,7 +46,7 @@ enum class FWarnMode : uint8_t {
   as_error  = 1ULL << 5
 };
 enum class ELogLevel : uint8_t {
-  DEFAULT,
+  NONE,
   quiet,
   normal,
   verbose,
@@ -108,7 +108,7 @@ enum class FCPUFeature : uint16_t {
 };
 
 enum class EDiagnosticFormat : uint8_t {
-  DEFAULT,
+  NONE,
   userfriendly,
   json,
   github,
@@ -116,10 +116,10 @@ enum class EDiagnosticFormat : uint8_t {
 
 
 struct TargetTriple final {
-  env::EArch     arch     = env::EArch::unknown;
-  env::EVendor   vendor   = env::EVendor::unknown;
-  env::EPlatform platform = env::EPlatform::unknown;
-  env::EABI      abi      = env::EABI::unknown;
+  env::EArch     arch     = env::EArch::NONE;
+  env::EVendor   vendor   = env::EVendor::NONE;
+  env::EPlatform platform = env::EPlatform::NONE;
+  env::EABI      abi      = env::EABI::NONE;
 
   [[nodiscard]] static TargetTriple parse(std::string_view s) noexcept;
   [[nodiscard]] std::string         dump() const noexcept;
@@ -127,7 +127,7 @@ struct TargetTriple final {
 
 struct Target final {
   TargetTriple         triple;
-  env::ECallConvention call_convention = env::ECallConvention::unknown;
+  env::ECallConvention call_convention = env::ECallConvention::NONE;
 
   std::string cpu;
   FCPUFeature features    = FCPUFeature::NONE;
@@ -150,14 +150,14 @@ struct Cffi final {
     int minor = 0;
 
     [[nodiscard]] static LibCVersion parse(std::string_view s) noexcept;
-    [[nodiscard]] std::string        print() const noexcept;
+    [[nodiscard]] std::string        dump() const noexcept;
   };
 
-  env::ELibC        libc         = env::ELibC::unknown;
+  env::ELibC        libc         = env::ELibC::NONE;
   LibCVersion       libc_version = {.major = 0, .minor = 0};
-  env::ECStandard   std          = env::ECStandard::unknown;
+  env::ECStandard   std          = env::ECStandard::NONE;
   env::FCSource     c_source;
-  env::EEnvironment env              = env::EEnvironment::unknown;
+  env::EEnvironment env              = env::EEnvironment::NONE;
   bool              disable_builtins = false;
   bool              strict_aliasing  = false;
   std::string       sysroot;
@@ -169,8 +169,12 @@ struct Cffi final {
 
 
 struct Dir final {
+  Dir(std::string_view p_dir_project)
+    : dir_project(p_dir_project)
+  {
+  }
+
   // directories
-  std::string project  = "./";
   std::string build    = "./build";
   std::string source   = "./src";
   std::string profile  = "./profile";
@@ -181,7 +185,6 @@ struct Dir final {
   std::string stdlib;
   std::string packages;
 
-  [[nodiscard]] std::string get_dir_project() const noexcept;
   [[nodiscard]] std::string get_dir_build() const noexcept;
   [[nodiscard]] std::string get_dir_source() const noexcept;
   [[nodiscard]] std::string get_dir_profile() const noexcept;
@@ -191,16 +194,19 @@ struct Dir final {
   [[nodiscard]] std::string get_dir_compiler() const noexcept;
   [[nodiscard]] std::string get_dir_stdlib() const noexcept;
   [[nodiscard]] std::string get_dir_packages() const noexcept;
+
+private:
+  std::string dir_project;
 };
 
-struct Profile final {
+struct Option_Profile final {
   bool          debug        = false;
   EOptimization optimization = EOptimization::O0;
 };
 
 struct Log final {
   FPass     logs  = FPass::NONE;
-  ELogLevel level = ELogLevel::DEFAULT;
+  ELogLevel level = ELogLevel::NONE;
 };
 
 struct Warn final {
@@ -218,39 +224,67 @@ struct Preprocessor final {
 };
 
 enum class EErrorMode : uint8_t {
-  DEFAULT,
+  NONE,
   fail_fatal,   // stop on first error
   fail_recover, // try recovering, accumulate errors
 };
 
 struct Diagnostic final {
-  EErrorMode        error_mode = EErrorMode::fail_fatal;
+  EErrorMode        error      = EErrorMode::fail_fatal;
   EDiagnosticFormat out_format = EDiagnosticFormat::userfriendly;
 };
 
+struct Dependency final {
+  std::string dependency;
 
-struct Options {
-  [[nodiscard]] static Options read_config(std::string_view path) noexcept;
-  [[nodiscard]] bool           write_config(std::string_view path, bool is_debug = false) noexcept;
+  [[nodiscard]] std::string name() const
+  {
+    auto start = dependency.find(':');
+    auto end   = dependency.find('@', start);
+    return dependency.substr((start == std::string::npos) ? 0 : start + 1,
+                             (end == std::string::npos) ? std::string::npos : end - start);
+  }
 
-  std::string              project_name;
-  // name, path
+  [[nodiscard]] std::string source() const
+  {
+    const auto colon = dependency.find(':');
+    if (colon == std::string_view::npos) return {};
+    return dependency.substr(0, colon);
+  }
+
+  [[nodiscard]] std::string version() const
+  {
+    const auto at = dependency.find('@');
+    if (at == std::string_view::npos) return {};
+    return dependency.substr(at + 1);
+  }
+};
+
+
+struct Manifest {
+  [[nodiscard]] static Manifest read_manifest(std::string_view project_manifest) noexcept;
+  [[nodiscard]] bool            write_manifest(std::string_view project_manifest, bool use_env = false) noexcept;
+
+  std::string project_name;
+  std::string project_path;
+
+  // name
   std::vector<std::string> profiles;
+  // name or name@version or origin:name@version
+  std::vector<Dependency>  dependencies;
 
   std::map<std::string, std::string> PREPROCESSOR_ARGS;
 
-  bool mute = false;
-
   bool is_check_mode = false;
 
-  Target     target;
-  Profile    profile;
-  Log        log;
-  Warn       warn;
-  Debug      debug;
-  Diagnostic diagnostic;
+  Target         target;
+  Option_Profile profile;
+  Log            log;
+  Warn           warn;
+  Debug          debug;
+  Diagnostic     diagnostic;
 
-  Dir dir;
+  Dir dir = Dir("");
 
   Preprocessor preprocessor;
 
@@ -262,9 +296,8 @@ struct Options {
 
   [[nodiscard]] std::string get_project_name() const noexcept;
 
-  // object, executable, ...
-  [[nodiscard]] std::string get_out_name() const noexcept;
-
+  // return path of tolza.toml
+  [[nodiscard]] std::string get_project_manifest() const noexcept;
   [[nodiscard]] std::string get_profile_filename() const noexcept;
   [[nodiscard]] std::string get_dir_build_profile() const noexcept;
   [[nodiscard]] std::string get_dir_preprocess() const noexcept;
@@ -278,10 +311,10 @@ struct Options {
 
   [[nodiscard]] const std::vector<std::string>& to_args() const noexcept;
 
-  [[nodiscard]] static Options get_preset(const TargetTriple& triple) noexcept;
-  [[nodiscard]] static Options get_current(std::string_view project_name) noexcept;
+  [[nodiscard]] static Manifest get_preset(const TargetTriple& triple) noexcept;
+  [[nodiscard]] static Manifest get_current(std::string_view project_name) noexcept;
 
-  [[nodiscard]] static Options invalid() noexcept
+  [[nodiscard]] static Manifest invalid() noexcept
   {
     return {};
   }
@@ -298,56 +331,58 @@ struct Options {
 };
 
 
-inline Options OPTIONS = Options::invalid();
-
-
 // for sub configuration
-struct Sub_Options : Options {
-  enum class EMergeMode : uint8_t { _union, _intersection, _anti_intersection };
+struct Profile : Manifest {
+  Profile(const Manifest& manifest)
+    : Manifest(manifest)
+  {
+  }
 
-  std::string current_config_file;
+  [[nodiscard]] static Profile read_profile(std::string_view path) noexcept;
+  [[nodiscard]] bool write_profile(std::string_view path, bool use_env = false, bool is_debug = false) noexcept;
 
-  EMergeMode COMPILATION_ARGS_merge_mode = EMergeMode::_union;
+  enum class EMergeMode : uint8_t { NONE, _union, _override, _intersection, _anti_intersection };
+
+  // profile file path
+  std::string profile_path;
+
+  EMergeMode COMPILATION_ARGS_merge_mode = EMergeMode::NONE;
 
   // target
-  EMergeMode features_merge_mode = EMergeMode::_union;
-  EMergeMode emits_merge_mode    = EMergeMode::_union;
+  EMergeMode target_features_merge_mode = EMergeMode::NONE;
+  EMergeMode target_emits_merge_mode    = EMergeMode::NONE;
 
-  // llvm
-  EMergeMode llvm_args_merge_mode = EMergeMode::_union;
 
-  // clang
-  EMergeMode clang_c_source_merge_mode  = EMergeMode::_union;
-  bool       has_clang_disable_builtins = false;
-  bool       has_clang_strict_aliasing  = false;
-  EMergeMode clang_args_merge_mode      = EMergeMode::_union;
+  // c ffi
+  EMergeMode c_ffi_c_source_merge_mode  = EMergeMode::NONE;
+  bool       has_c_ffi_disable_builtins = false;
+  bool       has_c_ffi_strict_aliasing  = false;
+  EMergeMode c_ffi_args_merge_mode      = EMergeMode::NONE;
 
   // profile
-  bool has_profile_debug        = false;
-  bool has_profile_optimization = false;
+  bool has_profile_debug = false;
 
   // logs
-  EMergeMode logs_merge_mode = EMergeMode::_union;
+  EMergeMode logs_merge_mode = EMergeMode::NONE;
 
   // warnings
-  EMergeMode warnings_merge_mode = EMergeMode::_union;
-  bool       has_warn_level      = false;
+  EMergeMode warnings_merge_mode = EMergeMode::NONE;
 
   // debugs
-  EMergeMode debug_merge_mode = EMergeMode::_union;
+  EMergeMode debug_merge_mode = EMergeMode::NONE;
 
   // defines
-  EMergeMode defines_merge_mode = EMergeMode::_union;
+  EMergeMode defines_merge_mode = EMergeMode::NONE;
 
   // undefines
-  EMergeMode undefines_merge_mode = EMergeMode::_union;
-
-  // codegen
+  EMergeMode undefines_merge_mode = EMergeMode::NONE;
 
   // llvm
-  bool has_llvm_verify_module = false;
+  bool       has_llvm_verify_module = false;
+  EMergeMode llvm_args_merge_mode   = EMergeMode::NONE;
 
-  [[nodiscard]] Options merge_context(const Options& base_ctx) const noexcept;
+
+  [[nodiscard]] Manifest merge_context(const Manifest& base_ctx) const noexcept;
 };
 
 } // namespace common::compiler
@@ -539,7 +574,8 @@ namespace common
 }
 
 
-extern std::string OPTIONS_TEMPLATE;
+extern std::string MANIFEST_TOML_TEMPLATE;
+extern std::string PROFILE_TOML_TEMPLATE;
 
 constexpr std::string_view TOLZA_MAIN_TEMPLATE =
     R"(

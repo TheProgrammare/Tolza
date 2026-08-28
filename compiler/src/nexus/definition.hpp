@@ -1,7 +1,7 @@
 #pragma once
 
-#include "nexus/ids.hpp"
 #include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 
 #include <cassert>
 #include <string>

@@ -17,18 +17,6 @@
 
 #pragma once
 
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <memory_resource>
-#include <vector>
-
-#include "nexus/forward.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/type/forward.hpp"
-#include "nexus/ast/definition.hpp"
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_global.hpp"
@@ -40,6 +28,17 @@
 #include "ast/ast_memory.hpp"
 #include "ast/ast_operation.hpp"
 #include "ast/ast_statement.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/ast/definition.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/type/forward.hpp"
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory_resource>
+#include <vector>
 
 namespace ast
 {

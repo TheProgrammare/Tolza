@@ -9,7 +9,7 @@ namespace ast
 {
 
 enum class ENodeKind : uint8_t {
-  Unknown,
+  NONE,
 
   // identifiers
 

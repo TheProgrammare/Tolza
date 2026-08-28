@@ -1,13 +1,7 @@
 #include "parser_type.hpp"
 
-#include <cstddef>
-#include <cstdlib>
-#include <llvm/ADT/APInt.h>
-#include <string_view>
-#include <sys/types.h>
-#include <vector>
-
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"
 #include "ast/ast_numeric_128_bits.hpp"
@@ -20,13 +14,16 @@
 #include "nexus/lexer/token_viewer.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
-
-#include "ast/ast_declaration_local.hpp"
-
-
+#include "parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
-#include "parser_base.hpp"
+
+#include <cstddef>
+#include <cstdlib>
+#include <llvm/ADT/APInt.h>
+#include <string_view>
+#include <sys/types.h>
+#include <vector>
 
 parser::Parser_Type::Parser_Type(Parser_Context& p_ctx)
   : p(p_ctx)

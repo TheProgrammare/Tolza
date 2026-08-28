@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-
 #include <string_view>
 
 std::string remove_quotes(std::string_view str);

@@ -29,133 +29,144 @@ set(SOFTWARE_VENDOR "CLOVIS")
 # Sources
 # ----------------------------
 set(TOLZA_SOURCES
-    ./src/ast/ast_base.hpp
-    ./src/ast/ast_declaration_extension.hpp
-    ./src/ast/ast_declaration_global.hpp
-    ./src/ast/ast_declaration_local.hpp
-    ./src/ast/ast_declaration_sfm.hpp
-    ./src/ast/ast_expression.hpp
-    ./src/ast/ast_generic.hpp
-    ./src/ast/ast_literal.hpp
-    ./src/ast/ast_memory.hpp
-    ./src/ast/ast_numeric_128_bits.cpp
-    ./src/ast/ast_numeric_128_bits.hpp
-    ./src/ast/ast_operation.hpp
-    ./src/ast/ast_statement.hpp
-    ./src/binder/binder_ffi.cpp
-    ./src/binder/binder_ffi.hpp
-    ./src/binder/ffi_c_reader.cpp
-    ./src/binder/ffi_c_reader.hpp
-    ./src/binder/ffi_json_reader.cpp
-    ./src/binder/ffi_json_reader.hpp
-    ./src/codegen/codegen.cpp
-    ./src/codegen/codegen.hpp
-    ./src/codegen/codegen_insurance.cpp
-    ./src/codegen/codegen_insurance.hpp
-    ./src/codegen/codegen_tools.cpp
-    ./src/codegen/codegen_tools.hpp
-    ./src/codegen/codegen_type.cpp
-    ./src/codegen/codegen_type.hpp
-    ./src/codegen/llvm_forward.hpp
-    ./src/codegen/static_evaluation.cpp
-    ./src/codegen/static_evaluation.hpp
-    ./src/compiler/CLI11_type_seralization.hpp
-    ./src/compiler/compilation_unit.cpp
+    
     ./src/compiler/compilation_unit.hpp
-    ./src/compiler/compiler.cpp
     ./src/compiler/compiler.hpp
     ./src/compiler/main.cpp
+    ./src/compiler/CLI11_type_serialization.hpp
     ./src/compiler/parser_command.cpp
+    ./src/compiler/io.hpp
+    ./src/compiler/compilation_unit.cpp
     ./src/compiler/parser_command.hpp
-    ./src/misc/ast_printer.cpp
-    ./src/misc/ast_printer.hpp
+    ./src/compiler/compiler.cpp
     ./src/misc/error_output.cpp
-    ./src/misc/error_output.hpp
-    ./src/misc/notification
-    ./src/misc/notification/notification.cpp
     ./src/misc/notification/notification.hpp
     ./src/misc/notification/win.cpp
-    ./src/nexus/ast/ast.cpp
+    ./src/misc/notification/notification.cpp
+    ./src/misc/error_output.hpp
+    ./src/misc/ast_printer.cpp
+    ./src/misc/ast_printer.hpp
+    ./src/parser/parser_expression.cpp
+    ./src/parser/parser_operation.hpp
+    ./src/parser/parser_base.cpp
+    ./src/parser/parser_base.hpp
+    ./src/parser/parser_context.cpp
+    ./src/parser/parser_declaration_extension.hpp
+    ./src/parser/parser_declaration_global.hpp
+    ./src/parser/parser_memory.cpp
+    ./src/parser/parser_declaration_sfm.hpp
+    ./src/parser/parser_context.hpp
+    ./src/parser/parser_statement.hpp
+    ./src/parser/parser_declaration_local.cpp
+    ./src/parser/parser_literal.hpp
+    ./src/parser/parser_declaration_local.hpp
+    ./src/parser/parser_declaration_global.cpp
+    ./src/parser/parser_statement.cpp
+    ./src/parser/parser_memory.hpp
+    ./src/parser/parser_declaration_extension.cpp
+    ./src/parser/parser_operation.cpp
+    ./src/parser/parser_type.cpp
+    ./src/parser/parser_literal.cpp
+    ./src/parser/parser_declaration_sfm.cpp
+    ./src/parser/parser_expression.hpp
+    ./src/parser/parser_type.hpp
+    ./src/codegen/codegen_insurance.hpp
+    ./src/codegen/codegen_insurance.cpp
+    ./src/codegen/codegen_type.cpp
+    ./src/codegen/static_evaluation.hpp
+    ./src/codegen/codegen_type.hpp
+    ./src/codegen/static_evaluation.cpp
+    ./src/codegen/codegen.hpp
+    ./src/codegen/codegen_tools.cpp
+    ./src/codegen/codegen_tools.hpp
+    ./src/codegen/llvm_forward.hpp
+    ./src/codegen/codegen.cpp
+    ./src/nexus/inference.hpp
+    ./src/nexus/type/data.hpp
+    ./src/nexus/type/definition.hpp
+    ./src/nexus/type/rule.cpp
+    ./src/nexus/type/type.hpp
+    ./src/nexus/type/rule.hpp
+    ./src/nexus/type/type.cpp
+    ./src/nexus/type/forward.hpp
+    ./src/nexus/scope.hpp
+    ./src/nexus/definition.hpp
+    ./src/nexus/lexer/token_viewer.cpp
+    ./src/nexus/lexer/token_viewer.hpp
+    ./src/nexus/lexer/token.cpp
+    ./src/nexus/lexer/token.hpp
+    ./src/nexus/lexer/stream_tracker.hpp
+    ./src/nexus/lexer/lexer.hpp
+    ./src/nexus/lexer/lexer.cpp
+    ./src/nexus/forward.cpp
+    ./src/nexus/inference.cpp
+    ./src/nexus/module.hpp
+    ./src/nexus/ids.cpp
+    ./src/nexus/definition.cpp
+    ./src/nexus/ids.hpp
+    ./src/nexus/resolved.cpp
     ./src/nexus/ast/ast.hpp
     ./src/nexus/ast/data.cpp
     ./src/nexus/ast/data.hpp
     ./src/nexus/ast/definition.hpp
+    ./src/nexus/ast/ast.cpp
     ./src/nexus/ast/forward.hpp
-    ./src/nexus/definition.cpp
-    ./src/nexus/definition.hpp
-    ./src/nexus/extension.cpp
-    ./src/nexus/extension.hpp
-    ./src/nexus/forward.cpp
     ./src/nexus/forward.hpp
-    ./src/nexus/ids.cpp
-    ./src/nexus/ids.hpp
-    ./src/nexus/inference.cpp
-    ./src/nexus/inference.hpp
-    ./src/nexus/lexer/lexer.cpp
-    ./src/nexus/lexer/lexer.hpp
-    ./src/nexus/lexer/stream_tracker.hpp
-    ./src/nexus/lexer/token.cpp
-    ./src/nexus/lexer/token.hpp
-    ./src/nexus/lexer/token_viewer.cpp
-    ./src/nexus/lexer/token_viewer.hpp
-    ./src/nexus/metacode/definition.cpp
-    ./src/nexus/metacode/definition.hpp
-    ./src/nexus/metacode/metacode.cpp
-    ./src/nexus/metacode/metacode.hpp
-    ./src/nexus/metacode/preprocessor.cpp
-    ./src/nexus/metacode/preprocessor.hpp
-    ./src/nexus/metacode/token_generator.cpp
-    ./src/nexus/metacode/token_generator.hpp
     ./src/nexus/module.cpp
-    ./src/nexus/module.hpp
-    ./src/nexus/pipeline.cpp
-    ./src/nexus/pipeline.hpp
-    ./src/nexus/resolved.cpp
-    ./src/nexus/resolved.hpp
     ./src/nexus/scope.cpp
-    ./src/nexus/scope.hpp
-    ./src/nexus/type/data.hpp
-    ./src/nexus/type/definition.hpp
-    ./src/nexus/type/forward.hpp
-    ./src/nexus/type/rule.cpp
-    ./src/nexus/type/rule.hpp
-    ./src/nexus/type/type.cpp
-    ./src/nexus/type/type.hpp
+    ./src/nexus/metacode/metacode.hpp
+    ./src/nexus/metacode/preprocessor.hpp
+    ./src/nexus/metacode/definition.hpp
+    ./src/nexus/metacode/definition.cpp
+    ./src/nexus/metacode/metacode.cpp
+    ./src/nexus/metacode/token_generator.hpp
+    ./src/nexus/metacode/preprocessor.cpp
+    ./src/nexus/metacode/token_generator.cpp
     ./src/nexus/unresolved.hpp
-    ./src/parser/parser_base.cpp
-    ./src/parser/parser_base.hpp
-    ./src/parser/parser_context.cpp
-    ./src/parser/parser_context.hpp
-    ./src/parser/parser_declaration_extension.cpp
-    ./src/parser/parser_declaration_extension.hpp
-    ./src/parser/parser_declaration_global.cpp
-    ./src/parser/parser_declaration_global.hpp
-    ./src/parser/parser_declaration_local.cpp
-    ./src/parser/parser_declaration_local.hpp
-    ./src/parser/parser_declaration_sfm.cpp
-    ./src/parser/parser_declaration_sfm.hpp
-    ./src/parser/parser_expression.cpp
-    ./src/parser/parser_expression.hpp
-    ./src/parser/parser_literal.cpp
-    ./src/parser/parser_literal.hpp
-    ./src/parser/parser_memory.cpp
-    ./src/parser/parser_memory.hpp
-    ./src/parser/parser_operation.cpp
-    ./src/parser/parser_operation.hpp
-    ./src/parser/parser_statement.cpp
-    ./src/parser/parser_statement.hpp
-    ./src/parser/parser_type.cpp
-    ./src/parser/parser_type.hpp
+    ./src/nexus/extension.hpp
+    ./src/nexus/extension.cpp
+    ./src/nexus/resolved.hpp
+    ./src/pipeline/pipeline.cpp
+    ./src/pipeline/linker.hpp
+    ./src/pipeline/module_resolver.cpp
+    ./src/pipeline/pipeline.hpp
+    ./src/pipeline/linker.cpp
+    ./src/pipeline/codegen.hpp
+    ./src/pipeline/module_resolver.hpp
+    ./src/pipeline/resolver.hpp
+    ./src/pipeline/preparer.cpp
+    ./src/pipeline/preparer.hpp
+    ./src/pipeline/codegen.cpp
+    ./src/pipeline/resolver.cpp
     ./src/resolver/resolver_base.cpp
     ./src/resolver/resolver_base.hpp
-    ./src/resolver/resolver_dump.cpp
-    ./src/resolver/resolver_dump.hpp
     ./src/resolver/resolver_inference.cpp
-    ./src/resolver/resolver_inference.hpp
-    ./src/resolver/resolver_semantic.cpp
-    ./src/resolver/resolver_semantic.hpp
-    ./src/resolver/resolver_symbol.cpp
     ./src/resolver/resolver_symbol.hpp
+    ./src/resolver/resolver_semantic.cpp
+    ./src/resolver/resolver_symbol.cpp
+    ./src/resolver/resolver_dump.cpp
+    ./src/resolver/resolver_semantic.hpp
+    ./src/resolver/resolver_inference.hpp
+    ./src/resolver/resolver_dump.hpp
+    ./src/ast/ast_numeric_128_bits.cpp
+    ./src/ast/ast_literal.hpp
+    ./src/ast/ast_expression.hpp
+    ./src/ast/ast_statement.hpp
+    ./src/ast/ast_declaration_local.hpp
+    ./src/ast/ast_operation.hpp
+    ./src/ast/ast_declaration_extension.hpp
+    ./src/ast/ast_declaration_global.hpp
+    ./src/ast/ast_declaration_sfm.hpp
+    ./src/ast/ast_memory.hpp
+    ./src/ast/ast_numeric_128_bits.hpp
+    ./src/ast/ast_base.hpp
+    ./src/ast/ast_generic.hpp
+    ./src/binder/binder_ffi.cpp
+    ./src/binder/ffi_json_reader.cpp
+    ./src/binder/ffi_c_reader.cpp
+    ./src/binder/binder_ffi.hpp
+    ./src/binder/ffi_json_reader.hpp
+    ./src/binder/ffi_c_reader.hpp
 
 )
 

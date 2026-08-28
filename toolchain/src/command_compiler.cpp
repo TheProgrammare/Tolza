@@ -1,12 +1,10 @@
 #include "command_compiler.hpp"
-#include "common/fileutils.hpp"
-
-#include <filesystem>
-#include <print>
 
 #include <common/common.hpp>
 #include <common/environment.hpp>
 #include <common/toolchain_options.hpp>
+#include <filesystem>
+#include <print>
 
 namespace fs = std::filesystem;
 
@@ -33,7 +31,7 @@ void command::compiler::apply_compiler(std::string_view file) noexcept
 
 void command::compiler::cogito_compiler(std::string_view file) noexcept
 {
-  const fs::path f(common::fileutils::resolve_path(file));
+  const fs::path f(file);
 
   if (!fs::exists(f)) {
     std::println(stderr, HERR "The file at \"{}\" dosen't exist.", f.string());

@@ -1,74 +1,65 @@
 #include "codegen.hpp"
 
-#include <cstdint>
-#include <cstring>
-#include <functional>
-#include <string_view>
-#include <vector>
-
-
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/Casting.h>
-
-#include <llvm/IR/Attributes.h>
-#include <llvm/IR/DataLayout.h>
-#include <llvm/IR/GlobalValue.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Constant.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/IR/Value.h>
-
-#include <llvm/ADT/APFloat.h>
-#include <llvm/ADT/STLExtras.h>
-#include <llvm/ADT/APInt.h>
-
-#include <llvm/Transforms/Utils/ModuleUtils.h>
-
-
-#include <common/compiler_options.hpp>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
+#include "ast/ast_expression.hpp"
+#include "ast/ast_literal.hpp"
+#include "ast/ast_operation.hpp"
+#include "ast/ast_statement.hpp"
 #include "codegen/codegen_insurance.hpp"
-#include "compiler/compilation_unit.hpp"
-
-#include "codegen_tools.hpp"
 #include "codegen/codegen_type.hpp"
-
+#include "codegen_tools.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
+#include "nexus/ast/definition.hpp"
+#include "nexus/ast/forward.hpp"
 #include "nexus/extension.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/inference.hpp"
-#include "nexus/pipeline.hpp"
 #include "nexus/resolved.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
+#include "pipeline/pipeline.hpp"
 #include "resolver/resolver_base.hpp"
 #include "static_evaluation.hpp"
-#include "compiler/compiler.hpp"
 
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
-#include "ast/ast_expression.hpp"
+#include <common/compiler_options.hpp>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/Attributes.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/Utils/ModuleUtils.h>
+#include <string_view>
+#include <vector>
+
 
 
 #define NOT_DEFINED assert(false);
@@ -212,7 +203,7 @@ llvm::Value* codegen::Codegen_AST::codegen_node(ast::ID nodeid) noexcept
     case_node(Operation_Binary);
     case_node(Operation_Unary);
     case_node(Operation_Interval);
-  case ast::ENodeKind::Unknown:
+  case ast::ENodeKind::NONE:
   case ast::ENodeKind::Path_Regex:
   case ast::ENodeKind::Import:
   case ast::ENodeKind::Global_Enum:

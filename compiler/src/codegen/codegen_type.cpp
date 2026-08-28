@@ -4,6 +4,7 @@
 #include "common/compiler_options.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/io.hpp"
 #include "misc/error_output.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
@@ -15,7 +16,6 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <print>
 #include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/DerivedTypes.h>
 #include <llvm-19/llvm/IR/Function.h>
@@ -25,6 +25,7 @@
 #include <llvm-19/llvm/IR/Type.h>
 #include <llvm-19/llvm/Support/Casting.h>
 #include <llvm-19/llvm/Support/raw_ostream.h>
+#include <print>
 #include <vector>
 
 
@@ -260,8 +261,8 @@ std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const 
     }
 
     if (ty.size_expression.canonical()) {
-      std::println("{}", ty.size_expression.dump());
-      std::println("{}", ty.size_expression.token().line_str());
+      IO::println(IO_PASS::codegen, "{}", ty.size_expression.dump());
+      IO::println(IO_PASS::codegen, "{}", ty.size_expression.token().line_str());
       compiler::COMPILER.add_error(
           Error_Diagnostic(cu.cuid, 279, ty.size_expression, ty.size_expression.canonical(), compiler::EPhase::llvmir,
                            "Impossible to evaluate the expression for a table size at compilation time.", ""));

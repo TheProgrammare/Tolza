@@ -28,7 +28,7 @@ bool common::fileutils::is_sub_path(std::string_view base, std::string_view path
 
 std::string common::fileutils::resolve_path(std::string_view current, std::string_view relative) noexcept
 {
-  if (current.empty()) return std::string(current);
+  if (current.empty()) return std::string(relative);
 
   std::string path_str(current);
 

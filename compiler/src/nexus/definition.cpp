@@ -1,15 +1,15 @@
 #include "definition.hpp"
 
-#include <algorithm>
-
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "nexus/ast/ast.hpp"
-#include "nexus/module.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
+#include "nexus/module.hpp"
 #include "nexus/resolved.hpp"
+
+#include <algorithm>
 
 std::string definition::Definition::mangle_name() const noexcept
 {

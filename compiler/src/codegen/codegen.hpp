@@ -1,18 +1,17 @@
 
 #pragma once
 
-#include <functional>
-#include <llvm/IR/IRBuilder.h>
-
-#include <string>
-#include <string_view>
-#include <vector>
-#include <unordered_map>
-
-#include "nexus/ast/forward.hpp"
 #include "llvm_forward.hpp"
+#include "nexus/ast/forward.hpp"
 #include "nexus/ids.hpp"
 #include "resolver/resolver_base.hpp"
+
+#include <functional>
+#include <llvm/IR/IRBuilder.h>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 
 using ErrorCode = short;

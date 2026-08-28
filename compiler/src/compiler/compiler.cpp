@@ -1,39 +1,34 @@
 #include "compiler.hpp"
 
-#include <algorithm>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <print>
-#include <ostream>
-#include <string>
-#include <filesystem>
-#include <chrono>
-
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/IR/LLVMContext.h>
-
-#include <common/compiler_options.hpp>
-#include <common/common.hpp>
-
-#include "binder/ffi_c_reader.hpp"
-#include "codegen/codegen_type.hpp"
+#include "compiler/io.hpp"
+#include "misc/error_output.hpp"
 #include "misc/notification/notification.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/module.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/type/type.hpp"
-#include "nexus/definition.hpp"
 #include "nexus/inference.hpp"
-#include "nexus/unresolved.hpp"
+#include "nexus/module.hpp"
 #include "nexus/resolved.hpp"
-#include "nexus/pipeline.hpp"
+#include "nexus/type/type.hpp"
+#include "nexus/unresolved.hpp"
+#include "pipeline/codegen.hpp"
+#include "pipeline/linker.hpp"
+#include "pipeline/module_resolver.hpp"
+#include "pipeline/pipeline.hpp"
+#include "pipeline/preparer.hpp"
+#include "pipeline/resolver.hpp"
 
-#include "misc/error_output.hpp"
+#include <algorithm>
+#include <chrono>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <filesystem>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/Target/TargetMachine.h>
+#include <print>
+#include <string>
 
 
 pipeline::Pipeline compiler::pipeline = pipeline::Pipeline();
@@ -43,29 +38,10 @@ resolved::Arena   compiler::resolved   = resolved::Arena();
 inference::Arena  compiler::inference  = inference::Arena();
 
 
-compiler::Compiler        compiler::COMPILER = compiler::Compiler();
-common::compiler::Options compiler::OPTIONS  = common::compiler::Options();
+compiler::Compiler         compiler::COMPILER = compiler::Compiler();
+common::compiler::Manifest compiler::OPTIONS  = common::compiler::Manifest();
 
 namespace fs = std::filesystem;
-
-
-constexpr std::string_view pipeline_info =
-    R"(
-===============================================================================
- [Toolchain]->configuration->[Preparer]
-===============================================================================
- [Preparer]->lexer->preprocessor->parser->wait all->[Shipowner] 
-===============================================================================
- [Shipowner]->binding generation->preparer->wait all->[Analyzer] 
-===============================================================================
- [Analyzer]->symbol->inference->semantic->[Generator] 
-===============================================================================
- [Generator]->codegen->optimisation->emitter->module linker->[Linker]
-===============================================================================
-)";
-
-constexpr std::string_view binder_info = "%0 files + %1 binding files = %2 total files in the main pipeline";
-
 
 void compiler::Compiler::add_error(const Error_Diagnostic& error)
 {
@@ -79,11 +55,20 @@ void compiler::Compiler::add_error(const Error_Diagnostic& error)
   }
 
 
-  if (compiler::OPTIONS.diagnostic.error_mode == common::compiler::EErrorMode::fail_fatal) {
+  if (compiler::OPTIONS.diagnostic.error == common::compiler::EErrorMode::fail_fatal) {
     print_errors();
     if (!compiler::OPTIONS.is_check_mode) {
-      std::println("[tolza-compiler] Compilation failed");
-      notification::notify("Tolza-Compiler", "Compilation failed", false);
+      auto end      = std::chrono::high_resolution_clock::now();
+      auto tp       = std::chrono::system_clock::time_point(std::chrono::milliseconds(start_compilation_time));
+      auto total_ms = static_cast<long long>(std::chrono::duration<double, std::milli>(end - tp).count());
+
+      const auto m  = total_ms / 60'000;
+      const auto s  = (total_ms / 1'000) % 60;
+      const auto ms = total_ms % 1'000;
+
+
+      IO::println(stderr, IO_PASS::NONE, "Compilation failed - {}m {}s {}ms", m, s, ms);
+      notification::notify("Tolza-Compiler", std::format("Compilation failed - {}m {}s {}ms", m, s, ms), false);
     }
     std::exit(1);
   }
@@ -98,12 +83,12 @@ compiler::Compiler::Compiler()
 
 bool compiler::Compiler::start_compilation()
 {
-  static const bool mute = compiler::OPTIONS.mute;
+  auto start             = std::chrono::system_clock::now();
+  start_compilation_time = std::chrono::duration_cast<std::chrono::milliseconds>(start.time_since_epoch()).count();
 
-  auto start = std::chrono::high_resolution_clock::now();
 
   // if (compiler::OPTIONS.dir.current_profile.empty() && !mute) {
-  //   std::println(
+  //   IO::println(
   //       "\n[build:warning] Raw compilation command detected, "
   //       "please use 'tolza-toolchain' to develop proprely with the Tolza programming language.\n");
   // }
@@ -115,7 +100,7 @@ bool compiler::Compiler::start_compilation()
     } else {
       auto binding_time = fs::last_write_time(p);
 
-      auto newest_profile = fs::last_write_time(fs::path(compiler::OPTIONS.dir.get_dir_project()) / "tolza.toml");
+      auto newest_profile = fs::last_write_time(compiler::OPTIONS.get_project_manifest());
       for (const auto& profile : compiler::OPTIONS.profiles) {
         auto profile_t =
             fs::last_write_time(fs::path(compiler::OPTIONS.dir.get_dir_profile()) / std::string(profile + ".toml"));
@@ -129,12 +114,12 @@ bool compiler::Compiler::start_compilation()
     }
   }
 
-  if (!mute) {
-    std::println("\n[tolza-compiler] Compilation Started");
+  if (compiler::OPTIONS.log.level != common::compiler::ELogLevel::quiet) {
+    IO::println("Compilation Started");
     size_t count = 1;
     for (auto& profile_name : compiler::OPTIONS.profiles) {
       auto p = (fs::path(compiler::OPTIONS.dir.get_dir_profile()) / profile_name).string();
-      std::println("  Profile {}: \"{}\'", count++, p);
+      IO::println("  Profile {}: \"{}\"", count++, p);
     }
   }
 
@@ -143,8 +128,8 @@ bool compiler::Compiler::start_compilation()
   auto     CUs        = compiler::pipeline.query_CUs_at_dir(cu::ID::main(), target_dir.string());
 
   if (CUs.empty()) {
-    if (!mute) {
-      std::println(
+    if (compiler::OPTIONS.log.level != common::compiler::ELogLevel::quiet) {
+      IO::println(
           R"([build] No files found at the source folder path:
   "{}"
   Check if the source folder path is correct.
@@ -155,7 +140,7 @@ bool compiler::Compiler::start_compilation()
   }
 
   while (!compiler::pipeline.unprepared_compilation_units.empty()) {
-    for (auto cuid : compiler::pipeline.unprepared_compilation_units) (void)compiler::pipeline.engage_preparer(cuid);
+    for (auto cuid : compiler::pipeline.unprepared_compilation_units) (void)preparer::prepare_cu(cuid);
 
     for (auto cuid : compiler::pipeline.prepared_compilation_units)
       compiler::pipeline.unprepared_compilation_units.erase(cuid);
@@ -165,62 +150,89 @@ bool compiler::Compiler::start_compilation()
     }
 
     if (compiler::pipeline.unprepared_compilation_units.empty()) {
-      (void)compiler::pipeline.engage_shipowner();
+      (void)module_resolver::resolve_modules(compiler::pipeline.prepared_compilation_units);
 
-      if (!errors.empty()) {
-        print_errors();
-        return false;
-      }
+      if (!errors.empty()) goto compiler_failed;
 
       (void)compiler::pipeline.engage_bindings();
     }
   }
 
 
-  for (auto cuid : compiler::pipeline.prepared_compilation_units) (void)compiler::pipeline.engage_analyzer(cuid);
+  {
+    bool analyzer_success = true;
+    for (auto cuid : compiler::pipeline.prepared_compilation_units) {
+      if (!resolver::resolve_cu(cuid)) analyzer_success = false;
+    }
 
-  bool success = true;
-  for (auto cuid : compiler::pipeline.analyzed_compilation_units) {
-    if (!compiler::pipeline.engage_generator(cuid)) success = false;
-  }
-
-  if (!success) {
-    auto end   = std::chrono::high_resolution_clock::now();
-    auto milli = std::chrono::duration<double, std::milli>(end - start).count();
-
-    std::println("[tolza-compiler] Compilation failed {:.3f} ms", milli);
-    notification::notify("Tolza-Compiler", std::format("Compilation failed - {:.3f} ms", milli), false);
-    return false;
+    if (!analyzer_success) goto compiler_failed;
   }
 
   // no building or code emission in check mode
   if (compiler::OPTIONS.is_check_mode) return true;
 
-  if (!compiler::pipeline.engage_module_linker()) {
-    return false;
+  codegen::generate_target_machine();
+
+  {
+    bool codegen_success = true;
+    for (auto cuid : compiler::pipeline.analyzed_compilation_units) {
+      if (!codegen::codegen_cu(cuid)) codegen_success = false;
+    }
+
+    if (!codegen_success) goto compiler_failed;
   }
 
-  fs::create_directories(compiler::OPTIONS.dir.get_dir_build());
+  if (!linker::link_modules()) return false;
+
+
+  fs::create_directories(compiler::OPTIONS.get_dir_build_profile());
   fs::create_directories(compiler::OPTIONS.get_dir_debug_graph());
   fs::create_directories(compiler::OPTIONS.get_dir_llvmir());
   fs::create_directories(compiler::OPTIONS.get_dir_preprocess());
   fs::create_directories(compiler::OPTIONS.get_dir_binding_profile());
 
-  if (!pipeline::Pipeline::engage_general_emitter()) {
-    return false;
+  if (!linker::emit()) return false;
+
+  if (!linker::link_executable()) return false;
+
+
+  {
+  compiler_successful:
+    auto end      = std::chrono::high_resolution_clock::now();
+    auto tp       = std::chrono::system_clock::time_point(std::chrono::milliseconds(start_compilation_time));
+    auto total_ms = static_cast<long long>(std::chrono::duration<double, std::milli>(end - tp).count());
+
+    const auto m  = total_ms / 60'000;
+    const auto s  = (total_ms / 1'000) % 60;
+    const auto ms = total_ms % 1'000;
+
+    const std::string msg = std::format("Compilation successfully ended - {}m {}s {}ms", m, s, ms);
+
+    IO::println("{}", msg);
+    notification::notify("Tolza-Compiler", msg, true);
+
+    return true;
   }
 
-  if (!pipeline::Pipeline::engage_linker()) {
+  {
+  compiler_failed:
+    compiler::COMPILER.print_errors();
+    if (!compiler::OPTIONS.is_check_mode) {
+      auto end      = std::chrono::high_resolution_clock::now();
+      auto tp       = std::chrono::system_clock::time_point(std::chrono::milliseconds(start_compilation_time));
+      auto total_ms = static_cast<long long>(std::chrono::duration<double, std::milli>(end - tp).count());
+
+      const auto m  = total_ms / 60'000;
+      const auto s  = (total_ms / 1'000) % 60;
+      const auto ms = total_ms % 1'000;
+
+      const std::string msg = std::format("Compilation failed - {}m {}s {}ms", m, s, ms);
+
+      IO::println(stderr, IO_PASS::NONE, "{}", msg);
+      notification::notify("Tolza-Compiler", msg, false);
+    }
     return false;
   }
-
-  auto end   = std::chrono::high_resolution_clock::now();
-  auto milli = std::chrono::duration<double, std::milli>(end - start).count();
-
-  std::println("[tolza-compiler] Compilation successfully ended {:.3f} ms", milli);
-  notification::notify("Tolza-Compiler", std::format("Compilation successfully ended - {:.3f} ms", milli), true);
-
-  return success;
 }
 
 void compiler::Compiler::print_errors() const

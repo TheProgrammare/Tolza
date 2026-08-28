@@ -1,17 +1,16 @@
 #include "command_audit.hpp"
 
-#include <common/utils.hpp>
+#include <atomic>
 #include <common/common.hpp>
-
+#include <common/utils.hpp>
 #include <filesystem>
-#include <print>
 #include <fstream>
 #include <mutex>
+#include <print>
 #include <string>
 #include <string_view>
-#include <vector>
 #include <thread>
-#include <atomic>
+#include <vector>
 
 namespace fs = std::filesystem;
 

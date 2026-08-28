@@ -1,28 +1,23 @@
 #include "parser_command.hpp"
 
-#include <print>
-#include <string>
-#include <filesystem>
-
-
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-#include <common/compiler_options.hpp>
-
-#include <CLIUtils/CLI11.hpp>
-#include <Neargye/magic_enum.hpp>
-
-
 #include "binder/ffi_c_reader.hpp"
 #include "binder/ffi_json_reader.hpp"
 
-// unused false positive
-// mandatory
-#include "CLI11_type_seralization.hpp"
+#include <CLIUtils/CLI11.hpp>
+#include <Neargye/magic_enum.hpp>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
+#include <filesystem>
+#include <print>
+#include <string>
 
-
+// Required for CLI11 type serialization; clang-tidy reports a false positive.
+// NOLINTNEXTLINE(unused-includes)
+#include "CLI11_type_serialization.hpp"
 #include "common/environment.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/io.hpp"
 
 
 namespace fs = std::filesystem;
@@ -31,7 +26,7 @@ namespace fs = std::filesystem;
 compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
   : common::Commander(_app)
   , args(argv, argv + argc)
-  , opt(*new common::compiler::Sub_Options())
+  , opt(*new common::compiler::Profile(common::compiler::Manifest{}))
 {
   init_commands();
 }
@@ -62,10 +57,9 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
 #define new_flag(flag_name, flag, desc) build->add_flag(flag_name, opt.flag, desc)->type_name("<flag>")
 #define new_opt(opt_name, var, desc)    build->add_option(opt_name, opt.var, desc)->type_name("<type>")
 
-  add_opt_path("path", opt.current_config_file, "Path to the .toml project file to get the compilation context");
+  add_opt_path("path", opt.project_path, "Path to Tolza project");
 
-  new_flag("--mute", mute, "Mute any output log");
-  new_flag("--check", is_check_mode, "Will compile without any emit");
+  new_flag("--check,-c", is_check_mode, "Will compile without any codegen");
 
   // base
   new_opt("--project-name", project_name, "Set the target project name");
@@ -77,14 +71,14 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
           "--preset",
           [&](const std::string& s) {
             auto triple       = common::compiler::TargetTriple::parse(s);
-            compiler::OPTIONS = common::compiler::Options::get_preset(triple);
+            compiler::OPTIONS = common::compiler::Manifest::get_preset(triple);
           },
           "define a target triple"
           "baremetal, custom")
       ->type_name("<arch>-<vendor>-<platform>");
 
   // error stop mode
-  new_opt("--error-mode", diagnostic.error_mode, "e.g. " + common::compiler::EErrorMode_names());
+  new_opt("--error-mode", diagnostic.error, "e.g. " + common::compiler::EErrorMode_names());
   new_opt("--diagnostic-format", diagnostic.out_format, "e.g. " + common::compiler::EDiagnosticFormat_names());
 
   // target
@@ -142,7 +136,6 @@ void compiler::Commander::compilation_args(CLI::App* build) noexcept
 
   new_opt("--emits", target.emits, "Code emission");
 
-  add_opt_path("--dir-project", opt.dir.project, "Set the project directory");
   add_opt_path("--dir-build", opt.dir.build, "Set the build directory");
   add_opt_path("--dir-src", opt.dir.source, "Set the source code directory");
   add_opt_path("--dir-vendor", opt.dir.vendor, "Set the vendor source code directory");
@@ -169,12 +162,26 @@ void compiler::Commander::init_command_build() noexcept
   compilation_args(build);
 
   build->callback([&]() {
-    auto f = common::fileutils::find_tolza_toml(opt.current_config_file);
+    auto f = common::fileutils::find_tolza_toml(opt.project_path);
 
-    compiler::OPTIONS = common::compiler::Options::read_config(f);
+    compiler::OPTIONS     = common::compiler::Manifest::read_manifest(f);
+    compiler::OPTIONS.dir = common::compiler::Dir(fs::path(f).parent_path().string());
+
+    // merge args to main
+    compiler::OPTIONS = opt.merge_context(compiler::OPTIONS);
+    for (const auto& profile : compiler::OPTIONS.profiles) {
+      auto f = common::fileutils::resolve_path(profile + ".toml", compiler::OPTIONS.dir.get_dir_profile());
+      if (!fs::exists(f)) {
+        IO::println(stderr, IO_PASS::NONE, R"(The profile "{}" at "{}" dosen't exist. Profile ignored.)", profile, f);
+      } else {
+        compiler::OPTIONS = common::compiler::Profile::read_profile(f).merge_context(compiler::OPTIONS);
+      }
+    }
+    compiler::OPTIONS.is_check_mode = opt.is_check_mode;
+    compiler::OPTIONS.project_path  = fs::path(f).parent_path();
 
     if (compiler::OPTIONS.log.level != common::compiler::ELogLevel::quiet) {
-      std::println("[tolza] Command executed:");
+      IO::println("Command executed:");
       for (const auto& arg : args) std::print("{} ", arg);
       std::println();
     }

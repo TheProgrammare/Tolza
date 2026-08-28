@@ -1,17 +1,16 @@
 #include "command_workspace.hpp"
 
-#include <filesystem>
-#include <print>
-#include <fstream>
-#include <string_view>
+#include "cli_wrapper.hpp"
+#include "toolchain/toolchain.hpp"
 
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
-#include <common/toolchain_options.hpp>
 #include <common/fileutils.hpp>
-
-#include "cli_wrapper.hpp"
-#include "toolchain/toolchain.hpp"
+#include <common/toolchain_options.hpp>
+#include <filesystem>
+#include <fstream>
+#include <print>
+#include <string_view>
 
 #define HLOG "[workspace] "
 #define HERR "[workspace:ERROR] "
@@ -60,8 +59,8 @@ std::string command::workspace::generate_tolza_workspace(std::string_view projec
   if (!dir_create(project_path / "build" / "release")) success = false;
   if (!dir_create(project_path / "profile")) success = false;
 
-  if (common::compiler::Options("tolza").write_config((project_path / "tolza").string())) success = false;
-  if (common::compiler::Options("debug").write_config((project_path / "profile").string())) success = false;
+  if (common::compiler::Manifest("tolza").write_manifest((project_path / "tolza").string())) success = false;
+  if (common::compiler::Manifest("debug").write_manifest((project_path / "profile").string())) success = false;
 
   if (write_file((project_path / "src" / "main.tlz").string(), toolchain::TOLZA_MAIN_TEMPLATE).empty()) success = false;
 

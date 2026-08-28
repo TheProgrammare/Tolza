@@ -1,24 +1,18 @@
 #include "parser_literal.hpp"
 
-#include <llvm/ADT/APInt.h>
-
-#include <llvm/ADT/APFloat.h>
-#include <string>
-#include <string_view>
-#include <vector>
-
-
 #include "ast/ast_literal.hpp"
-#include "ast/ast_expression.hpp"
-
 #include "ast/ast_numeric_128_bits.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
-#include "nexus/type/type.hpp"
 #include "parser/parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
+
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
+#include <string>
+#include <string_view>
+#include <vector>
 
 ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
 {
@@ -53,7 +47,7 @@ ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
     return literal_range();
     // literal
     // collection
-  case token::ETokenKind::L_CURLY: return literal_table();
+  case token::ETokenKind::L_SQUARE: return literal_table();
   case token::ETokenKind::L_PAREN:
     if (p.check_at(2, token::ETokenKind::COMMA) || p.check_at(2, token::ETokenKind::COLON)) {
       return literal_tuple();
@@ -545,17 +539,15 @@ ast::ID parser::Parser_Literal::literal_table()
   constexpr std::string_view hint =
       R"(define literal table like:
   - table: [ 1, 2, 3, 4 ]
-  - table population [ 0..4 => @i + 1 ]
-  - matrix [ 1, 2, 3, 4; 3 ]
-  - matrix {{ 1, 2 },{ 3, 4 }}
-  - matrix population { [0..4] => @i + 1 }*3
-  - matrix population { [0..4, 0..4] => @i + 1 + @j }
-  - map table { a: 1, b: 2, c: 3 }
-  - map table population { [0..4] => text_number[@i] : @i })";
+  - table population [ 0..4(i) => i + 1 ]
+  - matrix [ 1, 2; 3, 4; 5, 6 ]
+  - matrix population [ 0..4(i); 0..4(j); 0..4(k) => i + 1; j + 1; k + 1 ]
+  - map table [ a: 1, b: 2, c: 3 ]
+  - map table population [ 0..4(i) => i: "" ])";
 
-  (void)p.match(token::ETokenKind::L_CURLY);
+  (void)p.match(token::ETokenKind::L_SQUARE);
 
-  if (p.match(token::ETokenKind::R_CURLY)) {
+  if (p.match(token::ETokenKind::R_SQUARE)) {
     auto& node = p.add_get_node<ast::Literal_Table>(p.peek(-1).tokid);
     return node.nodeid();
   }
@@ -648,6 +640,8 @@ ast::ID parser::Parser_Literal::literal_record(ast::ID name)
   if (p.check(token::ETokenKind::AT)) {
     return literal_form(name);
   }
+
+  assert(false);
 }
 
 ast::ID parser::Parser_Literal::literal_form(ast::ID name)

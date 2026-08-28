@@ -1,17 +1,15 @@
 #include "toolchain/toolchain.hpp"
 
-#include <filesystem>
-#include <print>
-#include <string>
-#include <expected>
-
 #include <common/common.hpp>
 #include <common/environment.hpp>
-#include <common/utils.hpp>
 #include <common/fileutils.hpp>
 #include <common/toolchain_options.hpp>
-
+#include <common/utils.hpp>
+#include <expected>
+#include <filesystem>
 #include <marzer/toml++.hpp>
+#include <print>
+#include <string>
 
 namespace fs = std::filesystem;
 

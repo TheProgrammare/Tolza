@@ -10,20 +10,16 @@
 
 #include "command_check.hpp"
 
-
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-#include <common/compiler_options.hpp>
-#include <common/utils.hpp>
-
 #include "command_workspace.hpp"
 
-
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
+#include <common/utils.hpp>
 #include <expected>
-#include <print>
 #include <filesystem>
-
 #include <marzer/toml++.hpp>
+#include <print>
 
 namespace fs = std::filesystem;
 
@@ -48,11 +44,11 @@ bool command::check::check_tolza_config(std::string_view file, bool full_config,
     return false;
   }
 
-  std::string               cache_config = fs::path(cache) / "tolza.toml.template";
-  common::compiler::Options c            = common::compiler::Options::read_config(cache_config);
+  std::string                cache_config = fs::path(cache) / "tolza.toml.template";
+  common::compiler::Manifest c            = common::compiler::Manifest::read_manifest(cache_config);
 
   (void)workspace::write_file(cache.string(), "tolza.toml.template");
-  (void)c.write_config(cache.string());
+  (void)c.write_manifest(cache.string());
   if (cache_config.empty()) return false;
 
   toml::table eg_tbl;

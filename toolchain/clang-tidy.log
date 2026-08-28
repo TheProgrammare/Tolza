@@ -1,3 +1,164 @@
-Running clang-tidy for 17 files out of 17 in compilation database ...
+Running clang-tidy for 18 files out of 18 in compilation database ...
+[ 1/18][23.0s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/time.cpp
+4377 warnings generated.
 
-Ctrl-C detected, goodbye.
+[ 2/18][35.9s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_compiler.cpp
+4727 warnings generated.
+
+[ 3/18][15.8s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_package.cpp
+3233 warnings generated.
+
+[ 4/18][64.6s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/toolchain/main.cpp
+/media/data/Workspace/tolza/toolchain/src/toolchain/main.cpp:29:35: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   29 | int run_toolchain(int argc, const char* argv[])
+      |                                   ^
+7789 warnings generated.
+
+[ 5/18][24.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/fileutils.cpp
+4726 warnings generated.
+
+[ 6/18][84.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/commands.cpp
+/media/data/Workspace/tolza/common/src/common/commands.cpp:23:11: error: Value stored to 'opt_path' during its initialization is never read [clang-analyzer-deadcode.DeadStores,-warnings-as-errors]
+   23 |     auto* opt_path    = find->add_option("path", from_path,
+      |           ^~~~~~~~      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   24 |                                          "If no path provided, will use standard path or custom path in toolchain.toml");
+      |                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/media/data/Workspace/tolza/common/src/common/commands.cpp:23:11: note: Value stored to 'opt_path' during its initialization is never read
+   23 |     auto* opt_path    = find->add_option("path", from_path,
+      |           ^~~~~~~~      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   24 |                                          "If no path provided, will use standard path or custom path in toolchain.toml");
+      |                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+7875 warnings generated.
+
+[ 7/18][41.5s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/environment.cpp
+/media/data/Workspace/tolza/common/src/common/environment.cpp:171:3: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+  171 |   char    result[PATH_MAX];
+      |   ^
+4973 warnings generated.
+
+[ 8/18][63.2s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_check.cpp
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:248:3: warning: function 'source' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  248 |   std::string source() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:255:3: warning: function 'version' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  255 |   std::string version() const
+      |   ^
+      |   [[nodiscard]] 
+7407 warnings generated.
+
+[ 9/18][133.9s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/toolchain/parser_command.cpp
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:248:3: warning: function 'source' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  248 |   std::string source() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:255:3: warning: function 'version' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  255 |   std::string version() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/toolchain/src/command_build.hpp:14:40: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   14 | bool start_compilation(int argc, const char* argv[]);
+      |                                        ^
+8161 warnings generated.
+
+[10/18][30.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/utils.cpp
+/media/data/Workspace/tolza/common/src/common/utils.cpp:154:47: warning: '%' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  154 |         if (key[i] != static_cast<char>('0' + n % 10)) {
+      |                                               ^~~~~~~
+      |                                               (     )
+/media/data/Workspace/tolza/common/src/common/utils.hpp:98:6: warning: function 'common::utils::fmt_template' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+   98 | void fmt_template(std::string& template_str, const std::initializer_list<std::string>& args) noexcept;
+      |      ^
+/media/data/Workspace/tolza/common/src/common/utils.cpp:124:21: note: the definition seen here
+  124 | void common::utils::fmt_template(std::string& s, const std::initializer_list<std::string>& args) noexcept
+      |                     ^
+/media/data/Workspace/tolza/common/src/common/utils.hpp:98:6: note: differing parameters are named here: ('template_str'), in definition: ('s')
+   98 | void fmt_template(std::string& template_str, const std::initializer_list<std::string>& args) noexcept;
+      |      ^                         ~~~~~~~~~~~~
+      |                                s
+/media/data/Workspace/tolza/common/src/common/utils.hpp:99:6: warning: function 'common::utils::fmt_template' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+   99 | void fmt_template(std::string& template_str, const std::initializer_list<std::string_view>& args) noexcept;
+      |      ^
+/media/data/Workspace/tolza/common/src/common/utils.cpp:138:21: note: the definition seen here
+  138 | void common::utils::fmt_template(std::string& s, const std::initializer_list<std::string_view>& args) noexcept
+      |                     ^
+/media/data/Workspace/tolza/common/src/common/utils.hpp:99:6: note: differing parameters are named here: ('template_str'), in definition: ('s')
+   99 | void fmt_template(std::string& template_str, const std::initializer_list<std::string_view>& args) noexcept;
+      |      ^                         ~~~~~~~~~~~~
+      |                                s
+/media/data/Workspace/tolza/common/src/common/utils.hpp:100:6: warning: function 'common::utils::fmt_template' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+  100 | void fmt_template(std::string& template_str, const std::map<std::string_view, std::string_view>& args) noexcept;
+      |      ^
+/media/data/Workspace/tolza/common/src/common/utils.cpp:167:21: note: the definition seen here
+  167 | void common::utils::fmt_template(std::string& s, const std::map<std::string_view, std::string_view>& args) noexcept
+      |                     ^
+/media/data/Workspace/tolza/common/src/common/utils.hpp:100:6: note: differing parameters are named here: ('template_str'), in definition: ('s')
+  100 | void fmt_template(std::string& template_str, const std::map<std::string_view, std::string_view>& args) noexcept;
+      |      ^                         ~~~~~~~~~~~~
+      |                                s
+/media/data/Workspace/tolza/common/src/common/utils.hpp:101:6: warning: function 'common::utils::fmt_template' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name]
+  101 | void fmt_template(std::string& template_str, const std::map<std::string, std::string>& args) noexcept;
+      |      ^
+/media/data/Workspace/tolza/common/src/common/utils.cpp:176:21: note: the definition seen here
+  176 | void common::utils::fmt_template(std::string& s, const std::map<std::string, std::string>& args) noexcept
+      |                     ^
+/media/data/Workspace/tolza/common/src/common/utils.hpp:101:6: note: differing parameters are named here: ('template_str'), in definition: ('s')
+  101 | void fmt_template(std::string& template_str, const std::map<std::string, std::string>& args) noexcept;
+      |      ^                         ~~~~~~~~~~~~
+      |                                s
+4304 warnings generated.
+
+[11/18][23.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/cli_wrapper.cpp
+5273 warnings generated.
+
+[12/18][18.6s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/common.cpp
+4190 warnings generated.
+
+[13/18][42.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/toolchain/toolchain.cpp
+7210 warnings generated.
+
+[14/18][32.7s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_audit.cpp
+5227 warnings generated.
+
+[15/18][57.1s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_build.cpp
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:248:3: warning: function 'source' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  248 |   std::string source() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:255:3: warning: function 'version' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  255 |   std::string version() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/toolchain/src/command_build.cpp:54:56: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   54 | bool command::build::start_compilation(int argc, const char* argv[])
+      |                                                        ^
+/media/data/Workspace/tolza/toolchain/src/command_build.hpp:14:40: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+   14 | bool start_compilation(int argc, const char* argv[]);
+      |                                        ^
+6931 warnings generated.
+
+[16/18][76.5s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/toolchain_options.cpp
+9214 warnings generated.
+
+[17/18][55.5s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/toolchain/src/command_workspace.cpp
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:248:3: warning: function 'source' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  248 |   std::string source() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:255:3: warning: function 'version' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  255 |   std::string version() const
+      |   ^
+      |   [[nodiscard]] 
+5314 warnings generated.
+
+[18/18][97.5s] clang-tidy-19 -p=/media/data/Workspace/tolza/toolchain/build/debug -quiet --config-file=./.clang-tidy /media/data/Workspace/tolza/common/src/common/compiler_options.cpp
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:248:3: warning: function 'source' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  248 |   std::string source() const
+      |   ^
+      |   [[nodiscard]] 
+/media/data/Workspace/tolza/common/src/common/compiler_options.hpp:255:3: warning: function 'version' should be marked [[nodiscard]] [modernize-use-nodiscard]
+  255 |   std::string version() const
+      |   ^
+      |   [[nodiscard]] 
+7987 warnings generated.
+

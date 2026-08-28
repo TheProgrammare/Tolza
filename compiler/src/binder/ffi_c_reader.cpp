@@ -1,43 +1,40 @@
 #include "ffi_c_reader.hpp"
 
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
+#include "binder/binder_ffi.hpp"
+#include "common/environment.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/type/definition.hpp"
+#include "nexus/type/type.hpp"
+
+#include <Neargye/magic_enum.hpp>
 #include <cassert>
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
+#include <common/utils.hpp>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <marzer/toml++.hpp>
 #include <memory>
-#include <print>
-#include <unordered_set>
-#include <vector>
 #include <ostream>
+#include <print>
 #include <string>
 #include <string_view>
-
-#include <common/compiler_options.hpp>
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-
-
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "common/environment.hpp"
-#include "compiler/compiler.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/ast/ast.hpp"
-#include "binder/binder_ffi.hpp"
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
-#include <common/utils.hpp>
-
-#include <Neargye/magic_enum.hpp>
-#include <marzer/toml++.hpp>
+#include <unordered_set>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -122,7 +119,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
   } else if (platform == common::env::EPlatform::solaris) {
     wrap_headers(HEADERS_POSIX);
     wrap_headers(HEADERS_SOLARIS);
-  } else if (platform == common::env::EPlatform::unknown || platform == common::env::EPlatform::custom) {
+  } else if (platform == common::env::EPlatform::NONE || platform == common::env::EPlatform::custom) {
     wrap_headers(HEADERS_C_ISO);
   }
 
@@ -923,11 +920,11 @@ ffi::BindManifest ffi::BindManifest::read_manifest(std::string_view path) noexce
 
   m.binding_language = get_str("binding.language");
 
-  m.target_arch = get_enum("target.arch", common::env::EArch, unknown);
-  m.target_os   = get_enum("target.platform", common::env::EPlatform, unknown);
-  m.target_abi  = get_enum("target.abi", common::env::EABI, unknown);
+  m.target_arch = get_enum("target.arch", common::env::EArch, NONE);
+  m.target_os   = get_enum("target.platform", common::env::EPlatform, NONE);
+  m.target_abi  = get_enum("target.abi", common::env::EABI, NONE);
 
-  m.clang_libc         = get_enum("libc.kind", common::env::ELibC, unknown);
+  m.clang_libc         = get_enum("libc.kind", common::env::ELibC, NONE);
   m.clang_libc_version = common::compiler::Cffi::LibCVersion::parse(get_str("libc.version"));
 
   m.compiler_clang_version = get_str("compiler.clang_version");
@@ -966,13 +963,13 @@ bool ffi::BindManifest::write_manifest(std::string_view path) const noexcept
 {
   std::string txt(BINDER_MANIFEST);
 
-  std::map<std::string_view, std::string_view> map{
+  std::map<std::string, std::string> map{
       {"binding.language",         binding_language                         },
       {"target.arch",              GET_ENUM_NAME(target_arch)               },
       {"target.platform",          GET_ENUM_NAME(target_os)                 },
       {"target.abi",               GET_ENUM_NAME(target_abi)                },
       {"libc.kind",                GET_ENUM_NAME(clang_libc)                },
-      {"libc.version",             clang_libc_version.print()               },
+      {"libc.version",             clang_libc_version.dump()                },
       {"compiler.clang_version",   compiler_clang_version                   },
       {"feature.gnu_source",       std::to_string(features_gnu_source)      },
       {"feature.posix_c_source",   std::to_string(features_posix_c_source)  },

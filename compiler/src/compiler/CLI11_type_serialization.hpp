@@ -2,12 +2,12 @@
 
 #include "common/utils.hpp"
 #include "nexus/forward.hpp"
-#include <common/common.hpp>
-#include <common/compiler_options.hpp>
 
+#include <CLIUtils/CLI11.hpp>
 #include <Neargye/magic_enum.hpp>
 #include <Neargye/magic_enum_flags.hpp>
-#include <CLIUtils/CLI11.hpp>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
 
 #define SERALIZE_FLAG(_flag)                                                                                           \
   template <>                                                                                                          \
@@ -29,7 +29,7 @@
   {                                                                                                                    \
     auto value = STR_TO_ENUM(input, _enum);                                                                            \
     if (!value.has_value()) {                                                                                          \
-      output = _enum::DEFAULT;                                                                                         \
+      output = _enum::NONE;                                                                                            \
       return false;                                                                                                    \
     }                                                                                                                  \
     output = *value;                                                                                                   \

@@ -1,7 +1,9 @@
 #include "data.hpp"
+
 #include "Neargye/magic_enum.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/lexer/token.hpp"
+
 #include <string_view>
 
 

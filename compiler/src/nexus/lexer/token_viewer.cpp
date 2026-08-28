@@ -1,12 +1,12 @@
 #include "token_viewer.hpp"
 
-#include <cstddef>
-
-#include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/token.hpp"
+
+#include <cstddef>
 
 
 token::Viewer::Viewer(cu::CU& p_CU)

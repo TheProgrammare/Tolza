@@ -3,10 +3,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-
-#include <string>
 #include <format>
 #include <limits>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_set>

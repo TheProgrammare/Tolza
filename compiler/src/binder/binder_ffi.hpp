@@ -20,16 +20,16 @@
 
 #pragma once
 
+#include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/inference.hpp"
+
 #include <cstddef>
 #include <map>
 #include <set>
 #include <string>
 #include <string_view>
-
-#include "nexus/ast/forward.hpp"
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
 
 namespace module
 {

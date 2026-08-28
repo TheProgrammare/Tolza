@@ -1,8 +1,7 @@
 #pragma once
 
-#include <string>
-
 #include <common/commands.hpp>
+#include <string>
 
 
 namespace CLI

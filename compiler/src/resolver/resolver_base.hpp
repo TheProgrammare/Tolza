@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string_view>
-
 #include "nexus/forward.hpp"
+
+#include <string_view>
 
 
 namespace resolver

@@ -2,23 +2,22 @@
 #include "resolver_semantic.hpp"
 
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_expression.hpp"
+#include "ast/ast_literal.hpp"
+#include "ast/ast_operation.hpp"
 #include "ast/ast_statement.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_expression.hpp"
+#include "nexus/definition.hpp"
 #include "nexus/module.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/rule.hpp"
 #include "nexus/type/type.hpp"
-
-#include "compiler/compilation_unit.hpp"
-#include "nexus/definition.hpp"
 
 #include <cstddef>
 #include <vector>

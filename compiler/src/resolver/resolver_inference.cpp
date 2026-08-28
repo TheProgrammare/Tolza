@@ -1,33 +1,30 @@
 
 #include "resolver_inference.hpp"
 
-#include <cassert>
-
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
+#include "ast/ast_expression.hpp"
+#include "ast/ast_literal.hpp"
+#include "ast/ast_operation.hpp"
+#include "ast/ast_statement.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/ast.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+#include "nexus/inference.hpp"
 #include "nexus/scope.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/rule.hpp"
 #include "nexus/type/type.hpp"
-#include "nexus/inference.hpp"
-#include "compiler/compilation_unit.hpp"
 
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
-#include "ast/ast_expression.hpp"
+#include <cassert>
 
 #define INFERENCE_GUARD                                                                                                \
   if (n.nodeid().is_inferred()) return;
@@ -239,23 +236,25 @@ void resolver::Inference::ensure_expression_resolution(ast::ID expr_nodeid, type
     return;
   }
 
-bad_inference:
-  if (!ty_inference) return;
+  {
+  bad_inference:
+    if (!ty_inference) return;
 
-  // check if type inferred is compatible to the expected inference (or expected type
-  if (expr_nodeid.type() != ty_inference && !silent_error) {
-    if (type::ETypeKind_is_user_defined(ty_inference.kind())) {
-      const auto n = ty_inference.def().node().get();
-      add_error_two_nodes(230, expr_nodeid.get(), n, "Illegal type inference.", "");
-    } else {
-      if (!expr_nodeid.type()) {
-        add_error(230, expr_nodeid.get(),
-                  std::format("Expression type undefined, inference tried on \"{}\".", ty_inference.dump()), "");
-      } else if (!type::rule::can_implicit_cast(expr_nodeid.type(), ty_inference)) {
-        add_error(230, expr_nodeid.get(),
-                  std::format("Illegal type inference \"{}\" as \"", expr_nodeid.type().dump()) + ty_inference.dump()
-                      + "\".",
-                  "");
+    // check if type inferred is compatible to the expected inference (or expected type
+    if (expr_nodeid.type() != ty_inference && !silent_error) {
+      if (type::ETypeKind_is_user_defined(ty_inference.kind())) {
+        const auto n = ty_inference.def().node().get();
+        add_error_two_nodes(230, expr_nodeid.get(), n, "Illegal type inference.", "");
+      } else {
+        if (!expr_nodeid.type()) {
+          add_error(230, expr_nodeid.get(),
+                    std::format("Expression type undefined, inference tried on \"{}\".", ty_inference.dump()), "");
+        } else if (!type::rule::can_implicit_cast(expr_nodeid.type(), ty_inference)) {
+          add_error(230, expr_nodeid.get(),
+                    std::format("Illegal type inference \"{}\" as \"", expr_nodeid.type().dump()) + ty_inference.dump()
+                        + "\".",
+                    "");
+        }
       }
     }
   }

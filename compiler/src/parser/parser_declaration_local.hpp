@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+
+#include <vector>
 
 namespace parser
 {

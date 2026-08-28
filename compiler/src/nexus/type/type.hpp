@@ -17,19 +17,17 @@
 
 #pragma once
 
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/type/definition.hpp"
+
 #include <cassert>
 #include <cstdint>
 #include <memory>
-#include <print>
 #include <memory_resource>
+#include <print>
 #include <string_view>
 #include <unordered_map>
-
-
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-
-#include "nexus/type/definition.hpp"
 
 namespace type
 {

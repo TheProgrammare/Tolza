@@ -1,24 +1,22 @@
 #include "parser_declaration_local.hpp"
 
-#include <cassert>
-
 #include "ast/ast_base.hpp"
+#include "ast/ast_declaration_local.hpp"
 #include "ast/ast_expression.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/lexer/token.hpp"
-#include "nexus/forward.hpp"
-
-#include "ast/ast_declaration_local.hpp"
-
 #include "parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 #include "parser_literal.hpp"
 #include "parser_type.hpp"
+
+#include <cassert>
 
 ast::ID parser::Parser_Declaration_Local::parse_local(bool silent_error)
 {

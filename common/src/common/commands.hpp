@@ -37,6 +37,7 @@ protected:
   bool        compiler_latest = false;
   bool        is_release      = true;
   bool        is_debug        = false;
+  bool        no_env          = false;
 
   void         init_command_compiler() noexcept;
   virtual void init_command_build() noexcept = 0;

@@ -1,20 +1,18 @@
 #pragma once
 
 
-#include <string>
-#include <string_view>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_declaration_sfm.hpp"
-#include "nexus/ids.hpp"
-#include "resolver_base.hpp"
-
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "resolver_base.hpp"
+
+#include <string>
+#include <string_view>
 
 
 namespace resolver

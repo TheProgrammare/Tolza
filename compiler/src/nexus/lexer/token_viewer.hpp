@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-
 #include "nexus/forward.hpp"
+
+#include <string>
 // #include "token.hpp"
 
 namespace token

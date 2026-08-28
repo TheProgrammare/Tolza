@@ -2,8 +2,8 @@
 
 #include <cstddef>
 #include <initializer_list>
-#include <string_view>
 #include <string>
+#include <string_view>
 
 class StreamTracker
 {

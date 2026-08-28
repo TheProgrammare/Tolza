@@ -1,10 +1,10 @@
 #pragma once
 
-#include <algorithm>
-#include <unordered_map>
-
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+
+#include <algorithm>
+#include <unordered_map>
 
 
 namespace inference

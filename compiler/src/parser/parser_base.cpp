@@ -1,37 +1,35 @@
 
 #include "parser_base.hpp"
 
-#include <algorithm>
-#include <stdexcept>
-#include <string_view>
-#include <vector>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
 #include "nexus/ast/forward.hpp"
-
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/token.hpp"
 #include "nexus/lexer/token_viewer.hpp"
 #include "nexus/module.hpp"
 #include "nexus/scope.hpp"
 #include "nexus/type/type.hpp"
 #include "nexus/unresolved.hpp"
 #include "parser_context.hpp"
-#include "parser_declaration_local.hpp"
 #include "parser_declaration_global.hpp"
+#include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
 #include "parser_memory.hpp"
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
 
-#include "compiler/compilation_unit.hpp"
+#include <algorithm>
+#include <stdexcept>
+#include <string_view>
+#include <vector>
 
 
 parser::Parser_Base::Parser_Base(Parser_Context& p_ctx)

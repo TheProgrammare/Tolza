@@ -1,15 +1,13 @@
 #pragma once
 
+#include "definition.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+
 #include <cassert>
 #include <cstddef>
 #include <unordered_map>
 #include <vector>
-
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-
-
-#include "definition.hpp"
 
 
 namespace metacode

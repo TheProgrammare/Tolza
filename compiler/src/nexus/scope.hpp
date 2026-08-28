@@ -2,6 +2,7 @@
 
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
+
 #include <cassert>
 #include <set>
 #include <string_view>

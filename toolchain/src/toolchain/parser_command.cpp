@@ -1,26 +1,22 @@
 #include "toolchain/parser_command.hpp"
 
-#include <filesystem>
-#include <string>
-#include <print>
-
-#include <CLIUtils/CLI11.hpp>
-
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-#include <common/compiler_options.hpp>
-
-
 #include "cli_wrapper.hpp"
-#include "command_package.hpp"
-#include "command_compiler.hpp"
-#include "command_workspace.hpp"
-#include "command_check.hpp"
 #include "command_audit.hpp"
 #include "command_build.hpp"
+#include "command_check.hpp"
+#include "command_compiler.hpp"
+#include "command_package.hpp"
+#include "command_workspace.hpp"
 #include "toolchain/toolchain.hpp"
 
+#include <CLIUtils/CLI11.hpp>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
 #include <common/toolchain_options.hpp>
+#include <filesystem>
+#include <print>
+#include <string>
 
 namespace fs = std::filesystem;
 
@@ -74,7 +70,9 @@ void toolchain::Commander::init_command_toolchain() noexcept
 {
   auto* cogito = app.add_subcommand("cogito", "Ask if the compiler is detected");
 
-  cogito->callback([&]() { command::compiler::cogito_compiler(common::toolchain::OPTIONS.compiler_used); });
+  cogito->callback([&]() {
+    command::compiler::cogito_compiler(common::fileutils::resolve_path(common::toolchain::OPTIONS.compiler_used));
+  });
 }
 
 
@@ -88,7 +86,7 @@ void toolchain::Commander::init_command_check() noexcept
       check_ws->alias("ws");
       check_ws->add_option("path", from_path, "If no path provided, the current directory will be used");
       check_ws->callback([&]() {
-        if (from_path.empty()) from_path = fs::current_path();
+        from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
         (void)command::check::check_workspace(common::fileutils::resolve_path(from_path));
       });
@@ -99,9 +97,9 @@ void toolchain::Commander::init_command_check() noexcept
       check_profile->add_option("path", from_path, "If no path provided, the current directory will be used");
       check_profile->add_option("--full,-f", full, "Set the checker in full mode");
       check_profile->callback([&]() {
-        if (from_path.empty()) from_path = fs::current_path();
+        from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
-        (void)command::check::check_tolza_config(common::fileutils::resolve_path(from_path), full);
+        (void)command::check::check_tolza_config(from_path, full);
       });
     }
   }
@@ -109,18 +107,18 @@ void toolchain::Commander::init_command_check() noexcept
     auto* audit = app.add_subcommand("audit", "Produce an audit report of your tolza project");
     audit->add_option("path", from_path, "If no path provided, the current directory will be used");
     audit->callback([&]() {
-      if (from_path.empty()) from_path = fs::current_path();
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
-      command::audit::audit_workspace(common::fileutils::resolve_path(from_path));
+      command::audit::audit_workspace(from_path);
     });
   }
   {
     auto* sync = app.add_subcommand("sync", "Synchronize the workspace module tree with the filesystem");
     sync->add_option("path", from_path, "If no path provided, the current directory will be used");
     sync->callback([&]() {
-      if (from_path.empty()) from_path = fs::current_path();
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
-      command::workspace::synchronize(common::fileutils::resolve_path(from_path));
+      command::workspace::synchronize(from_path);
     });
   }
 }
@@ -136,7 +134,7 @@ void toolchain::Commander::init_command_new() noexcept
     _new_ws->add_option("--name,-n", name, "If no project name provided, a input prompt will appear");
     _new_ws->add_flag("-f", force, "Force the creation");
     _new_ws->callback([&]() {
-      from_path = common::fileutils::resolve_path(from_path);
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
       if (fs::is_regular_file(from_path)) {
         std::println("[tolza] The path provided \"{}\" must be a directory.", from_path);
         return;
@@ -153,10 +151,10 @@ void toolchain::Commander::init_command_new() noexcept
     _new_profile->alias("p");
     _new_profile->add_option("path", from_path, "If no path provided, the current directory will be used");
     _new_profile->add_option("--name,-n", name, "If no profile name provided, a input prompt will appear");
-    _new_profile->add_flag("--release,-r", is_release,
-                           "Default profile preset. Will config the profile to a release build");
     _new_profile->add_flag("--debug,-d", is_debug, "Will config the profile to a debug build");
+    _new_profile->add_flag("--no-env", no_env, "Disable all environment detected in the Manifest");
     _new_profile->callback([&]() {
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
       if (fs::exists(from_path) && fs::is_regular_file(from_path)) {
         std::println("[tolza] The profile file at \"{}\" already exists.", from_path);
         if (!cli::yes_no_question("Do you want to override it ?")) return;
@@ -170,15 +168,47 @@ void toolchain::Commander::init_command_new() noexcept
         from_path = fs::current_path();
       }
 
-      auto c = common::compiler::Options::get_current(name);
+      auto c = common::compiler::Profile(common::compiler::Manifest::get_current(name));
       from_path =
           (fs::is_regular_file(from_path)) ? from_path : (fs::path(from_path) / std::string(name + ".toml")).string();
       from_path = common::fileutils::resolve_path(from_path);
 
-      if (c.write_config(from_path, is_debug)) {
-        std::println("[tolza] profile file has been created at \"{}\"", from_path);
+      if (c.write_profile(from_path, !no_env, is_debug)) {
+        std::println("[tolza] Profile file has been created at \"{}\"", from_path);
       } else {
-        std::println("[tolza:ERROR] profile file cannot be created at \"{}\"", from_path);
+        std::println("[tolza:ERROR] Profile file cannot be created at \"{}\"", from_path);
+      }
+    });
+  }
+  {
+    auto* _new_manifest = _new->add_subcommand("manifest", "Create a new tolza.toml manifest file");
+    _new_manifest->alias("m");
+    _new_manifest->add_option("path", from_path, "If no path provided, the current directory will be used");
+    _new_manifest->add_option("--name,-n", name, "If no project name provided, a input prompt will appear");
+    _new_manifest->add_flag("--no-env", no_env, "Disable all environment detected in the Manifest");
+    _new_manifest->callback([&]() {
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
+      if (fs::exists(from_path) && fs::is_regular_file(from_path)) {
+        std::println("[tolza] The file tolza.toml at \"{}\" already exists.", from_path);
+        if (!cli::yes_no_question("Do you want to override it ?")) return;
+      }
+
+      if (name.empty()) {
+        name = cli::ask_text("Write down the project name");
+        if (name.empty()) return;
+      }
+      if (from_path.empty()) {
+        from_path = fs::current_path();
+      }
+
+      auto c    = common::compiler::Manifest::get_current(name);
+      from_path = (fs::is_regular_file(from_path)) ? from_path : (fs::path(from_path) / "tolza.toml").string();
+      from_path = common::fileutils::resolve_path(from_path);
+
+      if (c.write_manifest(from_path, !no_env)) {
+        std::println("[tolza] Manifest file has been created at \"{}\"", from_path);
+      } else {
+        std::println("[tolza:ERROR] Manifest file cannot be created at \"{}\"", from_path);
       }
     });
   }
@@ -187,7 +217,7 @@ void toolchain::Commander::init_command_new() noexcept
     gui->alias("ui");
     gui->add_option("path", from_path, "If no path provided, the current directory will be used");
     gui->callback([&]() {
-      if (from_path.empty()) from_path = fs::current_path();
+      from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
       // command::workspace::gui(path);
     });
@@ -203,7 +233,7 @@ void toolchain::Commander::init_command_build() noexcept
       ->type_name("<config path>");
 
   build->callback([&]() {
-    from_path = common::fileutils::resolve_path(from_path);
+    from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
 
     if (!fs::exists(from_path)) {
       std::println(stderr, "[build:Error] The file path dosen't exist.");
@@ -215,7 +245,7 @@ void toolchain::Commander::init_command_build() noexcept
       exit(1);
     }
 
-    auto        ctx = common::compiler::Options::read_config(from_path);
+    auto        ctx = common::compiler::Manifest::read_manifest(from_path);
     std::string cmd = std::format("build {} ", from_path);
     for (const auto& arg : ctx.to_args()) std::format_to(std::back_inserter(cmd), "{} ", arg);
     cmd += "\n";

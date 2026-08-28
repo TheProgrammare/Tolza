@@ -1,12 +1,12 @@
 #pragma once
 
+#include "ids.hpp"
+
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-
-#include "ids.hpp"
 
 using ErrorCode = short;
 enum class EVisibility : uint8_t { Lexical_Scope, File_Scope, Cross_File_Scope };

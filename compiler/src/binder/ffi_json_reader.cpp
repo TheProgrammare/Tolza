@@ -1,25 +1,10 @@
 #include "ffi_json_reader.hpp"
 
-#include <fstream>
-#include <filesystem>
-#include <memory>
-#include <string_view>
-#include <functional>
-
-#include <nlohmann/json.hpp>
-#include <Neargye/magic_enum.hpp>
-
-
-#include <common/common.hpp>
-#include <common/environment.hpp>
-#include <common/utils.hpp>
-#include <common/compiler_options.hpp>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_literal.hpp"
 #include "binder/binder_ffi.hpp"
 #include "nexus/ast/ast.hpp"
@@ -29,6 +14,18 @@
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "nexus/type/type.hpp"
+
+#include <Neargye/magic_enum.hpp>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/environment.hpp>
+#include <common/utils.hpp>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
@@ -209,7 +206,7 @@ ast::ID ffi::JSON_Reader::to_func(const json& j, std::string_view j_name) noexce
   if (common::utils::is_valid_identifier(n.name))
     common::FATAL_ERROR(std::format("Expected valid identifier ({})", n.name));
   n.call_convention = magic_enum::enum_cast<common::env::ECallConvention>(j.value("call_convention", ""))
-                          .value_or(common::env::ECallConvention::unknown);
+                          .value_or(common::env::ECallConvention::NONE);
   n.prototype = to_type(j.value("prototype", json::object()));
 
   auto        j_param_names = j.value("param_names", json::array());

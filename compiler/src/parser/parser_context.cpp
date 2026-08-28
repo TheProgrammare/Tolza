@@ -1,6 +1,36 @@
 
 #include "parser_context.hpp"
 
+#include "Neargye/magic_enum.hpp"
+#include "ast/ast_base.hpp"
+#include "ast/ast_declaration_global.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/ast/definition.hpp"
+#include "nexus/ast/forward.hpp"
+#include "nexus/definition.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+#include "nexus/lexer/token.hpp"
+#include "nexus/lexer/token_viewer.hpp"
+#include "nexus/metacode/metacode.hpp"
+#include "nexus/module.hpp"
+#include "nexus/scope.hpp"
+#include "nexus/type/type.hpp"
+#include "parser/parser_declaration_extension.hpp"
+#include "parser_base.hpp"
+#include "parser_declaration_global.hpp"
+#include "parser_declaration_local.hpp"
+#include "parser_declaration_sfm.hpp"
+#include "parser_expression.hpp"
+#include "parser_literal.hpp"
+#include "parser_memory.hpp"
+#include "parser_operation.hpp"
+#include "parser_statement.hpp"
+#include "parser_type.hpp"
+
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
@@ -8,37 +38,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
-#include "Neargye/magic_enum.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/lexer/token_viewer.hpp"
-#include "ast/ast_base.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/forward.hpp"
-#include "nexus/module.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/scope.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "nexus/definition.hpp"
-#include "nexus/ast/ast.hpp"
-#include "compiler/compiler.hpp"
-
-#include "nexus/type/type.hpp"
-#include "parser/parser_declaration_extension.hpp"
-#include "parser_base.hpp"
-#include "parser_declaration_global.hpp"
-#include "parser_declaration_sfm.hpp"
-#include "parser_declaration_local.hpp"
-#include "parser_expression.hpp"
-#include "parser_literal.hpp"
-#include "parser_memory.hpp"
-#include "parser_operation.hpp"
-#include "parser_statement.hpp"
-#include "parser_type.hpp"
 
 
 parser::Parser_Context::Parser_Context(cu::ID _cuid)
@@ -412,25 +411,12 @@ void parser::Parser_Context::add_error(ErrorCode code, std::string_view msg, std
 {
   static size_t count = 0;
   tok_v->add_error(code, msg, hint);
-
-  if (count++ > MAX_ERRORS) {
-    std::println(stderr, "[tolza:ERROR] Too many errors emitted. Parser aborted.");
-    std::abort();
-  }
-
-  // common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 void parser::Parser_Context::add_error_tok(ErrorCode code, const token::Token& tok, std::string_view msg,
                                            std::string_view hint) const
 {
   static size_t count = 0;
   tok_v->add_error_tok(code, tok, msg, hint);
-  if (count++ > MAX_ERRORS) {
-    std::println(stderr, "[tolza:ERROR] Too many errors emitted. Parser aborted.");
-    std::abort();
-  }
-
-  // common::compiler::DEBUG_TOLZA_ICE(msg);
 }
 
 
@@ -455,9 +441,9 @@ scope::Scope& parser::Parser_Context::get_current_scope()
 
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_expression.hpp"
 #include "ast/ast_generic.hpp"
 #include "ast/ast_literal.hpp"

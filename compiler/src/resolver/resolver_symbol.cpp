@@ -1,32 +1,29 @@
 #include "resolver_symbol.hpp"
 
-#include <cassert>
-#include <cstring>
-#include <memory>
-#include <string>
-#include <string_view>
-
 #include "ast/ast_base.hpp"
 #include "ast/ast_declaration_extension.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
 #include "ast/ast_declaration_sfm.hpp"
+#include "ast/ast_expression.hpp"
 #include "ast/ast_literal.hpp"
+#include "ast/ast_statement.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
+#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/module.hpp"
-#include "nexus/scope.hpp"
 #include "nexus/resolved.hpp"
-
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "ast/ast_statement.hpp"
-#include "ast/ast_expression.hpp"
+#include "nexus/scope.hpp"
 #include "nexus/type/definition.hpp"
+
+#include <cassert>
+#include <cstring>
+#include <string>
+#include <string_view>
 
 #define RESOLUTION_GUARD                                                                                               \
   if (n.nodeid().is_resolved()) return;
@@ -138,7 +135,6 @@ void resolver::Symbol::resolve_Symbol_Id(ast::Symbol_Id& n) noexcept
   RESOLUTION_GUARD
 
   auto sym = resolve_id_sym(n.nodeid().scope(), n.nodeid(), n.name, false);
-  assert(sym && "Resolution failed");
   if (!sym) return;
 
   add_resolution(n.nodeid(), sym);
@@ -148,7 +144,6 @@ void resolver::Symbol::resolve_Symbol_Qualified(ast::Symbol_Qualified& n) noexce
   RESOLUTION_GUARD
 
   auto sym = resolve_path_sym(n.nodeid().module(), n.nodeid(), n.name, n.path, n.anchor);
-  assert(sym && "Resolution failed");
   if (!sym) return;
 
   add_resolution(n.nodeid(), sym);
@@ -189,6 +184,8 @@ void resolver::Symbol::resolve_Expression_Invocation(ast::Expression_Invocation&
 
   resolve_node(n.callee);
   auto defid = n.callee.def();
+
+  if (!defid) return;
 
   if (n.arguments.empty()) {
     add_resolution(n.nodeid(), defid);

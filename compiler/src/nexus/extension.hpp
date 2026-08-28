@@ -1,10 +1,10 @@
 #pragma once
 
-#include <unordered_map>
-#include <unordered_set>
-
 #include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
+
+#include <unordered_map>
+#include <unordered_set>
 
 namespace extension
 {

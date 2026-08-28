@@ -1,45 +1,39 @@
 #include "codegen_tools.hpp"
 
-#include <cstdint>
-#include <exception>
-#include <expected>
-
-#include <functional>
-#include <llvm-19/llvm/Analysis/LoopInfo.h>
-#include <llvm-19/llvm/IR/GlobalValue.h>
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/ADT/APFloat.h>
-#include <llvm/IR/Value.h>
-#include <llvm/ADT/APInt.h>
-#include <llvm/IR/Constant.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Type.h>
-
-#include <string>
-#include <string_view>
-#include <vector>
-
-#include <common/compiler_options.hpp>
-
+#include "ast/ast_expression.hpp"
+#include "ast/ast_literal.hpp"
 #include "codegen/codegen.hpp"
 #include "codegen/codegen_insurance.hpp"
 #include "codegen/codegen_type.hpp"
+#include "compiler/compiler.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/forward.hpp"
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
 
-#include "ast/ast_expression.hpp"
-
-#include "compiler/compiler.hpp"
-
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-
 #include <Neargye/magic_enum.hpp>
+#include <common/compiler_options.hpp>
+#include <cstdint>
+#include <exception>
+#include <expected>
+#include <functional>
+#include <llvm-19/llvm/Analysis/LoopInfo.h>
+#include <llvm-19/llvm/IR/GlobalValue.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
+#include <llvm/IR/Constant.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #define NOT_DEFINED assert(false);
 
@@ -339,8 +333,6 @@ llvm::Value* codegen::Tools::codegen_explicit_cast(ast::ID from, type::ID to) co
   }
 
   if (from_ty.is<type::Array>() && to.is<type::String>()) {
-    std::println("test");
-    std::cout << std::flush;
     const auto* buffer  = from_ty.as<type::Array>();
     const auto* out_str = to.as<type::String>();
 

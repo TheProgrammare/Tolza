@@ -1,49 +1,48 @@
 #include "binder_ffi.hpp"
 
-#include <cstddef>
-#include <fstream>
-#include <filesystem>
-#include <print>
-#include <memory>
-#include <string>
-#include <string_view>
-
-#include <common/common.hpp>
-#include <common/fileutils.hpp>
-#include <common/time.hpp>
-#include <common/utils.hpp>
-#include <common/compiler_options.hpp>
-
-
-#include "Neargye/magic_enum.hpp"
 #include "ast/ast_base.hpp"
-#include "ast/ast_declaration_sfm.hpp"
 #include "ast/ast_declaration_global.hpp"
 #include "ast/ast_declaration_local.hpp"
+#include "ast/ast_declaration_sfm.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "compiler/io.hpp"
+#include "nexus/ast/ast.hpp"
 #include "nexus/ast/data.hpp"
 #include "nexus/ast/definition.hpp"
-#include "nexus/ast/ast.hpp"
 #include "nexus/ast/forward.hpp"
-#include "compiler/compiler.hpp"
 #include "nexus/ids.hpp"
-#include "compiler/compilation_unit.hpp"
 #include "nexus/inference.hpp"
-#include "nexus/pipeline.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
 #include "nexus/type/type.hpp"
+#include "pipeline/pipeline.hpp"
+
+#include <Neargye/magic_enum.hpp>
+#include <common/common.hpp>
+#include <common/compiler_options.hpp>
+#include <common/fileutils.hpp>
+#include <common/time.hpp>
+#include <common/utils.hpp>
+#include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <memory>
+#include <print>
+#include <string>
+#include <string_view>
 
 namespace fs = std::filesystem;
 
 
 void ffi::AST::tolza_codegen(std::string_view dest)
 {
-  fs::create_directories(fs::path(dest).parent_path());
-  fs::path f(dest);
+  fs::path f = std::string(dest);
+  fs::create_directories(f.parent_path());
 
   std::ofstream os(f, std::ios::out | std::ios::trunc);
 
-  if (!os) common::FATAL_ERROR(std::format("Cannot open file: \"{}\"", fs::path(dest).string()));
+  if (!os) common::FATAL_ERROR(std::format("Cannot open file: \"{}\"", dest));
 
   std::vector<ast::Global_Reexport const*>   reexports;
   std::vector<ast::Import const*>            imports;
@@ -146,7 +145,7 @@ void ffi::AST::tolza_codegen(std::string_view dest)
 
 std::string ffi::Bind_Package::get_file_path() const noexcept
 {
-  fs::path path = compiler::OPTIONS.get_dir_binding_profile();
+  fs::path path(compiler::OPTIONS.get_dir_binding_profile());
   if (!lang.empty()) path /= lang;
   if (!lib.empty()) path /= lib;
   path.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
@@ -180,7 +179,7 @@ bool ffi::check_ast_generation(const AST& ast) noexcept
     */
 
   for (const auto& err : errs) {
-    std::println(stderr, "{}", err);
+    IO::println(stderr, IO_PASS::NONE, "{}", err);
   }
 
   return errs.empty();

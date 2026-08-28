@@ -1,15 +1,14 @@
 #pragma once
 
+#include "nexus/forward.hpp"
+#include "nexus/ids.hpp"
+
 #include <cassert>
 #include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-
-
-#include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 
 
 namespace module

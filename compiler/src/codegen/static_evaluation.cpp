@@ -1,29 +1,28 @@
 #include "static_evaluation.hpp"
 
+#include "ast/ast_declaration_global.hpp"
+#include "ast/ast_declaration_local.hpp"
+#include "ast/ast_literal.hpp"
+#include "ast/ast_numeric_128_bits.hpp"
+#include "ast/ast_operation.hpp"
+#include "codegen/codegen.hpp"
+#include "codegen/codegen_type.hpp"
+#include "codegen_tools.hpp"
+#include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "misc/error_output.hpp"
+#include "nexus/ast/data.hpp"
+#include "nexus/ast/definition.hpp"
+#include "nexus/ast/forward.hpp"
+#include "nexus/type/data.hpp"
+
+#include <cmath>
 #include <expected>
 #include <llvm-19/llvm/IR/Constant.h>
 #include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/Type.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
-#include <cmath>
-
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "codegen/codegen.hpp"
-#include "codegen/codegen_type.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_numeric_128_bits.hpp"
-#include "ast/ast_operation.hpp"
-#include "codegen_tools.hpp"
-#include "compiler/compiler.hpp"
-#include "misc/error_output.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/type/data.hpp"
 
 codegen::Static_Evaluator::Static_Evaluator(codegen::Codegen_AST& p_res)
   : tools(new Tools(p_res))

@@ -1,13 +1,13 @@
 #include "rule.hpp"
 
-#include <algorithm>
-
 #include "Neargye/magic_enum.hpp"
 #include "ast/ast_declaration_extension.hpp"
 #include "nexus/extension.hpp"
-#include "nexus/type/type.hpp"
 #include "nexus/type/data.hpp"
 #include "nexus/type/definition.hpp"
+#include "nexus/type/type.hpp"
+
+#include <algorithm>
 
 bool type::rule::commutative_enum_union_castable(const type::Enum& _enum, const type::Union& _union) noexcept
 {
