@@ -31,7 +31,7 @@ int run_toolchain(int argc, const char* argv[])
   common::toolchain::init_toolchain_context();
 
   CLI::App             app{std::format("Tolza toolchain ({})", SOFTWARE_VERSION), "tolza"};
-  toolchain::Commander commander(app);
+  toolchain::Commander commander(app, argc, argv);
 
   toolchain::link_stdlib();
 

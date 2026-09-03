@@ -1,10 +1,10 @@
 #pragma once
 
 
-#include "Neargye/magic_enum_flags.hpp"
-#include "common/compiler_options.hpp"
 #include "compiler/compiler.hpp"
 
+#include <Neargye/magic_enum_flags.hpp>
+#include <common/compiler_options.hpp>
 #include <print>
 
 using IO_PASS = common::compiler::FPass;
@@ -16,11 +16,11 @@ template <typename... _Args>
 inline void println(FILE* __stream, IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&... __args)
 {
 
-  const bool can_log = magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, __phase)
-                       || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, IO_PASS::all);
+  const bool can_log = magic_enum::enum_flags_test(OPTIONS.log.logs, __phase)
+                       || magic_enum::enum_flags_test(OPTIONS.log.logs, IO_PASS::all);
 
   if (!can_log) return;
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet:
     if (__stream != stderr) return;
   case common::compiler::ELogLevel::NONE:
@@ -34,11 +34,11 @@ inline void println(FILE* __stream, IO_PASS __phase, std::format_string<_Args...
 template <typename... _Args>
 inline void println(IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  const bool can_log = magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, __phase)
-                       || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, IO_PASS::all);
+  const bool can_log = magic_enum::enum_flags_test(OPTIONS.log.logs, __phase)
+                       || magic_enum::enum_flags_test(OPTIONS.log.logs, IO_PASS::all);
 
   if (!can_log) return;
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet: return;
   case common::compiler::ELogLevel::NONE:
   case common::compiler::ELogLevel::normal:
@@ -51,7 +51,7 @@ inline void println(IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&
 template <typename... _Args>
 inline void println(std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet: return;
   case common::compiler::ELogLevel::NONE:
   case common::compiler::ELogLevel::normal:
@@ -64,11 +64,11 @@ inline void println(std::format_string<_Args...> __fmt, _Args&&... __args)
 template <typename... _Args>
 inline void print(FILE* __stream, IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  const bool can_log = magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, __phase)
-                       || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, IO_PASS::all);
+  const bool can_log = magic_enum::enum_flags_test(OPTIONS.log.logs, __phase)
+                       || magic_enum::enum_flags_test(OPTIONS.log.logs, IO_PASS::all);
 
   if (!can_log) return;
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet:
     if (__stream != stderr) return;
   case common::compiler::ELogLevel::NONE:
@@ -82,11 +82,11 @@ inline void print(FILE* __stream, IO_PASS __phase, std::format_string<_Args...> 
 template <typename... _Args>
 inline void print(IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  const bool can_log = magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, __phase)
-                       || magic_enum::enum_flags_test(compiler::OPTIONS.log.logs, IO_PASS::all);
+  const bool can_log = magic_enum::enum_flags_test(OPTIONS.log.logs, __phase)
+                       || magic_enum::enum_flags_test(OPTIONS.log.logs, IO_PASS::all);
 
   if (!can_log) return;
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet: return;
   case common::compiler::ELogLevel::NONE:
   case common::compiler::ELogLevel::normal:
@@ -99,7 +99,7 @@ inline void print(IO_PASS __phase, std::format_string<_Args...> __fmt, _Args&&..
 template <typename... _Args>
 inline void print(std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet: return;
   case common::compiler::ELogLevel::NONE:
   case common::compiler::ELogLevel::normal:
@@ -112,7 +112,7 @@ inline void print(std::format_string<_Args...> __fmt, _Args&&... __args)
 template <typename... _Args>
 inline void print_raw(std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet: return;
   case common::compiler::ELogLevel::NONE:
   case common::compiler::ELogLevel::normal:
@@ -124,7 +124,7 @@ inline void print_raw(std::format_string<_Args...> __fmt, _Args&&... __args)
 template <typename... _Args>
 inline void print_raw(FILE* __stream, std::format_string<_Args...> __fmt, _Args&&... __args)
 {
-  switch (compiler::OPTIONS.log.level) {
+  switch (OPTIONS.log.level) {
   case common::compiler::ELogLevel::quiet:
     if (__stream != stderr) return;
   case common::compiler::ELogLevel::NONE:

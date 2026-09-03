@@ -17,10 +17,10 @@
 
 #pragma once
 
+#include "ast/forward.hpp"
 #include "codegen/llvm_forward.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/type/forward.hpp"
+#include "type/forward.hpp"
 
 #include <cstdint>
 #include <expected>

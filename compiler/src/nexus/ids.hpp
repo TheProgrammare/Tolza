@@ -109,11 +109,6 @@ struct is_allowed_id_type<uint64_t> : std::true_type {
       return id != std::numeric_limits<uint64_t>::max();                                                               \
     }                                                                                                                  \
                                                                                                                        \
-    [[nodiscard]] std::string dec() const noexcept                                                                     \
-    {                                                                                                                  \
-      return std::to_string(id);                                                                                       \
-    }                                                                                                                  \
-                                                                                                                       \
     [[nodiscard]] std::string hex() const noexcept                                                                     \
     {                                                                                                                  \
       return std::format("0x{:x}", id);                                                                                \
@@ -238,6 +233,11 @@ DEF_ID(
 
 } // namespace cu
 
+namespace semantic
+{
+struct Metadata;
+}
+
 namespace ast
 {
 
@@ -291,6 +291,11 @@ DEF_COMPOSIT_ID(ID,
                 template <Generic T> [[nodiscard]] const T* as() const noexcept;
                 // is node
                 template <Generic T> [[nodiscard]] bool     is() const noexcept;
+
+                [[nodiscard]] bool is_builtin() const noexcept;
+
+                [[nodiscard]] semantic::Metadata * sem() noexcept;
+                [[nodiscard]] const semantic::Metadata* sem() const noexcept;
 
 )
 
@@ -452,6 +457,7 @@ struct Definition;
 DEF_COMPOSIT_ID(ID,
 
                 public :
+
                 // get definition type
                 [[nodiscard]] type::ID   type() const noexcept;
                 // get definition node reference

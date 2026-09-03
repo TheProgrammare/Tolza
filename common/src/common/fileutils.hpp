@@ -22,6 +22,11 @@ constexpr std::string_view TOLZA_FILE_EXTENSION = ".tlz";
 [[nodiscard]] std::string           get_tolza_file(std::string_view path) noexcept;
 [[nodiscard]] std::set<std::string> find_tolza_files(std::string_view target_dir, bool is_recursive) noexcept;
 [[nodiscard]] std::string           find_tolza_toml(std::string_view file_path) noexcept;
+[[nodiscard]] bool                  is_dirty(std::string_view workspace_file, std::string_view workspace_root,
+                                             std::string_view overlay_root) noexcept;
+[[nodiscard]] std::string           overlay_to_real_path(std::string_view overlay_file, std::string_view overlay_root,
+                                                         std::string_view workspace_root) noexcept;
+[[nodiscard]] std::string           get_temp_dir() noexcept;
 
 [[nodiscard]] bool is_barrel_file(std::string_view file_path) noexcept;
 [[nodiscard]] bool is_barrel_usercode(std::string_view file_path) noexcept;

@@ -1,18 +1,18 @@
 #include "parser_declaration_extension.hpp"
 
 #include "Neargye/magic_enum.hpp"
-#include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_local.hpp"
+#include "ast/data.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/extension.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/type/type.hpp"
 #include "parser/parser_base.hpp"
 #include "parser/parser_declaration_local.hpp"
 #include "parser/parser_type.hpp"
 #include "parser_context.hpp"
+#include "pool/link/extension.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 #include <string_view>
 
@@ -24,7 +24,7 @@ constexpr std::string_view hint = R"(define a extension like:
   - operator:         `extend T op + {...}`
   - cast:             `extend T cast U {...}`)";
 
-ast::ID parser::Parser_Declaration_Extension::parse_extension() noexcept
+ast::ID parser::Parser_Declaration_Extension::parse_extension()
 {
   (void)p.match(token::ETokenKind::EXTENSION);
 
@@ -57,7 +57,7 @@ ast::ID parser::Parser_Declaration_Extension::parse_extension() noexcept
   }
 }
 
-ast::ID parser::Parser_Declaration_Extension::extend_fn(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_fn(type::ID extended_type)
 {
   (void)p.match(token::ETokenKind::FUNCTION);
 
@@ -97,9 +97,11 @@ ast::ID parser::Parser_Declaration_Extension::extend_fn(type::ID extended_type) 
   // some parameters to init
   (void)p.match(token::ETokenKind::COMMA);
 
-  auto [protoid, params] = p.p_type->prototype_from_declaration(true);
-  n.prototype            = protoid;
-  n.parameters           = params;
+  auto [protoid, params, contract] = p.p_type->prototype_from_declaration(true);
+
+  n.prototype  = protoid;
+  n.parameters = params;
+  n.contract   = contract;
 
   n.codeblock = p.p_loc->parse_codeblock_instruction();
 
@@ -110,7 +112,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_fn(type::ID extended_type) 
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_cast(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_cast(type::ID extended_type)
 {
   (void)p.match(token::ETokenKind::AS);
 
@@ -141,7 +143,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_cast(type::ID extended_type
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_op_bin(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_op_bin(type::ID extended_type)
 {
   const auto op = ast::ETokenKind_to_EOp_Bin(p.next().kind);
 
@@ -177,7 +179,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_bin(type::ID extended_ty
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_op_un(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_op_un(type::ID extended_type)
 {
   const auto op = ast::ETokenKind_to_EOp_Unary(p.next().kind);
 
@@ -207,7 +209,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_un(type::ID extended_typ
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_op_subscript(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_op_subscript(type::ID extended_type)
 {
   ast::EOp_Subscript op = ast::EOp_Subscript::NONE;
 
@@ -270,7 +272,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_subscript(type::ID exten
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_op_transfert(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_op_transfert(type::ID extended_type)
 {
   ast::ETransfertType op = ast::ETokenKind_to_ETransfertType(p.peek().kind);
 
@@ -294,7 +296,7 @@ ast::ID parser::Parser_Declaration_Extension::extend_op_transfert(type::ID exten
 
   return n.nodeid();
 }
-ast::ID parser::Parser_Declaration_Extension::extend_op_other(type::ID extended_type) noexcept
+ast::ID parser::Parser_Declaration_Extension::extend_op_other(type::ID extended_type)
 {
   ast::EOp_Other op = ast::ETokenStr_to_EOp_Other(p.peek().tokid.str());
 

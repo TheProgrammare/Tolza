@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nexus/ast/forward.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "parser/parser_declaration_extension.hpp"
@@ -24,7 +24,7 @@ namespace parser
 
 #define parser_type_factory p.CU.types->factory
 
-bool is_gen_args(token::Viewer& tok_v) noexcept;
+bool is_gen_args(token::Viewer& tok_v);
 
 
 struct Parser_Context final {
@@ -49,14 +49,12 @@ struct Parser_Context final {
   [[nodiscard]] bool start_parsing();
 
 
-  // debug purpose on error
-  void                      attempt_recovery();
   // match separator, or end instruction or and error return true if end is encounter
-  [[nodiscard]] bool        match_field_separator(token::ETokenKind separator, token::ETokenKind end) const noexcept;
+  [[nodiscard]] bool        match_field_separator(token::ETokenKind separator, token::ETokenKind end) const;
   // return true if end is encounter
   [[nodiscard]] bool        match_field_any_separator(token::ETokenKind                        p_separator,
-                                                      std::initializer_list<token::ETokenKind> p_end) const noexcept;
-  [[nodiscard]] std::string parse_name(std::string_view msg = "", std::string_view hint = "") const noexcept;
+                                                      std::initializer_list<token::ETokenKind> p_end) const;
+  [[nodiscard]] std::string parse_name(std::string_view msg = "", std::string_view hint = "") const;
   // MetablockManager shortcut for ASTNode
   [[nodiscard]] bool        metablock_contains(size_t file_pos, std::string_view s) const;
   [[nodiscard]] bool        metablock_contains(size_t file_pos, token::ETokenKind t) const;
@@ -72,32 +70,32 @@ struct Parser_Context final {
   void enter_module(ast::ID nodeid, std::string_view debug_name);
   void exit_module();
 
-  [[nodiscard]] std::string_view tok_to_str(token::ID id) const noexcept;
-  [[nodiscard]] size_t           tok_to_pos(token::ID id) const noexcept;
+  [[nodiscard]] std::string_view tok_to_str(token::ID id) const;
+  [[nodiscard]] size_t           tok_to_pos(token::ID id) const;
 
   // token viewer navigation
 
   [[nodiscard]] token::Token& expect(ErrorCode code, token::ETokenKind tok, std::string_view msg,
-                                     std::string_view hint) const noexcept;
+                                     std::string_view hint) const;
   [[nodiscard]] token::Token& expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& types,
-                                         std::string_view msg, std::string_view hint) const noexcept;
-  [[nodiscard]] token::Token& next() const noexcept;
-  [[nodiscard]] bool          is_end() const noexcept;
-  [[nodiscard]] bool          match(token::ETokenKind tok) const noexcept;
-  [[nodiscard]] bool          match_val(std::string_view val) const noexcept;
-  [[nodiscard]] bool          match_any(std::initializer_list<token::ETokenKind> toks) const noexcept;
-  [[nodiscard]] bool          match_chain(std::initializer_list<token::ETokenKind> l) const noexcept;
+                                         std::string_view msg, std::string_view hint) const;
+  [[nodiscard]] token::Token& next() const;
+  [[nodiscard]] bool          is_end() const;
+  [[nodiscard]] bool          match(token::ETokenKind tok) const;
+  [[nodiscard]] bool          match_val(std::string_view val) const;
+  [[nodiscard]] bool          match_any(std::initializer_list<token::ETokenKind> toks) const;
+  [[nodiscard]] bool          match_chain(std::initializer_list<token::ETokenKind> l) const;
 
-  [[nodiscard]] bool          check(token::ETokenKind tok) const noexcept;
-  [[nodiscard]] bool          check_at(size_t offset, token::ETokenKind tok) const noexcept;
-  [[nodiscard]] bool          check_val(std::string_view val) const noexcept;
-  [[nodiscard]] bool          check_any(std::initializer_list<token::ETokenKind> toks) const noexcept;
-  [[nodiscard]] bool          check_chain(std::initializer_list<token::ETokenKind> l) const noexcept;
-  [[nodiscard]] token::Token& peek(size_t offset = 0) const noexcept;
-  void                        rewind(size_t pos) const noexcept;
+  [[nodiscard]] bool          check(token::ETokenKind tok) const;
+  [[nodiscard]] bool          check_at(size_t offset, token::ETokenKind tok) const;
+  [[nodiscard]] bool          check_val(std::string_view val) const;
+  [[nodiscard]] bool          check_any(std::initializer_list<token::ETokenKind> toks) const;
+  [[nodiscard]] bool          check_chain(std::initializer_list<token::ETokenKind> l) const;
+  [[nodiscard]] token::Token& peek(size_t offset = 0) const;
+  void                        rewind(size_t pos) const;
 
   template <ast::Generic T>
-  [[nodiscard]] T& add_get_node(token::ID tokid) noexcept;
+  [[nodiscard]] T& add_get_node(token::ID tokid);
 
   [[nodiscard]] definition::ID add_definition(ast::ID nodeid);
 

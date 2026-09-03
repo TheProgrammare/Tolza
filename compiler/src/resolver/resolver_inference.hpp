@@ -1,9 +1,9 @@
 #pragma once
 
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "nexus/ast/forward.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "resolver_base.hpp"
@@ -37,6 +37,7 @@ struct Inference : public Base {
   void resolve_Symbol_Type(const ast::Symbol_Type& n);
   void resolve_Global_Variable(const ast::Global_Variable& n);
   void resolve_Global_Function(const ast::Global_Function& n);
+  void resolve_Call_Contract(const ast::Call_Contract& n);
   void resolve_Global_Alias_Type(const ast::Global_Alias_Type& n);
   void resolve_Global_Export(const ast::Global_Export& n);
   void resolve_Global_Extern(const ast::Global_Extern& n);

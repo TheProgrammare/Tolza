@@ -1,6 +1,12 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+namespace common::compiler
+{
+struct Profile;
+}
 
 namespace CLI
 {
@@ -17,12 +23,12 @@ private:
 
 public:
   Commander() = delete;
-  Commander(CLI::App& _app)
-    : app(_app)
-  {
-    init_common_commands();
-  }
+  Commander(CLI::App& _app, int argc, const char* argv[]);
 
+
+  common::compiler::Profile& opt;
+
+  std::vector<std::string> args;
 
 protected:
   CLI::App& app;
@@ -38,6 +44,8 @@ protected:
   bool        is_release      = true;
   bool        is_debug        = false;
   bool        no_env          = false;
+
+  void compilation_args(CLI::App* build) noexcept;
 
   void         init_command_compiler() noexcept;
   virtual void init_command_build() noexcept = 0;

@@ -37,14 +37,76 @@ constexpr std::string_view SOFTWARE_ABOUT =
     "  Source: https://github.com/TheProgrammare/Tolza";
 
 
-constexpr std::string_view TOLZA_MAIN_TEMPLATE =
-    R"(
+constexpr std::string_view TOLZA_MAIN_TEMPLATE = R"(
 import bind::C::stdio as C
 
 fn main() {
   C::printf("hello world!")
 }
 
+)";
+
+constexpr std::string_view TOLZA_LAUNCH_TEMPLATE = R"(
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build-debug",
+        }
+    ]
+}
+)";
+
+constexpr std::string_view TOLZA_TASKS_TEMPLATE = R"(
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "clear",
+            "type": "shell",
+            "command": "clear"
+        },
+        {
+            "label": "build-debug",
+            "dependsOn": "clear",
+            "type": "shell",
+            "command": "tolza-compiler",
+            "args": [
+                "build",
+                "--profiles",
+                "debug",
+                "${workspaceFolder}/tolza.toml"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build-release",
+            "dependsOn": "clear",
+            "type": "shell",
+            "command": "tolza-compiler",
+            "args": [
+                "build",
+                "--profiles",
+                "release",
+                "${workspaceFolder}/tolza.toml"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
 )";
 
 } // namespace toolchain

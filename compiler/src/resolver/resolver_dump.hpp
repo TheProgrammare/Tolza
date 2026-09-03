@@ -1,9 +1,9 @@
 #pragma once
 
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "nexus/ast/forward.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
 #include "resolver_base.hpp"
@@ -29,6 +29,7 @@ struct Dump : public resolver::Base {
   static std::string dump_Import(const ast::Import& n) noexcept;
   static std::string dump_Global_Variable(const ast::Global_Variable& n) noexcept;
   static std::string dump_Global_Function(const ast::Global_Function& n) noexcept;
+  static std::string dump_Call_Contract(const ast::Call_Contract& n) noexcept;
   static std::string dump_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept;
   static std::string dump_Global_Extend_Cast(const ast::Global_Extend_Cast& n) noexcept;
   static std::string dump_Global_Extend_Op_Bin(const ast::Global_Extend_Op_Bin& n) noexcept;

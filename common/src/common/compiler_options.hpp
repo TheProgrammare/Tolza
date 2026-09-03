@@ -182,6 +182,7 @@ struct Dir final {
   std::string binding  = "./binding";
   std::string ffi_json = "./binding/ffi_json";
   std::string compiler = "~/tolza-compiler";
+  std::string overlay;
   std::string stdlib;
   std::string packages;
 
@@ -205,8 +206,9 @@ struct Option_Profile final {
 };
 
 struct Log final {
-  FPass     logs  = FPass::NONE;
-  ELogLevel level = ELogLevel::NONE;
+  FPass     logs   = FPass::NONE;
+  ELogLevel level  = ELogLevel::NONE;
+  bool      notify = true;
 };
 
 struct Warn final {
@@ -333,12 +335,13 @@ struct Manifest {
 
 // for sub configuration
 struct Profile : Manifest {
+  Profile() = default;
   Profile(const Manifest& manifest)
     : Manifest(manifest)
   {
   }
 
-  [[nodiscard]] static Profile read_profile(std::string_view path) noexcept;
+  [[nodiscard]] static Profile read_profile(std::string_view path, std::string_view project_path) noexcept;
   [[nodiscard]] bool write_profile(std::string_view path, bool use_env = false, bool is_debug = false) noexcept;
 
   enum class EMergeMode : uint8_t { NONE, _union, _override, _intersection, _anti_intersection };

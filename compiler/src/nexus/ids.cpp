@@ -1,27 +1,28 @@
 #include "ids.hpp"
 
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/definition.hpp"
-#include "nexus/extension.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/module.hpp"
-#include "nexus/resolved.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
 #include "pipeline/pipeline.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/link/extension.hpp"
+#include "pool/link/inference.hpp"
+#include "pool/link/resolved.hpp"
+#include "pool/link/semantic_metadata.hpp"
+#include "pool/module.hpp"
+#include "pool/scope.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
+#include "type/definition.hpp"
 
 #include <cstdint>
 
 
 cu::CU& cu::ID::get() noexcept
 {
-  auto& scrs = compiler::pipeline.compilation_units;
+  auto& scrs = PIPELINE.compilation_units;
 
   assert(*this && "Must be valid id");
   auto _offset = offset();
@@ -29,7 +30,7 @@ cu::CU& cu::ID::get() noexcept
   assert(_offset < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
 
   if (is_temp()) {
-    auto& temps = compiler::pipeline.temp_compilation_units;
+    auto& temps = PIPELINE.temp_compilation_units;
     assert(_offset < temps.size() && _offset >= 0 && "ID index is out of bound");
     return *temps.at(_offset);
   }
@@ -40,14 +41,14 @@ cu::CU& cu::ID::get() noexcept
 }
 const cu::CU& cu::ID::get() const noexcept
 {
-  auto& scrs = compiler::pipeline.compilation_units;
+  auto& scrs = PIPELINE.compilation_units;
 
   assert(*this && "Must be valid id");
   auto _offset = offset();
   assert(_offset < std::numeric_limits<uint32_t>::max() && "ID index will overflow on encoding");
 
   if (is_temp()) {
-    auto& temps = compiler::pipeline.temp_compilation_units;
+    auto& temps = PIPELINE.temp_compilation_units;
     assert(_offset < temps.size() && _offset >= 0 && "ID index is out of bound");
     return *temps.at(_offset);
   }
@@ -69,7 +70,7 @@ ast::ID ast::ID::canonical() const noexcept
   const auto k = kind();
 
   if (ast::ENodeKind_is_symbol(k)) {
-    if (auto defid = compiler::resolved.get_definition(*this)) {
+    if (auto defid = COMPILER.resolved.get_definition(*this)) {
       if (auto nodeid = defid.node()) return nodeid;
     }
   }
@@ -89,18 +90,20 @@ token::ID ast::ID::token() const noexcept
 type::ID ast::ID::type() const noexcept
 {
   assert(*this && "Must be valid id");
-  return compiler::inference.get_inference(*this);
+  if (auto inf = COMPILER.inference.get_inference(*this)) return inf;
+
+  return get_decl_type(*this);
 }
 bool ast::ID::is_inferred() const noexcept
 {
   assert(*this && "Must be valid id");
-  return compiler::inference.is_inferred(*this);
+  return COMPILER.inference.is_inferred(*this);
 }
 definition::ID ast::ID::def() const noexcept
 {
   assert(*this && "Must be valid id");
 
-  if (auto defid = compiler::resolved.get_definition(*this)) return defid;
+  if (auto defid = COMPILER.resolved.get_definition(*this)) return defid;
 
   return NO_ID;
 }
@@ -108,7 +111,7 @@ bool ast::ID::is_resolved() const noexcept
 {
   assert(*this && "Must be valid id");
 
-  return compiler::resolved.is_resolved(*this);
+  return COMPILER.resolved.is_resolved(*this);
 }
 scope::ID ast::ID::scope() const noexcept
 {
@@ -174,7 +177,21 @@ bool ast::ID::is() const noexcept
   assert(*this && "Must be valid id");
   return cu().get().ast->get(*this).kind == T::static_kind;
 }
-
+bool ast::ID::is_builtin() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return raw() < ast::NODEID_USER_START;
+}
+semantic::Metadata* ast::ID::sem() noexcept
+{
+  assert(*this && "Must be valid id");
+  return COMPILER.semantic_metadata.get_metadata(*this);
+}
+const semantic::Metadata* ast::ID::sem() const noexcept
+{
+  assert(*this && "Must be valid id");
+  return COMPILER.semantic_metadata.get_metadata(*this);
+}
 
 std::string_view token::ID::str() const noexcept
 {
@@ -234,7 +251,7 @@ type::ETypeKind type::ID::kind() const noexcept
 definition::ID type::ID::def() const noexcept
 {
   assert(*this && "Must be valid id");
-  return compiler::inference.get_declaration(*this).def();
+  return COMPILER.inference.get_declaration(*this).def();
 }
 const std::unordered_set<ast::ID, ast::ID::Hash>& type::ID::extensions() const noexcept
 {
@@ -438,18 +455,19 @@ const definition::Definition& definition::ID::get() const noexcept
  */
 
 
-// #include "ast/ast_base.hpp"
-// #include "ast/ast_declaration_extension.hpp"
-// #include "ast/ast_declaration_sfm.hpp"
-// #include "ast/ast_declaration_global.hpp"
-// #include "ast/ast_declaration_local.hpp"
-// #include "ast/ast_expression.hpp"
-// #include "ast/ast_generic.hpp"
-// #include "ast/ast_literal.hpp"
-// #include "ast/ast_memory.hpp"
-// #include "ast/ast_operation.hpp"
-// #include "ast/ast_statement.hpp"
-#include "ast/ast.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_memory.hpp"
+#include "ast/definition/ast_numeric_128_bits.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "pool/ast.hpp"
 
 
 #define AST_GET_INSTANCE(T)                                                                                            \
@@ -470,6 +488,7 @@ AST_GET_INSTANCE(ast::Root)
 AST_GET_INSTANCE(ast::Import)
 AST_GET_INSTANCE(ast::Global_Variable)
 AST_GET_INSTANCE(ast::Global_Function)
+AST_GET_INSTANCE(ast::Call_Contract)
 AST_GET_INSTANCE(ast::Global_Extend_Fn)
 AST_GET_INSTANCE(ast::Global_Extend_Cast)
 AST_GET_INSTANCE(ast::Global_Extend_Op_Bin)

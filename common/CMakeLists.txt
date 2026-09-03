@@ -16,22 +16,23 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ----------------------------
 set(TOLZA_SOURCES
 
-    ./src/common/common.cpp  
-    ./src/common/common.cpp  
-    ./src/common/commands.cpp  
-    ./src/common/commands.hpp  
-    ./src/common/compiler_options.cpp
-    ./src/common/compiler_options.hpp
-    ./src/common/environment.cpp
-    ./src/common/environment.hpp
-    ./src/common/fileutils.cpp
-    ./src/common/fileutils.hpp
-    ./src/common/time.cpp
-    ./src/common/time.hpp
-    ./src/common/toolchain_options.cpp
-    ./src/common/toolchain_options.hpp
-    ./src/common/utils.cpp
-    ./src/common/utils.hpp
+  ./src/common/CLI11_type_serialization.hpp
+./src/common/commands.cpp
+./src/common/commands.hpp
+./src/common/common.cpp
+./src/common/common.hpp
+./src/common/compiler_options.cpp
+./src/common/compiler_options.hpp
+./src/common/environment.cpp
+./src/common/environment.hpp
+./src/common/fileutils.cpp
+./src/common/fileutils.hpp
+./src/common/time.cpp
+./src/common/time.hpp
+./src/common/toolchain_options.cpp
+./src/common/toolchain_options.hpp
+./src/common/utils.cpp
+./src/common/utils.hpp
 
 )
 

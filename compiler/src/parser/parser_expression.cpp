@@ -1,19 +1,20 @@
 #include "parser_expression.hpp"
 
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/lexer/token.hpp"
 #include "parser/parser_base.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_literal.hpp"
 #include "parser_operation.hpp"
 #include "parser_type.hpp"
+#include "pool/token.hpp"
 
 #include <vector>
 
@@ -45,13 +46,16 @@ ast::ID parser::Parser_Expression::parse_expression()
     op         = node.nodeid();
   }
 
+  throw Parser_Exception(p, 141, p.peek(),
+                         std::format("Unexpected identifier \"{}\" inside expression", p.peek().tokid.str()), "");
   return op;
 }
 ast::ID parser::Parser_Expression::parse_expression_term()
 {
   if (auto term = base_expression()) return suffix_expression(term);
 
-  THROW_BAD_NODE;
+  throw Parser_Exception(p, 505, p.peek(), std::format("Unexpected suffix expression \"{}\"", p.peek().tokid.str()),
+                         "");
 }
 
 ast::ID parser::Parser_Expression::base_expression()
@@ -84,9 +88,7 @@ ast::ID parser::Parser_Expression::base_expression()
   }
 
 
-  p.add_error(79, std::format("Unexpected '{}' keyword.", p.tok_to_str(p.peek().tokid)), hint);
-
-  THROW_BAD_NODE;
+  throw Parser_Exception(p, 79, p.peek(), std::format("Unexpected '{}' keyword.", p.tok_to_str(p.peek().tokid)), hint);
 }
 
 ast::ID parser::Parser_Expression::assign(ast::ID left)
@@ -96,7 +98,7 @@ ast::ID parser::Parser_Expression::assign(ast::ID left)
 
 ast::ID parser::Parser_Expression::suffix_expression(ast::ID p_base_expr)
 {
-  if (!p_base_expr) THROW_BAD_NODE;
+  if (!p_base_expr) throw Parser_Exception(p, 611, p.peek(), "Unexpected expression", "");
 
   // is a literal expression, no suffix allowed
   if (ast::ENodeKind_is_literal(p_base_expr.kind())) {

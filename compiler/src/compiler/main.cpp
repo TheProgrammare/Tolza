@@ -15,6 +15,8 @@
  *  limitations under the License.
  */
 
+#include "Neargye/magic_enum.hpp"
+#include "common/compiler_options.hpp"
 #include "compiler.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
@@ -30,7 +32,7 @@ int run_tolza(int argc, const char* argv[])
 
   CLI11_PARSE(app, argc, argv);
 
-  if (compiler::COMPILER.run_requested) return compiler::COMPILER.start_compilation() ? 0 : 1;
+  if (COMPILER.run_requested) return COMPILER.start_compilation() ? 0 : 1;
 
   return 0;
 }

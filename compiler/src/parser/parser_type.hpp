@@ -22,14 +22,16 @@ private:
 
 
 public:
-  [[nodiscard]] std::vector<type::ID>                     explicit_tuple();
-  [[nodiscard]] ast::ID                                   get_type();
-  // proto, parameters
-  [[nodiscard]] std::pair<type::ID, std::vector<ast::ID>> prototype_from_declaration(bool start_at_params = false);
+  [[nodiscard]] std::vector<type::ID> explicit_tuple();
+  [[nodiscard]] ast::ID               get_type();
+  // proto, parameters, contract
+  [[nodiscard]] std::tuple<type::ID, std::vector<ast::ID>, ast::ID>
+                                                      prototype_from_declaration(bool start_at_params = false);
   // parameters
-  [[nodiscard]] type::ID                                  prototype_from_type();
+  [[nodiscard]] type::ID                              prototype_from_type();
+  [[nodiscard]] type::ID                              prototype_contract();
   // is_variadic, parameters
-  [[nodiscard]] std::pair<bool, std::vector<ast::ID>>     parameters();
+  [[nodiscard]] std::pair<bool, std::vector<ast::ID>> parameters();
 
   Parser_Context& p;
 };

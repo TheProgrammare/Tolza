@@ -23,6 +23,7 @@ struct Parser_Declaration final {
   [[nodiscard]] ast::ID function();
   [[nodiscard]] ast::ID generic();
   [[nodiscard]] ast::ID goto_label_statement();
+  [[nodiscard]] ast::ID call_contract();
 
   parser::Parser_Context& p;
 };

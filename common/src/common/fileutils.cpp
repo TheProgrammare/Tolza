@@ -8,17 +8,16 @@
 
 #include "common.hpp"
 #include "time.hpp"
-#include "utils.hpp"
 
 namespace fs = std::filesystem;
 
 
 bool common::fileutils::is_sub_path(std::string_view base, std::string_view path) noexcept
 {
-  auto f_base = fs::weakly_canonical(base);
-  auto f_path = fs::weakly_canonical(path);
   try {
-    auto rel = fs::relative(f_path, f_base);
+    auto f_base = fs::weakly_canonical(base);
+    auto f_path = fs::weakly_canonical(path);
+    auto rel    = fs::relative(f_path, f_base);
     return !rel.empty() && rel.native().find("..") == std::string::npos;
   } catch (...) {
     return false;
@@ -134,6 +133,42 @@ std::string common::fileutils::find_tolza_toml(std::string_view file_path) noexc
   return {};
 }
 
+bool common::fileutils::is_dirty(std::string_view workspace_file, std::string_view workspace_root,
+                                 std::string_view overlay_root) noexcept
+{
+  const auto relative = std::filesystem::relative(workspace_file, workspace_root);
+
+  return std::filesystem::exists(overlay_root / relative);
+}
+
+std::string common::fileutils::get_temp_dir() noexcept
+{
+#ifdef _WIN32
+  const char* temp = std::getenv("TEMP");
+  if (!temp) {
+    temp = std::getenv("TMP");
+  }
+#else
+  const char* temp = std::getenv("TMPDIR");
+  if (!temp) {
+    temp = "/tmp";
+  }
+#endif
+
+  if (!temp) {
+    return {};
+  }
+
+  return std::filesystem::path(temp);
+}
+
+std::string common::fileutils::overlay_to_real_path(std::string_view overlay_file, std::string_view overlay_root,
+                                                    std::string_view workspace_root) noexcept
+{
+  const auto relative = fs::relative(overlay_file, overlay_root);
+
+  return common::fileutils::resolve_path((workspace_root / relative).string());
+}
 
 bool common::fileutils::is_barrel_file(std::string_view file_path) noexcept
 {

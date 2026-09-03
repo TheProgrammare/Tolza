@@ -1,22 +1,18 @@
 
 #include "parser_base.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
+#include "lexer/token_viewer.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/lexer/token_viewer.hpp"
-#include "nexus/module.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/type/type.hpp"
-#include "nexus/unresolved.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration_global.hpp"
 #include "parser_declaration_local.hpp"
@@ -25,6 +21,11 @@
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
+#include "pool/module.hpp"
+#include "pool/scope.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
+#include "pool/unresolved.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -41,7 +42,7 @@ parser::Parser_Base::~Parser_Base()
 {
 }
 
-ast::ID parser::Parser_Base::parse_import() noexcept
+ast::ID parser::Parser_Base::parse_import()
 {
   constexpr std::string_view hint =
       R"(define import module like:
@@ -79,7 +80,7 @@ ast::ID parser::Parser_Base::parse_import() noexcept
   if (!mod) {
     auto& tok = p.CU.file_info.tokens->get(imp.header.start_tokid);
     auto  err = Error_Diagnostic(p.cuid, 238, tok.begin, tok.begin + tok.length, compiler::EPhase::binder, out_err, "");
-    compiler::COMPILER.add_error(err);
+    COMPILER.add_error(err);
   }
 
   assert(mod && "invalid moduleid");
@@ -96,7 +97,7 @@ ast::ID parser::Parser_Base::parse_import() noexcept
   return imp.nodeid();
 }
 
-ast::ID parser::Parser_Base::parse_export() noexcept
+ast::ID parser::Parser_Base::parse_export()
 {
   constexpr std::string_view hint = "define export module like: `export {...}`";
 
@@ -122,7 +123,7 @@ ast::ID parser::Parser_Base::parse_export() noexcept
   return exp_node.nodeid();
 }
 
-ast::ID parser::Parser_Base::parse_reexport() noexcept
+ast::ID parser::Parser_Base::parse_reexport()
 {
   constexpr std::string_view hint = "define re-export module like: `reexport <path>`";
 
@@ -160,7 +161,7 @@ ast::ID parser::Parser_Base::parse_reexport() noexcept
 }
 
 
-ast::ID parser::Parser_Base::parse_extern() noexcept
+ast::ID parser::Parser_Base::parse_extern()
 {
   constexpr std::string_view hint = R"(define extern like: `extern "ABI" {...}`)";
 
@@ -189,7 +190,7 @@ ast::ID parser::Parser_Base::parse_extern() noexcept
   return ext_node.nodeid();
 }
 
-ast::ID parser::Parser_Base::parse_instruction() noexcept
+ast::ID parser::Parser_Base::parse_instruction()
 {
   constexpr std::string_view hint =
       R"(define insutrction like:
@@ -234,11 +235,10 @@ ast::ID parser::Parser_Base::parse_instruction() noexcept
     return expr;
   }
 
-  p.add_error_tok(11, p.peek(), "Unexpected instruction", hint);
-  THROW_BAD_NODE;
+  throw Parser_Exception(p, 11, p.peek(), "Unexpected instruction", hint);
 }
 
-ast::ID parser::Parser_Base::regex_path() noexcept
+ast::ID parser::Parser_Base::regex_path()
 {
   constexpr std::string_view hint =
       R"(define regex path like: 
@@ -317,7 +317,7 @@ ast::ID parser::Parser_Base::regex_path() noexcept
 }
 
 
-ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_allowed) noexcept
+ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_allowed)
 {
   constexpr std::string_view hint =
       R"(define identifier like:"
@@ -342,7 +342,7 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
     else
       id.name = std::string(p.tok_to_str(p.next().tokid));
 
-    compiler::unresolved.add(id.nodeid());
+    COMPILER.unresolved.add(id.nodeid());
     return id.nodeid();
   }
 
@@ -371,11 +371,11 @@ ast::ID parser::Parser_Base::identifier(bool p_no_qualified_id, bool p_keyword_a
     }
   }
 
-  compiler::unresolved.add(id.nodeid());
+  COMPILER.unresolved.add(id.nodeid());
   return id.nodeid();
 }
 
-std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed() noexcept
+std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed()
 {
   (void)p.match_any({token::ETokenKind::TURBO_FISH, token::ETokenKind::L_CURLY});
 
@@ -398,7 +398,7 @@ std::tuple<ast::ID, type::ID> parser::Parser_Base::identifier_typed() noexcept
 
 
 ast::Local_Parameter& parser::Parser_Base::inject_parameter(ast::ID parent_callable, size_t pos, std::string_view name,
-                                                            ast::EPassMode passmode, type::ID tyid) noexcept
+                                                            ast::EPassMode passmode, type::ID tyid)
 {
   auto& n           = p.add_get_node<ast::Local_Parameter>(p.peek().tokid);
   n.name            = name;
@@ -422,7 +422,7 @@ ast::Local_Parameter& parser::Parser_Base::inject_parameter(ast::ID parent_calla
   return n;
 }
 ast::Local_Variable& parser::Parser_Base::inject_variable(std::string_view name, ast::EVariableKind kind, type::ID tyid,
-                                                          ast::ID expr) noexcept
+                                                          ast::ID expr)
 {
   auto& n      = p.add_get_node<ast::Local_Variable>(p.peek().tokid);
   n.name       = name;
@@ -436,7 +436,7 @@ ast::Local_Variable& parser::Parser_Base::inject_variable(std::string_view name,
 }
 
 ast::Local_Capability& parser::Parser_Base::inject_capability(std::string_view name, ast::ECapability capa,
-                                                              type::ID tyid, ast::ID expr) noexcept
+                                                              type::ID tyid, ast::ID expr)
 {
   auto& n      = p.add_get_node<ast::Local_Capability>(p.peek().tokid);
   n.name       = name;

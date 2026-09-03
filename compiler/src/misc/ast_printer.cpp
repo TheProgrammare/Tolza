@@ -1,21 +1,21 @@
 #include "ast_printer.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_generic.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_memory.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_memory.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/type/type.hpp"
+#include "pool/type.hpp"
 
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
@@ -32,7 +32,7 @@
 std::string AST_Printer::get_file_path() const
 {
   std::filesystem::path path =
-      std::filesystem::path(compiler::OPTIONS.get_debug_graph_dir()) / CU.file_info.get_file_name();
+      std::filesystem::path(OPTIONS.get_debug_graph_dir()) / CU.file_info.get_file_name();
   path.replace_extension(".html");
   return path.string();
 }

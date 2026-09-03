@@ -3,6 +3,7 @@
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
 #include "pipeline/pipeline.hpp"
+#include "resolver/resolver_eval.hpp"
 #include "resolver/resolver_inference.hpp"
 #include "resolver/resolver_semantic.hpp"
 #include "resolver/resolver_symbol.hpp"
@@ -27,8 +28,8 @@ inline double timing(const std::function<void()>& f) noexcept
 
 bool resolver::resolve_cu(cu::ID cuid) noexcept
 {
-  size_t err_count  = compiler::COMPILER.errors.size();
-  auto   have_error = [&]() { return compiler::COMPILER.errors.size() > err_count; };
+  size_t err_count  = COMPILER.errors.size();
+  auto   have_error = [&]() { return COMPILER.errors.size() > err_count; };
 
   auto& cu = cuid.get();
 
@@ -60,7 +61,7 @@ bool resolver::resolve_cu(cu::ID cuid) noexcept
 
   count++;
 
-  if (!have_error()) compiler::pipeline.analyzed_compilation_units.insert(cuid);
+  if (!have_error()) PIPELINE.analyzed_compilation_units.insert(cuid);
   return !have_error();
 }
 size_t resolver::symbol_resolution_cu(cu::ID cuid) noexcept
@@ -77,4 +78,9 @@ size_t resolver::semantic_resolution_cu(cu::ID cuid) noexcept
 {
   resolver::Semantic sem(cuid.get());
   return sem.start_resolver();
+}
+size_t resolver::eval_resolution_cu(cu::ID cuid) noexcept
+{
+  resolver::Evaluator eval(cuid.get());
+  return eval.start_resolver();
 }

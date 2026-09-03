@@ -1,18 +1,18 @@
 #include "compiler/compilation_unit.hpp"
 
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/definition.hpp"
-#include "nexus/extension.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/module.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/type/type.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/link/extension.hpp"
+#include "pool/metacode.hpp"
+#include "pool/module.hpp"
+#include "pool/scope.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 #include <cassert>
 #include <common/common.hpp>
@@ -201,11 +201,9 @@ std::string cu::FileInfo::get_module_path() const
 
 cu::EFileSource cu::file_path_to_EFileSource(std::string_view p_file)
 {
-  if (common::fileutils::is_sub_path(compiler::OPTIONS.dir.get_dir_source(), p_file)) return cu::EFileSource::src;
-  if (common::fileutils::is_sub_path(compiler::OPTIONS.get_dir_binding_profile(), p_file))
-    return cu::EFileSource::binding;
-  if (common::fileutils::is_sub_path(compiler::OPTIONS.dir.get_dir_vendor(), p_file))
-    return cu::EFileSource::vendor_lib;
+  if (common::fileutils::is_sub_path(OPTIONS.dir.get_dir_source(), p_file)) return cu::EFileSource::src;
+  if (common::fileutils::is_sub_path(OPTIONS.get_dir_binding_profile(), p_file)) return cu::EFileSource::binding;
+  if (common::fileutils::is_sub_path(OPTIONS.dir.get_dir_vendor(), p_file)) return cu::EFileSource::vendor_lib;
   if (common::fileutils::is_sub_path(common::env::get_stdlib_dir(), p_file)) return cu::EFileSource::stdlib;
   if (common::fileutils::is_sub_path(common::env::get_packages_dir(), p_file)) return cu::EFileSource::pkg_lib;
   return cu::EFileSource::relative;
@@ -215,11 +213,11 @@ cu::EFileSource cu::file_path_to_EFileSource(std::string_view p_file)
 std::string cu::EFileSource_to_dir(EFileSource p_file_source)
 {
   switch (p_file_source) {
-  case cu::EFileSource::src:        return compiler::OPTIONS.dir.get_dir_source();
-  case cu::EFileSource::vendor_lib: return compiler::OPTIONS.dir.get_dir_vendor();
-  case cu::EFileSource::stdlib:     return compiler::OPTIONS.dir.get_dir_stdlib();
-  case cu::EFileSource::pkg_lib:    return compiler::OPTIONS.dir.get_dir_packages();
-  case cu::EFileSource::binding:    return compiler::OPTIONS.get_dir_binding_profile();
+  case cu::EFileSource::src:        return OPTIONS.dir.get_dir_source();
+  case cu::EFileSource::vendor_lib: return OPTIONS.dir.get_dir_vendor();
+  case cu::EFileSource::stdlib:     return OPTIONS.dir.get_dir_stdlib();
+  case cu::EFileSource::pkg_lib:    return OPTIONS.dir.get_dir_packages();
+  case cu::EFileSource::binding:    return OPTIONS.get_dir_binding_profile();
   case cu::EFileSource::relative:   return {};
   }
 }

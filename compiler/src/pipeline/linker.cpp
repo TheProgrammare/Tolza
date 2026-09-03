@@ -46,7 +46,7 @@ namespace fs = std::filesystem;
 
 bool linker::link_modules() noexcept
 {
-  const auto& CUs = compiler::pipeline.compilation_units;
+  const auto& CUs = PIPELINE.compilation_units;
   if (CUs.empty()) return true;
 
   auto* main_mod = cu::ID::main().get().llvm_module;
@@ -81,13 +81,13 @@ bool linker::link_modules() noexcept
 
 bool linker::link_executable() noexcept
 {
-  std::string extension = compiler::OPTIONS.target.triple.platform == common::env::EPlatform::windows ? ".exe" : "";
+  std::string extension = OPTIONS.target.triple.platform == common::env::EPlatform::windows ? ".exe" : "";
 
-  fs::create_directories(compiler::OPTIONS.get_dir_build_profile());
+  fs::create_directories(OPTIONS.get_dir_build_profile());
 
-  fs::path target_o = fs::path(compiler::OPTIONS.get_dir_build_profile()) / compiler::OPTIONS.get_project_name();
+  fs::path target_o = fs::path(OPTIONS.get_dir_build_profile()) / OPTIONS.get_project_name();
   target_o.replace_extension(".o");
-  fs::path out_bin = fs::path(compiler::OPTIONS.get_dir_build_profile()) / compiler::OPTIONS.get_project_name();
+  fs::path out_bin = fs::path(OPTIONS.get_dir_build_profile()) / OPTIONS.get_project_name();
   out_bin.replace_extension(extension);
 
   auto* main_mod = cu::ID::main().get().llvm_module;
@@ -97,10 +97,10 @@ bool linker::link_executable() noexcept
 
   // if (auto err_code = llvm::sys::ExecuteAndWait("ld.lld", {target_o.string(), "-lc", "-o", out_bin.string()});
 
-  const std::string mode = (compiler::OPTIONS.profile.debug) ? "debug" : "release";
+  const std::string mode = (OPTIONS.profile.debug) ? "debug" : "release";
 
   if (auto err_code = std::system(cmd.c_str()); err_code != 0) {
-    if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
+    if (OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
       std::println(stderr, R"(@@TOLZA_EXORDIUM_RESULTATI@@
 {{"success":false,"executable":"","mode":"{}"}}
 @@TOLZA_CLAUSULA_RESULTATI@@)",
@@ -111,7 +111,7 @@ bool linker::link_executable() noexcept
     return false;
   }
 
-  if (compiler::OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
+  if (OPTIONS.diagnostic.out_format == common::compiler::EDiagnosticFormat::json) {
     std::println(R"(@@TOLZA_EXORDIUM_RESULTATI@@
 {{"success":true,"executable":"{}","mode":"{}"}}
 @@TOLZA_CLAUSULA_RESULTATI@@)",
@@ -129,7 +129,7 @@ bool linker::emit() noexcept
 
 
   std::error_code err_c;
-  fs::path dest_path = fs::path(compiler::OPTIONS.get_dir_build_profile()) / compiler::OPTIONS.get_project_name();
+  fs::path        dest_path = fs::path(OPTIONS.get_dir_build_profile()) / OPTIONS.get_project_name();
   dest_path.replace_extension(".o");
   fs::create_directories(dest_path.parent_path());
 
@@ -143,7 +143,7 @@ bool linker::emit() noexcept
 
   llvm::legacy::PassManager pass;
 
-  if (compiler::TM->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+  if (TARGET_MACHINE->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
     llvm::errs() << "[emitter:ERROR] TargetMachine doesn't support obj emit";
     return false;
   }

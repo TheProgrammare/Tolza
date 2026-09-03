@@ -1,22 +1,22 @@
 #include "binder_ffi.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/type/data.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
 #include "pipeline/pipeline.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/inference.hpp"
+#include "pool/type.hpp"
+#include "type/data.hpp"
+#include "type/definition.hpp"
 
 #include <Neargye/magic_enum.hpp>
 #include <common/common.hpp>
@@ -145,7 +145,7 @@ void ffi::AST::tolza_codegen(std::string_view dest)
 
 std::string ffi::Bind_Package::get_file_path() const noexcept
 {
-  fs::path path(compiler::OPTIONS.get_dir_binding_profile());
+  fs::path path(OPTIONS.get_dir_binding_profile());
   if (!lang.empty()) path /= lang;
   if (!lib.empty()) path /= lib;
   path.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
@@ -186,17 +186,17 @@ bool ffi::check_ast_generation(const AST& ast) noexcept
 }
 
 ffi::AST::AST()
-  : offset(compiler::pipeline.temp_compilation_units.size())
+  : offset(PIPELINE.temp_compilation_units.size())
   , inferences(new inference::Arena())
 {
   auto id = cu::ID::make(offset);
   id.set_temp();
   auto _tmp_cu = std::make_unique<cu::TEMP_CU>(id, nullptr, new ast::Arena(id), new type::Arena(id));
   temp_cu      = _tmp_cu.get();
-  compiler::pipeline.temp_compilation_units.emplace_back(std::move(_tmp_cu));
+  PIPELINE.temp_compilation_units.emplace_back(std::move(_tmp_cu));
 }
 
 ffi::AST::~AST()
 {
-  compiler::pipeline.temp_compilation_units.erase(compiler::pipeline.temp_compilation_units.begin() + (long)offset);
+  PIPELINE.temp_compilation_units.erase(PIPELINE.temp_compilation_units.begin() + (long)offset);
 }

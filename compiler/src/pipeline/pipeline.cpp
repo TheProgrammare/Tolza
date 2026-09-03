@@ -69,23 +69,65 @@ std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cui
     if (c == '\n') last_offset_line.emplace_back(offset);
     offset++;
   }
-
-  auto cuid = cu::ID::make(compiler::pipeline.compilation_units.size());
-
-  auto ptr = std::make_unique<cu::CU>(parent_cuid, cuid, path, data, last_offset_line);
-
   f.close();
 
-  return ptr;
+  auto cuid = cu::ID::make(PIPELINE.compilation_units.size());
+
+  if (OPTIONS.is_check_mode) {
+    std::string file_path =
+        common::fileutils::is_sub_path(common::fileutils::get_temp_dir(), path)
+            ? common::fileutils::overlay_to_real_path(path, OPTIONS.dir.overlay, OPTIONS.project_path)
+            : std::string(path);
+    return std::make_unique<cu::CU>(parent_cuid, cuid, file_path, data, last_offset_line);
+  }
+
+  return std::make_unique<cu::CU>(parent_cuid, cuid, path, data, last_offset_line);
 }
 
 std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept
 {
-  auto f_founds = common::fileutils::find_tolza_files(path, true);
+  auto set      = common::fileutils::find_tolza_files(path, true);
+  auto f_founds = std::vector<std::string>(set.begin(), set.end());
+
+  if (OPTIONS.is_check_mode) {
+    const auto relative_path = fs::relative(path, OPTIONS.project_path);
+
+    const auto overlay_path = OPTIONS.dir.overlay / relative_path;
+
+    std::vector<cu::ID> compilation_units_ids;
+
+    for (auto& file : f_founds) {
+      const auto relative_file = fs::relative(file, path);
+      const auto overlay_file  = overlay_path / relative_file;
+
+      if (fs::exists(overlay_file)) {
+        file = overlay_file.string();
+      }
+
+      if (auto it = path_generated.find(file); it != path_generated.end()) {
+        compilation_units_ids.emplace_back(it->second);
+        continue;
+      }
+
+      auto cu   = build_CU_from_path(parent_cuid, file);
+      auto cuid = cu->cuid;
+
+      compilation_units_ids.emplace_back(cuid);
+      compilation_units.emplace_back(std::move(cu));
+
+      path_generated.try_emplace(file, cuid);
+
+      if (!prepared_compilation_units.contains(cuid)) {
+        unprepared_compilation_units.insert(cuid);
+      }
+    }
+
+    return compilation_units_ids;
+  }
 
   std::vector<cu::ID> compilation_units_ids;
 
-  for (const auto& file : f_founds) {
+  for (auto& file : f_founds) {
     if (auto it = path_generated.find(file); it != path_generated.end()) {
       compilation_units_ids.emplace_back(it->second);
       continue;
@@ -93,24 +135,56 @@ std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std
 
     auto cu   = build_CU_from_path(parent_cuid, file);
     auto cuid = cu->cuid;
-    compilation_units_ids.emplace_back(cu->cuid);
+
+    compilation_units_ids.emplace_back(cuid);
     compilation_units.emplace_back(std::move(cu));
 
     path_generated.try_emplace(file, cuid);
-    if (!prepared_compilation_units.contains(cuid)) unprepared_compilation_units.insert(cuid);
+
+    if (!prepared_compilation_units.contains(cuid)) {
+      unprepared_compilation_units.insert(cuid);
+    }
   }
 
   return compilation_units_ids;
 }
+
+
 cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view path) noexcept
 {
-  if (auto it = path_generated.find(path); it != path_generated.end()) return it->second;
+  fs::path file_path{path};
 
-  auto cu     = build_CU_from_path(parent_cuid, path);
+  if (OPTIONS.is_check_mode) {
+    const auto relative_path = fs::relative(file_path, OPTIONS.project_path);
+
+    const auto overlay_path = OPTIONS.dir.overlay / relative_path;
+
+    if (fs::exists(overlay_path)) {
+      file_path = overlay_path;
+    }
+
+    if (auto it = path_generated.find(file_path.string()); it != path_generated.end()) {
+      return it->second;
+    }
+
+    auto cu     = build_CU_from_path(parent_cuid, file_path.string());
+    auto new_id = cu->cuid;
+
+    compilation_units.emplace_back(std::move(cu));
+    path_generated.try_emplace(file_path.string(), new_id);
+
+    return new_id;
+  }
+
+  if (auto it = path_generated.find(file_path.string()); it != path_generated.end()) {
+    return it->second;
+  }
+
+  auto cu     = build_CU_from_path(parent_cuid, file_path.string());
   auto new_id = cu->cuid;
-  compilation_units.emplace_back(std::move(cu));
 
-  path_generated.try_emplace(std::string(path), new_id);
+  compilation_units.emplace_back(std::move(cu));
+  path_generated.try_emplace(file_path.string(), new_id);
 
   return new_id;
 }
@@ -118,10 +192,10 @@ cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view
 
 bool pipeline::Pipeline::generate_libc_wrappers() noexcept
 {
-  auto p = fs::path(compiler::OPTIONS.get_dir_binding_profile()) / "C";
-  fs::remove_all(p);
+  auto p = fs::path(OPTIONS.get_dir_binding_profile()) / "C";
+  if (fs::exists(p)) fs::remove_all(p);
   p = common::fileutils::get_tolza_file(p.string());
-  fs::remove(p);
+  if (fs::exists(p)) fs::remove(p);
 
   // native C language lib handler
   auto duration = timing([&]() { ffi::C_Reader::generate_libc_wrappers(); });

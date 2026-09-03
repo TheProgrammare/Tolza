@@ -1,20 +1,20 @@
 #include "parser_declaration_local.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_expression.hpp"
-#include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_expression.hpp"
 #include "parser_literal.hpp"
 #include "parser_type.hpp"
+#include "pool/token.hpp"
 
 #include <cassert>
 
@@ -33,9 +33,8 @@ ast::ID parser::Parser_Declaration_Local::parse_local(bool silent_error)
   }
 
   if (!silent_error) {
-    p.add_error(40, std::format("Illegal instruction '{}' in local.", p.tok_to_str(p.peek().tokid)),
-                "you can define in local: variable, lambda, call, operation, assignation, statement");
-    THROW_BAD_NODE;
+    throw Parser_Exception(p, 40, tok, std::format("Illegal instruction '{}' in local.", p.tok_to_str(p.peek().tokid)),
+                           "you can define in local: variable, lambda, call, operation, assignation, statement");
   }
 
   return BAD_NODE_ID;
@@ -103,8 +102,8 @@ ast::ID parser::Parser_Declaration_Local::parse_pattern(ast::ID comparison_expr)
   if (p.match(token::ETokenKind::L_CURLY)) return facet_pattern(capa, id, comparison_expr);
 
 
-  p.add_error(41, "Expected pattern.", "define auto inferred variable like `let myName = expression;`");
-  THROW_BAD_NODE;
+  throw Parser_Exception(p, 41, p.peek(), "Expected pattern.",
+                         "define auto inferred variable like `let myName = expression;`");
 }
 
 ast::ID parser::Parser_Declaration_Local::variable()
@@ -268,9 +267,11 @@ ast::ID parser::Parser_Declaration_Local::lambda()
   // check capture
   if (p.match(token::ETokenKind::L_SQUARE)) lam.capture = lambda_capture();
 
-  auto [protoid, params] = p.p_type->prototype_from_declaration();
-  lam.prototype          = protoid;
-  lam.parameters         = params;
+  auto [protoid, params, contract] = p.p_type->prototype_from_declaration();
+
+  lam.prototype  = protoid;
+  lam.parameters = params;
+  lam.contract   = contract;
 
   lam.codeblock = p.p_loc->parse_codeblock_instruction();
 

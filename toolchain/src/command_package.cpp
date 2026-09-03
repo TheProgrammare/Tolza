@@ -32,9 +32,8 @@ bool command::package::check(std::string_view pkg_name) noexcept
 }
 bool command::package::list(std::string_view regex, bool only_installed, bool only_upgradable) noexcept
 {
-  std::print("Listing");
-  if (only_installed) std::print(" (installed)");
-  if (only_upgradable) std::print(" (upgradable)");
+  if (only_installed) std::println("Listing (installed)");
+  if (only_upgradable) std::println("Listing (upgradable)");
   return true;
 }
 bool command::package::update() noexcept

@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include "ast/forward.hpp"
 #include "llvm_forward.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/ids.hpp"
 #include "resolver/resolver_base.hpp"
 
@@ -14,6 +14,7 @@
 #include <vector>
 
 
+
 using ErrorCode = short;
 
 namespace codegen
@@ -22,6 +23,7 @@ struct Tools;
 struct Insurance;
 struct Static_Evaluator;
 struct Codegen_Type;
+struct DebugInfo;
 
 struct Codegen_AST : resolver::Base {
   Codegen_AST(cu::CU& p_CU, llvm::LLVMContext& p_ctx);
@@ -38,6 +40,8 @@ struct Codegen_AST : resolver::Base {
   llvm::LLVMContext& ctx;
   llvm::IRBuilder<>& builder;
   llvm::Module*      mod;
+  DebugInfo*         dinfo;
+  bool               is_debug_mode = false;
 
   Codegen_Type& types;
 
@@ -60,6 +64,8 @@ struct Codegen_AST : resolver::Base {
 
   llvm::BasicBlock* current_bb_break    = nullptr;
   llvm::BasicBlock* current_bb_continue = nullptr;
+
+  void set_debug_loc(ast::ID nodeid) noexcept;
 
   [[nodiscard]] size_t start_codegen() noexcept;
 

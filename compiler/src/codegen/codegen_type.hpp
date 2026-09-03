@@ -3,7 +3,7 @@
 #include "codegen/codegen.hpp"
 #include "llvm_forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/type/forward.hpp"
+#include "type/forward.hpp"
 
 #include <cstddef>
 #include <map>
@@ -15,17 +15,29 @@ namespace codegen
 
 struct Codegen_AST;
 
-struct Codegen_Type {
+struct LLVM_TYPE_DATA final {
+  LLVM_TYPE_DATA() = delete;
+  explicit LLVM_TYPE_DATA(llvm::Type* _type, std::initializer_list<llvm::Constant*> _constants = {})
+    : type(_type)
+    , constants(_constants)
+  {
+  }
+  llvm::Type*                  type = nullptr;
+  std::vector<llvm::Constant*> constants;
+};
+
+struct Codegen_Type final {
   Codegen_Type(cu::CU& p_CU, llvm::LLVMContext& p_ctx);
 
   llvm::LLVMContext& ctx;
   cu::CU&            cu;
   Codegen_AST*       res;
 
-  std::map<type::ID, llvm::Type*, type::ID::Compare> llvm_types;
+  std::map<type::ID, LLVM_TYPE_DATA, type::ID::Compare> llvm_types;
 
-  [[nodiscard]] llvm::Type* get(type::ID tyid) noexcept;
-  [[nodiscard]] llvm::Type* replace_type(type::ID tyid, llvm::Type* ty) noexcept;
+  [[nodiscard]] llvm::Type*                   get(type::ID tyid) noexcept;
+  [[nodiscard]] std::vector<llvm::Constant*>* get_constants(type::ID tyid) noexcept;
+  [[nodiscard]] llvm::Type*                   replace_type(type::ID tyid, llvm::Type* ty) noexcept;
 
   void init_llvm_types() noexcept;
 

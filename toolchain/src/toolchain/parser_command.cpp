@@ -20,6 +20,13 @@
 
 namespace fs = std::filesystem;
 
+
+toolchain::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
+  : common::Commander(_app, argc, argv)
+{
+  init_commands();
+}
+
 void toolchain::Commander::init_command_package() noexcept
 {
   auto* pkg = app.add_subcommand("packages", "Package manager commands");
@@ -224,36 +231,21 @@ void toolchain::Commander::init_command_new() noexcept
   }
 }
 
-
 void toolchain::Commander::init_command_build() noexcept
 {
   auto* build = app.add_subcommand("build", "Compile Tolza project");
   build->alias("b");
-  build->add_option("path", from_path, "Path to the .toml project file to get the compilation context")
-      ->type_name("<config path>");
+
+  compilation_args(build);
 
   build->callback([&]() {
-    from_path = common::fileutils::resolve_path(from_path, fs::current_path().string());
-
-    if (!fs::exists(from_path)) {
-      std::println(stderr, "[build:Error] The file path dosen't exist.");
-      exit(1);
-    }
-
-    if (!fs::is_regular_file(from_path)) {
-      std::println("[build:Error] The path is not a tolza.toml file.");
-      exit(1);
-    }
-
-    auto        ctx = common::compiler::Manifest::read_manifest(from_path);
-    std::string cmd = std::format("build {} ", from_path);
-    for (const auto& arg : ctx.to_args()) std::format_to(std::back_inserter(cmd), "{} ", arg);
-    cmd += "\n";
+    std::string cmd;
+    for (size_t i = 1; i < args.size(); i++) std::format_to(std::back_inserter(cmd), "{} ", args[i]);
+    cmd = cmd.substr(0, cmd.size() - 1);
 
     (void)toolchain::exec_compiler_cmd(cmd);
   });
 }
-
 
 void toolchain::Commander::init_commands() noexcept
 {

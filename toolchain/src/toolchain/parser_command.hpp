@@ -16,11 +16,7 @@ class Commander final : common::Commander
 {
 public:
   Commander() = delete;
-  Commander(CLI::App& _app)
-    : common::Commander(_app)
-  {
-    init_commands();
-  }
+  Commander(CLI::App& _app, int argc, const char* argv[]);
 
 private:
   std::string name;

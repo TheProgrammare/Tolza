@@ -116,8 +116,7 @@ void command::audit::audit_workspace(std::string_view root) noexcept
     {25:9}    {26:9}    {27:9}    {28:9}    {29:9}    {30:9}
 =============================================================================== 
  [Disk Size]     {31:9.2f} Ko
-===============================================================================
-  )";
+===============================================================================)";
 
   std::println("[tolza] Starting audit...");
 
@@ -163,7 +162,6 @@ void command::audit::audit_workspace(std::string_view root) noexcept
       double percent = total_files == 0 ? 1.0 : static_cast<double>(p) / static_cast<double>(total_files);
 
       // strange compilation error on thread when the formatter {:.2%} is used
-      // std::print("\r\033[K[tolza] auditing files: {} ({:.2%})", total_files, percent);
       std::print("\r\033[K[tolza] auditing files: {} ({:.2f}%)", total_files, percent * 100);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -228,16 +226,16 @@ void command::audit::audit_workspace(std::string_view root) noexcept
                       + global.generics + global.imports + global.roles + global.sys + global.unions;
 
 
-  std::print(str_template, source_code.files, source_code.lines, source_code.code_lines, source_code.comment_lines,
-             source_code.blank_lines,
+  std::println(str_template, source_code.files, source_code.lines, source_code.code_lines, source_code.comment_lines,
+               source_code.blank_lines,
 
-             vendor.files, vendor.lines, vendor.code_lines, vendor.comment_lines, vendor.blank_lines,
+               vendor.files, vendor.lines, vendor.code_lines, vendor.comment_lines, vendor.blank_lines,
 
-             binder.files, binder.lines, binder.code_lines, binder.comment_lines, binder.blank_lines,
+               binder.files, binder.lines, binder.code_lines, binder.comment_lines, binder.blank_lines,
 
-             global.global_cat.files, global.global_cat.lines, global.global_cat.code_lines,
-             global.global_cat.comment_lines, global.global_cat.blank_lines,
+               global.global_cat.files, global.global_cat.lines, global.global_cat.code_lines,
+               global.global_cat.comment_lines, global.global_cat.blank_lines,
 
-             global.roles, global.entities, global.comps, global.sys, global.imports, global.enums, global.functions,
-             global.generics, global.unions, global.flags, global.exports, file_size, population);
+               global.roles, global.entities, global.comps, global.sys, global.imports, global.enums, global.functions,
+               global.generics, global.unions, global.flags, global.exports, file_size, population);
 }

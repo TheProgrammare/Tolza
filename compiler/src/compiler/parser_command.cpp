@@ -2,31 +2,25 @@
 
 #include "binder/ffi_c_reader.hpp"
 #include "binder/ffi_json_reader.hpp"
+#include "compiler/compiler.hpp"
+#include "compiler/io.hpp"
+#include "pipeline/configurator.hpp"
 
 #include <CLIUtils/CLI11.hpp>
 #include <Neargye/magic_enum.hpp>
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
+#include <common/environment.hpp>
 #include <common/fileutils.hpp>
 #include <filesystem>
 #include <print>
 #include <string>
 
-// Required for CLI11 type serialization; clang-tidy reports a false positive.
-// NOLINTNEXTLINE(unused-includes)
-#include "CLI11_type_serialization.hpp"
-#include "common/environment.hpp"
-#include "compiler/compiler.hpp"
-#include "compiler/io.hpp"
-
-
 namespace fs = std::filesystem;
 
 
 compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
-  : common::Commander(_app)
-  , args(argv, argv + argc)
-  , opt(*new common::compiler::Profile(common::compiler::Manifest{}))
+  : common::Commander(_app, argc, argv)
 {
   init_commands();
 }
@@ -42,118 +36,6 @@ void compiler::Commander::init_command_cogito() noexcept
   });
 }
 
-void compiler::Commander::compilation_args(CLI::App* build) noexcept
-{
-  auto add_opt_path = [&](std::string_view option_name, std::basic_string<char>& variable,
-                          std::string_view option_description) {
-    return build
-        ->add_option_function<fs::path>(
-            std::string(option_name),
-            [&](const fs::path& path) { variable = common::fileutils::resolve_path(path.string()); },
-            std::string(option_description))
-        ->type_name("<path>");
-  };
-
-#define new_flag(flag_name, flag, desc) build->add_flag(flag_name, opt.flag, desc)->type_name("<flag>")
-#define new_opt(opt_name, var, desc)    build->add_option(opt_name, opt.var, desc)->type_name("<type>")
-
-  add_opt_path("path", opt.project_path, "Path to Tolza project");
-
-  new_flag("--check,-c", is_check_mode, "Will compile without any codegen");
-
-  // base
-  new_opt("--project-name", project_name, "Set the target project name");
-  new_opt("--sub-config", profiles, "Set the sub config to apply after main config");
-
-  // preset
-  build
-      ->add_option_function<std::string>(
-          "--preset",
-          [&](const std::string& s) {
-            auto triple       = common::compiler::TargetTriple::parse(s);
-            compiler::OPTIONS = common::compiler::Manifest::get_preset(triple);
-          },
-          "define a target triple"
-          "baremetal, custom")
-      ->type_name("<arch>-<vendor>-<platform>");
-
-  // error stop mode
-  new_opt("--error-mode", diagnostic.error, "e.g. " + common::compiler::EErrorMode_names());
-  new_opt("--diagnostic-format", diagnostic.out_format, "e.g. " + common::compiler::EDiagnosticFormat_names());
-
-  // target
-  new_opt("--arch", target.triple.arch, "e.g. " + common::env::EArch_names());
-  new_opt("--platform", target.triple.platform, "e.g. " + common::env::EPlatform_names());
-  new_opt("--vendor", target.triple.vendor, "e.g. " + common::env::EVendor_names());
-  new_opt("--abi", target.triple.abi, "e.g. " + common::env::EABI_names());
-  new_opt("--cpu", target.cpu, "e.g. generic, core-avx2, znver4");
-  new_opt("--features", target.features, "e.g. " + common::compiler::FCPUFeature_names());
-  new_opt("--call-conv", target.call_convention, "e.g. " + common::env::ECallConvention_names());
-  new_opt("--code-model", target.code_model, "e.g. " + common::compiler::ECodeModel_names());
-  new_opt("--reloc-model", target.reloc_model, "e.g. " + common::compiler::ERelocModel_names());
-
-  // profile
-  auto* opt_debug = new_opt("--debug,-d", profile.debug, "Compile in debug mode");
-  auto* opt_release =
-      build->add_flag("--release,-r", [&](std::size_t count) { opt.profile.debug = false; }, "Compile in release mode");
-  opt_debug->excludes(opt_release);
-  new_opt("--optimization,-O", profile.optimization, "Optimization level 0, 1, 2, 3, s, z");
-
-
-  // clang
-  new_opt("--libc", c_ffi.libc, "e.g. " + common::env::ELibC_names());
-  new_opt("--libc-version", c_ffi.libc_version, "major.minor, e.g. 1.20")->type_name("<version>");
-
-
-  new_opt("--logs", log.logs, "e.g. " + common::compiler::FPass_names());
-  new_opt("--log-level", log.level, "e.g. " + common::compiler::ELogLevel_names());
-
-  new_opt("--warns", warn.warns, "e.g. " + common::compiler::FWarnMode_names());
-  new_opt("--warning,-W", warn.level, "Warn level 0, 1, 2, 3");
-
-  new_opt("--debugs", debug.debugs, "e.g. " + common::compiler::FDebugPrinter_names());
-
-  build
-      ->add_option_function<std::string>(
-
-          "-D",
-          [&](std::string_view text) {
-            auto pos = text.find('=');
-            if (pos == std::string::npos) {
-              opt.preprocessor.defines[std::string(text)] = "true";
-            } else {
-              opt.preprocessor.defines[std::string(text.substr(0, pos))] = text.substr(pos + 1);
-            }
-          }
-
-          )
-      ->type_name("<key>");
-
-  build
-      ->add_option_function<std::string>(
-          "-U", [&](std::string_view text) { opt.preprocessor.undefines.emplace_back(text.data()); })
-      ->type_name("<key>");
-
-  new_opt("--emits", target.emits, "Code emission");
-
-  add_opt_path("--dir-build", opt.dir.build, "Set the build directory");
-  add_opt_path("--dir-src", opt.dir.source, "Set the source code directory");
-  add_opt_path("--dir-vendor", opt.dir.vendor, "Set the vendor source code directory");
-  add_opt_path("--dir-ffi-json", opt.dir.ffi_json, "Set the vendor source code directory");
-  add_opt_path("--dir-binding", opt.dir.binding, "Set the binding directory");
-  add_opt_path("--dir-compiler", opt.dir.compiler, "Set the compiler directory");
-  add_opt_path("--dir-stdlib", opt.dir.stdlib, "Set the stdlib directory");
-  add_opt_path("--dir-packages", opt.dir.packages, "Set the packages directory");
-
-  build->add_flag("--llvm-verify_module", opt.llvm.verify_module, "Enable llvm verification before and after passes");
-
-  build->allow_extras();
-
-#undef new_flag
-#undef new_opt
-}
-
-
 void compiler::Commander::init_command_build() noexcept
 {
   auto* build = app.add_subcommand("build", "Compile Tolza project");
@@ -164,29 +46,18 @@ void compiler::Commander::init_command_build() noexcept
   build->callback([&]() {
     auto f = common::fileutils::find_tolza_toml(opt.project_path);
 
-    compiler::OPTIONS     = common::compiler::Manifest::read_manifest(f);
-    compiler::OPTIONS.dir = common::compiler::Dir(fs::path(f).parent_path().string());
-
-    // merge args to main
-    compiler::OPTIONS = opt.merge_context(compiler::OPTIONS);
-    for (const auto& profile : compiler::OPTIONS.profiles) {
-      auto f = common::fileutils::resolve_path(profile + ".toml", compiler::OPTIONS.dir.get_dir_profile());
-      if (!fs::exists(f)) {
-        IO::println(stderr, IO_PASS::NONE, R"(The profile "{}" at "{}" dosen't exist. Profile ignored.)", profile, f);
-      } else {
-        compiler::OPTIONS = common::compiler::Profile::read_profile(f).merge_context(compiler::OPTIONS);
-      }
-    }
-    compiler::OPTIONS.is_check_mode = opt.is_check_mode;
-    compiler::OPTIONS.project_path  = fs::path(f).parent_path();
-
-    if (compiler::OPTIONS.log.level != common::compiler::ELogLevel::quiet) {
-      IO::println("Command executed:");
-      for (const auto& arg : args) std::print("{} ", arg);
-      std::println();
+    if (f.empty()) {
+      IO::println(stderr, IO_PASS::NONE, "The project path at \"{}\" is invalid", opt.project_path);
+      return;
     }
 
-    compiler::COMPILER.run_requested = true;
+    configurator::init_compiler_OPTIONS(f, opt);
+
+    IO::println("Command executed:");
+    for (const auto& arg : args) IO::print_raw("{} ", arg);
+    IO::print_raw("\n");
+
+    COMPILER.run_requested = true;
   });
 }
 

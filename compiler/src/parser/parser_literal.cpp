@@ -1,18 +1,20 @@
 #include "parser_literal.hpp"
 
-#include "ast/ast_literal.hpp"
-#include "ast/ast_numeric_128_bits.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_numeric_128_bits.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/lexer/token.hpp"
 #include "parser/parser_base.hpp"
-#include "parser_context.hpp"
-#include "parser_expression.hpp"
+#include "parser/parser_context.hpp"
+#include "parser/parser_expression.hpp"
+#include "parser/parser_recover.hpp"
+#include "pool/token.hpp"
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <string>
 #include <string_view>
 #include <vector>
+
 
 ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
 {
@@ -56,8 +58,7 @@ ast::ID parser::Parser_Literal::try_literal(bool p_is_silent_error)
   }
 
   if (!p_is_silent_error) {
-    p.add_error(80, "Expected literal value", "");
-    THROW_BAD_NODE;
+    throw Parser_Exception(p, 80, p.peek(), "Expected literal value", "");
   }
 
   return BAD_NODE_ID;
@@ -180,7 +181,7 @@ ast::ID parser::Parser_Literal::literal_integral(const token::Token& p_tok)
       api = llvm::APInt(bitWidth, tok_val, 10);
       break;
     }
-    default: throw std::runtime_error("Litearal token not supported");
+    default: p.add_error(82, "Illegal literal token", hint);
     }
 
     if (api.getBitWidth() > 64) {
@@ -192,9 +193,9 @@ ast::ID parser::Parser_Literal::literal_integral(const token::Token& p_tok)
       literal.type = type::EPrimitiveTypeKind::_s128;
     }
   } catch (const std::invalid_argument&) {
-    p.add_error(82, "Impossible to parse literal integral", hint);
+    throw Parser_Exception(p, 82, p_tok, "Impossible to parse literal integral", hint);
   } catch (const std::out_of_range&) {
-    p.add_error(83, "Integral literal too big for 128 bits", hint);
+    throw Parser_Exception(p, 83, p_tok, "Integral literal too big for 128 bits", hint);
   }
 
   // post literal type like 10i8 0u32
@@ -219,7 +220,7 @@ ast::ID parser::Parser_Literal::literal_cune()
 }
 
 
-inline int hex_value(char c) noexcept
+inline int hex_value(char c)
 {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return 10 + (c - 'a');

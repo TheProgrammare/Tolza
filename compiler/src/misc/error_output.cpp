@@ -1,10 +1,10 @@
 #include "error_output.hpp"
 
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/lexer/token.hpp"
+#include "pool/token.hpp"
 
 #include <algorithm>
 #include <common/compiler_options.hpp>
@@ -186,7 +186,7 @@ Error_Diagnostic::Error_Diagnostic(cu::ID _cuid, ErrorCode _code, ast::ID nodeid
 
 std::string Error_Diagnostic::print_error() const noexcept
 {
-  static const auto mode = compiler::OPTIONS.diagnostic.out_format;
+  static const auto mode = OPTIONS.diagnostic.out_format;
   switch (mode) {
   case common::compiler::EDiagnosticFormat::NONE:
   case common::compiler::EDiagnosticFormat::userfriendly: return print_userfriendly_error();

@@ -1,39 +1,42 @@
 #include "codegen.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "codegen/codegen_insurance.hpp"
 #include "codegen/codegen_type.hpp"
+#include "codegen/debug_info.hpp"
 #include "codegen_tools.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/extension.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/resolved.hpp"
-#include "nexus/type/data.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
 #include "pipeline/pipeline.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/extension.hpp"
+#include "pool/link/inference.hpp"
+#include "pool/link/resolved.hpp"
+#include "pool/link/semantic_metadata.hpp"
+#include "pool/type.hpp"
 #include "resolver/resolver_base.hpp"
 #include "static_evaluation.hpp"
+#include "type/data.hpp"
+#include "type/definition.hpp"
 
 #include <common/compiler_options.hpp>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <llvm-19/llvm/IR/DIBuilder.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/STLExtras.h>
@@ -61,8 +64,9 @@
 #include <vector>
 
 
-
-#define NOT_DEFINED assert(false);
+#define NOT_DEFINED                                                                                                    \
+  ;                                                                                                                    \
+  assert(false);
 
 #define GENERATION_GUARD                                                                                               \
   if (auto it = generation.find(n.nodeid()); it != generation.end()) return it->second;
@@ -74,6 +78,8 @@ codegen::Codegen_AST::Codegen_AST(cu::CU& p_CU, llvm::LLVMContext& p_ctx)
   , types(*new codegen::Codegen_Type(p_CU, p_ctx))
   , mod(CU.llvm_module)
   , builder(*new llvm::IRBuilder<>(ctx))
+  , dinfo(new DebugInfo(this, p_CU.cuid))
+  , is_debug_mode(OPTIONS.profile.debug)
   , tools(*new Tools(*this))
   , eval(*new Static_Evaluator(*this))
   , insurance(*new Insurance(*this))
@@ -85,6 +91,11 @@ codegen::Codegen_AST::Codegen_AST(cu::CU& p_CU, llvm::LLVMContext& p_ctx)
 compiler::EPhase codegen::Codegen_AST::current_EPhase() const
 {
   return compiler::EPhase::llvmir;
+}
+
+void codegen::Codegen_AST::set_debug_loc(ast::ID nodeid) noexcept
+{
+  builder.SetCurrentDebugLocation(dinfo->location(nodeid));
 }
 
 
@@ -370,12 +381,29 @@ void codegen::Codegen_AST::build_init_func() noexcept
 
 llvm::Constant* codegen::Codegen_AST::const_int(size_t val) noexcept
 {
-  return llvm::ConstantInt::get(llvm::Type::getIntNTy(ctx, compiler::OPTIONS.target.get_arch_size()), val);
+  return llvm::ConstantInt::get(llvm::Type::getIntNTy(ctx, OPTIONS.target.get_arch_size()), val);
 }
 
 
 llvm::AllocaInst* codegen::Codegen_AST::create_alloca(type::ID tyid, std::string_view name) noexcept
 {
+  if (const auto* ptr = tyid.as<type::Array>()) {
+    auto [arr, size] = types.codegen_Array(*ptr);
+    // [N x T]
+    auto* storage    = builder.CreateAlloca(get_type(ptr->inner), const_int(size), std::format("{}.storage", name));
+    // ptr to first elem
+    auto* data = builder.CreateGEP(storage->getAllocatedType(), storage, {const_int(0)}, std::format("{}.data", name));
+
+    // fat ptr { ptr, size }
+    llvm::Value* fat_ptr = llvm::UndefValue::get(arr);
+    fat_ptr              = builder.CreateInsertValue(fat_ptr, data, {0}, std::format("{}.fat_ptr.init", name));
+    fat_ptr = builder.CreateInsertValue(fat_ptr, const_int(size), {1}, std::format("{}.fat_ptr.complete", name));
+
+    // fat ptr instance
+    auto* out_ptr = builder.CreateAlloca(arr, nullptr, name);
+    builder.CreateStore(fat_ptr, out_ptr);
+    return out_ptr;
+  }
   auto* ty = get_type(tyid);
   return builder.CreateAlloca(ty, nullptr, name);
 }
@@ -399,20 +427,20 @@ llvm::Value* codegen::Codegen_AST::codegen_Symbol_Id(const ast::Symbol_Id& n) no
 {
   GENERATION_GUARD
 
-  // auto* v = insurance.ensure_lvalue(compiler::resolved.get_symbol(n.nodeid()).node());
-  auto* v = codegen_node(compiler::resolved.get_definition(n.nodeid()).node());
+  // auto* v = insurance.ensure_lvalue(COMPILER.resolved.get_symbol(n.nodeid()).node());
+  auto* v = codegen_node(n.nodeid().def().node());
   return add_generation(n.nodeid(), v);
 }
 llvm::Value* codegen::Codegen_AST::codegen_Symbol_Qualified(const ast::Symbol_Qualified& n) noexcept
 {
   GENERATION_GUARD
 
-  auto* v = codegen_node(compiler::resolved.get_definition(n.nodeid()).node());
+  auto* v = codegen_node(n.nodeid().def().node());
   return add_generation(n.nodeid(), v);
 }
 llvm::Type* codegen::Codegen_AST::codegen_Symbol_Type(const ast::Symbol_Type& n) noexcept
 {
-  const auto tyid = compiler::inference.get_inference(n.nodeid());
+  const auto tyid = n.nodeid().type();
   assert(tyid && "Invalid type");
   return get_type(tyid);
 }
@@ -440,8 +468,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Variable(const ast::Global_Var
     auto result = eval.evaluate_expression(n.expression);
     if (result) return add_generation(n.nodeid(), result.value());
 
-    compiler::COMPILER.add_error(
-        Error_Diagnostic(CU.cuid, 278, n.nodeid(), compiler::EPhase::llvmir, result.error(), ""));
+    COMPILER.add_error(Error_Diagnostic(CU.cuid, 278, n.nodeid(), compiler::EPhase::llvmir, result.error(), ""));
     return nullptr;
   }
 
@@ -523,7 +550,6 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Function(const ast::Global_Fun
     count++;
   }
 
-
   // add generation before codeblock generation to access on the function header generation for the parameters
   (void)add_generation(n.nodeid(), fn);
 
@@ -545,19 +571,33 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Function(const ast::Global_Fun
   return fn;
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Cast(const ast::Global_Extend_Cast&
-                                                                                   n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Bin(const ast::Global_Extend_Op_Bin&
-                                                                                     n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Un(const ast::Global_Extend_Op_Un&
-                                                                                    n) noexcept {NOT_DEFINED} llvm::
-    Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Subscript(const ast::Global_Extend_Op_Subscript& n) noexcept {
-        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::
-        codegen_Global_Extend_Op_Transfert(const ast::Global_Extend_Op_Transfert& n) noexcept {NOT_DEFINED} llvm::
-            Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Other(const ast::Global_Extend_Op_Other& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept
 {
-  NOT_DEFINED
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Cast(const ast::Global_Extend_Cast& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Bin(const ast::Global_Extend_Op_Bin& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Un(const ast::Global_Extend_Op_Un& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Subscript(const ast::Global_Extend_Op_Subscript& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Transfert(const ast::Global_Extend_Op_Transfert& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Global_Extend_Op_Other(const ast::Global_Extend_Op_Other& n) noexcept
+{
+  NOT_DEFINED;
 }
 
 void codegen::Codegen_AST::codegen_Global_Module(const ast::Global_Module& n) noexcept
@@ -649,10 +689,13 @@ llvm::Function* codegen::Codegen_AST::codegen_SFM_Form(const ast::SFM_Form& n) n
 }
 
 
-llvm::Function* codegen::Codegen_AST::codegen_SFM_Rule(const ast::SFM_Rule& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_SFM_Rule_Case(const ast::SFM_Rule_Case& n) noexcept
+llvm::Function* codegen::Codegen_AST::codegen_SFM_Rule(const ast::SFM_Rule& n) noexcept
 {
-  NOT_DEFINED
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_SFM_Rule_Case(const ast::SFM_Rule_Case& n) noexcept
+{
+  NOT_DEFINED;
 }
 
 
@@ -662,10 +705,15 @@ void codegen::Codegen_AST::codegen_CodeBlock(const ast::CodeBlock& n) noexcept
   for (auto elem : n.elements) (void)codegen_node(elem);
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda(const ast::Local_Lambda& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda_Capture(const ast::Local_Lambda_Capture&
-                                                                                     n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Parameter(const ast::Local_Parameter& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda(const ast::Local_Lambda& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda_Capture(const ast::Local_Lambda_Capture& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Parameter(const ast::Local_Parameter& n) noexcept
 {
   GENERATION_GUARD
 
@@ -677,27 +725,49 @@ llvm::Value* codegen::Codegen_AST::codegen_Local_Lambda(const ast::Local_Lambda&
   return add_generation(n.nodeid(), arg);
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Param_Elem(const ast::Local_Gen_Param_Elem& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Params(const ast::Local_Gen_Params& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Element(const ast::Local_Pattern_Element&
-                                                                                      n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Enum(const ast::Local_Pattern_Enum&
-                                                                                   n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Tuple(const ast::Local_Pattern_Tuple&
-                                                                                    n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Form(const ast::Local_Pattern_Form&
-                                                                                   n) noexcept {NOT_DEFINED} llvm::
-    Value* codegen::Codegen_AST::codegen_Local_Pattern_Rule_Facet(const ast::Local_Pattern_Rule_Facet& n) noexcept {
-        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Facet(const ast::Local_Pattern_Facet&
-                                                                                        n) noexcept {
-        NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Binding(const ast::Local_Binding& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Param_Elem(const ast::Local_Gen_Param_Elem& n) noexcept
 {
-  NOT_DEFINED
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Gen_Params(const ast::Local_Gen_Params& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Element(const ast::Local_Pattern_Element& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Enum(const ast::Local_Pattern_Enum& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Tuple(const ast::Local_Pattern_Tuple& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Form(const ast::Local_Pattern_Form& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Rule_Facet(const ast::Local_Pattern_Rule_Facet& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Pattern_Facet(const ast::Local_Pattern_Facet& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Binding(const ast::Local_Binding& n) noexcept
+{
+  NOT_DEFINED;
 }
 
 
-void codegen::Codegen_AST::codegen_Local_Tuple_Destructuring(const ast::Local_Tuple_Destructuring& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::codegen_Local_Variable(const ast::Local_Variable& n) noexcept
+void codegen::Codegen_AST::codegen_Local_Tuple_Destructuring(const ast::Local_Tuple_Destructuring& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Local_Variable(const ast::Local_Variable& n) noexcept
 {
   GENERATION_GUARD
 
@@ -728,9 +798,6 @@ void codegen::Codegen_AST::codegen_Local_Tuple_Destructuring(const ast::Local_Tu
     //   return nullptr;
     // }
     builder.CreateStore(codegen_node(n.expression), alloca, n.nodeid().type().get().qualifier.is_volatile);
-  } else {
-    auto* ty = get_type(n.nodeid().type());
-    builder.CreateStore(llvm::Constant::getNullValue(ty), alloca);
   }
 
 
@@ -990,7 +1057,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Literal_Record(const ast::Literal_Rec
 
     if (it == def->fields.end())
       add_error_two_nodes(171, field.get(), def->header,
-                          std::format("The field \"{}\" dosen't exists in type \"", name) + def->name + "\".", "");
+                          std::format(R"(The field "{}" dosen't exists in type "{}".)", name, def->name), "");
 
     auto n_found = *it;
     vals.emplace_back(codegen_node(n_found));
@@ -1017,7 +1084,13 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_If_Ternary(const ast::Expr
 }
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Member_Access(const ast::Expression_Member_Access& n) noexcept
 {
-  return nullptr;
+  GENERATION_GUARD
+
+  auto* ptr  = codegen_node(n.left_expression);
+  auto* l_ty = get_type(n.left_expression.type());
+  auto* mptr = builder.CreateStructGEP(l_ty, ptr, n.right_identifier.sem()->member_position, "field");
+
+  return add_generation(n.nodeid(), mptr);
 }
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Self(const ast::Expression_Self& n) noexcept
@@ -1052,20 +1125,19 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation(const ast::Expr
     return add_generation(n.nodeid(), call);
   }
 
-  NOT_DEFINED
+  NOT_DEFINED;
 }
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Arg(const ast::Expression_Invocation_Arg& n) noexcept
 {
   GENERATION_GUARD
 
-  auto sym = n.nodeid().def();
-
   // variadic argument : no parameter symbol reference
   // codegen on expression alone
-  if (!sym) return add_generation(n.nodeid(), insurance.ensure_variadic_arg(n.expression));
+  if (auto* sem = n.nodeid().sem()) {
+    if (sem->variadic_arg) return add_generation(n.nodeid(), insurance.ensure_variadic_arg(n.expression));
+  }
 
-
-  const auto* def_n = n.nodeid().def().node().as<ast::Local_Parameter>();
+  const auto* def_n = n.nodeid().sem()->param_def.as<ast::Local_Parameter>();
 
   switch (def_n->passmode) {
   case ast::EPassMode::mut:
@@ -1076,6 +1148,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Arg(const ast::
 
     return add_generation(n.nodeid(), codegen_node(n.expression));
   }
+  case ast::EPassMode::_const:
   case ast::EPassMode::copy:
     return add_generation(n.nodeid(), insurance.ensure_rvalue(n.expression, "arg." + def_n->name));
   case ast::EPassMode::addr: {
@@ -1091,9 +1164,11 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Arg(const ast::
   }
 }
 llvm::Value*
-codegen::Codegen_AST::codegen_Expression_Invocation_Extend(const ast::Expression_Invocation_Extend& n) noexcept {
-    NOT_DEFINED} llvm::Value* codegen::Codegen_AST::
-    codegen_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n) noexcept
+codegen::Codegen_AST::codegen_Expression_Invocation_Extend(const ast::Expression_Invocation_Extend& n) noexcept
+{
+  NOT_DEFINED;
+}
+llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n) noexcept
 {
   return nullptr;
 }
@@ -1108,6 +1183,11 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Table_Access(const ast::Ex
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Ptr_Val(const ast::Expression_Ptr_Val& n) noexcept
 {
+  if (auto* arr = n.target.type().as<type::Array>()) {
+    auto* target = codegen_node(n.target);
+    auto* ptr    = builder.CreateInBoundsGEP(get_type(n.target.type()), target, {const_int(0)});
+    return add_generation(n.nodeid(), builder.CreateLoad(ptr->getType(), ptr, "valof"));
+  }
   return add_generation(n.nodeid(), insurance.ensure_lvalue(n.target));
 }
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Mut_Of(const ast::Expression_Mut_Of& n) noexcept
@@ -1156,7 +1236,10 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Move_Of(const ast::Express
   return nullptr;
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept {NOT_DEFINED}
+llvm::Value* codegen::Codegen_AST::codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept
+{
+  NOT_DEFINED;
+}
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_New_Ptr(const ast::Expression_New_Ptr& n) noexcept
 {
@@ -1165,7 +1248,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_New_Ptr(const ast::Express
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_Get_Type(const ast::Expression_Get_Type& n) noexcept
 {
-  NOT_DEFINED
+  NOT_DEFINED;
 }
 
 void codegen::Codegen_AST::codegen_Statement_If(const ast::Statement_If& n, llvm::BasicBlock* bb_parent_merge) noexcept
@@ -1355,7 +1438,7 @@ void codegen::Codegen_AST::codegen_Statement_For_Index(const ast::Statement_For&
   (void)add_generation(n.index, phi); // override codegen
   phi->addIncoming(start, bb_entry);
 
-  auto* cond = builder.CreateICmpULT(phi, end);
+  auto* cond = end_included ? builder.CreateICmpULE(phi, end) : builder.CreateICmpULT(phi, end);
   builder.CreateCondBr(cond, bb_body, bb_exit);
 
   // =========================
@@ -1565,9 +1648,12 @@ llvm::BranchInst* codegen::Codegen_AST::codegen_Statement_Continue(const ast::St
 
 void codegen::Codegen_AST::codegen_Statement_Match(const ast::Statement_Match& n) noexcept
 {
-  NOT_DEFINED
+  NOT_DEFINED;
 }
-void codegen::Codegen_AST::codegen_Statement_Match_Case(const ast::Statement_Match_Case& n) noexcept {NOT_DEFINED}
+void codegen::Codegen_AST::codegen_Statement_Match_Case(const ast::Statement_Match_Case& n) noexcept
+{
+  NOT_DEFINED;
+}
 
 // ============ OPERATION ============
 llvm::Value* codegen::Codegen_AST::codegen_Operation_Cast_As(const ast::Operation_Cast_As& n) noexcept

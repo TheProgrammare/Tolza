@@ -1,20 +1,21 @@
 #include "parser_statement.hpp"
 
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/type/type.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
 #include "parser_operation.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 
 ast::ID parser::Parser_Statement::parse_statement(bool p_is_silent_error)
@@ -57,11 +58,10 @@ ast::ID parser::Parser_Statement::parse_statement(bool p_is_silent_error)
   }
 
   if (!p_is_silent_error) {
-    p.add_error(116,
-                "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid))
-                    + "' keyword not allowed in function statement.",
-                hint);
-    THROW_BAD_NODE;
+    throw Parser_Exception(p, 116, p.peek(),
+                           "Unexpected '" + std::string(p.tok_to_str(p.peek().tokid))
+                               + "' keyword not allowed in function statement.",
+                           hint);
   }
   return BAD_NODE_ID;
 }

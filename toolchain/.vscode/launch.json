@@ -9,9 +9,9 @@
             "args": [
                 "new",
                 "workspace",
-                "${workspaceFolder}/../../tolza-workspace",
+                "~",
                 "--name",
-                "tolza-example",
+                "test",
                 "-f"
             ],
             "env": [],

@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "nexus/ast/forward.hpp"
+#include "ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
+#include "pool/link/inference.hpp"
 
 #include <cstddef>
 #include <map>

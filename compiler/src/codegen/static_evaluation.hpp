@@ -1,7 +1,7 @@
 #pragma once
 
+#include "ast/forward.hpp"
 #include "llvm_forward.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 
 #include <expected>
@@ -18,7 +18,7 @@ struct Static_Evaluator {
   codegen::Codegen_AST& res;
   Tools*                tools;
 
-  [[nodiscard]] std::expected<llvm::Constant*, std::string> evaluate_expression(ast::ID n) noexcept;
+  [[nodiscard]] std::expected<llvm::Constant*, std::string> evaluate_expression(ast::ID expr) noexcept;
 
   [[nodiscard]] bool float_almost_eq_ULP(const llvm::APFloat& L, const llvm::APFloat& R, unsigned maxULP = 4) noexcept;
 

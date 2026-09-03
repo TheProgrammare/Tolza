@@ -1,17 +1,18 @@
 #include "codegen_tools.hpp"
 
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
+#include "ast/data.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/forward.hpp"
 #include "codegen/codegen.hpp"
 #include "codegen/codegen_insurance.hpp"
 #include "codegen/codegen_type.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/type/data.hpp"
-#include "nexus/type/definition.hpp"
+#include "pool/type.hpp"
+#include "type/data.hpp"
+#include "type/definition.hpp"
 
 #include <Neargye/magic_enum.hpp>
 #include <common/compiler_options.hpp>
@@ -194,7 +195,7 @@ llvm::Constant* codegen::Tools::get_primtive_zeroinit(type::EPrimitiveTypeKind t
   case type::EPrimitiveTypeKind::_udsize:
   case type::EPrimitiveTypeKind::_ssize:
   case type::EPrimitiveTypeKind::_usize:
-  case type::EPrimitiveTypeKind::_bsize:   return get_int_constant(compiler::OPTIONS.target.get_arch_size(), 0);
+  case type::EPrimitiveTypeKind::_bsize:   return get_int_constant(OPTIONS.target.get_arch_size(), 0);
   case type::EPrimitiveTypeKind::_s8:
   case type::EPrimitiveTypeKind::_u8:
   case type::EPrimitiveTypeKind::_b8:      return get_int_constant(8, 0);
@@ -216,7 +217,7 @@ llvm::Constant* codegen::Tools::get_primtive_zeroinit(type::EPrimitiveTypeKind t
   case type::EPrimitiveTypeKind::_s128:
   case type::EPrimitiveTypeKind::_u128:
   case type::EPrimitiveTypeKind::_b128:    return get_int_constant(128, 0);
-  case type::EPrimitiveTypeKind::_fsize:   return get_float_constant(compiler::OPTIONS.target.get_arch_size(), 0);
+  case type::EPrimitiveTypeKind::_fsize:   return get_float_constant(OPTIONS.target.get_arch_size(), 0);
   case type::EPrimitiveTypeKind::_f16:     return get_float_constant(16, 0);
   case type::EPrimitiveTypeKind::_f32:     return get_float_constant(32, 0);
   case type::EPrimitiveTypeKind::_f64:     return get_float_constant(64, 0);

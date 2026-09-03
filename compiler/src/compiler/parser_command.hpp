@@ -26,11 +26,7 @@
 
 #pragma once
 
-#include "common/compiler_options.hpp"
-
 #include <common/commands.hpp>
-#include <string>
-#include <vector>
 
 namespace CLI
 {
@@ -50,17 +46,12 @@ class Commander : common::Commander
 public:
   Commander(CLI::App& _app, int argc, const char* argv[]);
 
-  common::compiler::Profile& opt;
-
-  std::vector<std::string> args;
 
 private:
   void init_commands() noexcept;
 
   void init_command_cogito() noexcept;
   void init_command_ffi() noexcept;
-
-  void compilation_args(CLI::App* build) noexcept;
 
   void init_command_build() noexcept override;
   void exec_ffi_command() noexcept override;

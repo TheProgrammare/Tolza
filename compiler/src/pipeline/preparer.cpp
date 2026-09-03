@@ -1,16 +1,16 @@
 #include "pipeline/preparer.hpp"
 
-#include "common/compiler_options.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
-#include "nexus/definition.hpp"
-#include "nexus/lexer/lexer.hpp"
-#include "nexus/metacode/preprocessor.hpp"
-#include "nexus/metacode/token_generator.hpp"
+#include "lexer/lexer.hpp"
+#include "metacode/preprocessor.hpp"
+#include "metacode/token_generator.hpp"
 #include "parser/parser_context.hpp"
 #include "pipeline/pipeline.hpp"
+#include "pool/link/definition.hpp"
 
 #include <chrono>
+#include <common/compiler_options.hpp>
 #include <print>
 
 
@@ -35,7 +35,7 @@ bool preparer::prepare_cu(cu::ID cuid) noexcept
   const bool preprocessor_success = preprocessing_cu(cuid);
   const bool parser_success       = parsing_cu(cuid);
 
-  auto [_, success] = compiler::pipeline.prepared_compilation_units.insert(cuid);
+  auto [_, success] = PIPELINE.prepared_compilation_units.insert(cuid);
   assert(success);
 
   return lexer_success && preprocessor_success && parser_success;
@@ -84,7 +84,7 @@ bool preparer::preprocessing_cu(cu::ID cuid) noexcept
 
   static size_t count = 1;
   if (pre_success && gen_success) {
-    std::print("lex {:.2} ms >> ", pre_duration + gen_duration);
+    IO::print_raw("lex {:.2} ms >> ", pre_duration + gen_duration);
   }
   if (!pre_success) {
     IO::println(stderr, IO_PASS::preprocessor, "\"{}\" {:.2} ms", cu.file_info.path, pre_duration);

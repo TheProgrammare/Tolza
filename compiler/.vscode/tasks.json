@@ -32,16 +32,13 @@
             "label": "build-debug",
             "dependsOn": "Configure Debug",
             "type": "shell",
-            "command": "cmake",
+            "command": "time",
             "args": [
-                "--build",
-                "--preset",
-                "debug",
-                "--parallel",
-                "6"
+                "ninja",
+                "-j4"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/build/debug"
             },
             "problemMatcher": []
         },
@@ -49,16 +46,13 @@
             "label": "build-release",
             "dependsOn": "Configure Release",
             "type": "shell",
-            "command": "cmake",
+            "command": "time",
             "args": [
-                "--build",
-                "--preset",
-                "release",
-                "--parallel",
-                "6"
+                "ninja",
+                "-j4"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/build/release"
             },
             "problemMatcher": []
         },

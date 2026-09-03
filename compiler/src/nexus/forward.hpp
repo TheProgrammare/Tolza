@@ -10,6 +10,7 @@
 
 using ErrorCode = short;
 enum class EVisibility : uint8_t { Lexical_Scope, File_Scope, Cross_File_Scope };
+enum class ECallContract : uint8_t { Static, Assert, Result, Panic };
 
 struct StringHash {
   using is_transparent = void;
@@ -45,12 +46,19 @@ enum class EPathAnchor : uint8_t {
   relative_root,  // relative script root module
 };
 
+namespace evaluated
+{
+struct Arena;
+}
+
 namespace common::compiler
 {
 
 // tolza compiler invariant violation : Internal Compiler Error
 void DEBUG_TOLZA_ICE(std::string_view msg);
 enum class FPass : uint16_t;
+struct Manifest;
+struct Profile;
 
 } // namespace common::compiler
 
@@ -121,7 +129,6 @@ enum class ETextType : uint8_t;
 enum class EPrimitiveTypeKind : uint8_t;
 enum class ETypeKind : uint8_t;
 struct Arena;
-struct Dispatcher;
 struct Qualifier;
 struct TypeHeader;
 
@@ -162,6 +169,7 @@ struct Arena;
 
 namespace definition
 {
+
 struct Arena;
 struct Symbol;
 } // namespace definition
@@ -174,7 +182,6 @@ struct CU;
 
 namespace module
 {
-struct Dispatcher;
 struct Module;
 struct Graph;
 } // namespace module
@@ -188,6 +195,7 @@ namespace common::env
 {
 enum class ECallConvention : uint8_t;
 }
+
 
 namespace pipeline
 {
@@ -235,6 +243,20 @@ struct Parser_Declaration_SFM;
 struct Parser_Statement;
 struct Parser_Context;
 } // namespace parser
+
+
+namespace semantic
+{
+enum class EBuiltin_Member : uint8_t {
+  NONE,
+  _data,
+  _len,
+  _capa,
+};
+
+struct Arena;
+struct Metadata;
+} // namespace semantic
 
 
 // llvm convention (dot separation)

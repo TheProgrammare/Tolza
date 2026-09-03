@@ -2,24 +2,19 @@
 #include "parser_context.hpp"
 
 #include "Neargye/magic_enum.hpp"
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/definition.hpp"
+#include "compiler/io.hpp"
+#include "lexer/token_viewer.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/lexer/token_viewer.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/module.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/type/type.hpp"
 #include "parser/parser_declaration_extension.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_base.hpp"
 #include "parser_declaration_global.hpp"
 #include "parser_declaration_local.hpp"
@@ -30,6 +25,13 @@
 #include "parser_operation.hpp"
 #include "parser_statement.hpp"
 #include "parser_type.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/metacode.hpp"
+#include "pool/module.hpp"
+#include "pool/scope.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -71,7 +73,7 @@ parser::Parser_Context::~Parser_Context()
 }
 
 template <ast::Generic T>
-T& parser::Parser_Context::add_get_node(token::ID tokid) noexcept
+T& parser::Parser_Context::add_get_node(token::ID tokid)
 {
   assert(tokid && "Invalid token id");
   assert(tokid.pos() < CU.file_info.data.size() && "Invalid token position");
@@ -88,7 +90,7 @@ bool parser::Parser_Context::start_parsing()
   current_modid   = CU.modules->get_file_root().modid;
   current_scpid   = CU.scopes->get_file_root().scpid;
 
-  size_t errs = compiler::COMPILER.errors.size();
+  size_t errs = COMPILER.errors.size();
 
   try {
     while (!tok_v->is_end()) {
@@ -97,13 +99,16 @@ bool parser::Parser_Context::start_parsing()
       if (line) root_node->global_nodes.emplace_back(line);
       if (tok_v->match(token::ETokenKind::S_END_OF_FILE)) break;
     }
+  } catch (const Parser_Exception& e) {
+    return error::recover(*this);
   } catch (const std::runtime_error& e) {
-    // std::println(stderr, "{}", e.what());
-    // context.tokView.synchronize(); attempt_recovery();
-    return false;
+    IO::println(stderr, IO_PASS::parser, "{}", e.what());
+    assert(false && "Invalid throw error");
+  } catch (...) {
+    assert(false && "Invalid throw error");
   }
 
-  return errs == compiler::COMPILER.errors.size();
+  return errs == COMPILER.errors.size();
 
   CU.ast->freeze         = true;
   CU.types->freeze       = true;
@@ -112,7 +117,7 @@ bool parser::Parser_Context::start_parsing()
   CU.scopes->freeze      = true;
 }
 
-bool parser::is_gen_args(token::Viewer& tok_v) noexcept
+bool parser::is_gen_args(token::Viewer& tok_v)
 {
   size_t originPos           = tok_v.position();
   bool   isGenArgsValid      = true;
@@ -241,39 +246,19 @@ void parser::Parser_Context::exit_module()
   exit_scope();
 }
 
-std::string_view parser::Parser_Context::tok_to_str(token::ID id) const noexcept
+std::string_view parser::Parser_Context::tok_to_str(token::ID id) const
 {
   return CU.file_info.tokens->audit.Token_to_str(id);
 }
 
-size_t parser::Parser_Context::tok_to_pos(token::ID id) const noexcept
+size_t parser::Parser_Context::tok_to_pos(token::ID id) const
 {
   return CU.file_info.tokens->get(id).begin;
 }
 
 
-void parser::Parser_Context::attempt_recovery()
-{
-  /*
-  // recovery loop case
-  static Token lastokRecovered;
-  if (lastokRecovered.span == tok_v->peek().span) {
-    std::println(stderr, R"(\n--------------------- ! COMPILATION STOPPED ! -------------------
-  Compiler: Infinitive recovery loop detected!
-  Please check the code source.)");
-  return;
-}
-else
-{
-  lastokRecovered = tok_v->peek();
-}
-
-return;
-*/
-}
-
 bool parser::Parser_Context::match_field_separator(token::ETokenKind separator = token::ETokenKind::COMMA,
-                                                   token::ETokenKind end = token::ETokenKind::R_CURLY) const noexcept
+                                                   token::ETokenKind end       = token::ETokenKind::R_CURLY) const
 {
   if (separator != token::ETokenKind::S_END_OF_FILE) {
     if (match(separator)) return false;
@@ -289,7 +274,7 @@ bool parser::Parser_Context::match_field_separator(token::ETokenKind separator =
 
 bool parser::Parser_Context::match_field_any_separator(token::ETokenKind p_separator = token::ETokenKind::COMMA,
                                                        std::initializer_list<token::ETokenKind> p_end = {
-                                                           token::ETokenKind::R_CURLY}) const noexcept
+                                                           token::ETokenKind::R_CURLY}) const
 {
   if (match(p_separator)) return false;
   if (tok_v->match_any(p_end)) return true;
@@ -307,7 +292,7 @@ bool parser::Parser_Context::match_field_any_separator(token::ETokenKind p_separ
   return false;
 }
 
-std::string parser::Parser_Context::parse_name(std::string_view p_msg, std::string_view p_hint) const noexcept
+std::string parser::Parser_Context::parse_name(std::string_view p_msg, std::string_view p_hint) const
 {
   constexpr std::string_view msg = "Expected identifier (classic name).";
   constexpr std::string_view hint =
@@ -325,75 +310,70 @@ std::string parser::Parser_Context::parse_name(std::string_view p_msg, std::stri
 
 
 token::Token& parser::Parser_Context::expect(ErrorCode code, token::ETokenKind tok, std::string_view msg,
-                                             std::string_view hint) const noexcept
+                                             std::string_view hint) const
 {
   return tok_v->expect(code, tok, msg, hint);
 }
 token::Token& parser::Parser_Context::expect_any(ErrorCode code, const std::initializer_list<token::ETokenKind>& types,
-                                                 std::string_view msg, std::string_view hint) const noexcept
+                                                 std::string_view msg, std::string_view hint) const
 {
   return tok_v->expect_any(code, types, msg, hint);
 }
-token::Token& parser::Parser_Context::next() const noexcept
+token::Token& parser::Parser_Context::next() const
 {
   return tok_v->next();
 }
-bool parser::Parser_Context::is_end() const noexcept
+bool parser::Parser_Context::is_end() const
 {
   return tok_v->is_end();
 }
-bool parser::Parser_Context::match(token::ETokenKind tok) const noexcept
+bool parser::Parser_Context::match(token::ETokenKind tok) const
 {
   return tok_v->match(tok);
 }
-bool parser::Parser_Context::match_any(std::initializer_list<token::ETokenKind> toks) const noexcept
+bool parser::Parser_Context::match_any(std::initializer_list<token::ETokenKind> toks) const
 {
   return tok_v->match_any(toks);
 }
-bool parser::Parser_Context::check(token::ETokenKind tok) const noexcept
+bool parser::Parser_Context::check(token::ETokenKind tok) const
 {
   return tok_v->check(tok);
 }
-bool parser::Parser_Context::check_any(std::initializer_list<token::ETokenKind> toks) const noexcept
+bool parser::Parser_Context::check_any(std::initializer_list<token::ETokenKind> toks) const
 {
   return tok_v->check_any(toks);
 }
-bool parser::Parser_Context::check_at(size_t offset, token::ETokenKind tok) const noexcept
+bool parser::Parser_Context::check_at(size_t offset, token::ETokenKind tok) const
 {
   return tok_v->peek(offset).kind == tok;
 }
-bool parser::Parser_Context::check_val(std::string_view val) const noexcept
+bool parser::Parser_Context::check_val(std::string_view val) const
 {
   return tok_v->check_val(val);
 }
-bool parser::Parser_Context::match_val(std::string_view val) const noexcept
+bool parser::Parser_Context::match_val(std::string_view val) const
 {
   return tok_v->match_val(val);
 }
-bool parser::Parser_Context::check_chain(std::initializer_list<token::ETokenKind> l) const noexcept
+bool parser::Parser_Context::check_chain(std::initializer_list<token::ETokenKind> l) const
 {
   return tok_v->check_chain(l);
 }
-bool parser::Parser_Context::match_chain(std::initializer_list<token::ETokenKind> l) const noexcept
+bool parser::Parser_Context::match_chain(std::initializer_list<token::ETokenKind> l) const
 {
   return tok_v->match_chain(l);
 }
-token::Token& parser::Parser_Context::peek(size_t offset) const noexcept
+token::Token& parser::Parser_Context::peek(size_t offset) const
 {
   return tok_v->peek(offset);
 }
-void parser::Parser_Context::rewind(size_t pos) const noexcept
+void parser::Parser_Context::rewind(size_t pos) const
 {
   tok_v->rewind(pos);
 }
 definition::ID parser::Parser_Context::add_definition(ast::ID nodeid)
 {
-  definition::Definition def{
-      .nodeid     = nodeid,
-      .visibility = current_modid.get().visibility,
-  };
-
-  const auto defid = CU.definitions->add(def);
+  const auto defid = CU.definitions->add(nodeid, current_modid.get().visibility);
 
 #ifdef DEBUG
   for (size_t i = 0; i < scope_depth; ++i) std::print("│ ");
@@ -439,20 +419,20 @@ scope::Scope& parser::Parser_Context::get_current_scope()
  */
 
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_generic.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_memory.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_memory.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
 
 
-#define AST_ADD_NODE_INSTANCE(T) template T& parser::Parser_Context::add_get_node<T>(token::ID tokid) noexcept;
+#define AST_ADD_NODE_INSTANCE(T) template T& parser::Parser_Context::add_get_node<T>(token::ID tokid);
 
 
 AST_ADD_NODE_INSTANCE(ast::Unknown)
@@ -464,6 +444,7 @@ AST_ADD_NODE_INSTANCE(ast::Root)
 AST_ADD_NODE_INSTANCE(ast::Import)
 AST_ADD_NODE_INSTANCE(ast::Global_Variable)
 AST_ADD_NODE_INSTANCE(ast::Global_Function)
+AST_ADD_NODE_INSTANCE(ast::Call_Contract)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Fn)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Cast)
 AST_ADD_NODE_INSTANCE(ast::Global_Extend_Op_Bin)

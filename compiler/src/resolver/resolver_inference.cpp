@@ -1,28 +1,30 @@
 
 #include "resolver_inference.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/scope.hpp"
-#include "nexus/type/data.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/rule.hpp"
-#include "nexus/type/type.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/link/inference.hpp"
+#include "pool/link/resolved.hpp"
+#include "pool/scope.hpp"
+#include "pool/type.hpp"
+#include "type/data.hpp"
+#include "type/definition.hpp"
+#include "type/rule.hpp"
 
 #include <cassert>
 
@@ -42,7 +44,7 @@ void resolver::Inference::Inference::add_inference(ast::ID nodeid, type::ID type
   assert(type && "Invalid type");
 
   const auto canon = type.canonical();
-  compiler::inference.add(nodeid, canon);
+  COMPILER.inference.add(nodeid, canon);
   inference_count++;
 }
 
@@ -250,10 +252,10 @@ void resolver::Inference::ensure_expression_resolution(ast::ID expr_nodeid, type
           add_error(230, expr_nodeid.get(),
                     std::format("Expression type undefined, inference tried on \"{}\".", ty_inference.dump()), "");
         } else if (!type::rule::can_implicit_cast(expr_nodeid.type(), ty_inference)) {
-          add_error(230, expr_nodeid.get(),
-                    std::format("Illegal type inference \"{}\" as \"", expr_nodeid.type().dump()) + ty_inference.dump()
-                        + "\".",
-                    "");
+          add_error(
+              230, expr_nodeid.get(),
+              std::format(R"(Illegal type inference "{}" as "{}".)", expr_nodeid.type().dump(), ty_inference.dump()),
+              "");
         }
       }
     }
@@ -281,11 +283,11 @@ size_t resolver::Inference::start_resolver()
 
 void resolver::Inference::resolve_Root(const ast::Root& n)
 {
-  for (auto& elem : n.global_nodes) resolve_node(elem);
+  for (auto elem : n.global_nodes) resolve_node(elem);
 }
 void resolver::Inference::resolve_CodeBlock(const ast::CodeBlock& n)
 {
-  for (auto& elem : n.elements) resolve_node(elem);
+  for (auto elem : n.elements) resolve_node(elem);
 }
 
 void resolver::Inference::resolve_Global_Export(const ast::Global_Export& n)
@@ -378,8 +380,18 @@ void resolver::Inference::resolve_Global_Function(const ast::Global_Function& n)
   else
     add_inference(n.nodeid(), type::TYPEID_u0);
 
+  resolve_node(n.contract);
   resolve_node(n.codeblock);
 }
+
+void resolver::Inference::resolve_Call_Contract(const ast::Call_Contract& n)
+{
+  INFERENCE_GUARD
+
+  ensure_expression_resolution(n.pre, type::TYPEID_bool);
+  ensure_expression_resolution(n.post, type::TYPEID_bool);
+}
+
 
 void resolver::Inference::resolve_Global_Alias_Type(const ast::Global_Alias_Type& n)
 {
@@ -456,7 +468,37 @@ void resolver::Inference::resolve_Expression_Member_Access(const ast::Expression
   INFERENCE_GUARD
 
   resolve_node(n.left_expression);
-  resolve_node(n.right_identifier);
+
+  auto builtin_member = [&](type::ID inner) {
+    if (const auto* sym_id = n.right_identifier.as<ast::Symbol_Id>()) {
+      if (sym_id->name == "data") {
+        add_inference(n.right_identifier, CU.types->factory.make_ptr(inner));
+        COMPILER.resolved.add(n.right_identifier, CU.definitions->add(ast::NODEID_BUILTIN_Member_Access_Data));
+      } else if (sym_id->name == "len") {
+        add_inference(n.right_identifier, type::TYPEID_usize);
+        COMPILER.resolved.add(n.right_identifier, CU.definitions->add(ast::NODEID_BUILTIN_Member_Access_Len));
+      } else if (sym_id->name == "capa") {
+        add_inference(n.right_identifier, type::TYPEID_usize);
+        COMPILER.resolved.add(n.right_identifier, CU.definitions->add(ast::NODEID_BUILTIN_Member_Access_Capa));
+      } else {
+        resolve_node(n.right_identifier);
+        return;
+      }
+
+      return;
+    }
+
+    resolve_node(n.right_identifier);
+  };
+
+  if (const auto* array = n.left_expression.type().as<type::Array>()) {
+    builtin_member(array->inner);
+  } else if (const auto* buff = n.left_expression.type().as<type::Buffer>()) {
+    builtin_member(buff->inner);
+  } else if (const auto* slice = n.left_expression.type().as<type::Slice>()) {
+    builtin_member(slice->inner);
+  }
+
 
   add_inference(n.nodeid(), n.right_identifier.type());
 }
@@ -499,6 +541,7 @@ void resolver::Inference::resolve_Expression_Invocation(const ast::Expression_In
     const auto* arg   = n.arguments[i].as<ast::Expression_Invocation_Arg>();
     assert(arg);
     ensure_expression_resolution(arg->expression, param.type);
+    add_inference(arg->nodeid(), param.type);
   }
 
   if (proto->is_variadic && proto->params.size() < n.arguments.size()) {

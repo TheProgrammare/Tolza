@@ -1,23 +1,31 @@
 
 #include "resolver_semantic.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_operation.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_memory.hpp"
+#include "ast/definition/ast_numeric_128_bits.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/definition.hpp"
-#include "nexus/module.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/rule.hpp"
-#include "nexus/type/type.hpp"
+#include "compiler/compiler.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/link/resolved.hpp"
+#include "pool/link/semantic_metadata.hpp"
+#include "pool/module.hpp"
+#include "pool/type.hpp"
+#include "type/definition.hpp"
+#include "type/rule.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -29,19 +37,72 @@ bool resolver::Semantic::start_resolver()
   return true;
 }
 
+semantic::Metadata& resolver::Semantic::add_metadata(ast::ID nodeid, semantic::Metadata& metadata)
+{
+  assert(nodeid);
+  assert(&metadata);
+  auto& m = COMPILER.semantic_metadata.add(nodeid);
+  m       = metadata;
+  return m;
+}
+semantic::Metadata& resolver::Semantic::add_metadata(ast::ID nodeid, semantic::Metadata&& metadata)
+{
+  assert(nodeid);
+  auto& m = COMPILER.semantic_metadata.add(nodeid);
+  m       = metadata;
+  return m;
+}
+
+
 void resolver::Semantic::resolve_node(ast::ID nodeid)
 {
   const auto kind = nodeid.kind();
 
 #define resolve(_kind)                                                                                                 \
   case ast::ENodeKind::_kind: resolve_##_kind(*nodeid.as<ast::_kind>()); break;
+#define ignore(_kind)                                                                                                  \
+  case ast::ENodeKind::_kind: break;
 
   switch (kind) {
+    resolve(Root);
+    resolve(CodeBlock);
+    resolve(Global_Export);
+    resolve(Global_Extern);
     resolve(Global_Function);
+    resolve(Global_Variable);
+    resolve(Local_Variable);
     resolve(Operation_Binary);
     resolve(Operation_Cast_As);
     resolve(Expression_Invocation);
-  default: break;
+    resolve(Expression_Invocation_Arg);
+    resolve(Expression_Ptr_Val);
+    resolve(Expression_Member_Access);
+    resolve(Statement_If);
+    resolve(Statement_For);
+    resolve(Statement_Loop);
+    resolve(Statement_While);
+    resolve(Statement_GoTo);
+    resolve(Statement_GoTo_Label);
+    resolve(Statement_Return);
+    resolve(Statement_Break);
+    resolve(Statement_Continue);
+    resolve(Statement_Match);
+    resolve(Statement_Match_Case);
+    resolve(Literal_Range);
+    ignore(Import);
+    ignore(Global_Alias_Type);
+    ignore(Global_Alias_Module);
+    ignore(Literal_Boolean);
+    ignore(Literal_NullPtr);
+    ignore(Literal_Integral);
+    ignore(Literal_Fixed_Point);
+    ignore(Literal_Floating_Point);
+    ignore(Literal_Cune);
+    ignore(Literal_Rune);
+    ignore(Literal_Text_Pure);
+    ignore(Symbol_Id);
+    ignore(Symbol_Qualified);
+  default: assert(false && "Unhandled node resolution");
   }
 
 #undef resolve
@@ -54,6 +115,14 @@ void resolver::Semantic::resolve_Root(ast::Root& n)
 void resolver::Semantic::resolve_CodeBlock(ast::CodeBlock& n)
 {
   for (auto& elem : n.elements) resolve_node(elem);
+}
+void resolver::Semantic::resolve_Global_Export(ast::Global_Export& n)
+{
+  resolve_node(n.codeblock);
+}
+void resolver::Semantic::resolve_Global_Extern(ast::Global_Extern& n)
+{
+  resolve_node(n.codeblock);
 }
 
 void resolver::Semantic::resolve_Statement_If(ast::Statement_If& n)
@@ -105,6 +174,13 @@ void resolver::Semantic::resolve_Statement_Match_Case(ast::Statement_Match_Case&
   resolve_node(n.codeblock);
 }
 
+void resolver::Semantic::resolve_Literal_Range(ast::Literal_Range& n)
+{
+  if (n.start) resolve_node(n.start);
+  if (n.end) resolve_node(n.end);
+  if (n.step) resolve_node(n.step);
+}
+
 
 void resolver::Semantic::resolve_Global_Function(ast::Global_Function& n)
 {
@@ -117,7 +193,24 @@ void resolver::Semantic::resolve_Global_Function(ast::Global_Function& n)
       add_error(217, n.header, "Illegal function reserved name 'main'. Or your main function musn't be external.", "");
   }
 
-  resolve_node(n.codeblock);
+  if (n.codeblock) resolve_node(n.codeblock);
+  if (n.contract) resolve_node(n.contract);
+}
+
+void resolver::Semantic::resolve_Call_Contract(ast::Call_Contract& n)
+{
+  resolve_node(n.pre);
+  resolve_node(n.post);
+}
+
+
+void resolver::Semantic::resolve_Global_Variable(ast::Global_Variable& n)
+{
+  if (n.expression) resolve_node(n.expression);
+}
+void resolver::Semantic::resolve_Local_Variable(ast::Local_Variable& n)
+{
+  if (n.expression) resolve_node(n.expression);
 }
 
 
@@ -138,7 +231,7 @@ void resolver::Semantic::resolve_Operation_Binary(ast::Operation_Binary& n)
   if (const auto* prim = n.left.type().as<type::Primitive>()) {
     if (!type::rule::can_op_primitive(prim->primitive, n.op_ty)) {
       add_error(206, n.header,
-                std::format("Invalid operation \"{}\" on ", EOp_Bin_to_str(n.op_ty)) + n.left.type().dump() + " type.",
+                std::format(R"(Invalid operation "{}" on "{}" type.)", EOp_Bin_to_str(n.op_ty), n.left.type().dump()),
                 "");
       return;
     }
@@ -147,6 +240,7 @@ void resolver::Semantic::resolve_Operation_Binary(ast::Operation_Binary& n)
 
 void resolver::Semantic::resolve_Operation_Cast_As(ast::Operation_Cast_As& n)
 {
+  resolve_node(n.expression);
 }
 
 void resolver::Semantic::resolve_Expression_Invocation(ast::Expression_Invocation& n)
@@ -181,5 +275,56 @@ void resolver::Semantic::resolve_Expression_Invocation(ast::Expression_Invocatio
     const auto argid = n.arguments[count++];
 
     if (argid.type() != param->type) add_error_two_nodes(214, argid.get(), param->header, "Invalid argument type", "");
+
+    resolve_node(argid);
+    add_metadata(argid, semantic::Metadata{.param_def = paramid});
   }
+
+  if (proto->is_variadic) {
+    for (size_t i = params.size(); i < n.arguments.size(); i++) {
+      auto argid = n.arguments[i];
+      resolve_node(argid);
+      add_metadata(argid, semantic::Metadata{.variadic_arg = true});
+    }
+  } else if (params.size() < n.arguments.size()) {
+    add_error_two_nodes(215, n.header, n.arguments[params.size()].get(), "Too many arguments specified", "");
+  }
+}
+
+void resolver::Semantic::resolve_Expression_Invocation_Arg(ast::Expression_Invocation_Arg& n)
+{
+  resolve_node(n.expression);
+}
+
+
+void resolver::Semantic::resolve_Expression_Member_Access(ast::Expression_Member_Access& n)
+{
+  resolve_node(n.left_expression);
+
+  auto defid = n.left_expression.def().node();
+
+  if (auto* def = defid.as<ast::SFM_Facet>()) {
+    if (auto* id = n.right_identifier.as<ast::Symbol_Id>()) {
+      size_t pos = 0;
+      for (auto fid : def->fields) {
+        auto* f = fid.as<ast::SFM_Facet_Field>();
+        if (id->name == f->name) {
+          add_metadata(n.right_identifier, semantic::Metadata{.member_position = pos});
+          break;
+        }
+        pos++;
+      }
+    }
+  } else if (auto* arr = defid.type().as<type::Array>()) {
+    if (n.right_identifier.def().node() == ast::NODEID_BUILTIN_Member_Access_Data)
+      add_metadata(n.right_identifier, semantic::Metadata{.member_position = 0});
+    else if (n.right_identifier.def().node() == ast::NODEID_BUILTIN_Member_Access_Len)
+      add_metadata(n.right_identifier, semantic::Metadata{.member_position = 1});
+    else if (n.right_identifier.def().node() == ast::NODEID_BUILTIN_Member_Access_Capa)
+      add_metadata(n.right_identifier, semantic::Metadata{.member_position = 2});
+  }
+}
+void resolver::Semantic::resolve_Expression_Ptr_Val(ast::Expression_Ptr_Val& n)
+{
+  resolve_node(n.target);
 }

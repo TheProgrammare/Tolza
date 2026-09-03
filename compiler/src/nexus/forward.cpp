@@ -13,7 +13,7 @@ void common::compiler::DEBUG_TOLZA_ICE(std::string_view msg)
                "[tolza] Assume tolza code is valid\n"
                "[tolza:ICE] Internal compiler error: {})",
                msg);
-  ::compiler::COMPILER.print_errors();
+  ::COMPILER.print_errors();
   std::abort();
 #else
   (void)msg;

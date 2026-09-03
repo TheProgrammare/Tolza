@@ -65,8 +65,7 @@ bool codegen::codegen_cu(cu::ID cuid) noexcept
   if (!generate_llvm_ir_cu(cuid)) return false;
 
   // llvm .ll file emission is before llvm optimization
-  if (magic_enum::enum_flags_test(compiler::OPTIONS.target.emits, common::compiler::FEmit::llvm))
-    (void)emit_llvm_ir_cu(cuid);
+  if (magic_enum::enum_flags_test(OPTIONS.target.emits, common::compiler::FEmit::llvm)) (void)emit_llvm_ir_cu(cuid);
 
   if (!optimizing_cu(cuid)) return false;
 
@@ -81,7 +80,7 @@ void codegen::generate_target_machine() noexcept
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
 
-  std::string target_triple = compiler::OPTIONS.target.triple.dump();
+  std::string target_triple = OPTIONS.target.triple.dump();
 
   std::string         err;
   const llvm::Target* target = llvm::TargetRegistry::lookupTarget(target_triple, err);
@@ -92,7 +91,7 @@ void codegen::generate_target_machine() noexcept
   }
 
   llvm::Reloc::Model reloc;
-  switch (compiler::OPTIONS.target.reloc_model) {
+  switch (OPTIONS.target.reloc_model) {
   case common::compiler::ERelocModel::STATIC:    reloc = llvm::Reloc::Static; break;
   case common::compiler::ERelocModel::NONE:
   case common::compiler::ERelocModel::PIC:       reloc = llvm::Reloc::PIC_; break;
@@ -104,9 +103,8 @@ void codegen::generate_target_machine() noexcept
 
   // Init target machine
   llvm::TargetOptions opt;
-  compiler::TM =
-      target->createTargetMachine(target_triple, compiler::OPTIONS.target.cpu,
-                                  magic_enum::enum_flags_name(compiler::OPTIONS.target.features), opt, reloc);
+  TARGET_MACHINE = target->createTargetMachine(target_triple, OPTIONS.target.cpu,
+                                               magic_enum::enum_flags_name(OPTIONS.target.features), opt, reloc);
 }
 
 bool codegen::generate_llvm_ir_cu(cu::ID cuid) noexcept
@@ -117,15 +115,15 @@ bool codegen::generate_llvm_ir_cu(cu::ID cuid) noexcept
   if (once) {
     once           = false;
     auto& cu       = cu::ID::main().get();
-    cu.llvm_module = new llvm::Module(compiler::OPTIONS.get_project_name(), ctx);
+    cu.llvm_module = new llvm::Module(OPTIONS.get_project_name(), ctx);
   }
 
   auto& cu       = cuid.get();
   cu.llvm_module = new llvm::Module(cu.file_info.get_module_path(), ctx);
 
 
-  if (compiler::OPTIONS.llvm.args.size() > 0) {
-    llvm::cl::ParseCommandLineOptions(int(compiler::OPTIONS.llvm.args.size()), compiler::OPTIONS.llvm.args.data());
+  if (OPTIONS.llvm.args.size() > 0) {
+    llvm::cl::ParseCommandLineOptions(int(OPTIONS.llvm.args.size()), OPTIONS.llvm.args.data());
   }
 
   auto duration = timing([&]() {
@@ -145,14 +143,14 @@ bool codegen::emit_llvm_ir_cu(cu::ID cuid) noexcept
   auto& cu = cuid.get();
 
   try {
-    fs::create_directories(compiler::OPTIONS.get_dir_llvmir());
+    fs::create_directories(OPTIONS.get_dir_llvmir());
   } catch (const std::runtime_error& e) {
     IO::println(stderr, IO_PASS::emit, "Directory creation failed: {}", e.what());
     return false;
   }
 
 
-  fs::path out_llvm_file(compiler::OPTIONS.get_dir_llvmir());
+  fs::path out_llvm_file(OPTIONS.get_dir_llvmir());
   fs::create_directories(out_llvm_file);
   out_llvm_file /= cu.file_info.get_file_name();
   out_llvm_file.replace_extension("ll");
@@ -185,10 +183,10 @@ bool codegen::optimizing_cu(cu::ID cuid) noexcept
 
   auto duration = timing([&]() {
     // Init target
-    std::string target_triple = compiler::OPTIONS.target.triple.dump();
+    std::string target_triple = OPTIONS.target.triple.dump();
     mod->setTargetTriple(target_triple);
 
-    mod->setDataLayout(compiler::TM->createDataLayout());
+    mod->setDataLayout(TARGET_MACHINE->createDataLayout());
 
     if (!mod) {
       IO::println(stderr, IO_PASS::optimization, "Module is nullptr!");
@@ -214,7 +212,7 @@ bool codegen::optimizing_cu(cu::ID cuid) noexcept
     llvm::ModuleAnalysisManager   MAM;
 
     // Enregistre les analyses
-    llvm::PassBuilder PB(compiler::TM);
+    llvm::PassBuilder PB(TARGET_MACHINE);
     PB.registerModuleAnalyses(MAM);
     PB.registerFunctionAnalyses(FAM);
     PB.registerLoopAnalyses(LAM);
@@ -223,7 +221,7 @@ bool codegen::optimizing_cu(cu::ID cuid) noexcept
 
     llvm::OptimizationLevel opt_level = llvm::OptimizationLevel::O0;
 
-    switch (compiler::OPTIONS.profile.optimization) {
+    switch (OPTIONS.profile.optimization) {
     case common::compiler::EOptimization::O0:   opt_level = llvm::OptimizationLevel::O0; break;
     case common::compiler::EOptimization::O1:   opt_level = llvm::OptimizationLevel::O1; break;
     case common::compiler::EOptimization::O2:   opt_level = llvm::OptimizationLevel::O2; break;

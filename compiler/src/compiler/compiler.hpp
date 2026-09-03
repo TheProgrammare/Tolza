@@ -83,6 +83,7 @@ enum class EPhase : uint8_t {
   resolver_symbol,
   resolver_type,
   resolver_semantic,
+  resolver_evaluation,
   llvmir,
   linker
 };
@@ -90,6 +91,12 @@ enum class EPhase : uint8_t {
 
 struct Compiler {
   Compiler();
+
+  unresolved::Arena& unresolved;
+  resolved::Arena&   resolved;
+  inference::Arena&  inference;
+  semantic::Arena&   semantic_metadata;
+  evaluated::Arena&  evaluated;
 
   bool run_requested          = false;
   long start_compilation_time = 0;
@@ -106,16 +113,11 @@ struct Compiler {
 [[nodiscard]] std::string Phase_to_code(EPhase phase);
 [[nodiscard]] std::string Phase_to_str(EPhase phase);
 
-extern pipeline::Pipeline pipeline;
-
-extern module::Dispatcher modules;
-extern unresolved::Arena  unresolved;
-extern resolved::Arena    resolved;
-extern inference::Arena   inference;
-
-extern Compiler                   COMPILER;
-extern common::compiler::Manifest OPTIONS;
-inline llvm::TargetMachine*       TM = nullptr;
-
 
 } // namespace compiler
+
+
+extern pipeline::Pipeline         PIPELINE;
+extern compiler::Compiler         COMPILER;
+extern common::compiler::Manifest OPTIONS;
+inline llvm::TargetMachine*       TARGET_MACHINE = nullptr;

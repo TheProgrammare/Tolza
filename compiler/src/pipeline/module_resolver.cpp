@@ -1,13 +1,13 @@
 #include "pipeline/module_resolver.hpp"
 
-#include "ast/ast_base.hpp"
+#include "ast/definition/ast_base.hpp"
 #include "binder/binder_ffi.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/module.hpp"
-#include "nexus/unresolved.hpp"
 #include "pipeline/pipeline.hpp"
+#include "pool/module.hpp"
+#include "pool/token.hpp"
+#include "pool/unresolved.hpp"
 
 #include <common/compiler_options.hpp>
 #include <common/fileutils.hpp>
@@ -58,7 +58,7 @@ bool module_resolver::resolve_modules(std::unordered_set<cu::ID, cu::ID::Hash>& 
                                                   cu::file_path_to_str(regex->path, regex->source),
                                                   std::string(common::fileutils::TOLZA_FILE_EXTENSION)),
                                       "");
-          compiler::COMPILER.add_error(err);
+          COMPILER.add_error(err);
         }
       }
 
@@ -73,7 +73,7 @@ bool module_resolver::generate_bind(const std::vector<std::string>& path, std::s
 {
   // path must specify the language, then the file
   assert(path.size() >= 2);
-  fs::create_directories(compiler::OPTIONS.get_dir_binding_profile());
+  fs::create_directories(OPTIONS.get_dir_binding_profile());
   size_t bind_count = 0;
 
   ffi::Bind_Package bind;
@@ -81,10 +81,10 @@ bool module_resolver::generate_bind(const std::vector<std::string>& path, std::s
   bind.lib  = path[1];
 
   std::unordered_set<ast::ID, ast::ID::Hash> resolved_nodes;
-  resolved_nodes.reserve(compiler::unresolved.nodes.size() / compiler::pipeline.compilation_units.size());
+  resolved_nodes.reserve(COMPILER.unresolved.nodes.size() / PIPELINE.compilation_units.size());
 
 
-  for (auto id : compiler::unresolved.nodes) {
+  for (auto id : COMPILER.unresolved.nodes) {
     const auto* n = id.as<ast::Symbol_Qualified>();
     if (!n) continue;
 
@@ -94,7 +94,7 @@ bool module_resolver::generate_bind(const std::vector<std::string>& path, std::s
     resolved_nodes.insert(id);
   }
 
-  fs::path bind_path = compiler::OPTIONS.get_dir_binding_profile();
+  fs::path bind_path = OPTIONS.get_dir_binding_profile();
   for (const auto& i : path) bind_path /= i;
   bind_path.replace_extension(common::fileutils::TOLZA_FILE_EXTENSION);
   fs::create_directories(bind_path.parent_path());
@@ -105,7 +105,7 @@ bool module_resolver::generate_bind(const std::vector<std::string>& path, std::s
 
   bind_path = common::fileutils::get_tolza_file(bind_path.string());
 
-  compiler::pipeline.binding_compilation_units_to_prepare.insert(bind_path);
+  PIPELINE.binding_compilation_units_to_prepare.insert(bind_path);
 
 
   return true;

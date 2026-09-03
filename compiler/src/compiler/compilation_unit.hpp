@@ -58,6 +58,7 @@ struct FileInfo {
   token::Arena* const       tokens     = nullptr;
   const bool                is_mod_dir = false;
   const bool                is_barrel  = false;
+  const bool                is_dirty   = false;
 
   [[nodiscard]] std::string get_module_name() const;
   [[nodiscard]] std::string get_module_path() const;

@@ -301,49 +301,62 @@ const std::vector<std::string>& common::compiler::Manifest::to_args() const noex
   if (is_check_mode) out.emplace_back("--check");
 
   // target
-  out.emplace_back(std::format(R"(--arch="{}")", GET_ENUM_NAME(target.triple.arch)));
-  out.emplace_back(std::format(R"(--platform="{}")", GET_ENUM_NAME(target.triple.platform)));
-  out.emplace_back(std::format(R"(--vendor="{}")", GET_ENUM_NAME(target.triple.vendor)));
-  out.emplace_back(std::format(R"(--abi="{}")", GET_ENUM_NAME(target.triple.abi)));
-  out.emplace_back(std::format(R"(--cpu="{}")", target.cpu));
-  out.emplace_back(std::format(R"(--features="{}")", GET_FLAGS_NAME(target.features)));
-  out.emplace_back(std::format(R"(--calling_convention="{}")", GET_ENUM_NAME(target.call_convention)));
-  out.emplace_back(std::format(R"(--reloc-model="{}")", GET_ENUM_NAME(target.reloc_model)));
-  out.emplace_back(std::format(R"(--code-model="{}")", GET_ENUM_NAME(target.code_model)));
-  out.emplace_back(std::format(R"(--emits="{}")", GET_FLAGS_NAME(target.emits)));
+  if (target.triple.arch != env::EArch::NONE)
+    out.emplace_back(std::format(R"(--arch="{}")", GET_ENUM_NAME(target.triple.arch)));
+  if (target.triple.platform != env::EPlatform::NONE)
+    out.emplace_back(std::format(R"(--platform="{}")", GET_ENUM_NAME(target.triple.platform)));
+  if (target.triple.vendor != env::EVendor::NONE)
+    out.emplace_back(std::format(R"(--vendor="{}")", GET_ENUM_NAME(target.triple.vendor)));
+  if (target.triple.abi != env::EABI::NONE)
+    out.emplace_back(std::format(R"(--abi="{}")", GET_ENUM_NAME(target.triple.abi)));
+  if (!target.cpu.empty()) out.emplace_back(std::format(R"(--cpu="{}")", target.cpu));
+  if (target.features != FCPUFeature::NONE)
+    out.emplace_back(std::format(R"(--features="{}")", GET_FLAGS_NAME(target.features)));
+  if (target.call_convention != env::ECallConvention::NONE)
+    out.emplace_back(std::format(R"(--calling_convention="{}")", GET_ENUM_NAME(target.call_convention)));
+  if (target.reloc_model != ERelocModel::NONE)
+    out.emplace_back(std::format(R"(--reloc-model="{}")", GET_ENUM_NAME(target.reloc_model)));
+  if (target.code_model != ECodeModel::NONE)
+    out.emplace_back(std::format(R"(--code-model="{}")", GET_ENUM_NAME(target.code_model)));
+  if (target.emits != FEmit::NONE) out.emplace_back(std::format(R"(--emits="{}")", GET_FLAGS_NAME(target.emits)));
 
-  out.emplace_back(std::format(R"(--libc="{}")", GET_ENUM_NAME(c_ffi.libc)));
+  if (c_ffi.libc != env::ELibC::NONE) out.emplace_back(std::format(R"(--libc="{}")", GET_ENUM_NAME(c_ffi.libc)));
 
-  std::string _profile;
-  for (const auto& elem : profiles) std::format_to(std::back_inserter(_profile), "{}|", elem);
-  _profile = _profile.substr(0, _profile.size() - 1);
-  out.emplace_back(std::format(R"(--profile="{}")", _profile));
+  if (!profiles.empty()) {
+    std::string _profile;
+    for (const auto& elem : profiles) std::format_to(std::back_inserter(_profile), "{}|", elem);
+    _profile = _profile.substr(0, _profile.size() - 1);
+    out.emplace_back(std::format(R"(--profile="{}")", _profile));
+  }
 
-  out.emplace_back(profile.debug ? "--debug" : "--release");
-  out.emplace_back("-" + GET_ENUM_NAME(profile.optimization));
-
-  out.emplace_back(std::format(R"(--logs="{}")", GET_FLAGS_NAME(log.logs)));
-  out.emplace_back(std::format(R"(--log-level="{}")", GET_ENUM_NAME(log.level)));
-  out.emplace_back(std::format(R"(--warns="{}")", GET_FLAGS_NAME(warn.warns)));
-  out.emplace_back("-" + GET_ENUM_NAME(warn.level));
-  out.emplace_back(std::format(R"(--debugs="{}")", GET_FLAGS_NAME(debug.debugs)));
+  out.emplace_back(profile.debug ? "--debug" : "");
+  if (profile.optimization != EOptimization::NONE) out.emplace_back("-" + GET_ENUM_NAME(profile.optimization));
+  if (log.logs != FPass::NONE) out.emplace_back(std::format(R"(--logs="{}")", GET_FLAGS_NAME(log.logs)));
+  if (log.level != ELogLevel::NONE) out.emplace_back(std::format(R"(--log-level="{}")", GET_ENUM_NAME(log.level)));
+  if (warn.warns != FWarnMode::NONE) out.emplace_back(std::format(R"(--warns="{}")", GET_FLAGS_NAME(warn.warns)));
+  if (warn.level != EWarnLevel::NONE) out.emplace_back("-" + GET_ENUM_NAME(warn.level));
+  if (debug.debugs != FDebugPrinter::NONE)
+    out.emplace_back(std::format(R"(--debugs="{}")", GET_FLAGS_NAME(debug.debugs)));
 
   for (const auto& [name, val] : preprocessor.defines) out.emplace_back("-D" + name + "=" + val);
 
   for (const auto& udef : preprocessor.undefines) out.emplace_back("-U" + std::string(udef));
 
-  out.emplace_back(std::format(R"(--dir-build="{}")", dir.build));
-  out.emplace_back(std::format(R"(--dir-src="{}")", dir.source));
-  out.emplace_back(std::format(R"(--dir-profile="{}")", dir.profile));
-  out.emplace_back(std::format(R"(--dir-vendor="{}")", dir.vendor));
-  out.emplace_back(std::format(R"(--dir-ffi-json="{}")", dir.ffi_json));
-  out.emplace_back(std::format(R"(--dir-binding="{}")", dir.binding));
-  out.emplace_back(std::format(R"(--dir-compiler="{}")", dir.compiler));
-  out.emplace_back(std::format(R"(--dir-stdlib="{}")", dir.stdlib));
-  out.emplace_back(std::format(R"(--dir-packages="{}")", dir.packages));
+  if (!dir.overlay.empty()) out.emplace_back(std::format(R"(--overlay="{}")", dir.overlay));
+  if (!dir.build.empty()) out.emplace_back(std::format(R"(--dir-build="{}")", dir.build));
+  if (!dir.source.empty()) out.emplace_back(std::format(R"(--dir-src="{}")", dir.source));
+  if (!dir.profile.empty()) out.emplace_back(std::format(R"(--dir-profile="{}")", dir.profile));
+  if (!dir.vendor.empty()) out.emplace_back(std::format(R"(--dir-vendor="{}")", dir.vendor));
+  if (!dir.ffi_json.empty()) out.emplace_back(std::format(R"(--dir-ffi-json="{}")", dir.ffi_json));
+  if (!dir.binding.empty()) out.emplace_back(std::format(R"(--dir-binding="{}")", dir.binding));
+  if (!dir.compiler.empty()) out.emplace_back(std::format(R"(--dir-compiler="{}")", dir.compiler));
+  if (!dir.stdlib.empty()) out.emplace_back(std::format(R"(--dir-stdlib="{}")", dir.stdlib));
+  if (!dir.packages.empty()) out.emplace_back(std::format(R"(--dir-packages="{}")", dir.packages));
 
-  out.emplace_back(std::format(R"(--error-mode="{}")", GET_ENUM_NAME(diagnostic.error)));
-  out.emplace_back(std::format(R"(--diagnostic-format="{}")", GET_ENUM_NAME(diagnostic.out_format)));
+  if (diagnostic.error != EErrorMode::NONE)
+    out.emplace_back(std::format(R"(--error-mode="{}")", GET_ENUM_NAME(diagnostic.error)));
+  if (diagnostic.out_format != EDiagnosticFormat::NONE)
+    out.emplace_back(std::format(R"(--diagnostic-format="{}")", GET_ENUM_NAME(diagnostic.out_format)));
 
   if (llvm.verify_module) out.emplace_back("--verify-module");
 
@@ -698,7 +711,12 @@ common::compiler::Manifest common::compiler::Profile::merge_context(const Manife
   // debugs
   merge_bitwise(out.debug.debugs, debug.debugs, debug_merge_mode);
 
+  // diagnostic
+  if (diagnostic.error != EErrorMode::NONE) out.diagnostic.error = diagnostic.error;
+  if (diagnostic.out_format != EDiagnosticFormat::NONE) out.diagnostic.out_format = diagnostic.out_format;
+
   // dirs
+  apply_str(out.dir.overlay, dir.overlay);
   apply_str(out.dir.build, dir.build);
   apply_str(out.dir.source, dir.source);
   apply_str(out.dir.profile, dir.profile);
@@ -751,12 +769,13 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   };
 
   auto out = common::compiler::Manifest::invalid();
-  out.dir  = Dir(fs::path(project_manifest).parent_path().string());
 
   toml::table tbl;
   tbl = toml::parse_file(project_manifest);
 
   out.project_name = get_str("project_name");
+  out.project_path = fs::path(project_manifest).parent_path().string();
+  out.dir          = Dir(out.project_path);
 
   out.profiles = utils::split_flags(get_str("profiles"));
 
@@ -784,8 +803,8 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   out.warn.level = get_enum("warning.level", EWarnLevel, W0);
 
   // diagnostic
-  out.diagnostic.error      = get_enum("diagnostic.error.mode", EErrorMode, fail_fatal);
-  out.diagnostic.out_format = get_enum("diagnostic.out.format", EDiagnosticFormat, userfriendly);
+  out.diagnostic.error      = get_enum("diagnostic.error", EErrorMode, fail_fatal);
+  out.diagnostic.out_format = get_enum("diagnostic.out_format", EDiagnosticFormat, userfriendly);
 
   // llvm
   out.llvm.verify_module = get_bool("llvm.verify_module");
@@ -794,15 +813,15 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   }
 
   // directories
-  out.dir.build    = common::fileutils::resolve_path(get_str("directory.build"), project_manifest);
-  out.dir.source   = common::fileutils::resolve_path(get_str("directory.source"), project_manifest);
-  out.dir.profile  = common::fileutils::resolve_path(get_str("directory.profile"), project_manifest);
-  out.dir.vendor   = common::fileutils::resolve_path(get_str("directory.vendor"), project_manifest);
-  out.dir.binding  = common::fileutils::resolve_path(get_str("directory.binding"), project_manifest);
-  out.dir.ffi_json = common::fileutils::resolve_path(get_str("directory.ffi_json"), project_manifest);
-  out.dir.compiler = common::fileutils::resolve_path(get_str("directory.compiler"), project_manifest);
-  out.dir.stdlib   = common::fileutils::resolve_path(get_str("directory.stdlib"), project_manifest);
-  out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), project_manifest);
+  out.dir.build    = common::fileutils::resolve_path(get_str("directory.build"), out.project_path);
+  out.dir.source   = common::fileutils::resolve_path(get_str("directory.source"), out.project_path);
+  out.dir.profile  = common::fileutils::resolve_path(get_str("directory.profile"), out.project_path);
+  out.dir.vendor   = common::fileutils::resolve_path(get_str("directory.vendor"), out.project_path);
+  out.dir.binding  = common::fileutils::resolve_path(get_str("directory.binding"), out.project_path);
+  out.dir.ffi_json = common::fileutils::resolve_path(get_str("directory.ffi_json"), out.project_path);
+  out.dir.compiler = common::fileutils::resolve_path(get_str("directory.compiler"), out.project_path);
+  out.dir.stdlib   = common::fileutils::resolve_path(get_str("directory.stdlib"), out.project_path);
+  out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), out.project_path);
 
   if (const toml::table* defines = tbl.at_path("preprocessor.defines").as_table()) {
     for (const auto& [key, val] : *defines) out.preprocessor.defines[std::string(key.str())] = val.value_or("");
@@ -930,7 +949,8 @@ bool common::compiler::Manifest::write_manifest(std::string_view project_manifes
   return true;
 }
 
-common::compiler::Profile common::compiler::Profile::read_profile(std::string_view profile_path) noexcept
+common::compiler::Profile common::compiler::Profile::read_profile(std::string_view profile_path,
+                                                                  std::string_view project_path) noexcept
 {
 #define get_enum(_path, _enum_kind, _enum_default)                                                                     \
   magic_enum::enum_cast<_enum_kind>(utils::str_to_snake(tbl.at_path(_path).value_or("")))                              \
@@ -956,8 +976,6 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
 
   toml::table tbl;
   tbl = toml::parse_file(profile_path);
-
-  out.project_path = profile_path;
 
   out.profiles = utils::split_flags(get_str("profiles"));
 
@@ -1005,15 +1023,15 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
   out.llvm_args_merge_mode = get_enum("llvm.args_mode", EMergeMode, NONE);
 
   // directories
-  out.dir.build    = common::fileutils::resolve_path(get_str("directory.build"), profile_path);
-  out.dir.source   = common::fileutils::resolve_path(get_str("directory.source"), profile_path);
-  out.dir.profile  = common::fileutils::resolve_path(get_str("directory.profile"), profile_path);
-  out.dir.vendor   = common::fileutils::resolve_path(get_str("directory.vendor"), profile_path);
-  out.dir.binding  = common::fileutils::resolve_path(get_str("directory.binding"), profile_path);
-  out.dir.ffi_json = common::fileutils::resolve_path(get_str("directory.ffi_json"), profile_path);
-  out.dir.compiler = common::fileutils::resolve_path(get_str("directory.compiler"), profile_path);
-  out.dir.stdlib   = common::fileutils::resolve_path(get_str("directory.stdlib"), profile_path);
-  out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), profile_path);
+  out.dir.build    = common::fileutils::resolve_path(get_str("directory.build"), project_path);
+  out.dir.source   = common::fileutils::resolve_path(get_str("directory.source"), project_path);
+  out.dir.profile  = common::fileutils::resolve_path(get_str("directory.profile"), project_path);
+  out.dir.vendor   = common::fileutils::resolve_path(get_str("directory.vendor"), project_path);
+  out.dir.binding  = common::fileutils::resolve_path(get_str("directory.binding"), project_path);
+  out.dir.ffi_json = common::fileutils::resolve_path(get_str("directory.ffi_json"), project_path);
+  out.dir.compiler = common::fileutils::resolve_path(get_str("directory.compiler"), project_path);
+  out.dir.stdlib   = common::fileutils::resolve_path(get_str("directory.stdlib"), project_path);
+  out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), project_path);
 
   if (const toml::table* defines = tbl.at_path("preprocessor.defines").as_table()) {
     for (const auto& [key, val] : *defines) out.preprocessor.defines[std::string(key.str())] = val.value_or("");

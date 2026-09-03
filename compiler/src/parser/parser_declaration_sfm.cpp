@@ -1,28 +1,28 @@
 #include "parser_declaration_sfm.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_statement.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_statement.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/definition.hpp"
+#include "lexer/token_viewer.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/lexer/token_viewer.hpp"
-#include "nexus/type/type.hpp"
 #include "parser/parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_expression.hpp"
 #include "parser_literal.hpp"
 #include "parser_type.hpp"
+#include "pool/ast.hpp"
+#include "pool/link/definition.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 #include <vector>
 
@@ -219,9 +219,11 @@ ast::ID parser::Parser_Declaration_SFM::rule()
   (void)p.add_definition(n.nodeid());
   p.enter_scope(n.nodeid(), "rule " + n.name);
 
-  auto [protoid, params] = p.p_type->prototype_from_declaration();
-  n.prototype            = protoid;
-  n.parameters           = params;
+  auto [protoid, params, contract] = p.p_type->prototype_from_declaration();
+
+  n.prototype  = protoid;
+  n.parameters = params;
+  n.contract   = contract;
 
   bool is_no_facet_used = true;
 

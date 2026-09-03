@@ -1,25 +1,28 @@
 
 #include "parser_declaration_global.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_extension.hpp"
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_generic.hpp"
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
+#include "lexer/token_viewer.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/metacode/metacode.hpp"
-#include "nexus/type/type.hpp"
+#include "parser/parser_literal.hpp"
+#include "parser/parser_recover.hpp"
 #include "parser_base.hpp"
 #include "parser_context.hpp"
 #include "parser_declaration_local.hpp"
 #include "parser_declaration_sfm.hpp"
 #include "parser_expression.hpp"
 #include "parser_type.hpp"
+#include "pool/metacode.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
 
 #include <string>
 #include <string_view>
@@ -53,12 +56,10 @@ ast::ID parser::Parser_Declaration::parse_declaration()
   default:                           break;
   }
 
-  p.add_error(60, std::format("Illegal instruction '{}' in global.", p.tok_to_str(tok.tokid)),
-              "you can define in global: namespace, variable, function, form, facet, rule");
+  throw Parser_Exception(p, 60, tok, std::format("Illegal instruction '{}' in global.", p.tok_to_str(tok.tokid)),
+                         "you can define in global: namespace, variable, function, form, facet, rule");
 
   (void)p.next();
-
-  THROW_BAD_NODE;
 }
 
 
@@ -131,9 +132,7 @@ ast::ID parser::Parser_Declaration::_module()
     return node.nodeid();
   }
 
-  p.add_error_tok(61, p.peek(), "Expected '{' or '=' after module name.", hint);
-
-  THROW_BAD_NODE;
+  throw Parser_Exception(p, 61, p.peek(), "Expected '{' or '=' after module name.", hint);
 }
 
 ast::ID parser::Parser_Declaration::enumeration()
@@ -328,9 +327,11 @@ ast::ID parser::Parser_Declaration::function()
   (void)p.add_definition(fn.nodeid());
   p.enter_scope(fn.nodeid(), "function " + std::string(fn.name));
 
-  auto [protoid, params] = p.p_type->prototype_from_declaration();
-  fn.prototype           = protoid;
-  fn.parameters          = params;
+  auto [protoid, params, contract] = p.p_type->prototype_from_declaration();
+
+  fn.prototype  = protoid;
+  fn.parameters = params;
+  fn.contract   = contract;
 
   if (fn.name == "main") {
     auto* proto = fn.prototype.as<type::Prototype>();
@@ -353,6 +354,73 @@ ast::ID parser::Parser_Declaration::function()
   p.current_returnable = old_ret;
 
   return fn.nodeid();
+}
+
+ast::ID parser::Parser_Declaration::call_contract()
+{
+  constexpr std::string_view hint =
+      R"(define contract like:
+  - static proof `pre <cond>` `post <cond>`
+  - debug `pre <cond> -> assert` `post <cond> -> assert("...")`
+  - runtime result `pre <cond> -> <error>` `post <cond> -> <error>`
+  - runtime panic `pre <cond> -> panic("...")` `post <cond> -> panic("...")`)";
+
+  auto& n = p.add_get_node<ast::Call_Contract>(p.peek().tokid);
+  while (!p.is_end()) {
+    if (p.match(token::ETokenKind::PRE)) {
+      n.pre = p.p_expr->parse_expression();
+      if (p.match(token::ETokenKind::ARROW)) {
+        if (p.match_val("assert")) {
+          n.pre_mode = ECallContract::Assert;
+
+          if (p.match(token::ETokenKind::L_PAREN)) {
+            (void)p.expect(331, token::ETokenKind::L_TEXTUAL, "expected text error",
+                           "define assert like: `assert(\"my error info\")`");
+            p.rewind(p.tok_v->position() - 1);
+            n.pre_err = p.p_lit->try_literal();
+          }
+        } else if (p.check_val("panic")) {
+          n.pre_mode = ECallContract::Panic;
+          (void)p.expect(331, token::ETokenKind::L_TEXTUAL, "expected text error",
+                         "define panic like: `panic(\"my error info\")`");
+          p.rewind(p.tok_v->position() - 1);
+          n.pre_err = p.p_lit->try_literal();
+        } else {
+          n.pre_mode = ECallContract::Result;
+          n.pre_err  = p.p_expr->parse_expression();
+        }
+      }
+    }
+    if (p.match(token::ETokenKind::POST)) {
+      n.post = p.p_expr->parse_expression();
+      if (p.match(token::ETokenKind::ARROW)) {
+        if (p.match_val("assert")) {
+          n.post_mode = ECallContract::Assert;
+
+          if (p.match(token::ETokenKind::L_PAREN)) {
+            (void)p.expect(331, token::ETokenKind::L_TEXTUAL, "expected text error",
+                           "define assert like: `assert(\"my error info\")`");
+            p.rewind(p.tok_v->position() - 1);
+            n.post_err = p.p_lit->try_literal();
+          }
+        } else if (p.check_val("panic")) {
+          n.post_mode = ECallContract::Panic;
+          (void)p.expect(331, token::ETokenKind::L_TEXTUAL, "expected text error",
+                         "define panic like: `panic(\"my error info\")`");
+          p.rewind(p.tok_v->position() - 1);
+          n.post_err = p.p_lit->try_literal();
+        } else {
+          n.post_mode = ECallContract::Result;
+          n.post_err  = p.p_expr->parse_expression();
+        }
+      }
+    }
+
+    if (p.match_field_separator(token::ETokenKind::SEMICOLON, token::ETokenKind::L_CURLY)) break;
+    if (p.match_field_separator(token::ETokenKind::COMMA, token::ETokenKind::L_CURLY)) break;
+  }
+
+  return n.nodeid();
 }
 
 

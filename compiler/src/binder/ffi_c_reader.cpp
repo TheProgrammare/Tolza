@@ -1,18 +1,18 @@
 #include "ffi_c_reader.hpp"
 
-#include "ast/ast_declaration_global.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_declaration_sfm.hpp"
+#include "ast/data.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/forward.hpp"
 #include "binder/binder_ffi.hpp"
-#include "common/environment.hpp"
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/forward.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
+#include "pool/ast.hpp"
+#include "pool/type.hpp"
+#include "type/definition.hpp"
 
 #include <Neargye/magic_enum.hpp>
 #include <cassert>
@@ -20,6 +20,7 @@
 #include <clang-c/Index.h>
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
+#include <common/environment.hpp>
 #include <common/fileutils.hpp>
 #include <common/utils.hpp>
 #include <cstdint>
@@ -36,6 +37,7 @@
 #include <unordered_set>
 #include <vector>
 
+
 namespace fs = std::filesystem;
 
 
@@ -48,7 +50,7 @@ ffi::C_Reader::C_Reader()
 
 void ffi::C_Reader::generate_libc_wrappers() noexcept
 {
-  const auto& ctx = compiler::OPTIONS;
+  const auto& ctx = OPTIONS;
 
   BindManifest m = {
       .binding_language          = "C",
@@ -86,7 +88,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
 
   wrap_headers(HEADERS_C_ISO);
 
-  auto& platform = compiler::OPTIONS.target.triple.platform;
+  auto& platform = OPTIONS.target.triple.platform;
 
   // headers resolution
   if (platform == common::env::EPlatform::linux) {
@@ -123,7 +125,7 @@ void ffi::C_Reader::generate_libc_wrappers() noexcept
     wrap_headers(HEADERS_C_ISO);
   }
 
-  std::string c_bindings_path = fs::path(compiler::OPTIONS.get_dir_binding_profile()) / "C";
+  std::string c_bindings_path = fs::path(OPTIONS.get_dir_binding_profile()) / "C";
   common::fileutils::write_barrel(c_bindings_path, "C");
 
   fs::remove(tmp_path);
@@ -135,7 +137,7 @@ void ffi::C_Reader::generate_c_api_wrappers(std::string_view from, std::string_v
   const fs::path pfrom(from);
   const fs::path pto(to);
 
-  const auto& c_ffi_args = compiler::OPTIONS.c_ffi.generate_preprocessor_args();
+  const auto& c_ffi_args = OPTIONS.c_ffi.generate_preprocessor_args();
 
   auto generate_wrapper = [&c_ffi_args, this](const fs::path& _from, std::string_view _to) {
     auto ast       = parse_c_compilation_unit(_from.string(), c_ffi_args);
@@ -526,13 +528,13 @@ type::ID ffi::C_Reader::c_type_resolve_opaque(CXCursor decl, type::Qualifier& de
 type::ID ffi::C_Reader::c_type_resolve_struct(CXCursor decl, type::Qualifier& dec) noexcept
 {
   auto facet = c_struct_to_facet(decl); // <-- placeholder clean
-  return current_ast->inferences->get_inference(facet);
+  return facet.type();
 }
 
 type::ID ffi::C_Reader::c_type_resolve_union(CXCursor decl, type::Qualifier& dec) noexcept
 {
   auto _union = c_union_to_union(decl);
-  return current_ast->inferences->get_inference(_union);
+  return _union.type();
 }
 
 
@@ -540,7 +542,7 @@ type::ID ffi::C_Reader::c_type_resolve_enum(CXCursor decl, type::Qualifier& dec)
 {
   auto _flag = c_enum_to_flag(decl);
 
-  return current_ast->inferences->get_inference(_flag);
+  return _flag.type();
 }
 
 type::ID ffi::C_Reader::c_type_resolve_primitive(CXType input) noexcept

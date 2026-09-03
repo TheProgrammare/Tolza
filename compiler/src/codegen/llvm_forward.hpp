@@ -20,4 +20,9 @@ class LoadInst;
 class BasicBlock;
 class Argument;
 class PointerType;
+class DIBuilder;
+class DIFile;
+class DICompileUnit;
+class DILocation;
+class DILocalScope;
 } // namespace llvm

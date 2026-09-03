@@ -1,20 +1,20 @@
 #include "codegen_type.hpp"
 
+#include "ast/data.hpp"
 #include "codegen/static_evaluation.hpp"
-#include "common/compiler_options.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
 #include "misc/error_output.hpp"
-#include "nexus/ast/data.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/inference.hpp"
-#include "nexus/type/data.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
+#include "pool/link/inference.hpp"
+#include "pool/type.hpp"
+#include "type/data.hpp"
+#include "type/definition.hpp"
 
 #include <array>
 #include <cassert>
+#include <common/compiler_options.hpp>
 #include <cstddef>
 #include <llvm-19/llvm/IR/Constants.h>
 #include <llvm-19/llvm/IR/DerivedTypes.h>
@@ -43,14 +43,23 @@ llvm::Type* codegen::Codegen_Type::get(const type::ID tyid) noexcept
 
   auto it = llvm_types.find(tyid);
   if (it == llvm_types.end()) return nullptr;
-  return it->second;
+  return it->second.type;
+}
+std::vector<llvm::Constant*>* codegen::Codegen_Type::get_constants(type::ID tyid) noexcept
+{
+  size_t offset = tyid.index();
+  if (offset >= 0 && offset < type::TYPEID_USER_START) return nullptr;
+
+  auto it = llvm_types.find(tyid);
+  if (it == llvm_types.end()) return nullptr;
+  return &it->second.constants;
 }
 llvm::Type* codegen::Codegen_Type::replace_type(const type::ID tyid, llvm::Type* ty) noexcept
 {
   size_t offset = tyid.index();
   assert(offset >= type::TYPEID_USER_START && "Illegal type replace on primitives");
 
-  llvm_types.try_emplace(tyid, ty);
+  llvm_types.try_emplace(tyid, LLVM_TYPE_DATA(ty));
 
   return ty;
 }
@@ -63,7 +72,7 @@ void codegen::Codegen_Type::init_llvm_types() noexcept
   if (once) return;
   once = true;
 
-  const size_t arch_size = compiler::OPTIONS.target.get_arch_size();
+  const size_t arch_size = OPTIONS.target.get_arch_size();
 
   codegen::LLVM_TYPEID_u0      = llvm::Type::getVoidTy(ctx);
   codegen::LLVM_TYPEID_bool    = llvm::Type::getInt1Ty(ctx);
@@ -156,7 +165,7 @@ void codegen::Codegen_Type::init_llvm_types() noexcept
   llvm_primitives.try_emplace(type::TYPEID_str, LLVM_TYPEID_str);
   llvm_primitives.try_emplace(type::TYPEID_text, LLVM_TYPEID_text);
 
-  for (auto [nodeid, tyid] : compiler::inference.inference) {
+  for (auto [nodeid, tyid] : COMPILER.inference.inference) {
     (void)codegen_type(tyid);
   }
 }
@@ -177,7 +186,7 @@ llvm::Type* codegen::Codegen_Type::codegen_type(const type::ID tyid) noexcept
 {
   assert(tyid);
 
-  if (auto it = llvm_types.find(tyid); it != llvm_types.end()) return it->second;
+  if (auto it = llvm_types.find(tyid); it != llvm_types.end()) return it->second.type;
 
   llvm::Type* out   = nullptr;
   const auto  canon = tyid.canonical();
@@ -203,7 +212,7 @@ llvm::Type* codegen::Codegen_Type::codegen_type(const type::ID tyid) noexcept
     case_ty(Identifier);
   case type::ETypeKind::Array: {
     auto* ty = codegen_Array(*canon.as<type::Array>()).first;
-    llvm_types.try_emplace(tyid, ty);
+    llvm_types.try_emplace(tyid, LLVM_TYPE_DATA(ty));
     return ty;
   }
   default: assert(false && "Invalid type defined as None");
@@ -211,7 +220,7 @@ llvm::Type* codegen::Codegen_Type::codegen_type(const type::ID tyid) noexcept
 
 #undef case_ty
 
-  llvm_types.try_emplace(tyid, out);
+  llvm_types.try_emplace(tyid, LLVM_TYPE_DATA(out));
   return out;
 }
 
@@ -243,37 +252,31 @@ llvm::Type* codegen::Codegen_Type::codegen_Tuple(const type::Tuple& ty) noexcept
 
 std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const type::Array& ty) noexcept
 {
-  if (auto it = llvm_types.find(ty.tyid()); it != llvm_types.end()) {
-    auto* llvm_ty = llvm::cast<llvm::StructType>(it->second);
-    return {llvm_ty, ty.size};
+  if (auto* arr = get(ty.tyid())) {
+    auto* llvm_ty = llvm::cast<llvm::StructType>(arr);
+
+    if (auto* consts = get_constants(ty.tyid())) {
+      assert(!consts->empty() && "The array don't have a size");
+      auto* size = llvm::cast<llvm::ConstantInt>(consts->at(0));
+      return {llvm_ty, size->getLimitedValue()};
+    }
+
+    assert(false && "Static Array must have a contant size");
   }
 
-  llvm::ArrayType* array_data = nullptr;
-  size_t           size       = 0;
+  size_t size = ty.size;
 
-  if (ty.size <= 0) {
+  if (ty.size == 0) {
     auto expr = res->eval.evaluate_expression(ty.size_expression);
 
-    if (expr) {
-      auto* v    = llvm::cast<llvm::ConstantInt>(expr.value());
-      size       = v->getValue().getLimitedValue();
-      array_data = llvm::ArrayType::get(codegen_type(ty.inner.canonical()), size);
-    }
-
-    if (ty.size_expression.canonical()) {
-      IO::println(IO_PASS::codegen, "{}", ty.size_expression.dump());
-      IO::println(IO_PASS::codegen, "{}", ty.size_expression.token().line_str());
-      compiler::COMPILER.add_error(
-          Error_Diagnostic(cu.cuid, 279, ty.size_expression, ty.size_expression.canonical(), compiler::EPhase::llvmir,
-                           "Impossible to evaluate the expression for a table size at compilation time.", ""));
+    if (expr && llvm::isa<llvm::ConstantInt>(expr.value())) {
+      auto* v = llvm::cast<llvm::ConstantInt>(expr.value());
+      size    = v->getValue().getLimitedValue();
     } else {
-      compiler::COMPILER.add_error(
-          Error_Diagnostic(cu.cuid, 279, ty.size_expression, compiler::EPhase::llvmir,
-                           "Impossible to evaluate the expression for a table size at compilation time.", ""));
+      COMPILER.add_error(Error_Diagnostic(cu.cuid, 279, ty.size_expression, compiler::EPhase::llvmir,
+                                          "Impossible to evaluate the expression for a table size at compilation time.",
+                                          ""));
     }
-  } else {
-    array_data = llvm::ArrayType::get(codegen_type(ty.inner.canonical()), ty.size);
-    size       = ty.size;
   }
 
   // array {data: ptr'T, size: usize}
@@ -282,7 +285,7 @@ std::pair<llvm::StructType*, size_t> codegen::Codegen_Type::codegen_Array(const 
   tys[1] = llvm_primitives.at(type::TYPEID_usize);               // size
 
   auto* out_ty = llvm::StructType::create(ctx, tys, "array");
-  llvm_types.try_emplace(ty.tyid(), out_ty);
+  llvm_types.try_emplace(ty.tyid(), LLVM_TYPE_DATA(out_ty, {res->const_int(size)}));
   return {out_ty, size};
 }
 

@@ -1,12 +1,12 @@
 #include "resolver_base.hpp"
 
+#include "ast/data.hpp"
+#include "ast/definition.hpp"
+#include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "misc/error_output.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/definition.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/lexer/token.hpp"
+#include "pool/token.hpp"
 
 
 void resolver::Base::add_error(ErrorCode code, const ast::NodeHeader& n, std::string_view msg,
@@ -14,7 +14,7 @@ void resolver::Base::add_error(ErrorCode code, const ast::NodeHeader& n, std::st
 {
   auto& tok   = CU.file_info.tokens->get(n.start_tokid);
   auto  error = Error_Diagnostic(CU.cuid, code, n.nodeid, current_EPhase(), msg, hint);
-  compiler::COMPILER.add_error(std::move(error));
+  COMPILER.add_error(std::move(error));
 }
 
 void resolver::Base::add_error_two_nodes(ErrorCode code, const ast::NodeHeader& first, const ast::NodeHeader& second,
@@ -27,7 +27,7 @@ void resolver::Base::add_error_two_nodes(ErrorCode code, const ast::NodeHeader& 
   auto err_second =
       Error_Elem(CU.cuid, code, second_tok.begin, second_tok.begin + first_tok.length, current_EPhase(), msg, hint);
   Error_Diagnostic err(err_first, err_second);
-  compiler::COMPILER.add_error(err);
+  COMPILER.add_error(err);
 }
 
 compiler::EPhase resolver::Base::current_EPhase() const

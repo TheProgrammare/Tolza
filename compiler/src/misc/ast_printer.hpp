@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ast/ast_literal.hpp"
-#include "nexus/ast/forward.hpp"
-#include "nexus/type/forward.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/forward.hpp"
+#include "type/forward.hpp"
 
 #include <string_view>
 

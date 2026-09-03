@@ -1,22 +1,23 @@
 #include "parser_type.hpp"
 
-#include "ast/ast_base.hpp"
-#include "ast/ast_declaration_local.hpp"
-#include "ast/ast_expression.hpp"
-#include "ast/ast_literal.hpp"
-#include "ast/ast_numeric_128_bits.hpp"
-#include "nexus/ast/ast.hpp"
-#include "nexus/ast/data.hpp"
-#include "nexus/ast/forward.hpp"
+#include "ast/data.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_numeric_128_bits.hpp"
+#include "ast/forward.hpp"
+#include "lexer/token_viewer.hpp"
 #include "nexus/forward.hpp"
 #include "nexus/ids.hpp"
-#include "nexus/lexer/token.hpp"
-#include "nexus/lexer/token_viewer.hpp"
-#include "nexus/type/definition.hpp"
-#include "nexus/type/type.hpp"
 #include "parser_base.hpp"
 #include "parser_context.hpp"
+#include "parser_declaration_global.hpp"
 #include "parser_expression.hpp"
+#include "pool/ast.hpp"
+#include "pool/token.hpp"
+#include "pool/type.hpp"
+#include "type/definition.hpp"
 
 #include <cstddef>
 #include <cstdlib>
@@ -24,6 +25,7 @@
 #include <string_view>
 #include <sys/types.h>
 #include <vector>
+
 
 parser::Parser_Type::Parser_Type(Parser_Context& p_ctx)
   : p(p_ctx)
@@ -230,12 +232,14 @@ ast::ID parser::Parser_Type::get_type()
 }
 
 
-std::pair<type::ID, std::vector<ast::ID>> parser::Parser_Type::prototype_from_declaration(bool start_at_params)
+std::tuple<type::ID, std::vector<ast::ID>, ast::ID>
+parser::Parser_Type::prototype_from_declaration(bool start_at_params)
 {
   constexpr std::string_view hint =
       R"(define function like:
   - `fn myName() { ... }`
-  - with return `fn myName() -> (copy i32, ...) { ... }`)";
+  - with return `fn myName() -> (copy i32, ...) { ... }`
+  - with contract `fn div(a: i32, b: i32) pre b != 0 { ... }`)";
 
   (void)p.match_any({token::ETokenKind::FUNCTION, token::ETokenKind::LAMBDA});
 
@@ -261,9 +265,13 @@ std::pair<type::ID, std::vector<ast::ID>> parser::Parser_Type::prototype_from_de
 
   proto.is_variadic = is_variadic;
 
+  // check contract
+  auto contract =
+      p.check_any({token::ETokenKind::PRE, token::ETokenKind::POST}) ? p.p_decl->call_contract() : ast::ID::invalid();
+
   auto tyid = parser_type_factory.make_prototype(proto.params, proto.ret, proto.is_variadic);
 
-  return {tyid, params};
+  return {tyid, params, contract};
 }
 
 

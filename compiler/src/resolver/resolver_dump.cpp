@@ -1,10 +1,22 @@
 #include "resolver_dump.hpp"
 
 #include "Neargye/magic_enum.hpp"
+#include "ast/data.hpp"
+#include "ast/definition/ast_base.hpp"
+#include "ast/definition/ast_declaration_extension.hpp"
+#include "ast/definition/ast_declaration_global.hpp"
+#include "ast/definition/ast_declaration_local.hpp"
+#include "ast/definition/ast_declaration_sfm.hpp"
+#include "ast/definition/ast_expression.hpp"
+#include "ast/definition/ast_generic.hpp"
+#include "ast/definition/ast_literal.hpp"
+#include "ast/definition/ast_memory.hpp"
+#include "ast/definition/ast_numeric_128_bits.hpp"
+#include "ast/definition/ast_operation.hpp"
+#include "ast/definition/ast_statement.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "nexus/ast/ast.hpp" // is mandatory, do not remove
-#include "nexus/ast/data.hpp"
-#include "nexus/type/definition.hpp"
+#include "pool/ast.hpp"
+#include "type/definition.hpp"
 
 #include <string>
 
@@ -26,6 +38,7 @@ std::string utils::Dump::dump_node(ast::ID nodeid) noexcept
     case_n(Import);
     case_n(Global_Variable);
     case_n(Global_Function);
+    case_n(Call_Contract);
     case_n(Global_Extend_Fn);
     case_n(Global_Extend_Cast);
     case_n(Global_Extend_Op_Bin);
@@ -190,10 +203,20 @@ std::string utils::Dump::dump_Global_Function(const ast::Global_Function& n) noe
   params.reserve(n.parameters.size() * 32);
   for (auto param : n.parameters) params += param.dump();
 
-  return std::format("fn {}({}){}\n{}", n.name, params,
-                     n.is_explicit_ret ? " -> " + n.prototype.as<type::Prototype>()->ret.dump() : "",
-                     n.codeblock.dump());
+  return std::format("fn {}({}){} -> {}\n{}", n.name, params, n.contract ? "\n" + n.contract.dump() : "",
+                     n.prototype.as<type::Prototype>()->ret.dump(), n.codeblock.dump());
 }
+std::string utils::Dump::dump_Call_Contract(const ast::Call_Contract& n) noexcept
+{
+  if (n.pre && n.post)
+    return std::format("pre {} -> {}\npost {} -> {}", n.pre.dump(), magic_enum::enum_name(n.pre_mode), n.post.dump(),
+                       magic_enum::enum_name(n.post_mode));
+  if (n.pre) return std::format("pre {} -> {}", n.pre.dump(), magic_enum::enum_name(n.pre_mode));
+  if (n.post) return std::format("post {} -> {}", n.post.dump(), magic_enum::enum_name(n.post_mode));
+
+  return {};
+}
+
 std::string utils::Dump::dump_Global_Extend_Fn(const ast::Global_Extend_Fn& n) noexcept
 {
   std::string params;
