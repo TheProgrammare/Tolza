@@ -1,5 +1,6 @@
 .cache
 build/
+build-trace/
 
 # Prerequisites
 *.d
