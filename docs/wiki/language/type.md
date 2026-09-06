@@ -21,6 +21,7 @@
 | function prototype | `fn() -> ()` | `fn(i32, i32) -> (i32)` | |
 
 ## Literal strings
+For more info about string interpolation, check [textual.md](/docs/wiki/language/textual.md)
 
 Literal type annotation
 | type | syntax | position | info |
