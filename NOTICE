@@ -1,10 +1,25 @@
-Tolza
-Copyright © 2026 Foz Florian
+# Tolza — NOTICE
 
-Tolza is licensed under the Apache License, Version 2.0.
-See the LICENSE file for the full license text.
+Copyright © 2026 TheProgrammare
 
-The Tolza name, logo, wordmark and associated branding are not
-licensed under the Apache License 2.0 and may not be used in a
-manner that implies official endorsement, affiliation or sponsorship
-without permission.
+Tolza is distributed under the Apache License, Version 2.0.
+
+The source code is licensed under the terms of the Apache License 2.0. A copy of the license is available in the `LICENSE` file at the root of this repository.
+
+## Project Identity
+
+The name **Tolza**, the Tolza name and wordmark, logos, icons, and other visual elements of the Tolza project are part of the project's identity and are not granted under the Apache License 2.0, except where explicitly stated otherwise.
+
+The Apache License 2.0 does not grant permission to use the project's trademarks, product names, logos, or other branding to imply endorsement, sponsorship, or official affiliation with the Tolza project or its maintainers.
+
+Forks and derivative projects are permitted under the terms of the Apache License 2.0. Such projects should use their own name and visual identity and should not represent themselves as the official Tolza project.
+
+## Third-Party Components
+
+Tolza may include or depend on third-party software, libraries, tools, or other components. Such components remain subject to their respective licenses and copyright notices.
+
+Users and distributors are responsible for complying with the applicable licenses of third-party components.
+
+## No Endorsement
+
+Unless explicitly stated otherwise, use of the Tolza name, logos, or branding does not imply endorsement, sponsorship, or affiliation with the Tolza project or TheProgrammare.
