@@ -2,14 +2,21 @@
 
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "id/tokid.hpp"
+#include "lexer/data.hpp"
+#include "lexer/pool.hpp"
 #include "misc/error_output.hpp"
-#include "nexus/ids.hpp"
-#include "pool/token.hpp"
 
-#include <common/common.hpp>
+#include <cassert>
 #include <common/utils.hpp>
+#include <cstddef>
+#include <cstdio>
 #include <initializer_list>
 #include <queue>
+#include <set>
+#include <string_view>
+#include <vector>
 
 
 Lexer::DFANode::DFANode()
@@ -125,8 +132,8 @@ bool Lexer::tokenize(const std::set<char>& exit_char) noexcept
     last_op = stream.position();
 
     // it's a literal string
-    if (stream.check('"') || (stream.check('r') && (stream.peek(1) == '"'))
-        || (stream.check('r') && stream.peek(1) == '#' && stream.peek(2) == '"')) {
+    if (stream.check('"') || stream.check('`') || (stream.check('r') && (stream.peek(1) == '"'))
+        || (stream.check('r') && stream.peek(1) == '`')) {
       start_buffer();
       tokenize_textual();
       continue;
@@ -242,7 +249,7 @@ void Lexer::process_escape() noexcept
   (void)stream.next(); // consume '\'
 
   char c = stream.peek();
-  if (!stream.next()) {
+  if (stream.peek(1) == EOF) {
     add_error(6, "Incomplete escape sequence", "");
     return;
   }
@@ -281,94 +288,150 @@ void Lexer::process_escape() noexcept
 
 void Lexer::tokenize_textual() noexcept
 {
-  auto tok_text = [&](bool with_escape, bool with_interpolation, std::vector<char> end_tokens) {
+  auto tokenize_literal = [&](bool with_escape, bool with_interpolation, char end_token, bool multiline) {
     start_buffer();
-    do {
-      if (with_interpolation) {
-        if (stream.check('{')) {
-          if (!is_buffer_empty()) add_token(token::ETokenKind::L_TEXTUAL);
-          start_buffer();
-          add_token(token::ETokenKind::S_INTERPOLATION_START);
 
-          start_buffer();
-          (void)tokenize({'}', ':'});
-
-          if (stream.check(':')) {
-            start_buffer();
-            add_token(token::ETokenKind::COLON);
-            while (tokenize_spec()) {
-              (void)stream.next();
-            }
-          }
-
-          if (stream.check('}')) {
-            add_token(token::ETokenKind::S_INTERPOLATION_END);
-            if (stream.check('"')) {
-              return;
-            }
-          }
-        }
-      }
-
-      if (with_escape) {
-        if (stream.check('\\')) {
-          process_escape();
-          continue;
-        }
-      }
-
-      if (end_tokens.empty()) {
-        if (stream.check_at(1, '"')) {
+    while (true) {
+      // -----------------------------------------------------------------
+      // End of literal
+      // -----------------------------------------------------------------
+      if (!multiline) {
+        if (stream.check_at(1, end_token)) {
           add_token(token::ETokenKind::L_TEXTUAL);
-          (void)stream.next(); // consume
-          return;
-        }
-        if (stream.check('"')) {
-          add_token(token::ETokenKind::L_TEXTUAL);
-          // special empty string
-          CU.file_info.tokens->tokens.back().length = 0;
-          return;
-        }
-      } else if (end_tokens.size() == 1) {
-        if (stream.check(end_tokens[0])) {
-          add_token(token::ETokenKind::L_TEXTUAL);
+
+          (void)stream.next();
+
+          // Empty literal.
+          if (is_buffer_empty()) CU.file_info.tokens->tokens.back().length = 0;
+
           return;
         }
       } else {
-        bool is_ended = true;
-        for (size_t i = 0; i < end_tokens.size(); i++) {
-          auto elem = end_tokens[i];
-          if (stream.peek(i) != elem) {
-            is_ended = false;
-            break;
-          }
-        }
-        if (is_ended) {
-          for (size_t i = 0; i < end_tokens.size(); i++) {
-            (void)stream.next(); // consume end token
-          }
+        if (stream.check_chain({'\n', '"', '"', '"'})) {
           add_token(token::ETokenKind::L_TEXTUAL, true);
+
+          for (size_t i = 0; i < 4; ++i) (void)stream.next();
+
+          return;
+        }
+        if (stream.check_chain({'"', '"', '"'})) {
+          add_error(229, "Expected new line after the end of multiline literal", "");
           return;
         }
       }
 
-    } while (stream.next());
+      // -----------------------------------------------------------------
+      // Interpolation: ${expression[:spec]}
+      // -----------------------------------------------------------------
+      if (with_interpolation && stream.check_chain({'$', '{'})) {
+        if (!is_buffer_empty()) add_token(token::ETokenKind::L_TEXTUAL);
+
+        start_buffer();
+        add_token(token::ETokenKind::S_INTERPOLATION_START);
+
+        start_buffer();
+        (void)tokenize({'}', ':'});
+
+        if (stream.check(':')) {
+          start_buffer();
+          add_token(token::ETokenKind::COLON);
+
+          while (tokenize_spec()) (void)stream.next();
+        }
+
+        if (stream.check('}')) add_token(token::ETokenKind::S_INTERPOLATION_END);
+
+        continue;
+      }
+
+      // -----------------------------------------------------------------
+      // Escape sequence
+      // -----------------------------------------------------------------
+      if (with_escape && stream.check('\\')) {
+        process_escape();
+        continue;
+      }
+
+      // -----------------------------------------------------------------
+      // Consume current character.
+      // -----------------------------------------------------------------
+      if (!stream.next()) {
+        add_error(229, "Unterminated literal string", "");
+        return;
+      }
+    }
   };
 
+
+  // =====================================================================
+  // Multiline literal
+  // =====================================================================
   if (stream.match_chain({'"', '"', '"'})) {
-    if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
+    if (!stream.match('\n')) {
+      add_error(229, "Expected new line after a literal", "");
+      return;
+    }
+
+    tokenize_literal(true, true, '"', true);
+    return;
+  }
 
 
-    tok_text(false, true, {'\n', '"', '"', '"'});
-  } else if (stream.match_chain({'r', '"', '"', '"'})) {
-    if (!stream.match('\n')) add_error(229, "Expected new line after a literal", "");
+  // =====================================================================
+  // Raw multiline literal
+  // =====================================================================
+  if (stream.match_chain({'r', '"', '"', '"'})) {
+    if (!stream.match('\n')) {
+      add_error(229, "Expected new line after a literal", "");
+      return;
+    }
 
-    tok_text(false, true, {'\n', '"', '"', '"'});
-  } else if (stream.match_chain({'r', '#', '"'})) {
-    tok_text(false, true, {'#', '"'});
-  } else {
-    (void)stream.next(); // consume "
-    tok_text(false, true, {});
+    tokenize_literal(false, true, '"', true);
+    return;
+  }
+
+
+  // =====================================================================
+  // Raw string with double-quote delimiter
+  //
+  // r"C:\my\path"
+  // =====================================================================
+  if (stream.match_chain({'r', '"'})) {
+    tokenize_literal(false, true, '"', false);
+    return;
+  }
+
+
+  // =====================================================================
+  // Raw string with backtick delimiter
+  //
+  // r`windows_command "C:\my\specific path"`
+  // =====================================================================
+  if (stream.match_chain({'r', '`'})) {
+    tokenize_literal(false, true, '`', false);
+    return;
+  }
+
+
+  // =====================================================================
+  // String with backtick delimiter
+  //
+  // `hello "world"`
+  // =====================================================================
+  if (stream.match('`')) {
+    tokenize_literal(true, true, '`', false);
+    return;
+  }
+
+
+  // =====================================================================
+  // Normal string
+  //
+  // "hello"
+  // =====================================================================
+  if (stream.match('"')) {
+    tokenize_literal(true, true, '"', false);
+    return;
   }
 }
 
@@ -638,10 +701,6 @@ void Lexer::add_token(token::ETokenKind kind, bool do_not_move) noexcept
 
   assert(stream.position() >= buffer_start_pos && "Position calculation error");
 
-#ifdef DEBUG
-  tok.debug_val = get_buffer_str();
-#endif
-
   if (!do_not_move) (void)stream.next();
 
   (void)CU.file_info.tokens->add(tok);
@@ -650,6 +709,7 @@ void Lexer::add_token(token::ETokenKind kind, bool do_not_move) noexcept
 
 void Lexer::add_error(ErrorCode code, std::string_view msg, std::string_view hint) noexcept
 {
+  start_buffer();
   auto out = Error_Diagnostic(CU.cuid, code, buffer_start_pos, stream.position(), compiler::EPhase::lexer, msg, hint);
   COMPILER.add_error(out);
 }

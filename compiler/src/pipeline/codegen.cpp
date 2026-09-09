@@ -1,47 +1,45 @@
 #include "pipeline/codegen.hpp"
 
+#include "ast/tool.hpp"
 #include "codegen/codegen.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
 #include "compiler/io.hpp"
+#include "id/cuid.hpp"
 
+#include <cassert>
+#include <chrono>
 #include <common/compiler_options.hpp>
-#include <filesystem>
-#include <print>
-
-
-// LLVM core
 #include <csignal>
-#include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/PassManager.h>
-#include <llvm/IR/Verifier.h>
-
-// Passes / pipeline
-#include <llvm/Passes/OptimizationLevel.h>
-#include <llvm/Passes/PassBuilder.h>
-
-// Target / codegen
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/TargetParser/Host.h>
-
-// Backend init
-#include <llvm/Support/CommandLine.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Program.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/raw_ostream.h>
-
-// Analysis managers
-#include <llvm/Analysis/LoopAnalysisManager.h>
-
-// Linking / IR tools
-#include <llvm/Linker/Linker.h>
+#include <cstddef>
+#include <filesystem>
+#include <format>
+#include <functional>
+#include <llvm-19/llvm/ADT/StringRef.h>
+#include <llvm-19/llvm/Analysis/CGSCCPassManager.h>
+#include <llvm-19/llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm-19/llvm/IR/LLVMContext.h>
+#include <llvm-19/llvm/IR/LegacyPassManager.h>
+#include <llvm-19/llvm/IR/Module.h>
+#include <llvm-19/llvm/IR/PassManager.h>
+#include <llvm-19/llvm/IR/Verifier.h>
+#include <llvm-19/llvm/Linker/Linker.h>
+#include <llvm-19/llvm/MC/TargetRegistry.h>
+#include <llvm-19/llvm/Passes/OptimizationLevel.h>
+#include <llvm-19/llvm/Passes/PassBuilder.h>
+#include <llvm-19/llvm/Support/CodeGen.h>
+#include <llvm-19/llvm/Support/CommandLine.h>
+#include <llvm-19/llvm/Support/FileSystem.h>
+#include <llvm-19/llvm/Support/TargetSelect.h>
+#include <llvm-19/llvm/Support/raw_ostream.h>
+#include <llvm-19/llvm/Target/TargetMachine.h>
+#include <llvm-19/llvm/Target/TargetOptions.h>
+#include <llvm-19/llvm/TargetParser/Host.h>
+#include <ratio>
+#include <stdexcept>
+#include <string>
+#include <system_error>
 
 
 namespace fs = std::filesystem;
@@ -65,7 +63,8 @@ bool codegen::codegen_cu(cu::ID cuid) noexcept
   if (!generate_llvm_ir_cu(cuid)) return false;
 
   // llvm .ll file emission is before llvm optimization
-  if (magic_enum::enum_flags_test(OPTIONS.target.emits, common::compiler::FEmit::llvm)) (void)emit_llvm_ir_cu(cuid);
+  if (common::compiler::FEmit_has_flag(OPTIONS.target.emits, common::compiler::FEmit::llvm))
+    (void)emit_llvm_ir_cu(cuid);
 
   if (!optimizing_cu(cuid)) return false;
 
@@ -101,10 +100,12 @@ void codegen::generate_target_machine() noexcept
   case common::compiler::ERelocModel::ROPI_RWPI: reloc = llvm::Reloc::ROPI_RWPI; break;
   }
 
+  std::string features = common::compiler::FCPUFeature_to_str(OPTIONS.target.features);
+  features             = features == "NONE" ? "" : features;
+
   // Init target machine
   llvm::TargetOptions opt;
-  TARGET_MACHINE = target->createTargetMachine(target_triple, OPTIONS.target.cpu,
-                                               magic_enum::enum_flags_name(OPTIONS.target.features), opt, reloc);
+  TARGET_MACHINE = target->createTargetMachine(target_triple, OPTIONS.target.cpu, features, opt, reloc);
 }
 
 bool codegen::generate_llvm_ir_cu(cu::ID cuid) noexcept

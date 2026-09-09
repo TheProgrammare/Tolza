@@ -2,17 +2,20 @@
 #pragma once
 
 #include "ast/forward.hpp"
+#include "id/cuid.hpp"
+#include "id/id_query.hpp"
+#include "id/nodeid.hpp"
 #include "llvm_forward.hpp"
-#include "nexus/ids.hpp"
-#include "resolver/resolver_base.hpp"
+#include "nexus/forward.hpp"
+#include "resolver/base.hpp"
 
+#include <cstddef>
 #include <functional>
-#include <llvm/IR/IRBuilder.h>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-
 
 
 using ErrorCode = short;
@@ -24,6 +27,7 @@ struct Insurance;
 struct Static_Evaluator;
 struct Codegen_Type;
 struct DebugInfo;
+class Builder;
 
 struct Codegen_AST : resolver::Base {
   Codegen_AST(cu::CU& p_CU, llvm::LLVMContext& p_ctx);
@@ -38,7 +42,7 @@ struct Codegen_AST : resolver::Base {
   std::unordered_map<ast::ID, llvm::BranchInst*, ast::ID::Hash> branchs;
 
   llvm::LLVMContext& ctx;
-  llvm::IRBuilder<>& builder;
+  Builder&           builder;
   llvm::Module*      mod;
   DebugInfo*         dinfo;
   bool               is_debug_mode = false;
@@ -86,8 +90,7 @@ struct Codegen_AST : resolver::Base {
   void                          finalize_globals_ctor() noexcept;
 
 
-  [[nodiscard]] llvm::Function* generate_stub(llvm::FunctionType* fn_ty, std::string_view name,
-                                              llvm::Function::LinkageTypes link_ty) noexcept;
+  [[nodiscard]] llvm::Function* generate_stub(llvm::FunctionType* fn_ty, std::string_view name, int link_ty) noexcept;
 
   [[nodiscard]] llvm::AllocaInst* create_alloca(type::ID tyid, std::string_view name) noexcept;
 
@@ -151,8 +154,6 @@ struct Codegen_AST : resolver::Base {
   [[nodiscard]] llvm::Value*    codegen_Literal_Textual_Format(const ast::Literal_Textual_Format& n) noexcept;
   [[nodiscard]] llvm::Value*    codegen_Literal_Format_Specifier(const ast::Literal_Format_Specifier& n) noexcept;
   [[nodiscard]] llvm::ConstantArray* codegen_Literal_Table(const ast::Literal_Table& n) noexcept;
-  [[nodiscard]] llvm::Value*         codegen_Literal_Table_Population(const ast::Literal_Table_Population& n) noexcept;
-  [[nodiscard]] llvm::Value*         codegen_Literal_Map(const ast::Literal_Map& n) noexcept;
   [[nodiscard]] llvm::Value*         codegen_Literal_Tuple(const ast::Literal_Tuple& n) noexcept;
   [[nodiscard]] llvm::Value*         codegen_Literal_Range(const ast::Literal_Range& n) noexcept;
   [[nodiscard]] llvm::Value*         codegen_Literal_Record(const ast::Literal_Record& n) noexcept;
@@ -166,16 +167,7 @@ struct Codegen_AST : resolver::Base {
   [[nodiscard]] llvm::Value* codegen_Expression_Invocation_Extend(const ast::Expression_Invocation_Extend& n) noexcept;
   [[nodiscard]] llvm::Value* codegen_Expression_Invocation_Rule(const ast::Expression_Invocation_Rule& n) noexcept;
   [[nodiscard]] llvm::Value* codegen_Expression_Table_Access(const ast::Expression_Table_Access& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Ptr_Val(const ast::Expression_Ptr_Val& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Mut_Of(const ast::Expression_Mut_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Ref_Of(const ast::Expression_Ref_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Move_Of(const ast::Expression_Move_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Addr_Of(const ast::Expression_Addr_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Size_Of(const ast::Expression_Size_Of& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_GetBits(const ast::Expression_GetBits& n) noexcept;
   [[nodiscard]] llvm::Value* codegen_Expression_New_Ptr(const ast::Expression_New_Ptr& n) noexcept;
-  [[nodiscard]] llvm::Value* codegen_Expression_Get_Type(const ast::Expression_Get_Type& n) noexcept;
 
   void codegen_Statement_If(const ast::Statement_If& n, llvm::BasicBlock* bb_parent_merge = nullptr) noexcept;
   void codegen_Statement_Elif(const ast::Statement_If& n, llvm::BasicBlock* bb_parent_merge = nullptr) noexcept;
@@ -203,6 +195,7 @@ struct Codegen_AST : resolver::Base {
   [[nodiscard]] llvm::Value* codegen_Operation_Binary(const ast::Operation_Binary& n) noexcept;
   [[nodiscard]] llvm::Value* codegen_Operation_Unary(const ast::Operation_Unary& n) noexcept;
   [[nodiscard]] llvm::Value* codegen_Operation_Interval(const ast::Operation_Interval& n) noexcept;
+  [[nodiscard]] llvm::Value* codegen_Operation_Mem(const ast::Operation_Mem& n) noexcept;
 };
 
 

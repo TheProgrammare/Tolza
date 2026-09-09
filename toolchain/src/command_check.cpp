@@ -14,6 +14,7 @@
 
 #include <common/common.hpp>
 #include <common/compiler_options.hpp>
+#include <common/environment.hpp>
 #include <common/fileutils.hpp>
 #include <common/utils.hpp>
 #include <expected>

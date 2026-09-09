@@ -1,6 +1,8 @@
 #pragma once
 
-#include "nexus/ids.hpp"
+#include "id/cuid.hpp"
+
+#include <cstddef>
 
 namespace resolver
 {

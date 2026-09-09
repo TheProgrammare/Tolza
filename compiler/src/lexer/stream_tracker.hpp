@@ -11,10 +11,6 @@ class StreamTracker
 
   size_t cur = 0;
 
-#ifdef DEBUG
-  char cur_str;
-#endif
-
 public:
   StreamTracker(const std::string_view& s)
     : text(std::string(s))
@@ -49,10 +45,6 @@ public:
     if (cur >= text.size()) return false;
 
     cur++;
-#ifdef DEBUG
-    update_debug_cur_str();
-#endif
-
     return true;
   }
 
@@ -99,9 +91,6 @@ public:
   {
     if (pos > text.size()) return false;
     cur = pos;
-#ifdef DEBUG
-    update_debug_cur_str();
-#endif
     return true;
   }
 
@@ -110,19 +99,5 @@ public:
     if (cur == 0) return;
 
     --cur;
-#ifdef DEBUG
-    update_debug_cur_str();
-#endif
   }
-
-private:
-#ifdef DEBUG
-  void update_debug_cur_str()
-  {
-    if (cur >= text.size())
-      cur_str = text.back();
-    else
-      cur_str = text.at(cur);
-  }
-#endif
 };

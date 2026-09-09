@@ -1,13 +1,19 @@
 #include "rule.hpp"
 
-#include "Neargye/magic_enum.hpp"
-#include "ast/definition/ast_declaration_extension.hpp"
-#include "pool/link/extension.hpp"
-#include "pool/type.hpp"
+#include "ast/data.hpp"
+#include "ast/tool.hpp"
+#include "id/typeid.hpp"
+#include "pool/node_to_ext.hpp"
 #include "type/data.hpp"
-#include "type/definition.hpp"
+#include "type/pool.hpp"
+#include "type/type.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 bool type::rule::commutative_enum_union_castable(const type::Enum& _enum, const type::Union& _union) noexcept
 {
@@ -246,7 +252,7 @@ bool type::rule::can_op_primitive(type::EPrimitiveTypeKind term, ast::EOp_Bin op
 }
 
 
-constexpr auto prim_size = magic_enum::enum_count<type::EPrimitiveTypeKind>();
+constexpr auto prim_size = 39;
 
 // type cast oracle
 // clang-format off

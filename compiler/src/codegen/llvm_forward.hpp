@@ -25,4 +25,6 @@ class DIFile;
 class DICompileUnit;
 class DILocation;
 class DILocalScope;
+class FunctionType;
+class ConstantArray;
 } // namespace llvm

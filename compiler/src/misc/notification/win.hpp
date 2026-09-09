@@ -1,6 +1,7 @@
 #ifdef _WIN32
 
 #include <Windows.h>
+#include <string_view>
 #include <winrt/Windows.Data.Xml.Dom.h>
 #include <winrt/Windows.UI.Notifications.h>
 #include <winrt/base.h>

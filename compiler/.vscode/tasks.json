@@ -35,7 +35,7 @@
             "command": "time",
             "args": [
                 "ninja",
-                "-j4"
+                "-j$(nproc)"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/build/debug"
@@ -49,7 +49,7 @@
             "command": "time",
             "args": [
                 "ninja",
-                "-j4"
+                "-j$(nproc)"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/build/release"
@@ -73,6 +73,23 @@
             "type": "shell",
             "command": "cmake --install build/release",
             "problemMatcher": []
+        },
+        {
+            "label": "init-cmake-build-trace",
+            "type": "shell",
+            "command": "cmake -S . -B build-trace -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS=\"-ftime-trace\" -DCMAKE_CXX_STANDARD=23"
+        },
+        {
+            "label": "init-build-trace",
+            "dependsOn": "init-cmake-build-trace",
+            "type": "shell",
+            "command": "~/bin/ClangBuildAnalyzer-linux --start build-trace",
+        },
+        {
+            "label": "Build Trace",
+            "dependsOn": "init-build-trace",
+            "type": "shell",
+            "command": "cmake --build build-trace -j$(nproc) && ~/bin/ClangBuildAnalyzer-linux --stop build-trace build-trace/build-analysis.bin && clear && ~/bin/ClangBuildAnalyzer-linux --analyze build-trace/build-analysis.bin"
         }
     ]
 }

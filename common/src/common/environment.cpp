@@ -2,26 +2,27 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
+#include <format>
 #include <print>
 #include <string>
-#include <filesystem>
+#include <string_view>
+#include <sys/types.h>
+#include <vector>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <shlobj.h>
+#include <windows.h>
 #elif __APPLE__
-#include <mach-o/dyld.h>
 #include <limits.h>
+#include <mach-o/dyld.h>
 #elif __linux__
-#include <unistd.h>
 #include <linux/limits.h>
+#include <unistd.h>
 #endif
 
 #include "common.hpp"
 #include "toolchain_options.hpp"
-
-#include <Neargye/magic_enum.hpp>
-#include <Neargye/magic_enum_flags.hpp>
 
 namespace fs = std::filesystem;
 

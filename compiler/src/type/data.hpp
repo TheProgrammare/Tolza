@@ -2,30 +2,35 @@
 
 
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
+
+#include <common/enum_lite.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <string_view>
 
 namespace type
 {
 
 
-enum class ETypeKind : uint8_t {
-  NONE,
-  Primitive,
-  String,
-  Tuple,
-  Array,
-  Buffer,
-  Slice,
-  Ptr,
-  Prototype,
-  Facet,
-  View,
-  Form,
-  Enum,
-  Flag,
-  Union,
-  Identifier,
-};
+DEFINE_ENUM(ETypeKind, uint8_t, //
+            Primitive, 1,       //
+            String, 2,          //
+            Tuple, 3,           //
+            Array, 4,           //
+            Buffer, 5,          //
+            Slice, 6,           //
+            Ptr, 7,             //
+            Prototype, 8,       //
+            Facet, 9,           //
+            View, 10,           //
+            Form, 11,           //
+            Enum, 12,           //
+            Flag, 13,           //
+            Union, 14,          //
+            Identifier, 15,     //
+            Range, 16,          //
+)
 
 [[nodiscard]] inline bool ETypeKind_is_user_defined(ETypeKind type) noexcept
 {
@@ -38,61 +43,60 @@ enum class ETypeKind : uint8_t {
 }
 
 
-enum class EPrimitiveTypeKind : uint8_t {
-  NONE,
-  _u0,
-  _bool,
-  _cune,
-  _rune,
-  _ssize,
-  _s8,
-  _s16,
-  _s32,
-  _s64,
-  _s128,
-  _usize,
-  _u8,
-  _u16,
-  _u32,
-  _u64,
-  _u128,
-  _bsize,
-  _b8,
-  _b16,
-  _b32,
-  _b64,
-  _b128,
-  _ptrdiff,
-  _fsize,
-  _f16,
-  _f32,
-  _f64,
-  _f80,
-  _f128,
-  _dsize,
-  _d32,
-  _d64,
-  _d128,
-  _udsize,
-  _ud32,
-  _ud64,
-  _ud128,
-  _opaque,
-};
+DEFINE_ENUM(EPrimitiveTypeKind, uint8_t, //
+            _u0, 1,                      //
+            _bool, 2,                    //
+            _cune, 3,                    //
+            _rune, 4,                    //
+            _ssize, 5,                   //
+            _s8, 6,                      //
+            _s16, 7,                     //
+            _s32, 8,                     //
+            _s64, 9,                     //
+            _s128, 10,                   //
+            _usize, 11,                  //
+            _u8, 12,                     //
+            _u16, 13,                    //
+            _u32, 14,                    //
+            _u64, 15,                    //
+            _u128, 16,                   //
+            _bsize, 17,                  //
+            _b8, 18,                     //
+            _b16, 19,                    //
+            _b32, 20,                    //
+            _b64, 21,                    //
+            _b128, 22,                   //
+            _ptrdiff, 23,                //
+            _fsize, 24,                  //
+            _f16, 25,                    //
+            _f32, 26,                    //
+            _f64, 27,                    //
+            _f80, 28,                    //
+            _f128, 29,                   //
+            _dsize, 30,                  //
+            _d32, 31,                    //
+            _d64, 32,                    //
+            _d128, 33,                   //
+            _udsize, 34,                 //
+            _ud32, 35,                   //
+            _ud64, 36,                   //
+            _ud128, 37,                  //
+            _opaque, 38,                 //
+)
 
-enum class EPrimitiveFamily : uint8_t {
-  _void,
-  _boolean,
-  _textual,
-  _signed,
-  _unsigned,
-  _byte,
-  _ptrdiff,
-  _floating,
-  _s_fixed,
-  _u_fixed,
-  _ptr,
-};
+DEFINE_ENUM(EPrimitiveFamily, uint8_t, //
+            _void, 1,                  //
+            _boolean, 2,               //
+            _textual, 3,               //
+            _signed, 4,                //
+            _unsigned, 5,              //
+            _byte, 6,                  //
+            _ptrdiff, 7,               //
+            _floating, 8,              //
+            _s_fixed, 9,               //
+            _u_fixed, 10,              //
+            _ptr, 11,                  //
+)
 
 [[nodiscard]] inline bool EPrimitiveTypeKind_is_signed(EPrimitiveTypeKind type) noexcept
 {
@@ -126,14 +130,11 @@ enum class EPrimitiveFamily : uint8_t {
 [[nodiscard]] EPrimitiveTypeKind ETokenKind_to_EPrimitiveTypeKind(token::ETokenKind tok) noexcept;
 
 
-enum class EPtrType : uint8_t {
-  NONE,
-  raw_ptr,
-  unique_ptr,
-  shared_ptr,
-};
-
-[[nodiscard]] std::string_view EPtrType_to_str(EPtrType type) noexcept;
+DEFINE_ENUM(EPtrType, uint8_t, //
+            raw_ptr, 1,        //
+            unique_ptr, 2,     //
+            shared_ptr, 3,     //
+)
 
 [[nodiscard]] std::string_view EPtrType_to_mangle(EPtrType type) noexcept;
 
@@ -158,7 +159,13 @@ template <typename T>
   return seed ^ (value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2));
 }
 
-enum class ETextType : uint8_t { NONE, _str, _cstr, _text, _cune, _rune };
+DEFINE_ENUM(ETextType, uint8_t, //
+            _str, 1,            //
+            _cstr, 2,           //
+            _text, 3,           //
+            _cune, 4,           //
+            _rune, 5,           //
+)
 
 [[nodiscard]] ETextType ETokenKind_to_ETextType(token::ETokenKind tok) noexcept;
 

@@ -15,14 +15,13 @@
  *  limitations under the License.
  */
 
-#include "Neargye/magic_enum.hpp"
-#include "common/compiler_options.hpp"
 #include "compiler.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/parser_command.hpp"
 
 #include <CLIUtils/CLI11.hpp>
-#include <common/common.hpp>
+#include <exception>
+#include <format>
 #include <print>
 
 int run_tolza(int argc, const char* argv[])

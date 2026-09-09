@@ -1,12 +1,12 @@
 #pragma once
 
+#include "id/tokid.hpp"
+#include "lexer/pool.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "pool/metacode.hpp"
-#include "pool/token.hpp"
 
+#include <cstddef>
+#include <initializer_list>
 #include <string_view>
-#include <vector>
 
 
 namespace metacode
@@ -29,7 +29,7 @@ struct Preprocessor final {
   void      add_token_to_generate(token::Token& tok) noexcept;
   void      add_generated_token(token::ID id) noexcept;
 
-  void preprocess_scope(metacode::Metacode& meta) noexcept;
+  void preprocess_scope(metacode::MetacodeHeader& meta) noexcept;
 
   [[nodiscard]] metacode::ID preprocess_file() noexcept;
   [[nodiscard]] metacode::ID preprocess_any() noexcept;
@@ -62,8 +62,8 @@ struct Preprocessor final {
 
   [[nodiscard]] std::string_view tok_to_str(token::ID id) const noexcept;
 
-  metacode::Metacode* current_parent = nullptr;
-  metacode::Expand*   current_expand = nullptr;
+  metacode::MetacodeHeader* current_parent = nullptr;
+  metacode::Expand*         current_expand = nullptr;
 
   size_t last_tok_pos = 0;
 };

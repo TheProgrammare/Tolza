@@ -1,7 +1,8 @@
 #pragma once
 
 #include "codegen/llvm_forward.hpp"
-#include "nexus/ids.hpp"
+#include "id/cuid.hpp"
+#include "id/nodeid.hpp"
 
 namespace codegen
 {

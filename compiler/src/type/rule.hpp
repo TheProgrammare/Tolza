@@ -1,7 +1,7 @@
 #pragma once
 
+#include "id/typeid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 #include "type/forward.hpp"
 
 #include <vector>

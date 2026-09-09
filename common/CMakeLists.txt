@@ -16,17 +16,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ----------------------------
 set(TOLZA_SOURCES
 
-  ./src/common/CLI11_type_serialization.hpp
 ./src/common/commands.cpp
 ./src/common/commands.hpp
 ./src/common/common.cpp
 ./src/common/common.hpp
 ./src/common/compiler_options.cpp
 ./src/common/compiler_options.hpp
+./src/common/enum_lite.hpp
 ./src/common/environment.cpp
 ./src/common/environment.hpp
 ./src/common/fileutils.cpp
 ./src/common/fileutils.hpp
+./src/common/forward.hpp
 ./src/common/time.cpp
 ./src/common/time.hpp
 ./src/common/toolchain_options.cpp
@@ -37,6 +38,11 @@ set(TOLZA_SOURCES
 )
 
 add_library(tolza-common ${TOLZA_SOURCES})
+
+target_precompile_headers(tolza-common
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/pch.hpp"
+)
 
 # ----------------------------
 # Include directories

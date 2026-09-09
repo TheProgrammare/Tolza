@@ -3,27 +3,23 @@
 #include "ast/forward.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "id/defid.hpp"
+#include "lexer/pool.hpp"
 #include "nexus/forward.hpp"
-#include "pool/token.hpp"
 
 #include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <common/compiler_options.hpp>
+#include <cstddef>
 #include <format>
 #include <iomanip>
+#include <ios>
 #include <sstream>
 #include <string>
 #include <string_view>
 
-
-std::string_view ESeverity_to_str(EErrorSeverity severity) noexcept
-{
-  switch (severity) {
-  case EErrorSeverity::debug:   return "debug";
-  case EErrorSeverity::warning: return "warning";
-  case EErrorSeverity::error:   return "error";
-  case EErrorSeverity::fatal:   return "fatal";
-  }
-}
 
 std::string_view ESeverity_to_color(EErrorSeverity severity) noexcept
 {
@@ -107,7 +103,7 @@ std::string Error_Elem::print_error() const noexcept
 
 std::string Error_Elem::print_messages() const noexcept
 {
-  return std::format("[{}] {} {}{}", ESeverity_to_str(error_info.severity), print_code(), error_info.msg,
+  return std::format("[{}] {} {}{}", EErrorSeverity_to_str(error_info.severity), print_code(), error_info.msg,
                      !error_info.hint.empty() ? "\n[hint] " + error_info.hint : "");
 }
 

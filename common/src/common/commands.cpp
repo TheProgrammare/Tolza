@@ -1,19 +1,58 @@
 #include "commands.hpp"
 
-#include <print>
-#include <filesystem>
-
 #include <CLIUtils/CLI11.hpp>
-
-#include <common/CLI11_type_serialization.hpp>
 #include <common/compiler_options.hpp>
 #include <common/environment.hpp>
-#include <common/toolchain_options.hpp>
-#include <common/utils.hpp>
 #include <common/fileutils.hpp>
+#include <common/toolchain_options.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <format>
+#include <print>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 
 namespace fs = std::filesystem;
+
+
+inline common::compiler::EOptimization parse_opti(std::string_view input)
+{
+  if (input.size() > 1 || input.empty()) return common::compiler::EOptimization::NONE;
+
+  switch (input[0]) {
+  case '0': return common::compiler::EOptimization::O0;
+  case '1': return common::compiler::EOptimization::O1;
+  case '2': return common::compiler::EOptimization::O2;
+  case '3': return common::compiler::EOptimization::O3;
+  case 's':
+  case 'S': return common::compiler::EOptimization::Os;
+  case 'z':
+  case 'Z': return common::compiler::EOptimization::Oz;
+  default:  return common::compiler::EOptimization::NONE;
+  }
+}
+inline common::compiler::EWarnLevel parse_warnlevel(std::string_view input)
+{
+  int level{};
+
+  try {
+    level = std::stoi(std::string(input));
+  } catch (...) {
+    return common::compiler::EWarnLevel::NONE;
+  }
+
+  switch (level) {
+  case 0:  return common::compiler::EWarnLevel::W0;
+  case 1:  return common::compiler::EWarnLevel::W1;
+  case 2:  return common::compiler::EWarnLevel::W2;
+  case 3:  return common::compiler::EWarnLevel::W3;
+  default: return common::compiler::EWarnLevel::NONE;
+  }
+}
 
 common::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
   : app(_app)
@@ -41,18 +80,16 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
 #define new_flag(flag_name, flag, desc)                                                                                \
   build->add_flag_function(flag_name, [&](int64_t) { opt.flag = true; }, desc)->type_name("<flag>")
 
-#define new_opt_flags(opt_name, var, desc)                                                                             \
+#define new_opt_flags(opt_name, type, var, desc)                                                                       \
   build                                                                                                                \
       ->add_option_function<std::string>(                                                                              \
-          opt_name, [&](const std::string& input) { opt.var = CLI::type_ser::parse_flags<decltype(opt.var)>(input); }, \
-          desc)                                                                                                        \
+          opt_name, [&](const std::string& input) { opt.var = type##_from_str(input); }, desc)                         \
       ->type_name("<type>")
 
-#define new_opt_enum(opt_name, var, desc)                                                                              \
+#define new_opt_enum(opt_name, type, var, desc)                                                                        \
   build                                                                                                                \
       ->add_option_function<std::string>(                                                                              \
-          opt_name, [&](const std::string& input) { opt.var = CLI::type_ser::parse_enum<decltype(opt.var)>(input); },  \
-          desc)                                                                                                        \
+          opt_name, [&](const std::string& input) { opt.var = type##_from_str(input); }, desc)                         \
       ->type_name("<type>")
 
 #define new_opt_parse(opt_name, var, fn, desc)                                                                         \
@@ -73,8 +110,10 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
       ->add_option_function<std::string>(
           "--profiles,-p",
           [&](const std::string& s) {
-            auto _profiles = common::utils::split_flags(s);
-            opt.profiles   = _profiles;
+            std::stringstream ss(s);
+            std::string       item;
+
+            while (std::getline(ss, item, '|')) opt.profiles.push_back(item);
           },
           "Set compilation profiles")
       ->type_name("<p1>|<p2>|...");
@@ -92,36 +131,44 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
       ->type_name("<arch>-<vendor>-<platform>");
 
   // error stop mode
-  new_opt_enum("--error-mode", diagnostic.error, "e.g. " + common::compiler::EErrorMode_names());
-  new_opt_enum("--diagnostic-format", diagnostic.out_format, "e.g. " + common::compiler::EDiagnosticFormat_names());
+  new_opt_enum("--error-mode", common::compiler::EErrorMode, diagnostic.error,
+               std::format("e.g. {}", common::compiler::EErrorMode_values));
+  new_opt_enum("--diagnostic-format", common::compiler::EDiagnosticFormat, diagnostic.out_format,
+               std::format("e.g. {}", common::compiler::EDiagnosticFormat_values));
 
   // target
-  new_opt_enum("--arch", target.triple.arch, "e.g. " + common::env::EArch_names());
-  new_opt_enum("--platform", target.triple.platform, "e.g. " + common::env::EPlatform_names());
-  new_opt_enum("--vendor", target.triple.vendor, "e.g. " + common::env::EVendor_names());
-  new_opt_enum("--abi", target.triple.abi, "e.g. " + common::env::EABI_names());
+  new_opt_enum("--arch", common::env::EArch, target.triple.arch, std::format("e.g. {}", common::env::EArch_values));
+  new_opt_enum("--platform", common::env::EPlatform, target.triple.platform,
+               std::format("e.g. {}", common::env::EPlatform_values));
+  new_opt_enum("--vendor", common::env::EVendor, target.triple.vendor,
+               std::format("e.g. {}", common::env::EVendor_values));
+  new_opt_enum("--abi", common::env::EABI, target.triple.abi, std::format("e.g. {}", common::env::EABI_values));
   new_str("--cpu", target.cpu, "e.g. generic, core-avx2, znver4");
-  new_opt_flags("--features", target.features, "e.g. " + common::compiler::FCPUFeature_names());
-  new_opt_enum("--call-conv", target.call_convention, "e.g. " + common::env::ECallConvention_names());
-  new_opt_enum("--code-model", target.code_model, "e.g. " + common::compiler::ECodeModel_names());
-  new_opt_enum("--reloc-model", target.reloc_model, "e.g. " + common::compiler::ERelocModel_names());
+  new_opt_flags("--features", common::compiler::FCPUFeature, target.features,
+                std::format("e.g. {}", common::compiler::FCPUFeature_values));
+  new_opt_enum("--call-conv", common::env::ECallConvention, target.call_convention,
+               std::format("e.g. {}", common::env::ECallConvention_values));
+  new_opt_enum("--code-model", common::compiler::ECodeModel, target.code_model,
+               std::format("e.g. {}", common::compiler::ECodeModel_values));
+  new_opt_enum("--reloc-model", common::compiler::ERelocModel, target.reloc_model,
+               std::format("e.g. {}", common::compiler::ERelocModel_values));
 
   // profile
   auto* opt_debug = new_flag("--debug,-d", profile.debug, "Compile in debug mode");
   auto* opt_release =
       build->add_flag("--release,-r", [&](std::size_t) { opt.profile.debug = false; }, "Compile in release mode");
   opt_debug->excludes(opt_release);
-  new_opt_parse("--optimization,-O", profile.optimization, CLI::type_ser::parse_opti,
-                "Optimization level 0, 1, 2, 3, s, z");
+  new_opt_parse("--optimization,-O", profile.optimization, parse_opti, "Optimization level 0, 1, 2, 3, s, z");
 
 
   // clang
-  new_opt_enum("--libc", c_ffi.libc, "e.g. " + common::env::ELibC_names());
+  new_opt_enum("--libc", common::env::ELibC, c_ffi.libc, std::format("e.g. {}", common::env::ELibC_values));
   new_opt_parse("--libc-version", c_ffi.libc_version, compiler::Cffi::LibCVersion::parse, "major.minor, e.g. 1.20");
 
   // log
-  new_opt_flags("--logs", log.logs, "e.g. " + common::compiler::FPass_names());
-  new_opt_enum("--log-level", log.level, "e.g. " + common::compiler::ELogLevel_names());
+  new_opt_flags("--logs", common::compiler::FPass, log.logs, std::format("e.g. {}", common::compiler::FPass_values));
+  new_opt_enum("--log-level", common::compiler::ELogLevel, log.level,
+               std::format("e.g. {}", common::compiler::ELogLevel_values));
   auto* opt_notify = new_flag("--notify", log.notify, "Notify the compilation result");
   auto* opt_no_notify =
       build->add_flag("--no-notify", [&](std::size_t) { opt.log.notify = false; }, "No notify the compilation result");
@@ -129,10 +176,12 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
 
 
   // warn
-  new_opt_flags("--warns", warn.warns, "e.g. " + common::compiler::FWarnMode_names());
-  new_opt_parse("--warning,-W", warn.level, CLI::type_ser::parse_warnlevel, "Warn level 0, 1, 2, 3");
+  new_opt_flags("--warns", common::compiler::FWarnMode, warn.warns,
+                std::format("e.g. {}", common::compiler::FWarnMode_values));
+  new_opt_parse("--warning,-W", warn.level, parse_warnlevel, "Warn level 0, 1, 2, 3");
 
-  new_opt_flags("--debugs", debug.debugs, "e.g. " + common::compiler::FDebugPrinter_names());
+  new_opt_flags("--debugs", common::compiler::FDebugPrinter, debug.debugs,
+                std::format("e.g. {}", common::compiler::FDebugPrinter_values));
 
   build
       ->add_option_function<std::string>(
@@ -141,9 +190,9 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
           [&](std::string_view text) {
             auto pos = text.find('=');
             if (pos == std::string::npos) {
-              opt.preprocessor.defines[std::string(text)] = "true";
+              opt.preprocessor.defines.emplace_back(std::string(text), "true");
             } else {
-              opt.preprocessor.defines[std::string(text.substr(0, pos))] = text.substr(pos + 1);
+              opt.preprocessor.defines.emplace_back(std::string(text.substr(0, pos)), text.substr(pos + 1));
             }
           }
 
@@ -155,7 +204,7 @@ void common::Commander::compilation_args(CLI::App* build) noexcept
           "-U", [&](std::string_view text) { opt.preprocessor.undefines.emplace_back(text.data()); })
       ->type_name("<key>");
 
-  new_opt_flags("--emits", target.emits, "Code emission");
+  new_opt_flags("--emits", compiler::FEmit, target.emits, "Code emission");
 
   add_opt_path("--overlay", opt.dir.overlay, "Set overlay directory");
   add_opt_path("--dir-build", opt.dir.build, "Set the build directory");

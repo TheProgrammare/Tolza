@@ -3,13 +3,18 @@
 #include "ast/data.hpp"
 #include "codegen/codegen.hpp"
 #include "compiler/compilation_unit.hpp"
-#include "pool/token.hpp"
+#include "compiler/file_info.hpp"
+#include "id/cuid.hpp"
+#include "id/nodeid.hpp"
+#include "id/tokid.hpp"
 
+#include "llvm/BinaryFormat/Dwarf.h"
+
+#include <cassert>
 #include <filesystem>
 #include <llvm-19/llvm/IR/DIBuilder.h>
 #include <llvm-19/llvm/IR/DebugInfoMetadata.h>
 #include <llvm-19/llvm/IR/LLVMContext.h>
-#include <llvm-19/llvm/IR/Module.h>
 
 namespace fs = std::filesystem;
 

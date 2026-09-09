@@ -1,24 +1,17 @@
 #include "utils.hpp"
-#include "common/environment.hpp"
 
+#include "common/compiler_options.hpp"
+#include "common/forward.hpp"
 
-std::vector<std::string> common::utils::split_flags(std::string_view s, char separator) noexcept
-{
-  std::vector<std::string> out;
+#include <algorithm>
+#include <cstddef>
+#include <initializer_list>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-  size_t start = 0;
-
-  while (start < s.size()) {
-    size_t end = s.find(separator, start);
-    if (end == std::string_view::npos) end = s.size();
-
-    out.emplace_back(s.substr(start, end - start));
-
-    start = end + 1;
-  }
-
-  return out;
-}
 
 bool common::utils::is_valid_identifier(std::string_view s, bool path_possible) noexcept
 {
@@ -164,20 +157,181 @@ void common::utils::fmt_template(std::string& s, const std::initializer_list<std
   });
 }
 
-void common::utils::fmt_template(std::string& s, const std::map<std::string_view, std::string_view>& args) noexcept
+void common::utils::fmt_template(
+    std::string& s, const std::initializer_list<std::pair<std::string_view, std::string_view>>& args) noexcept
 {
   fmt_template_impl(s, [&args](const std::string_view key) -> const std::string_view* {
-    if (const auto it = args.find(key); it != args.end()) return &it->second;
+    const auto* const it = std::ranges::find_if(args, [&key](const auto& pair) { return pair.first == key; });
 
-    return nullptr;
+    return it != args.end() ? &it->second : nullptr;
   });
 }
 
-void common::utils::fmt_template(std::string& s, const std::map<std::string, std::string>& args) noexcept
+void common::utils::fmt_template(std::string&                                                      s,
+                                 const std::initializer_list<std::pair<std::string, std::string>>& args) noexcept
 {
   fmt_template_impl(s, [&args](const std::string& key) -> const std::string* {
-    if (const auto it = args.find(key); it != args.end()) return &it->second;
+    const auto* const it = std::ranges::find_if(args, [&key](const auto& pair) { return pair.first == key; });
 
-    return nullptr;
+    return it != args.end() ? &it->second : nullptr;
   });
+}
+
+
+void common::utils::merge_list_cstr(std::vector<const char*>& _dest, const std::vector<const char*>& _val,
+                                    compiler::EMergeMode mode) noexcept
+{
+  switch (mode) {
+  case compiler::EMergeMode::NONE:
+  case compiler::EMergeMode::_union: {
+    _dest.insert(_dest.end(), _val.begin(), _val.end());
+    break;
+  }
+  case compiler::EMergeMode::_override:     _dest = _val;
+  case compiler::EMergeMode::_intersection: {
+    std::vector<const char*> tmp;
+    tmp.reserve(_dest.size());
+    auto tmp_set = std::set<const char*>(_val.begin(), _val.end());
+    for (const auto& elem : _dest) {
+      if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
+    }
+    _dest = tmp;
+    break;
+  }
+  case compiler::EMergeMode::_anti_intersection: {
+    std::vector<const char*> tmp;
+    tmp.reserve(_dest.size());
+    auto tmp_set = std::set<const char*>(_val.begin(), _val.end());
+    for (const auto& elem : _dest) {
+      if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
+    }
+    _dest = tmp;
+    break;
+  }
+  }
+}
+void common::utils::merge_list_str(std::vector<std::string>& _dest, const std::vector<std::string>& _val,
+                                   compiler::EMergeMode mode) noexcept
+{
+  switch (mode) {
+  case compiler::EMergeMode::NONE:
+  case compiler::EMergeMode::_union: {
+    _dest.insert(_dest.end(), _val.begin(), _val.end());
+    break;
+  }
+  case compiler::EMergeMode::_override:     _dest = _val;
+  case compiler::EMergeMode::_intersection: {
+    std::vector<std::string> tmp;
+    tmp.reserve(_dest.size());
+    auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
+    for (const auto& elem : _dest) {
+      if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
+    }
+    _dest = tmp;
+    break;
+  }
+  case compiler::EMergeMode::_anti_intersection: {
+    std::vector<std::string> tmp;
+    tmp.reserve(_dest.size());
+    auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
+    for (const auto& elem : _dest) {
+      if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
+    }
+    _dest = tmp;
+    break;
+  }
+  }
+}
+
+void common::utils::merge_map(std::vector<std::pair<std::string, std::string>>&       _dest,
+                              const std::vector<std::pair<std::string, std::string>>& _val,
+                              compiler::EMergeMode                                    mode) noexcept
+{
+  using Pair = std::pair<std::string, std::string>;
+
+  // A value starting with '!' means that the corresponding key
+  // must be removed from the destination.
+  auto is_remove = [](const Pair& p) { return !p.second.empty() && p.second.front() == '!'; };
+
+  auto key_exists = [](const std::vector<Pair>& vec, const std::string& key) {
+    return std::ranges::find_if(vec, [&](const Pair& p) { return p.first == key; }) != vec.end();
+  };
+
+  auto find_key = [](std::vector<Pair>& vec, const std::string& key) {
+    return std::ranges::find_if(vec, [&](const Pair& p) { return p.first == key; });
+  };
+
+  switch (mode) {
+  case compiler::EMergeMode::NONE:
+    // Do nothing.
+    break;
+
+  case compiler::EMergeMode::_union: {
+    for (const auto& p : _val) {
+      auto it = find_key(_dest, p.first);
+
+      if (is_remove(p)) {
+        // Explicitly remove the key from the destination.
+        _dest.erase(std::remove_if(_dest.begin(), _dest.end(), [&](const Pair& d) { return d.first == p.first; }),
+                    _dest.end());
+        continue;
+      }
+
+      if (it == _dest.end()) {
+        // Add the key if it does not already exist.
+        _dest.push_back(p);
+      } else {
+        // Override the existing value.
+        it->second = p.second;
+      }
+    }
+    break;
+  }
+
+  case compiler::EMergeMode::_override: {
+    // Remove keys explicitly marked with '!'.
+    for (const auto& p : _val) {
+      if (!is_remove(p)) continue;
+
+      _dest.erase(std::remove_if(_dest.begin(), _dest.end(), [&](const Pair& d) { return d.first == p.first; }),
+                  _dest.end());
+    }
+
+    // Replace the destination with the non-removal entries.
+    std::vector<Pair> result;
+    result.reserve(_val.size());
+
+    for (const auto& p : _val) {
+      if (!is_remove(p)) result.push_back(p);
+    }
+
+    _dest = std::move(result);
+    break;
+  }
+
+  case compiler::EMergeMode::_intersection: {
+    // Keep only keys that exist in both maps.
+    _dest.erase(std::remove_if(_dest.begin(), _dest.end(),
+                               [&](const Pair& d) {
+                                 auto it = find_key(const_cast<std::vector<Pair>&>(_val), d.first);
+
+                                 if (it == _val.end()) return true;
+
+                                 // An explicit removal means that the key
+                                 // is not part of the effective intersection.
+                                 return is_remove(*it);
+                               }),
+                _dest.end());
+
+    break;
+  }
+
+  case compiler::EMergeMode::_anti_intersection: {
+    // Keep only keys that exist in the destination but not in _val.
+    _dest.erase(std::remove_if(_dest.begin(), _dest.end(), [&](const Pair& d) { return key_exists(_val, d.first); }),
+                _dest.end());
+
+    break;
+  }
+  }
 }

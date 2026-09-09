@@ -1,28 +1,37 @@
-#include <common/compiler_options.hpp>
+#include "common/compiler_options.hpp"
 
-#include <common/common.hpp>
+#include <algorithm>
+#include <cctype>
+#include <charconv>
+#include <common/enum_lite.hpp>
 #include <common/environment.hpp>
 #include <common/fileutils.hpp>
 #include <common/utils.hpp>
-
-#include <algorithm>
 #include <cstddef>
-#include <fstream>
-#include <print>
-#include <set>
-#include <string>
+#include <cstdint>
 #include <filesystem>
+#include <format>
+#include <fstream>
+#include <initializer_list>
+#include <ios>
+#include <iterator>
+#include <marzer/toml++.hpp>
+#include <set>
+#include <sstream>
+#include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
-
-#include <marzer/toml++.hpp>
-
-#include <Neargye/magic_enum.hpp>
-#include <Neargye/magic_enum_flags.hpp>
 
 
 namespace fs = std::filesystem;
+
+
+DEFINE_FLAGS(FTest, uint8_t,   //
+             all, 1ULL << 0,   //
+             extra, 1ULL << 1, //
+)
 
 
 size_t common::compiler::Target::get_arch_size() const noexcept
@@ -117,6 +126,7 @@ std::string common::compiler::Manifest::get_project_manifest() const noexcept
   return common::fileutils::resolve_path("tolza.toml", project_path);
 }
 
+
 std::string common::compiler::Manifest::get_profile_filename() const noexcept
 {
   static std::string out;
@@ -155,12 +165,10 @@ common::compiler::TargetTriple common::compiler::TargetTriple::parse(std::string
   }
 
   // Cas général : arch-vendor-platform-abi
-  result.arch = magic_enum::enum_cast<env::EArch>(std::string(parts[0])).value_or(env::EArch::NONE);
-  if (parts.size() >= 2)
-    result.vendor = magic_enum::enum_cast<env::EVendor>(std::string(parts[1])).value_or(env::EVendor::NONE);
-  if (parts.size() >= 3)
-    result.platform = magic_enum::enum_cast<env::EPlatform>(std::string(parts[2])).value_or(env::EPlatform::NONE);
-  if (parts.size() >= 4) result.abi = magic_enum::enum_cast<env::EABI>(std::string(parts[3])).value_or(env::EABI::NONE);
+  result.arch = env::EArch_from_str(std::string(parts[0]));
+  if (parts.size() >= 2) result.vendor = env::EVendor_from_str(std::string(parts[1]));
+  if (parts.size() >= 3) result.platform = env::EPlatform_from_str(std::string(parts[2]));
+  if (parts.size() >= 4) result.abi = env::EABI_from_str(std::string(parts[3]));
 
   return result;
 }
@@ -168,13 +176,17 @@ common::compiler::TargetTriple common::compiler::TargetTriple::parse(std::string
 std::string common::compiler::TargetTriple::dump() const noexcept
 {
   std::string triple;
-  triple += magic_enum::enum_name(arch);
+  auto        str_arch     = env::EArch_to_str(arch);
+  auto        str_vendor   = env::EVendor_to_str(vendor);
+  auto        str_platform = env::EPlatform_to_str(platform);
+  triple += str_arch.empty() ? "unknown" : str_arch;
   triple += "-";
-  triple += magic_enum::enum_name(vendor);
+  triple += str_vendor.empty() ? "unknown" : str_vendor;
   triple += "-";
-  triple += magic_enum::enum_name(platform);
+  triple += str_platform.empty() ? "unknown" : str_platform;
   return triple;
 }
+
 
 const std::vector<std::string>& common::compiler::Cffi::generate_preprocessor_args() const noexcept
 {
@@ -193,7 +205,7 @@ const std::vector<std::string>& common::compiler::Cffi::generate_preprocessor_ar
   if (auto l = ELibC_to_clang_flag(libc); !l.empty()) args.insert(std::string(l));
 
   // feature macros list
-  for (auto& flag : common::ECSource_to_clang_flag(c_source)) args.insert(flag);
+  for (auto& flag : common::env::ECSource_to_clang_flag(c_source)) args.insert(flag);
 
   return out = {args.begin(), args.end()};
 }
@@ -221,9 +233,11 @@ const std::vector<std::string>& common::compiler::Manifest::generate_clang_args(
   return args;
 }
 
-const std::map<std::string, std::string>& common::compiler::Manifest::generate_preprocessor_args() const noexcept
+const std::vector<std::pair<std::string, std::string>>&
+common::compiler::Manifest::generate_preprocessor_args() const noexcept
 {
-  static std::map<std::string, std::string> args;
+  using Pair = std::pair<std::string, std::string>;
+  static std::vector<Pair> args;
   if (!args.empty()) return args;
 
   auto to_std_arg = [](std::string_view _str) {
@@ -234,34 +248,33 @@ const std::map<std::string, std::string>& common::compiler::Manifest::generate_p
 
   auto build_arg = [&](std::string_view _str, std::string_view key) {
     const std::string std_arg = to_std_arg(_str);
-    args[std::string(key)]    = std_arg;
-    args[std_arg]             = "true";
+    args.emplace_back(std::string(key), std_arg);
+    args.emplace_back(std_arg, "true");
   };
 
-  args["project_name"] = get_project_name();
+  args.emplace_back("project_name", get_project_name());
 
-  build_arg(GET_ENUM_NAME(target.triple.arch), "target.arch");
-  build_arg(GET_ENUM_NAME(target.triple.platform), "target.platform");
-  build_arg(GET_ENUM_NAME(target.triple.vendor), "target.vendor");
-  build_arg(GET_ENUM_NAME(target.triple.abi), "target.abi");
+  build_arg(env::EArch_to_str(target.triple.arch), "target.arch");
+  build_arg(env::EPlatform_to_str(target.triple.platform), "target.platform");
+  build_arg(env::EVendor_to_str(target.triple.vendor), "target.vendor");
+  build_arg(env::EABI_to_str(target.triple.abi), "target.abi");
   build_arg(target.cpu, "target.cpu");
-  for (auto& feature : common::utils::split_flags(magic_enum::enum_flags_name(target.features, ','))) {
-    args["target.feature." + feature] = "true";
+  for (const auto& feature : FCPUFeature_to_vec_str(target.features)) {
+    args.emplace_back(std::format("target.feature.{}", feature), "true");
   }
-  build_arg(GET_ENUM_NAME(target.call_convention), "target.calling_convention");
-  build_arg(GET_ENUM_NAME(target.reloc_model), "target.reloc_model");
-  build_arg(GET_ENUM_NAME(target.code_model), "target.code_model");
-  for (auto& emit : common::utils::split_flags(magic_enum::enum_flags_name(target.emits, ','))) {
-    args["target.emit." + emit] = "true";
+  build_arg(env::ECallConvention_to_str(target.call_convention), "target.calling_convention");
+  build_arg(ERelocModel_to_str(target.reloc_model), "target.reloc_model");
+  build_arg(ECodeModel_to_str(target.code_model), "target.code_model");
+  for (const auto& emit : FEmit_to_vec_str(target.emits)) {
+    args.emplace_back(std::format("target.emit.{}", emit), "true");
   }
 
-  args["llvm.verify_module"] = llvm.verify_module ? "true" : "false";
+  args.emplace_back("llvm.verify_module", llvm.verify_module ? "true" : "false");
 
-  build_arg(GET_ENUM_NAME(c_ffi.libc), "clang.libc");
-  args["clang.libc.version"] =
-      std::to_string(c_ffi.libc_version.major) + "." + std::to_string(c_ffi.libc_version.minor);
-  build_arg(GET_ENUM_NAME(c_ffi.std), "clang.std");
-  build_arg(GET_ENUM_NAME(c_ffi.env), "clang.env");
+  build_arg(env::ELibC_to_str(c_ffi.libc), "clang.libc");
+  args.emplace_back("clang.libc.version", c_ffi.libc_version.dump());
+  build_arg(env::ECStandard_to_str(c_ffi.std), "clang.std");
+  build_arg(env::EEnvironment_to_str(c_ffi.env), "clang.env");
   build_arg(std::to_string(c_ffi.disable_builtins), "clang.disable_builtins");
   build_arg(std::to_string(c_ffi.strict_aliasing), "clang.strict_aliasing");
   build_arg(c_ffi.sysroot, "clang.sysroot");
@@ -272,21 +285,19 @@ const std::map<std::string, std::string>& common::compiler::Manifest::generate_p
     build_arg("release", "profile.build_mode");
   }
 
-  build_arg(GET_ENUM_NAME(profile.optimization), "optimization");
+  build_arg(EOptimization_to_str(profile.optimization), "optimization");
 
-  for (auto& log : common::utils::split_flags(magic_enum::enum_flags_name(log.logs, ','))) build_arg(log, "log");
-  build_arg(GET_ENUM_NAME(log.level), "log.level");
+  for (const auto& log : FPass_to_vec_str(log.logs)) build_arg(log, "log");
+  build_arg(ELogLevel_to_str(log.level), "log.level");
 
-  for (auto& warn : common::utils::split_flags(magic_enum::enum_flags_name(warn.warns)))
-    build_arg("true", "warning." + warn);
-  build_arg(GET_ENUM_NAME(warn.level), "warning.level");
+  for (const auto& warn : FWarnMode_to_vec_str(warn.warns)) build_arg("true", std::format("warning.{}", warn));
+  build_arg(EWarnLevel_to_str(warn.level), "warning.level");
 
-  for (auto& debug : common::utils::split_flags(magic_enum::enum_flags_name(debug.debugs)))
-    build_arg("true", "debug." + debug);
+  for (const auto& debug : FDebugPrinter_to_vec_str(debug.debugs)) build_arg("true", std::format("debug.{}", debug));
 
-  for (const auto& [key, val] : preprocessor.defines) args[key] = val;
+  for (const auto& [key, val] : preprocessor.defines) args.emplace_back(key, val);
 
-  for (const auto& undef : preprocessor.undefines) args[undef] = "true";
+  for (const auto& undef : preprocessor.undefines) args.emplace_back(undef, "true");
 
   return args;
 }
@@ -302,25 +313,25 @@ const std::vector<std::string>& common::compiler::Manifest::to_args() const noex
 
   // target
   if (target.triple.arch != env::EArch::NONE)
-    out.emplace_back(std::format(R"(--arch="{}")", GET_ENUM_NAME(target.triple.arch)));
+    out.emplace_back(std::format(R"(--arch="{}")", env::EArch_to_str(target.triple.arch)));
   if (target.triple.platform != env::EPlatform::NONE)
-    out.emplace_back(std::format(R"(--platform="{}")", GET_ENUM_NAME(target.triple.platform)));
+    out.emplace_back(std::format(R"(--platform="{}")", env::EPlatform_to_str(target.triple.platform)));
   if (target.triple.vendor != env::EVendor::NONE)
-    out.emplace_back(std::format(R"(--vendor="{}")", GET_ENUM_NAME(target.triple.vendor)));
+    out.emplace_back(std::format(R"(--vendor="{}")", env::EVendor_to_str(target.triple.vendor)));
   if (target.triple.abi != env::EABI::NONE)
-    out.emplace_back(std::format(R"(--abi="{}")", GET_ENUM_NAME(target.triple.abi)));
+    out.emplace_back(std::format(R"(--abi="{}")", env::EABI_to_str(target.triple.abi)));
   if (!target.cpu.empty()) out.emplace_back(std::format(R"(--cpu="{}")", target.cpu));
   if (target.features != FCPUFeature::NONE)
-    out.emplace_back(std::format(R"(--features="{}")", GET_FLAGS_NAME(target.features)));
+    out.emplace_back(std::format(R"(--features="{}")", FCPUFeature_to_str(target.features)));
   if (target.call_convention != env::ECallConvention::NONE)
-    out.emplace_back(std::format(R"(--calling_convention="{}")", GET_ENUM_NAME(target.call_convention)));
+    out.emplace_back(std::format(R"(--calling_convention="{}")", env::ECallConvention_to_str(target.call_convention)));
   if (target.reloc_model != ERelocModel::NONE)
-    out.emplace_back(std::format(R"(--reloc-model="{}")", GET_ENUM_NAME(target.reloc_model)));
+    out.emplace_back(std::format(R"(--reloc-model="{}")", ERelocModel_to_str(target.reloc_model)));
   if (target.code_model != ECodeModel::NONE)
-    out.emplace_back(std::format(R"(--code-model="{}")", GET_ENUM_NAME(target.code_model)));
-  if (target.emits != FEmit::NONE) out.emplace_back(std::format(R"(--emits="{}")", GET_FLAGS_NAME(target.emits)));
+    out.emplace_back(std::format(R"(--code-model="{}")", ECodeModel_to_str(target.code_model)));
+  if (target.emits != FEmit::NONE) out.emplace_back(std::format(R"(--emits="{}")", FEmit_to_str(target.emits)));
 
-  if (c_ffi.libc != env::ELibC::NONE) out.emplace_back(std::format(R"(--libc="{}")", GET_ENUM_NAME(c_ffi.libc)));
+  if (c_ffi.libc != env::ELibC::NONE) out.emplace_back(std::format(R"(--libc="{}")", env::ELibC_to_str(c_ffi.libc)));
 
   if (!profiles.empty()) {
     std::string _profile;
@@ -330,13 +341,14 @@ const std::vector<std::string>& common::compiler::Manifest::to_args() const noex
   }
 
   out.emplace_back(profile.debug ? "--debug" : "");
-  if (profile.optimization != EOptimization::NONE) out.emplace_back("-" + GET_ENUM_NAME(profile.optimization));
-  if (log.logs != FPass::NONE) out.emplace_back(std::format(R"(--logs="{}")", GET_FLAGS_NAME(log.logs)));
-  if (log.level != ELogLevel::NONE) out.emplace_back(std::format(R"(--log-level="{}")", GET_ENUM_NAME(log.level)));
-  if (warn.warns != FWarnMode::NONE) out.emplace_back(std::format(R"(--warns="{}")", GET_FLAGS_NAME(warn.warns)));
-  if (warn.level != EWarnLevel::NONE) out.emplace_back("-" + GET_ENUM_NAME(warn.level));
+  if (profile.optimization != EOptimization::NONE)
+    out.emplace_back(std::format("-", EOptimization_to_str(profile.optimization)));
+  if (log.logs != FPass::NONE) out.emplace_back(std::format(R"(--logs="{}")", FPass_to_str(log.logs)));
+  if (log.level != ELogLevel::NONE) out.emplace_back(std::format(R"(--log-level="{}")", ELogLevel_to_str(log.level)));
+  if (warn.warns != FWarnMode::NONE) out.emplace_back(std::format(R"(--warns="{}")", FWarnMode_to_str(warn.warns)));
+  if (warn.level != EWarnLevel::NONE) out.emplace_back(std::format("-", EWarnLevel_to_str(warn.level)));
   if (debug.debugs != FDebugPrinter::NONE)
-    out.emplace_back(std::format(R"(--debugs="{}")", GET_FLAGS_NAME(debug.debugs)));
+    out.emplace_back(std::format(R"(--debugs="{}")", FDebugPrinter_to_str(debug.debugs)));
 
   for (const auto& [name, val] : preprocessor.defines) out.emplace_back("-D" + name + "=" + val);
 
@@ -354,9 +366,9 @@ const std::vector<std::string>& common::compiler::Manifest::to_args() const noex
   if (!dir.packages.empty()) out.emplace_back(std::format(R"(--dir-packages="{}")", dir.packages));
 
   if (diagnostic.error != EErrorMode::NONE)
-    out.emplace_back(std::format(R"(--error-mode="{}")", GET_ENUM_NAME(diagnostic.error)));
+    out.emplace_back(std::format(R"(--error-mode="{}")", EErrorMode_to_str(diagnostic.error)));
   if (diagnostic.out_format != EDiagnosticFormat::NONE)
-    out.emplace_back(std::format(R"(--diagnostic-format="{}")", GET_ENUM_NAME(diagnostic.out_format)));
+    out.emplace_back(std::format(R"(--diagnostic-format="{}")", EDiagnosticFormat_to_str(diagnostic.out_format)));
 
   if (llvm.verify_module) out.emplace_back("--verify-module");
 
@@ -432,12 +444,12 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
 
   switch (triple.platform) {
 
-  case env::EPlatform::linux:
+  case env::EPlatform::_linux:
     options.c_ffi = {
         .libc = triple.abi == env::EABI::gnu ? env::ELibC::glibc : env::ELibC::musl,
 
         .std              = env::ECStandard::gnu17,
-        .c_source         = env::FCSource::gnu,
+        .c_source         = env::FCSource::_gnu,
         .env              = env::EEnvironment::gnu,
         .disable_builtins = false,
         .strict_aliasing  = false,
@@ -446,12 +458,12 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
     return options;
 
 
-  case env::EPlatform::macos:
-  case env::EPlatform::ios:
+  case env::EPlatform::_macos:
+  case env::EPlatform::_ios:
     options.c_ffi = {
         .libc             = env::ELibC::libsystem,
         .std              = env::ECStandard::gnu17,
-        .c_source         = env::FCSource::darwin,
+        .c_source         = env::FCSource::_darwin,
         .env              = env::EEnvironment::darwin,
         .disable_builtins = false,
         .strict_aliasing  = false,
@@ -460,11 +472,11 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
     return options;
 
 
-  case env::EPlatform::windows:
+  case env::EPlatform::_windows:
     options.c_ffi = {
         .libc             = env::ELibC::ucrt,
         .std              = env::ECStandard::c17,
-        .c_source         = env::FCSource::crt_secure_no_warnings,
+        .c_source         = env::FCSource::_crt_secure_no_warnings,
         .env              = env::EEnvironment::msvc,
         .disable_builtins = false,
         .strict_aliasing  = false,
@@ -474,14 +486,14 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
     return options;
 
 
-  case env::EPlatform::freebsd:
-  case env::EPlatform::openbsd:
-  case env::EPlatform::netbsd:
-  case env::EPlatform::dragonflybsd:
+  case env::EPlatform::_freebsd:
+  case env::EPlatform::_openbsd:
+  case env::EPlatform::_netbsd:
+  case env::EPlatform::_dragonflybsd:
     options.c_ffi = {
         .libc             = env::ELibC::bsd_libc,
         .std              = env::ECStandard::gnu17,
-        .c_source         = env::FCSource::bsd,
+        .c_source         = env::FCSource::_bsd,
         .env              = env::EEnvironment::gnu,
         .disable_builtins = false,
         .strict_aliasing  = false,
@@ -491,9 +503,9 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
 
 
   case env::EPlatform::NONE:
-  case env::EPlatform::android:
-  case env::EPlatform::solaris:
-  default:                      break;
+  case env::EPlatform::_android:
+  case env::EPlatform::_solaris:
+  default:                       break;
   }
 
 
@@ -538,7 +550,7 @@ common::compiler::Manifest common::compiler::Manifest::get_preset(const TargetTr
 }
 
 template <typename Enum>
-void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Profile::EMergeMode mode) noexcept
+void merge_bitwise(Enum& _dest, Enum _val, common::compiler::EMergeMode mode) noexcept
 {
   using _underlying = std::underlying_type_t<Enum>;
 
@@ -549,17 +561,17 @@ void merge_bitwise(Enum& _dest, Enum _val, common::compiler::Profile::EMergeMode
   _underlying out;
 
   switch (mode) {
-  case common::compiler::Profile::EMergeMode::_override: out = d; break;
-  case common::compiler::Profile::EMergeMode::NONE:
-  case common::compiler::Profile::EMergeMode::_union:    {
+  case common::compiler::EMergeMode::_override: out = d; break;
+  case common::compiler::EMergeMode::NONE:
+  case common::compiler::EMergeMode::_union:    {
     out = d | v;
     break;
   }
-  case common::compiler::Profile::EMergeMode::_intersection: {
+  case common::compiler::EMergeMode::_intersection: {
     out = d & v;
     break;
   }
-  case common::compiler::Profile::EMergeMode::_anti_intersection: {
+  case common::compiler::EMergeMode::_anti_intersection: {
     out = d & ~v;
     break;
   }
@@ -585,102 +597,11 @@ common::compiler::Manifest common::compiler::Profile::merge_context(const Manife
     _dest = _val;
   };
 
-  auto merge_list = [&](std::vector<const char*>& _dest, const std::vector<const char*>& _val, EMergeMode mode) {
-    switch (mode) {
-    case EMergeMode::NONE:
-    case EMergeMode::_union: {
-      _dest.insert(_dest.end(), _val.begin(), _val.end());
-      break;
-    }
-    case EMergeMode::_override:     _dest = _val;
-    case EMergeMode::_intersection: {
-      std::vector<const char*> tmp;
-      tmp.reserve(_dest.size());
-      auto tmp_set = std::set<const char*>(_val.begin(), _val.end());
-      for (const auto& elem : _dest) {
-        if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
-      }
-      _dest = tmp;
-      break;
-    }
-    case EMergeMode::_anti_intersection: {
-      std::vector<const char*> tmp;
-      tmp.reserve(_dest.size());
-      auto tmp_set = std::set<const char*>(_val.begin(), _val.end());
-      for (const auto& elem : _dest) {
-        if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
-      }
-      _dest = tmp;
-      break;
-    }
-    }
-  };
-  auto merge_list_str = [&](std::vector<std::string>& _dest, const std::vector<std::string>& _val, EMergeMode mode) {
-    switch (mode) {
-    case EMergeMode::NONE:
-    case EMergeMode::_union: {
-      _dest.insert(_dest.end(), _val.begin(), _val.end());
-      break;
-    }
-    case EMergeMode::_override:     _dest = _val;
-    case EMergeMode::_intersection: {
-      std::vector<std::string> tmp;
-      tmp.reserve(_dest.size());
-      auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
-      for (const auto& elem : _dest) {
-        if (tmp_set.find(elem) != tmp_set.end()) tmp.emplace_back(elem);
-      }
-      _dest = tmp;
-      break;
-    }
-    case EMergeMode::_anti_intersection: {
-      std::vector<std::string> tmp;
-      tmp.reserve(_dest.size());
-      auto tmp_set = std::set<std::string_view>(_val.begin(), _val.end());
-      for (const auto& elem : _dest) {
-        if (tmp_set.find(elem) == tmp_set.end()) tmp.emplace_back(elem);
-      }
-      _dest = tmp;
-      break;
-    }
-    }
-  };
-
-  auto merge_map = [&](std::map<std::string, std::string>& _dest, const std::map<std::string, std::string>& _val,
-                       EMergeMode mode) {
-    switch (mode) {
-    case EMergeMode::NONE:
-    case EMergeMode::_union: {
-      for (const auto& [val_key, val_val] : _val) _dest[val_key] = val_val;
-
-      break;
-    }
-    case EMergeMode::_override:     _dest = _val;
-    case EMergeMode::_intersection: {
-      std::map<std::string, std::string> tmp;
-      for (const auto& [key, val] : _dest) {
-        if (_val.find(key) != _val.end()) tmp[key] = val;
-      }
-      _dest = tmp;
-      break;
-    }
-    case EMergeMode::_anti_intersection: {
-      std::map<std::string, std::string> tmp;
-      for (const auto& [key, val] : _dest) {
-        if (_val.find(key) == _val.end()) tmp[key] = val;
-      }
-      _dest = tmp;
-      break;
-    }
-    }
-  };
-
-
   Manifest out = base_ctx;
 
-  merge_list_str(out.profiles, profiles, COMPILATION_ARGS_merge_mode);
+  utils::merge_list_str(out.profiles, profiles, COMPILATION_ARGS_merge_mode);
 
-  merge_map(out.PREPROCESSOR_ARGS, PREPROCESSOR_ARGS, COMPILATION_ARGS_merge_mode);
+  utils::merge_map(out.PREPROCESSOR_ARGS, PREPROCESSOR_ARGS, COMPILATION_ARGS_merge_mode);
 
   apply_str(out.project_name, project_name);
 
@@ -728,12 +649,12 @@ common::compiler::Manifest common::compiler::Profile::merge_context(const Manife
   apply_str(out.dir.packages, dir.packages);
 
   // preprocessor
-  merge_map(out.preprocessor.defines, preprocessor.defines, defines_merge_mode);
-  merge_list(out.preprocessor.undefines, preprocessor.undefines, undefines_merge_mode);
+  utils::merge_map(out.preprocessor.defines, preprocessor.defines, defines_merge_mode);
+  utils::merge_list_cstr(out.preprocessor.undefines, preprocessor.undefines, undefines_merge_mode);
 
   // llvm
   apply_bool(out.llvm.verify_module, llvm.verify_module, has_llvm_verify_module);
-  merge_list(out.llvm.args, llvm.args, llvm_args_merge_mode);
+  utils::merge_list_cstr(out.llvm.args, llvm.args, llvm_args_merge_mode);
 
   if (c_ffi.libc != env::ELibC::NONE) out.c_ffi.libc = c_ffi.libc;
   if (c_ffi.libc_version.minor != 0 && c_ffi.libc_version.major != 0) out.c_ffi.libc_version = c_ffi.libc_version;
@@ -743,20 +664,16 @@ common::compiler::Manifest common::compiler::Profile::merge_context(const Manife
   apply_bool(out.c_ffi.disable_builtins, c_ffi.disable_builtins, has_c_ffi_disable_builtins);
   apply_bool(out.c_ffi.strict_aliasing, c_ffi.strict_aliasing, has_c_ffi_strict_aliasing);
   apply_str(out.c_ffi.sysroot, c_ffi.sysroot);
-  merge_list(out.c_ffi.args, c_ffi.args, c_ffi_args_merge_mode);
+  utils::merge_list_cstr(out.c_ffi.args, c_ffi.args, c_ffi_args_merge_mode);
 
   return out;
 }
 
 common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string_view project_manifest) noexcept
 {
-#define get_enum(_path, _enum_kind, _enum_default)                                                                     \
-  magic_enum::enum_cast<_enum_kind>(utils::str_to_snake(tbl.at_path(_path).value_or("")))                              \
-      .value_or(_enum_kind::_enum_default)
+#define get_enum(_path, _enum_kind) _enum_kind##_from_str(tbl.at_path(_path).value_or(""))
 
-#define get_flags(_path, _flag_kind, _flag_default)                                                                    \
-  magic_enum::enum_flags_cast<_flag_kind>(utils::str_to_snake(tbl.at_path(_path).value_or("")))                        \
-      .value_or(_flag_kind::_flag_default)
+#define get_flags(_path, _flag_kind) _flag_kind##_from_str(tbl.at_path(_path).value_or(""))
 
 #define get_str(_path) tbl.at_path(_path).value_or("")
 
@@ -777,34 +694,46 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   out.project_path = fs::path(project_manifest).parent_path().string();
   out.dir          = Dir(out.project_path);
 
-  out.profiles = utils::split_flags(get_str("profiles"));
+  {
+    std::stringstream ss(get_str("profiles"));
+    std::string       item;
+
+    while (std::getline(ss, item, '|')) out.profiles.push_back(item);
+  }
 
   // target
-  out.target.triple.arch     = get_enum("target.arch", env::EArch, NONE);
-  out.target.triple.platform = get_enum("target.platform", env::EPlatform, NONE);
-  out.target.triple.vendor   = get_enum("target.vendor", env::EVendor, NONE);
-  out.target.triple.abi      = get_enum("target.abi", env::EABI, NONE);
+  out.target.triple.arch     = get_enum("target.arch", env::EArch);
+  out.target.triple.platform = get_enum("target.platform", env::EPlatform);
+  out.target.triple.vendor   = get_enum("target.vendor", env::EVendor);
+  out.target.triple.abi      = get_enum("target.abi", env::EABI);
   out.target.cpu             = get_str("target.cpu");
-  out.target.features        = get_flags("target.features", FCPUFeature, NONE);
-  out.target.reloc_model     = get_enum("target.reloc_model", ERelocModel, PIE);
-  out.target.code_model      = get_enum("target.code_model", ECodeModel, small);
-  out.target.emits           = get_flags("target.emits", FEmit, bin);
+  out.target.features        = get_flags("target.features", FCPUFeature);
+  out.target.reloc_model     = get_enum("target.reloc_model", ERelocModel);
+  if (out.target.reloc_model == ERelocModel::NONE) out.target.reloc_model = ERelocModel::PIE;
+  out.target.code_model = get_enum("target.code_model", ECodeModel);
+  if (out.target.code_model == ECodeModel::NONE) out.target.code_model = ECodeModel::small;
+  out.target.emits = get_flags("target.emits", FEmit);
+  if (out.target.emits == FEmit::NONE) out.target.emits = FEmit::bin;
 
   // profile
   out.profile.debug        = get_bool("profile.debug");
-  out.profile.optimization = get_enum("profile.optimization", EOptimization, O0);
+  out.profile.optimization = get_enum("profile.optimization", EOptimization);
+  if (out.profile.optimization == EOptimization::NONE) out.profile.optimization = EOptimization::O0;
 
   // log
-  out.log.logs  = get_flags("log.logs", FPass, NONE);
-  out.log.level = get_enum("log.level", ELogLevel, NONE);
+  out.log.logs  = get_flags("log.logs", FPass);
+  out.log.level = get_enum("log.level", ELogLevel);
 
   // warn
-  out.warn.warns = get_flags("warning.warnings", FWarnMode, NONE);
-  out.warn.level = get_enum("warning.level", EWarnLevel, W0);
+  out.warn.warns = get_flags("warning.warnings", FWarnMode);
+  out.warn.level = get_enum("warning.level", EWarnLevel);
+  if (out.warn.level == EWarnLevel::NONE) out.warn.level = EWarnLevel::W0;
 
   // diagnostic
-  out.diagnostic.error      = get_enum("diagnostic.error", EErrorMode, fail_fatal);
-  out.diagnostic.out_format = get_enum("diagnostic.out_format", EDiagnosticFormat, userfriendly);
+  out.diagnostic.error = get_enum("diagnostic.error", EErrorMode);
+  if (out.diagnostic.error == EErrorMode::NONE) out.diagnostic.error = EErrorMode::fail_fatal;
+  out.diagnostic.out_format = get_enum("diagnostic.out_format", EDiagnosticFormat);
+  if (out.diagnostic.out_format == EDiagnosticFormat::NONE) out.diagnostic.out_format = EDiagnosticFormat::userfriendly;
 
   // llvm
   out.llvm.verify_module = get_bool("llvm.verify_module");
@@ -824,7 +753,8 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), out.project_path);
 
   if (const toml::table* defines = tbl.at_path("preprocessor.defines").as_table()) {
-    for (const auto& [key, val] : *defines) out.preprocessor.defines[std::string(key.str())] = val.value_or("");
+    for (const auto& [key, val] : *defines)
+      out.preprocessor.defines.emplace_back(std::string(key.str()), val.value_or(""));
   }
 
   if (const toml::array* undefines = tbl.at_path("preprocessor.undefines").as_array()) {
@@ -835,11 +765,11 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
     for (const auto& key : *clang_args) out.c_ffi.args.emplace_back(key.value_or(""));
   }
 
-  out.c_ffi.libc             = get_enum("c_ffi.libc", env::ELibC, NONE);
+  out.c_ffi.libc             = get_enum("c_ffi.libc", env::ELibC);
   out.c_ffi.libc_version     = Cffi::LibCVersion::parse(get_str("c_ffi.libc_version"));
-  out.c_ffi.std              = get_enum("c_ffi.std", env::ECStandard, NONE);
-  out.c_ffi.c_source         = get_enum("c_ffi.c_source", env::FCSource, NONE);
-  out.c_ffi.env              = get_enum("c_ffi.environment", env::EEnvironment, NONE);
+  out.c_ffi.std              = get_enum("c_ffi.std", env::ECStandard);
+  out.c_ffi.c_source         = get_enum("c_ffi.c_source", env::FCSource);
+  out.c_ffi.env              = get_enum("c_ffi.environment", env::EEnvironment);
   out.c_ffi.disable_builtins = get_str("c_ffi.disable_builtins");
   out.c_ffi.strict_aliasing  = get_str("c_ffi.strict_aliasing");
   out.c_ffi.sysroot          = get_str("c_ffi.sysroot");
@@ -847,6 +777,7 @@ common::compiler::Manifest common::compiler::Manifest::read_manifest(std::string
   return out;
 
 #undef get_enum
+#undef get_flags
 #undef get_str
 #undef get_bool
 }
@@ -874,64 +805,64 @@ bool common::compiler::Manifest::write_manifest(std::string_view project_manifes
 
   const std::string _libc_version = c_ffi.libc_version.dump();
 
-  const auto _c_source = GET_FLAGS_NAME(c_ffi.c_source);
+  const auto _c_source = env::FCSource_to_str(c_ffi.c_source);
 
-  std::map<std::string, std::string> params = {
+  std::initializer_list<std::pair<std::string, std::string>> params = {
       // project
-      {"project_name",           project_name                                            },
+      {"project_name",           project_name                                                                   },
       // target
-      {"profiles",               _profiles                                               },
-      {"dependencies",           _dependencies                                           },
-      {"target.arch",            use_env ? GET_ENUM_NAME(target.triple.arch) : ""        },
-      {"target.platform",        use_env ? GET_ENUM_NAME(target.triple.platform) : ""    },
-      {"target.vendor",          use_env ? GET_ENUM_NAME(target.triple.vendor) : ""      },
-      {"target.abi",             use_env ? GET_ENUM_NAME(target.triple.abi) : ""         },
-      {"target.call_convention", use_env ? GET_ENUM_NAME(target.call_convention) : ""    },
-      {"target.cpu",             use_env ? target.cpu : ""                               },
-      {"target.features",        use_env ? GET_FLAGS_NAME(target.features) : ""          },
-      {"target.code_model",      use_env ? GET_ENUM_NAME(target.code_model) : ""         },
-      {"target.reloc_model",     use_env ? GET_ENUM_NAME(target.reloc_model) : ""        },
-      {"target.emits",           GET_FLAGS_NAME(target.emits)                            },
+      {"profiles",               _profiles                                                                      },
+      {"dependencies",           _dependencies                                                                  },
+      {"target.arch",            use_env ? std::string(env::EArch_to_str(target.triple.arch)) : ""              },
+      {"target.platform",        use_env ? std::string(env::EPlatform_to_str(target.triple.platform)) : ""      },
+      {"target.vendor",          use_env ? std::string(env::EVendor_to_str(target.triple.vendor)) : ""          },
+      {"target.abi",             use_env ? std::string(env::EABI_to_str(target.triple.abi)) : ""                },
+      {"target.call_convention", use_env ? std::string(env::ECallConvention_to_str(target.call_convention)) : ""},
+      {"target.cpu",             use_env ? target.cpu : ""                                                      },
+      {"target.features",        use_env ? FCPUFeature_to_str(target.features) : ""                             },
+      {"target.code_model",      use_env ? std::string(ECodeModel_to_str(target.code_model)) : ""               },
+      {"target.reloc_model",     use_env ? std::string(ERelocModel_to_str(target.reloc_model)) : ""             },
+      {"target.emits",           FEmit_to_str(target.emits)                                                     },
       // profile
-      {"profile.debug",          "true"                                                  },
-      {"profile.optimization",   GET_ENUM_NAME(EOptimization::O0)                        },
+      {"profile.debug",          "true"                                                                         },
+      {"profile.optimization",   std::string(EOptimization_to_str(EOptimization::O0))                           },
       // logs
-      {"log.logs",               GET_FLAGS_NAME(FPass::all)                              },
-      {"log.level",              GET_ENUM_NAME(ELogLevel::normal)                        },
+      {"log.logs",               FPass_to_str(FPass::all)                                                       },
+      {"log.level",              std::string(ELogLevel_to_str(ELogLevel::normal))                               },
       // warnings
-      {"warn.warnings",          GET_FLAGS_NAME(warn.warns)                              },
-      {"warn.level",             std::string(magic_enum::enum_name(warn.level).substr(1))},
-      {"diagnostic.error.mode",  GET_ENUM_NAME(diagnostic.error)                         },
-      {"diagnostic.out.format",  GET_ENUM_NAME(diagnostic.out_format)                    },
+      {"warn.warnings",          FWarnMode_to_str(warn.warns)                                                   },
+      {"warn.level",             std::string(EWarnLevel_to_str(warn.level).substr(1))                           },
+      {"diagnostic.error.mode",  std::string(EErrorMode_to_str(diagnostic.error))                               },
+      {"diagnostic.out.format",  std::string(EDiagnosticFormat_to_str(diagnostic.out_format))                   },
       // debug printer
-      {"debug.debugs",           GET_FLAGS_NAME(debug.debugs)                            },
+      {"debug.debugs",           FDebugPrinter_to_str(debug.debugs)                                             },
       // defines
-      {"preprocessor.defines",   use_env ? _defines : ""                                 },
+      {"preprocessor.defines",   use_env ? _defines : ""                                                        },
       // undefines
-      {"preprocessor.undefines", use_env ? _undefines : ""                               },
+      {"preprocessor.undefines", use_env ? _undefines : ""                                                      },
       // directories
-      {"dir.build",              dir.build                                               },
-      {"dir.source",             dir.source                                              },
-      {"dir.profile",            dir.profile                                             },
-      {"dir.vendor",             dir.vendor                                              },
-      {"dir.ffi_json",           dir.ffi_json                                            },
-      {"dir.binding",            dir.binding                                             },
-      {"dir.compiler",           std::string(common::env::get_compilers_dir())           },
-      {"dir.stdlib",             std::string(common::env::get_stdlib_dir())              },
-      {"dir.packages",           std::string(common::env::get_packages_dir())            },
+      {"dir.build",              dir.build                                                                      },
+      {"dir.source",             dir.source                                                                     },
+      {"dir.profile",            dir.profile                                                                    },
+      {"dir.vendor",             dir.vendor                                                                     },
+      {"dir.ffi_json",           dir.ffi_json                                                                   },
+      {"dir.binding",            dir.binding                                                                    },
+      {"dir.compiler",           std::string(common::env::get_compilers_dir())                                  },
+      {"dir.stdlib",             std::string(common::env::get_stdlib_dir())                                     },
+      {"dir.packages",           std::string(common::env::get_packages_dir())                                   },
       // llvm
-      {"llvm.verify_module",     use_env ? btos(llvm.verify_module) : "true"             },
-      {"llvm.args",              use_env ? _llvm_args : ""                               },
+      {"llvm.verify_module",     use_env ? btos(llvm.verify_module) : "true"                                    },
+      {"llvm.args",              use_env ? _llvm_args : ""                                                      },
       // c_ffi
-      {"c_ffi.libc_version",     use_env ? _libc_version : ""                            },
-      {"c_ffi.libc",             use_env ? GET_ENUM_NAME(c_ffi.libc) : ""                },
-      {"c_ffi.std",              use_env ? GET_ENUM_NAME(c_ffi.std) : ""                 },
-      {"c_ffi.c_source",         use_env ? _c_source : ""                                },
-      {"c_ffi.environment",      use_env ? GET_ENUM_NAME(c_ffi.env) : ""                 },
-      {"c_ffi.disable_builtins", use_env ? btos(c_ffi.disable_builtins) : "false"        },
-      {"c_ffi.strict_aliasing",  use_env ? btos(c_ffi.strict_aliasing) : "false"         },
-      {"c_ffi.sysroot",          use_env ? c_ffi.sysroot : ""                            },
-      {"c_ffi.args",             use_env ? _clang_args : ""                              },
+      {"c_ffi.libc_version",     use_env ? _libc_version : ""                                                   },
+      {"c_ffi.libc",             use_env ? std::string(env::ELibC_to_str(c_ffi.libc)) : ""                      },
+      {"c_ffi.std",              use_env ? std::string(env::ECStandard_to_str(c_ffi.std)) : ""                  },
+      {"c_ffi.c_source",         use_env ? _c_source : ""                                                       },
+      {"c_ffi.environment",      use_env ? std::string(env::EEnvironment_to_str(c_ffi.env)) : ""                },
+      {"c_ffi.disable_builtins", use_env ? btos(c_ffi.disable_builtins) : "false"                               },
+      {"c_ffi.strict_aliasing",  use_env ? btos(c_ffi.strict_aliasing) : "false"                                },
+      {"c_ffi.sysroot",          use_env ? c_ffi.sysroot : ""                                                   },
+      {"c_ffi.args",             use_env ? _clang_args : ""                                                     },
   };
 
   common::utils::fmt_template(txt, params);
@@ -952,13 +883,9 @@ bool common::compiler::Manifest::write_manifest(std::string_view project_manifes
 common::compiler::Profile common::compiler::Profile::read_profile(std::string_view profile_path,
                                                                   std::string_view project_path) noexcept
 {
-#define get_enum(_path, _enum_kind, _enum_default)                                                                     \
-  magic_enum::enum_cast<_enum_kind>(utils::str_to_snake(tbl.at_path(_path).value_or("")))                              \
-      .value_or(_enum_kind::_enum_default)
+#define get_enum(_path, _enum_kind) _enum_kind##_from_str(tbl.at_path(_path).value_or(""))
 
-#define get_flags(_path, _flag_kind, _flag_default)                                                                    \
-  magic_enum::enum_flags_cast<_flag_kind>(utils::str_to_snake(tbl.at_path(_path).value_or("")))                        \
-      .value_or(_flag_kind::_flag_default)
+#define get_flags(_path, _flag_kind) _flag_kind##_from_str(tbl.at_path(_path).value_or(""))
 
 #define get_str(_path) tbl.at_path(_path).value_or("")
 
@@ -977,42 +904,47 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
   toml::table tbl;
   tbl = toml::parse_file(profile_path);
 
-  out.profiles = utils::split_flags(get_str("profiles"));
+  {
+    std::stringstream ss(get_str("profiles"));
+    std::string       item;
 
-  out.COMPILATION_ARGS_merge_mode = get_enum("compilation_args_mode", EMergeMode, NONE);
+    while (std::getline(ss, item, '|')) out.profiles.push_back(item);
+  }
+
+  out.COMPILATION_ARGS_merge_mode = get_enum("compilation_args_mode", EMergeMode);
 
   // target
-  out.target.triple.arch = get_enum("target.arch", env::EArch, NONE);
+  out.target.triple.arch = get_enum("target.arch", env::EArch);
 
-  out.target.triple.vendor       = get_enum("target.vendor", env::EVendor, NONE);
-  out.target.triple.platform     = get_enum("target.platform", env::EPlatform, NONE);
-  out.target.triple.abi          = get_enum("target.abi", env::EABI, NONE);
+  out.target.triple.vendor       = get_enum("target.vendor", env::EVendor);
+  out.target.triple.platform     = get_enum("target.platform", env::EPlatform);
+  out.target.triple.abi          = get_enum("target.abi", env::EABI);
   out.target.cpu                 = get_str("target.cpu");
-  out.target.features            = get_flags("target.features", FCPUFeature, NONE);
-  out.target_features_merge_mode = get_enum("target.features_mode", EMergeMode, NONE);
-  out.target.reloc_model         = get_enum("target.reloc_model", ERelocModel, NONE);
-  out.target.code_model          = get_enum("target.code_model", ECodeModel, NONE);
-  out.target.emits               = get_flags("target.emits", FEmit, NONE);
-  out.target_emits_merge_mode    = get_enum("target.emits_mode", EMergeMode, NONE);
+  out.target.features            = get_flags("target.features", FCPUFeature);
+  out.target_features_merge_mode = get_enum("target.features_mode", EMergeMode);
+  out.target.reloc_model         = get_enum("target.reloc_model", ERelocModel);
+  out.target.code_model          = get_enum("target.code_model", ECodeModel);
+  out.target.emits               = get_flags("target.emits", FEmit);
+  out.target_emits_merge_mode    = get_enum("target.emits_mode", EMergeMode);
 
   // profile
   out.profile.debug        = get_bool("profile.debug");
   out.has_profile_debug    = has("profile.debug");
-  out.profile.optimization = get_enum("profile.optimization", EOptimization, NONE);
+  out.profile.optimization = get_enum("profile.optimization", EOptimization);
 
   // log
-  out.log.logs        = get_flags("log.logs", FPass, NONE);
-  out.logs_merge_mode = get_enum("log.logs_mode", EMergeMode, NONE);
-  out.log.level       = get_enum("log.level", ELogLevel, NONE);
+  out.log.logs        = get_flags("log.logs", FPass);
+  out.logs_merge_mode = get_enum("log.logs_mode", EMergeMode);
+  out.log.level       = get_enum("log.level", ELogLevel);
 
   // warn
-  out.warn.warns          = get_flags("warning.warnings", FWarnMode, NONE);
-  out.warnings_merge_mode = get_enum("warning.warnings_mode", EMergeMode, NONE);
-  out.warn.level          = get_enum("warning.level", EWarnLevel, NONE);
+  out.warn.warns          = get_flags("warning.warnings", FWarnMode);
+  out.warnings_merge_mode = get_enum("warning.warnings_mode", EMergeMode);
+  out.warn.level          = get_enum("warning.level", EWarnLevel);
 
   // diagnostic
-  out.diagnostic.error      = get_enum("diagnostic.error.mode", EErrorMode, NONE);
-  out.diagnostic.out_format = get_enum("diagnostic.out.format", EDiagnosticFormat, NONE);
+  out.diagnostic.error      = get_enum("diagnostic.error.mode", EErrorMode);
+  out.diagnostic.out_format = get_enum("diagnostic.out.format", EDiagnosticFormat);
 
   // llvm
   out.llvm.verify_module     = get_bool("llvm.verify_module");
@@ -1020,7 +952,7 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
   if (const toml::array* llvm_args = tbl.at_path("llvm.args").as_array()) {
     for (const auto& key : *llvm_args) out.llvm.args.emplace_back(key.value_or(""));
   }
-  out.llvm_args_merge_mode = get_enum("llvm.args_mode", EMergeMode, NONE);
+  out.llvm_args_merge_mode = get_enum("llvm.args_mode", EMergeMode);
 
   // directories
   out.dir.build    = common::fileutils::resolve_path(get_str("directory.build"), project_path);
@@ -1034,26 +966,27 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
   out.dir.packages = common::fileutils::resolve_path(get_str("directory.packages"), project_path);
 
   if (const toml::table* defines = tbl.at_path("preprocessor.defines").as_table()) {
-    for (const auto& [key, val] : *defines) out.preprocessor.defines[std::string(key.str())] = val.value_or("");
+    for (const auto& [key, val] : *defines)
+      out.preprocessor.defines.emplace_back(std::string(key.str()), val.value_or(""));
   }
-  out.defines_merge_mode = get_enum("preprocessor.defines_mode", EMergeMode, NONE);
+  out.defines_merge_mode = get_enum("preprocessor.defines_mode", EMergeMode);
 
   if (const toml::array* undefines = tbl.at_path("preprocessor.undefines").as_array()) {
     for (const auto& undef : *undefines) out.preprocessor.undefines.emplace_back(undef.value_or(""));
   }
-  out.undefines_merge_mode = get_enum("preprocessor.undefines_mode", EMergeMode, NONE);
+  out.undefines_merge_mode = get_enum("preprocessor.undefines_mode", EMergeMode);
 
   if (const toml::array* clang_args = tbl.at_path("c_ffi.args").as_array()) {
     for (const auto& key : *clang_args) out.c_ffi.args.emplace_back(key.value_or(""));
   }
-  out.c_ffi_args_merge_mode = get_enum("c_ffi.args_mode", EMergeMode, NONE);
+  out.c_ffi_args_merge_mode = get_enum("c_ffi.args_mode", EMergeMode);
 
-  out.c_ffi.libc                 = get_enum("c_ffi.libc", env::ELibC, NONE);
+  out.c_ffi.libc                 = get_enum("c_ffi.libc", env::ELibC);
   out.c_ffi.libc_version         = Cffi::LibCVersion::parse(get_str("c_ffi.libc_version"));
-  out.c_ffi.std                  = get_enum("c_ffi.std", env::ECStandard, NONE);
-  out.c_ffi.c_source             = get_enum("c_ffi.c_source", env::FCSource, NONE);
-  out.c_ffi_c_source_merge_mode  = get_enum("c_ffi.c_source_mode", EMergeMode, NONE);
-  out.c_ffi.env                  = get_enum("c_ffi.environment", env::EEnvironment, NONE);
+  out.c_ffi.std                  = get_enum("c_ffi.std", env::ECStandard);
+  out.c_ffi.c_source             = get_enum("c_ffi.c_source", env::FCSource);
+  out.c_ffi_c_source_merge_mode  = get_enum("c_ffi.c_source_mode", EMergeMode);
+  out.c_ffi.env                  = get_enum("c_ffi.environment", env::EEnvironment);
   out.c_ffi.disable_builtins     = get_str("c_ffi.disable_builtins");
   out.has_c_ffi_disable_builtins = has("c_ffi.disable_builtins");
   out.c_ffi.strict_aliasing      = get_str("c_ffi.strict_aliasing");
@@ -1063,6 +996,7 @@ common::compiler::Profile common::compiler::Profile::read_profile(std::string_vi
   return out;
 
 #undef get_enum
+#undef get_flags
 #undef get_str
 #undef get_bool
 }
@@ -1089,65 +1023,66 @@ bool common::compiler::Profile::write_profile(std::string_view profile_path, boo
 
   const std::string _libc_version = std::format("{}.{}", c_ffi.libc_version.major, c_ffi.libc_version.minor);
 
-  const auto _c_source = GET_FLAGS_NAME(c_ffi.c_source);
+  const auto _c_source = env::FCSource_to_str(c_ffi.c_source);
 
-  std::map<std::string, std::string> params = {
+  std::initializer_list<std::pair<std::string, std::string>> params = {
       // project
-      {"profiles",                    _profiles                                                                        },
-      {"dependencies",                _dependencies                                                                    },
-      {"compilation_args_mode",       "union"                                                                          },
-      {"target.arch",                 use_env ? GET_ENUM_NAME(target.triple.arch) : ""                                 },
-      {"target.platform",             use_env ? GET_ENUM_NAME(target.triple.platform) : ""                             },
-      {"target.vendor",               use_env ? GET_ENUM_NAME(target.triple.vendor) : ""                               },
-      {"target.abi",                  use_env ? GET_ENUM_NAME(target.triple.abi) : ""                                  },
-      {"target.call_convention",      use_env ? GET_ENUM_NAME(target.call_convention) : ""                             },
-      {"target.cpu",                  use_env ? target.cpu : ""                                                        },
-      {"target.features",             use_env ? GET_FLAGS_NAME(target.features) : ""                                   },
-      {"target.features_mode",        "union"                                                                          },
-      {"target.code_model",           use_env ? GET_ENUM_NAME(target.code_model) : ""                                  },
-      {"target.reloc_model",          use_env ? GET_ENUM_NAME(target.reloc_model) : ""                                 },
-      {"target.emits",                use_env ? GET_FLAGS_NAME(target.emits) : ""                                      },
-      {"target.emits_mode",           "union"                                                                          },
-      {"profile.debug",               is_debug ? "true" : btos(profile.debug)                                          },
-      {"profile.optimization",        is_debug ? GET_ENUM_NAME(EOptimization::O0) : GET_ENUM_NAME(profile.optimization)},
-      {"log.logs",                    is_debug ? GET_FLAGS_NAME(FPass::all) : GET_FLAGS_NAME(log.logs)                 },
-      {"log.logs_mode",               "union"                                                                          },
-      {"log.level",                   is_debug ? GET_ENUM_NAME(ELogLevel::normal) : GET_ENUM_NAME(log.level)           },
-      {"warn.warnings",               GET_FLAGS_NAME(warn.warns)                                                       },
-      {"warn.warnings_mode",          "union"                                                                          },
-      {"warn.level",                  std::string(magic_enum::enum_name(warn.level).substr(1))                         },
-      {"diagnostic.error",            GET_ENUM_NAME(diagnostic.error)                                                  },
-      {"diagnostic.error_mode",       "union"                                                                          },
-      {"diagnostic.out_format",       GET_ENUM_NAME(diagnostic.out_format)                                             },
-      {"debug.debugs",                GET_FLAGS_NAME(debug.debugs)                                                     },
-      {"debug.debugs_mode",           "union"                                                                          },
-      {"preprocessor.defines",        use_env ? _defines : ""                                                          },
-      {"preprocessor.defines_mode",   "union"                                                                          },
-      {"preprocessor.undefines",      use_env ? _undefines : ""                                                        },
-      {"preprocessor.undefines_mode", "union"                                                                          },
-      {"dir.build",                   dir.build                                                                        },
-      {"dir.source",                  dir.source                                                                       },
-      {"dir.profile",                 dir.profile                                                                      },
-      {"dir.vendor",                  dir.vendor                                                                       },
-      {"dir.ffi_json",                dir.ffi_json                                                                     },
-      {"dir.binding",                 dir.binding                                                                      },
-      {"dir.compiler",                std::string(common::env::get_compilers_dir())                                    },
-      {"dir.stdlib",                  std::string(common::env::get_stdlib_dir())                                       },
-      {"dir.packages",                std::string(common::env::get_packages_dir())                                     },
-      {"llvm.verify_module",          use_env ? btos(llvm.verify_module) : "false"                                     },
-      {"llvm.args",                   _llvm_args                                                                       },
-      {"llvm.args_mode",              "union"                                                                          },
-      {"c_ffi.libc_version",          use_env ? _libc_version : ""                                                     },
-      {"c_ffi.libc",                  use_env ? GET_ENUM_NAME(c_ffi.libc) : ""                                         },
-      {"c_ffi.std",                   use_env ? GET_ENUM_NAME(c_ffi.std) : ""                                          },
-      {"c_ffi.c_source",              use_env ? _c_source : ""                                                         },
-      {"c_ffi.c_source_mode",         "union"                                                                          },
-      {"c_ffi.environment",           use_env ? GET_ENUM_NAME(c_ffi.env) : ""                                          },
-      {"c_ffi.disable_builtins",      use_env ? btos(c_ffi.disable_builtins) : "false"                                 },
-      {"c_ffi.strict_aliasing",       use_env ? btos(c_ffi.strict_aliasing) : "false"                                  },
-      {"c_ffi.sysroot",               use_env ? c_ffi.sysroot : ""                                                     },
-      {"c_ffi.args",                  use_env ? _clang_args : ""                                                       },
-      {"c_ffi.args_mode",             "union"                                                                          },
+      {"profiles",                    _profiles                                                                                },
+      {"dependencies",                _dependencies                                                                            },
+      {"compilation_args_mode",       "union"                                                                                  },
+      {"target.arch",                 std::string(use_env ? env::EArch_to_str(target.triple.arch) : "")                        },
+      {"target.platform",             std::string(use_env ? env::EPlatform_to_str(target.triple.platform) : "")                },
+      {"target.vendor",               std::string(use_env ? env::EVendor_to_str(target.triple.vendor) : "")                    },
+      {"target.abi",                  std::string(use_env ? env::EABI_to_str(target.triple.abi) : "")                          },
+      {"target.call_convention",      std::string(use_env ? env::ECallConvention_to_str(target.call_convention) : "")          },
+      {"target.cpu",                  use_env ? target.cpu : ""                                                                },
+      {"target.features",             use_env ? FCPUFeature_to_str(target.features) : ""                                       },
+      {"target.features_mode",        "union"                                                                                  },
+      {"target.code_model",           std::string(use_env ? ECodeModel_to_str(target.code_model) : "")                         },
+      {"target.reloc_model",          std::string(use_env ? ERelocModel_to_str(target.reloc_model) : "")                       },
+      {"target.emits",                use_env ? FEmit_to_str(target.emits) : ""                                                },
+      {"target.emits_mode",           "union"                                                                                  },
+      {"profile.debug",               is_debug ? "true" : btos(profile.debug)                                                  },
+      {"profile.optimization",
+       std::string(is_debug ? EOptimization_to_str(EOptimization::O0) : EOptimization_to_str(profile.optimization))            },
+      {"log.logs",                    is_debug ? FPass_to_str(FPass::all) : FPass_to_str(log.logs)                             },
+      {"log.logs_mode",               "union"                                                                                  },
+      {"log.level",                   std::string(is_debug ? ELogLevel_to_str(ELogLevel::normal) : ELogLevel_to_str(log.level))},
+      {"warn.warnings",               FWarnMode_to_str(warn.warns)                                                             },
+      {"warn.warnings_mode",          "union"                                                                                  },
+      {"warn.level",                  std::string(EWarnLevel_to_str(warn.level).substr(1))                                     },
+      {"diagnostic.error",            std::string(EErrorMode_to_str(diagnostic.error))                                         },
+      {"diagnostic.error_mode",       "union"                                                                                  },
+      {"diagnostic.out_format",       std::string(EDiagnosticFormat_to_str(diagnostic.out_format))                             },
+      {"debug.debugs",                FDebugPrinter_to_str(debug.debugs)                                                       },
+      {"debug.debugs_mode",           "union"                                                                                  },
+      {"preprocessor.defines",        use_env ? _defines : ""                                                                  },
+      {"preprocessor.defines_mode",   "union"                                                                                  },
+      {"preprocessor.undefines",      use_env ? _undefines : ""                                                                },
+      {"preprocessor.undefines_mode", "union"                                                                                  },
+      {"dir.build",                   dir.build                                                                                },
+      {"dir.source",                  dir.source                                                                               },
+      {"dir.profile",                 dir.profile                                                                              },
+      {"dir.vendor",                  dir.vendor                                                                               },
+      {"dir.ffi_json",                dir.ffi_json                                                                             },
+      {"dir.binding",                 dir.binding                                                                              },
+      {"dir.compiler",                std::string(common::env::get_compilers_dir())                                            },
+      {"dir.stdlib",                  std::string(common::env::get_stdlib_dir())                                               },
+      {"dir.packages",                std::string(common::env::get_packages_dir())                                             },
+      {"llvm.verify_module",          use_env ? btos(llvm.verify_module) : "false"                                             },
+      {"llvm.args",                   _llvm_args                                                                               },
+      {"llvm.args_mode",              "union"                                                                                  },
+      {"c_ffi.libc_version",          use_env ? _libc_version : ""                                                             },
+      {"c_ffi.libc",                  std::string(use_env ? env::ELibC_to_str(c_ffi.libc) : "")                                },
+      {"c_ffi.std",                   std::string(use_env ? env::ECStandard_to_str(c_ffi.std) : "")                            },
+      {"c_ffi.c_source",              use_env ? _c_source : ""                                                                 },
+      {"c_ffi.c_source_mode",         "union"                                                                                  },
+      {"c_ffi.environment",           std::string(use_env ? env::EEnvironment_to_str(c_ffi.env) : "")                          },
+      {"c_ffi.disable_builtins",      use_env ? btos(c_ffi.disable_builtins) : "false"                                         },
+      {"c_ffi.strict_aliasing",       use_env ? btos(c_ffi.strict_aliasing) : "false"                                          },
+      {"c_ffi.sysroot",               use_env ? c_ffi.sysroot : ""                                                             },
+      {"c_ffi.args",                  use_env ? _clang_args : ""                                                               },
+      {"c_ffi.args_mode",             "union"                                                                                  },
   };
 
   common::utils::fmt_template(txt, params);
@@ -1188,33 +1123,42 @@ dependencies                        = [
 ]
     
 [target]
-### enum: )" + env::EArch_names() +
+### enum: )" + std::string(common::env::EArch_values)
+                                             +
                                              R"( ...
 arch                                = "%target.arch"                
-### enum: )" + env::EPlatform_names() +
+### enum: )" + std::string(common::env::EPlatform_values)
+                                             +
                                              R"( ...
 platform                            = "%target.platform"                  
-### enum: )" + env::EVendor_names() +
+### enum: )" + std::string(common::env::EVendor_values)
+                                             +
                                              R"( ...
 vendor                              = "%target.vendor"              
-### enum: )" + env::EABI_names() +
+### enum: )" + std::string(common::env::EABI_values)
+                                             +
                                              R"( ...
 abi                                 = "%target.abi"           
 ### text: overrides host cpu detection
 cpu                                 = "%target.cpu"                 
-### flags: )" + compiler::FCPUFeature_names() +
+### flags: )" + std::string(compiler::FCPUFeature_values)
+                                             +
                                              R"( ...
 features                            = "%target.features"
-### enum: )" + env::ECallConvention_names() +
+### enum: )" + std::string(common::env::ECallConvention_values)
+                                             +
                                              R"( ...
 call_convention                     = "%target.call_convention"
-### enum: )" + compiler::ECodeModel_names() +
+### enum: )" + std::string(compiler::ECodeModel_values)
+                                             +
                                              R"( ...
 code_model                          = "%target.code_model"          
-### enum: )" + compiler::ERelocModel_names() +
+### enum: )" + std::string(compiler::ERelocModel_values)
+                                             +
                                              R"( ...
 reloc_model                         = "%target.reloc_model"         
-### flags: )" + compiler::FEmit_names() +
+### flags: )" + std::string(compiler::FEmit_values)
+                                             +
                                              R"( ...
 emits                               = "%target.emits"               
 
@@ -1223,20 +1167,23 @@ emits                               = "%target.emits"
 
 ### true = disable optimization, enable debug info
 debug                               = %profile.debug
-### enum: )" + compiler::EOptimization_names()
+### enum: )" + std::string(compiler::EOptimization_values)
                                              +
                                              R"( ...
 optimization                        = "%profile.optimization"       
 
 [log]
-### flags: )" + compiler::FPass_names() +
+### flags: )" + std::string(compiler::FPass_values)
+                                             +
                                              R"( ...
 logs                                = "%log.logs"        
-### enum: )" + compiler::ELogLevel_names() + R"( ...
+### enum: )" + std::string(compiler::ELogLevel_values)
+                                             + R"( ...
 level                               = "%log.level"
 
 [warning]
-### flags: )" + compiler::FWarnMode_names() +
+### flags: )" + std::string(compiler::FWarnMode_values)
+                                             +
                                              R"( ...
 warnings                            = "%warn.warnings"
 ### 1, 2, 3
@@ -1247,9 +1194,10 @@ level                               = %warn.level
 debugs                              = "%debug.debugs"
 
 [diagnostic]
-### enum: )" + compiler::EErrorMode_names() + R"( ...
+### enum: )" + std::string(compiler::EErrorMode_values)
+                                             + R"( ...
 error.mode                          = "%diagnostic.error.mode"
-### enum: )" + compiler::EDiagnosticFormat_names()
+### enum: )" + std::string(compiler::EDiagnosticFormat_values)
                                              + R"( ...
 out.format                          = "%diagnostic.out.format"
 
@@ -1295,18 +1243,22 @@ args                                = [
 ### This configuration is strictly for C ffi passes on C std lib
 
 [c_ffi]
-### enum: )" + env::ELibC_names() +
+### enum: )" + std::string(common::env::ELibC_values)
+                                             +
                                              R"( ...
 libc                                = "%c_ffi.libc"
 ### major.minor format: e.g. 10.2
 libc_version                        = "%c_ffi.libc_version"
-### enum: )" + env::ECStandard_names() +
+### enum: )" + std::string(common::env::ECStandard_values)
+                                             +
                                              R"( ...
 std                                 = "%c_ffi.std"
-### flags: )" + env::FCSource_names() +
+### flags: )" + std::string(common::env::FCSource_values)
+                                             +
                                              R"( ...
 c_source                            = "%c_ffi.c_source"
-### enum: )" + env::EEnvironment_names() +
+### enum: )" + std::string(common::env::EEnvironment_values)
+                                             +
                                              R"( ...
 environment                         = "%c_ffi.environment"
 ### true, false
@@ -1348,35 +1300,43 @@ std::string common::PROFILE_TOML_TEMPLATE = R"(
 # compilation_args_mode             = "%compilation_args_mode" ### enum: "union", "inter", "!inter", "override"
     
 [target]
-### enum: )" + env::EArch_names() +
+### enum: )" + std::string(common::env::EArch_values)
+                                            +
                                             R"( ...
 # arch                              = "%target.arch"                
-### enum: )" + env::EPlatform_names() +
+### enum: )" + std::string(common::env::EPlatform_values)
+                                            +
                                             R"( ...
 # platform                          = "%target.platform"                  
-### enum: )" + env::EVendor_names() +
+### enum: )" + std::string(common::env::EVendor_values)
+                                            +
                                             R"( ...
 # vendor                            = "%target.vendor"              
-### enum: )" + env::EABI_names() +
+### enum: )" + std::string(common::env::EABI_values)
+                                            +
                                             R"( ...
 # abi                               = "%target.abi"           
 ### text: overrides host cpu detection
 # cpu                               = "%target.cpu"                 
-### flags: )" + compiler::FCPUFeature_names()
+### flags: )" + std::string(compiler::FCPUFeature_values)
                                             +
                                             R"( ...
 # features                          = "%target.features"
 # features_mode                     = "%target.features_mode" ### enum: "union", "inter", "!inter", "override"
-### enum: )" + env::ECallConvention_names() +
+### enum: )" + std::string(common::env::ECallConvention_values)
+                                            +
                                             R"( ...
 # call_convention                   = "%target.call_convention"
-### enum: )" + compiler::ECodeModel_names() +
+### enum: )" + std::string(compiler::ECodeModel_values)
+                                            +
                                             R"( ...
 # code_model                        = "%target.code_model"          
-### enum: )" + compiler::ERelocModel_names() +
+### enum: )" + std::string(compiler::ERelocModel_values)
+                                            +
                                             R"( ...
 # reloc_model                       = "%target.reloc_model"         
-### flags: )" + compiler::FEmit_names() +
+### flags: )" + std::string(compiler::FEmit_values)
+                                            +
                                             R"( ...
 # emits                             = "%target.emits"
 # emits_mode                        = "%target.emits_mode" ### enum: "union", "inter", "!inter", "override"
@@ -1386,21 +1346,24 @@ std::string common::PROFILE_TOML_TEMPLATE = R"(
 
 # true = disable optimization, enable debug info
 # debug                             = %profile.debug
-### enum: )" + compiler::EOptimization_names()
+### enum: )" + std::string(compiler::EOptimization_values)
                                             +
                                             R"( ...
 # optimization                      = "%profile.optimization"       
 
 [log]
-### flags: )" + compiler::FPass_names() +
+### flags: )" + std::string(compiler::FPass_values)
+                                            +
                                             R"( ...
 # logs                              = "%log.logs"        
 # logs_mode                         = "%log.logs_mode" ### enum: "union", "inter", "!inter", "override"
-### enum: )" + compiler::ELogLevel_names() + R"( ...
+### enum: )" + std::string(compiler::ELogLevel_values)
+                                            + R"( ...
 # level                             = "%log.level"
 
 [warning]
-### flags: )" + compiler::FWarnMode_names() +
+### flags: )" + std::string(compiler::FWarnMode_values)
+                                            +
                                             R"( ...
 # warnings                          = "%warn.warnings"
 # warnings_mode                        = "%warn.warnings_mode" ### enum: "union", "inter", "!inter", "override"
@@ -1415,9 +1378,10 @@ std::string common::PROFILE_TOML_TEMPLATE = R"(
 
 
 [diagnostic]
-### enum: )" + compiler::EErrorMode_names() + R"( ...
+### enum: )" + std::string(compiler::EErrorMode_values)
+                                            + R"( ...
 # error                             = "%diagnostic.error"
-### enum: )" + compiler::EDiagnosticFormat_names()
+### enum: )" + std::string(compiler::EDiagnosticFormat_values)
                                             + R"( ...
 # out_format                        = "%diagnostic.out_format"
 
@@ -1467,19 +1431,23 @@ std::string common::PROFILE_TOML_TEMPLATE = R"(
 ### This configuration is strictly for C ffi passes on C std lib
 
 [c_ffi]
-### enum: )" + env::ELibC_names() +
+### enum: )" + std::string(common::env::ELibC_values)
+                                            +
                                             R"( ...
 # libc                              = "%c_ffi.libc"
 ### major.minor format: e.g. 10.2
 # libc_version                      = "%c_ffi.libc_version"
-### enum: )" + env::ECStandard_names() +
+### enum: )" + std::string(common::env::ECStandard_values)
+                                            +
                                             R"( ...
 # std                               = "%c_ffi.std"
-### flags: )" + env::FCSource_names() +
+### flags: )" + std::string(common::env::FCSource_values)
+                                            +
                                             R"( ...
 # c_source                          = "%c_ffi.c_source"
 # c_source_mode                     = "%c_ffi.c_source_mode" ### enum: "union", "inter", "!inter", "override"
-### enum: )" + env::EEnvironment_names() +
+### enum: )" + std::string(common::env::EEnvironment_values)
+                                            +
                                             R"( ...
 # environment                       = "%c_ffi.environment"
 ### true, false
@@ -1493,5 +1461,5 @@ std::string common::PROFILE_TOML_TEMPLATE = R"(
 # args                              = [
 #   %c_ffi.args
 # ]
-# args_mode                         = "%c_ffi.args_mode" ### enum: "union", "inter", "!inter", "override"
+# args_mode                         = "%c_ffi.args_mode" ### enum: "union", "inter", "!inter", "override"                                                             
 )";

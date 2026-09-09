@@ -2,6 +2,7 @@
 
 #include "utils.hpp"
 
+#include <cstdlib>
 #include <print>
 #include <random>
 #include <string_view>

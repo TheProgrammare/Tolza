@@ -1,13 +1,12 @@
 #pragma once
 
-#include "compiler/compilation_unit.hpp"
+#include "id/cuid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 
-#include <functional>
-#include <memory>
 #include <set>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -41,21 +40,21 @@ namespace pipeline
 struct Pipeline {
   Pipeline();
 
-  StringMap<cu::ID>                         path_generated;
+  std::unordered_map<std::string, cu::ID>  path_generated;
   // paths
-  std::vector<std::unique_ptr<cu::CU>>      compilation_units;
-  std::vector<std::unique_ptr<cu::TEMP_CU>> temp_compilation_units;
-  std::set<std::string>                     binding_compilation_units_to_prepare;
-  std::unordered_set<cu::ID, cu::ID::Hash>  unprepared_compilation_units;
-  std::unordered_set<cu::ID, cu::ID::Hash>  prepared_compilation_units;
-  std::unordered_set<cu::ID, cu::ID::Hash>  analyzed_compilation_units;
+  std::vector<cu::CU*>                     compilation_units;
+  std::vector<cu::TEMP_CU*>                temp_compilation_units;
+  std::set<std::string>                    binding_compilation_units_to_prepare;
+  std::unordered_set<cu::ID, cu::ID::Hash> unprepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash> prepared_compilation_units;
+  std::unordered_set<cu::ID, cu::ID::Hash> analyzed_compilation_units;
 
   // push to prepared_compilation_units
   [[nodiscard]] std::vector<cu::ID> query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept;
   // push to prepared_compilation_units
   [[nodiscard]] cu::ID              query_CU_at_path(cu::ID parent_cuid, std::string_view path) noexcept;
 
-  [[nodiscard]] static std::unique_ptr<cu::CU> build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept;
+  [[nodiscard]] static cu::CU* build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept;
 
   [[nodiscard]] bool generate_libc_wrappers() noexcept;
 

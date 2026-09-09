@@ -1,14 +1,11 @@
 #pragma once
 
+#include <common/enum_lite.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <string>
 #include <string_view>
 #include <vector>
-
-#include <Neargye/magic_enum.hpp>
-#include <Neargye/magic_enum_flags.hpp>
-
 
 namespace common::env
 {
@@ -19,30 +16,22 @@ namespace common::env
 [[nodiscard]] std::string find_compiler_version(std::string_view dir_search, std::string_view version) noexcept;
 
 
-enum class EArch : uint8_t {
-  NONE,
-  x86_64,
-  x86_32,
-
-  aarch64,
-  aarch32,
-
-  riscv64,
-  riscv32,
-
-  ppc64,
-  ppc32,
-
-  mips64,
-  mips32,
-
-  wasm64,
-  wasm32,
-
-  sparc64,
-
-  custom
-};
+DEFINE_ENUM(EArch, uint8_t, //
+            x86_64, 1,      //
+            x86_32, 2,      //
+            aarch64, 3,     //
+            aarch32, 4,     //
+            riscv64, 5,     //
+            riscv32, 6,     //
+            ppc64, 7,       //
+            ppc32, 8,       //
+            mips64, 9,      //
+            mips32, 10,     //
+            wasm64, 11,     //
+            wasm32, 12,     //
+            sparc64, 13,    //
+            custom, 14      // your own scrap
+);
 
 constexpr bool is_32bit(EArch arch) noexcept
 {
@@ -58,127 +47,105 @@ constexpr bool is_32bit(EArch arch) noexcept
   }
 }
 
-enum class EPlatform : uint8_t {
-  NONE,
-  linux, // yes linux is a kernel
-  macos,
-  windows,
-
-  freebsd,
-  openbsd,
-  netbsd,
-
-  dragonflybsd,
-
-  android,
-  ios,
-
-  solaris,
-
-  custom
-};
+DEFINE_ENUM(EPlatform, uint8_t, //
+            _linux, 1,          // yes linux is a kernel we know...
+            _macos, 2,          //
+            _windows, 3,        //
+            _freebsd, 4,        //
+            _openbsd, 5,        //
+            _netbsd, 6,         //
+            _dragonflybsd, 7,   //
+            _android, 8,        //
+            _ios, 9,            //
+            _solaris, 10,       //
+            _custom, 11         // your own scrap
+);
 
 
 [[nodiscard]] constexpr bool supports_posix(EPlatform platform) noexcept
 {
   switch (platform) {
-  case EPlatform::linux:
-  case EPlatform::macos:
-  case EPlatform::freebsd:
-  case EPlatform::openbsd:
-  case EPlatform::netbsd:
-  case EPlatform::dragonflybsd:
-  case EPlatform::android:
-  case EPlatform::ios:
-  case EPlatform::solaris:      return true;
+  case EPlatform::_linux:
+  case EPlatform::_macos:
+  case EPlatform::_freebsd:
+  case EPlatform::_openbsd:
+  case EPlatform::_netbsd:
+  case EPlatform::_dragonflybsd:
+  case EPlatform::_android:
+  case EPlatform::_ios:
+  case EPlatform::_solaris:      return true;
 
-  default:                      return false;
+  default:                       return false;
   }
 }
 
 [[nodiscard]] constexpr bool supports_gnu(EPlatform platform) noexcept
 {
   switch (platform) {
-  case EPlatform::linux: return true;
+  case EPlatform::_linux: return true;
 
-  default:               return false;
+  default:                return false;
   }
 }
 
 [[nodiscard]] constexpr bool supports_bsd(EPlatform platform) noexcept
 {
   switch (platform) {
-  case EPlatform::freebsd:
-  case EPlatform::openbsd:
-  case EPlatform::netbsd:
-  case EPlatform::dragonflybsd:
+  case EPlatform::_freebsd:
+  case EPlatform::_openbsd:
+  case EPlatform::_netbsd:
+  case EPlatform::_dragonflybsd:
+  case EPlatform::_macos:
+  case EPlatform::_ios:          return true;
 
-  case EPlatform::macos:
-  case EPlatform::ios:          return true;
-
-  default:                      return false;
+  default:                       return false;
   }
 }
 
 [[nodiscard]] constexpr bool supports_darwin(EPlatform platform) noexcept
 {
   switch (platform) {
-  case EPlatform::macos:
-  case EPlatform::ios:   return true;
+  case EPlatform::_macos:
+  case EPlatform::_ios:   return true;
 
-  default:               return false;
+  default:                return false;
   }
 }
-enum class EABI : uint8_t {
-  NONE,
-  sysv,  // System V ABI (x86_64 Linux/BSD default)
-  win64, // Windows x86_64 ABI
 
-  gnu, // GNU ABI (Linux GNU toolchains, musl/gnu distinction souvent implicite)
-
-  aapcs,   // ARM 32-bit procedure call standard
-  aapcs64, // aarch64 ABI (AArch64)
-
-  darwin_arm64, // Apple arm/aarch64 ABI (macOS/iOS)
-
-  msvc_x86, // MSVC 32-bit ABI
-  msvc_x64, // MSVC 64-bit ABI
-
-  riscv_ilp32, // RV32 (ILP32 ABI)
-  riscv_lp64,  // RV64 (LP64 ABI)
-
-  wasm32, // WebAssembly 32-bit ABI
-
-  custom,
-};
+DEFINE_ENUM(EABI, uint8_t,   //
+            sysv, 1,         // System V ABI (x86_64 Linux/BSD default)
+            win64, 2,        // Windows x86_64 ABI
+            gnu, 3,          // GNU ABI (Linux GNU toolchains, musl/gnu distinction souvent implicite)
+            aapcs, 4,        // ARM 32-bit procedure call standard
+            aapcs64, 5,      // aarch64 ABI (AArch64)
+            darwin_arm64, 6, // Apple arm/aarch64 ABI (macOS/iOS)
+            msvc_x86, 7,     // MSVC 32-bit ABI
+            msvc_x64, 8,     // MSVC 64-bit ABI
+            riscv_ilp32, 9,  // RV32 (ILP32 ABI)
+            riscv_lp64, 10,  // RV64 (LP64 ABI)
+            wasm32, 11,      // WebAssembly 32-bit ABI
+            custom, 12       // your own scrap
+)
 
 
-enum class ECallConvention : uint8_t {
-  NONE,
-  cdecl,
-  stdcall,
-  fastcall,
-  thiscall,
-
-  sysv,
-  sysv_x86_64,
-  sysv_x86_32,
-
-  win64,
-
-  riscv_lp64,
-  riscv_ilp32,
-
-  aapcs,
-  aapcs64,
-  aapcs_vfp,
-
-  vectorcall,
-
-  wasm32,
-
-  custom,
-};
+DEFINE_ENUM(ECallConvention, uint8_t, //
+            cdecl, 1,                 //
+            stdcall, 2,               //
+            fastcall, 3,              //
+            thiscall, 4,              //
+            sysv, 5,                  //
+            sysv_x86_64, 6,           //
+            sysv_x86_32, 7,           //
+            win64, 8,                 //
+            riscv_lp64, 9,            //
+            riscv_ilp32, 10,          //
+            aapcs, 11,                //
+            aapcs64, 12,              //
+            aapcs_vfp, 13,            //
+            vectorcall, 14,           //
+            wasm32, 15,               //
+            custom, 16                // your own scrap
+)
 
 
 [[nodiscard]] constexpr ECallConvention call_convention(EPlatform platform, EArch arch, EABI abi) noexcept
@@ -235,7 +202,7 @@ enum class ECallConvention : uint8_t {
   // Fallback plateforme + architecture
   switch (platform) {
 
-  case EPlatform::windows:
+  case EPlatform::_windows:
     switch (arch) {
     case EArch::x86_64: return ECallConvention::win64;
     case EArch::x86_32: return ECallConvention::cdecl;
@@ -243,15 +210,15 @@ enum class ECallConvention : uint8_t {
     }
 
 
-  case EPlatform::linux:
-  case EPlatform::android:
-  case EPlatform::freebsd:
-  case EPlatform::openbsd:
-  case EPlatform::netbsd:
-  case EPlatform::dragonflybsd:
-  case EPlatform::macos:
-  case EPlatform::ios:
-  case EPlatform::solaris:
+  case EPlatform::_linux:
+  case EPlatform::_android:
+  case EPlatform::_freebsd:
+  case EPlatform::_openbsd:
+  case EPlatform::_netbsd:
+  case EPlatform::_dragonflybsd:
+  case EPlatform::_macos:
+  case EPlatform::_ios:
+  case EPlatform::_solaris:
     switch (arch) {
 
     case EArch::x86_64:  return ECallConvention::sysv_x86_64;
@@ -265,24 +232,23 @@ enum class ECallConvention : uint8_t {
     }
 
 
-  case EPlatform::custom:
-  default:                return ECallConvention::NONE;
+  case EPlatform::_custom:
+  default:                 return ECallConvention::NONE;
   }
 }
 
 
-enum class FCSource : uint16_t {
-  NONE                   = 0,
-  gnu                    = 1ULL << 0,
-  bsd                    = 1ULL << 1,
-  darwin                 = 1ULL << 2,
-  posix                  = 1ULL << 3,
-  xopen                  = 1ULL << 4,
-  linux                  = 1ULL << 5,
-  android                = 1ULL << 6,
-  crt_secure_no_warnings = 1ULL << 7,
-  custom                 = 1ULL << 8
-};
+DEFINE_FLAGS(FCSource, uint16_t,                 //
+             _gnu, 1ULL << 0,                    //
+             _bsd, 1ULL << 1,                    //
+             _darwin, 1ULL << 2,                 //
+             _posix, 1ULL << 3,                  //
+             _xopen, 1ULL << 4,                  //
+             _linux, 1ULL << 5,                  //
+             _android, 1ULL << 6,                //
+             _crt_secure_no_warnings, 1ULL << 7, //
+             _custom, 1ULL << 8                  //
+)
 
 
 [[nodiscard]] constexpr FCSource c_source()
@@ -290,60 +256,86 @@ enum class FCSource : uint16_t {
   uint16_t flags = 0;
 
 #ifdef _GNU_SOURCE
-  flags |= static_cast<uint16_t>(FCSource::gnu);
+  flags |= static_cast<uint16_t>(FCSource::_gnu);
 #endif
 
 #ifdef _BSD_SOURCE
-  flags |= static_cast<uint16_t>(FCSource::bsd);
+  flags |= static_cast<uint16_t>(FCSource::_bsd);
 #endif
 
 #ifdef __APPLE__
-  flags |= static_cast<uint16_t>(FCSource::darwin);
+  flags |= static_cast<uint16_t>(FCSource::_darwin);
 #endif
 
 #ifdef _POSIX_C_SOURCE
-  flags |= static_cast<uint16_t>(FCSource::posix);
+  flags |= static_cast<uint16_t>(FCSource::_posix);
 #endif
 
 #ifdef _XOPEN_SOURCE
-  flags |= static_cast<uint16_t>(FCSource::xopen);
+  flags |= static_cast<uint16_t>(FCSource::_xopen);
 #endif
 
 #ifdef __linux__
-  flags |= static_cast<uint16_t>(FCSource::linux);
+  flags |= static_cast<uint16_t>(FCSource::_linux);
 #endif
 
 #ifdef __ANDROID__
-  flags |= static_cast<uint16_t>(FCSource::android);
+  flags |= static_cast<uint16_t>(FCSource::_android);
 #endif
 
 #ifdef _CRT_SECURE_NO_WARNINGS
-  flags |= static_cast<uint16_t>(FCSource::crt_secure_no_warnings);
+  flags |= static_cast<uint16_t>(FCSource::_crt_secure_no_warnings);
 #endif
 
   return static_cast<FCSource>(flags);
 }
 
 
-enum class EVendor : uint8_t { NONE, apple, pc, w64 };
+DEFINE_ENUM(EVendor, uint8_t, //
+            apple, 1,         //
+            pc, 2,            //
+            w64, 3            //
+)
 
 
-enum class ECStandard : uint8_t { NONE, c89, c99, c11, c17, c23, gnu89, gnu99, gnu11, gnu17, gnu23 };
+DEFINE_ENUM(ECStandard, uint8_t, //
+            c89, 1,              //
+            c99, 2,              //
+            c11, 3,              //
+            c17, 4,              //
+            c23, 5,              //
+            gnu89, 6,            //
+            gnu99, 7,            //
+            gnu11, 8,            //
+            gnu17, 9,            //
+            gnu23, 10,           //
+)
 
-enum class EEnvironment : uint8_t { NONE, gnu, musl, msvc, gnuabi, mingw, darwin, baremetal, wasi, custom };
 
-enum class ELibC : uint8_t {
-  NONE,
-  glibc,
-  musl,
-  libsystem,
-  ucrt,
-  msvcrt,
-  mingw_libc,
-  bionic,
-  bsd_libc,
-  custom,
-};
+DEFINE_ENUM(EEnvironment, uint8_t, //
+            gnu, 1,                //
+            musl, 2,               //
+            msvc, 3,               //
+            gnuabi, 4,             //
+            mingw, 5,              //
+            darwin, 6,             //
+            baremetal, 7,          //
+            wasi, 8,               //
+            custom, 9,             // your own scrap
+)
+
+DEFINE_ENUM(ELibC, uint8_t, //
+            glibc, 1,       //
+            musl, 2,        //
+            libsystem, 3,   //
+            ucrt, 4,        //
+            msvcrt, 5,      //
+            mingw_libc, 6,  //
+            bionic, 7,      //
+            bsd_libc, 8,    //
+            custom, 9,      // your own scrap
+)
+
 
 [[nodiscard]] constexpr size_t file_offset_bits(ELibC libc, env::EArch arch)
 {
@@ -406,27 +398,27 @@ namespace PlatformDetection
 {
 inline constexpr EPlatform PLATFORM =
 #if defined(__ANDROID__)
-    EPlatform::android;
+    EPlatform::_android;
 #elif defined(__APPLE__) && defined(__MACH__)
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-    EPlatform::ios;
+    EPlatform::_ios;
 #else
-    EPlatform::macos;
+    EPlatform::_macos;
 #endif
 #elif defined(_WIN32)
-    EPlatform::windows;
+    EPlatform::_windows;
 #elif defined(__linux__) || defined(__gnu_linux__)
-    EPlatform::linux;
+    EPlatform::_linux;
 #elif defined(__FreeBSD__)
-    EPlatform::freebsd;
+    EPlatform::_freebsd;
 #elif defined(__OpenBSD__)
-    EPlatform::openbsd;
+    EPlatform::_openbsd;
 #elif defined(__NetBSD__)
-    EPlatform::netbsd;
+    EPlatform::_netbsd;
 #elif defined(__DragonFly__)
-    EPlatform::dragonflybsd;
+    EPlatform::_dragonflybsd;
 #elif defined(__sun)
-    EPlatform::solaris;
+    EPlatform::_solaris;
 #else
     EPlatform::NONE;
 #endif
@@ -595,6 +587,69 @@ inline constexpr FCSource C_SOURCE = c_source();
 
 }; // namespace PlatformDetection
 
+[[nodiscard]] inline std::vector<std::string> ECSource_to_clang_flag(common::env::FCSource v) noexcept
+{
+  std::vector<std::string> out;
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_gnu)) out.emplace_back("-D_GNU_SOURCE");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_bsd)) out.emplace_back("-D_BSD_SOURCE");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_darwin)) out.emplace_back("-D_DARWIN_C_SOURCE");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_posix)) out.emplace_back("-D_POSIX_C_SOURCE=200809L");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_xopen)) out.emplace_back("-D_XOPEN_SOURCE=700");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_linux)) out.emplace_back("-D__linux__");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_android)) out.emplace_back("-D__ANDROID__");
+  if (common::env::FCSource_has_flag(v, common::env::FCSource::_crt_secure_no_warnings))
+    out.emplace_back("-D_CRT_SECURE_NO_WARNINGS");
+  return out;
+}
+
+[[nodiscard]] inline std::string_view ECStandard_to_clang_flag(ECStandard v) noexcept
+{
+  switch (v) {
+  case ECStandard::c89:   return "-std=c89";
+  case ECStandard::c99:   return "-std=c99";
+  case ECStandard::c11:   return "-std=c11";
+  case ECStandard::c17:   return "-std=c17";
+  case ECStandard::c23:   return "-std=c23";
+  case ECStandard::gnu89: return "-std=gnu89";
+  case ECStandard::gnu99: return "-std=gnu99";
+  case ECStandard::gnu11: return "-std=gnu11";
+  case ECStandard::gnu17: return "-std=gnu17";
+  case ECStandard::gnu23: return "-std=gnu23";
+
+  default:                return {};
+  }
+}
+
+[[nodiscard]] inline std::string_view EEnvironment_to_clang_flag(EEnvironment v) noexcept
+{
+  switch (v) {
+  case EEnvironment::gnu:       return "-D_GNU_SOURCE";
+  case EEnvironment::musl:      return "-D_MUSL_SOURCE";
+  case EEnvironment::msvc:      return "-fms-compatibility";
+  case EEnvironment::gnuabi:    return {};
+  case EEnvironment::mingw:     return "-D__MINGW32__";
+  case EEnvironment::darwin:    return "-D_DARWIN_C_SOURCE";
+  case EEnvironment::baremetal: return "-ffreestanding";
+  case EEnvironment::wasi:      return "-D__wasi__";
+  default:                      return {};
+  }
+}
+
+[[nodiscard]] inline std::string_view ELibC_to_clang_flag(ELibC v) noexcept
+{
+  switch (v) {
+  case ELibC::glibc:      return "-D__GLIBC__";
+  case ELibC::musl:       return "-D__MUSL__";
+  case ELibC::libsystem:  return "-D__APPLE__";
+  case ELibC::ucrt:       return "-D_UCRT";
+  case ELibC::msvcrt:     return "-D_MSVCRT";
+  case ELibC::mingw_libc: return "-D__MINGW32__";
+  case ELibC::bionic:     return "-D__ANDROID_API__";
+  case ELibC::bsd_libc:   return "-D__BSD_VISIBLE";
+  default:                return {};
+  }
+}
+
 
 [[nodiscard]] std::string_view get_local_data_dir() noexcept;
 [[nodiscard]] std::string_view get_cache_dir() noexcept;
@@ -608,90 +663,5 @@ inline constexpr FCSource C_SOURCE = c_source();
 [[nodiscard]] std::string_view get_exe_dir() noexcept;
 
 [[nodiscard]] std::vector<std::string> get_compiler_dirs() noexcept;
-
-} // namespace common::env
-
-
-template <>
-struct magic_enum::customize::enum_range<common::env::FCSource> {
-  static constexpr bool is_flags = true;
-};
-
-namespace common::env
-{
-
-#define GET_ENUM_NAMES_TO_STRING(_enum_type)                                                                           \
-  ([]() -> std::string {                                                                                               \
-    std::string out;                                                                                                   \
-    bool        first = true;                                                                                          \
-    for (auto name : magic_enum::enum_names<_enum_type>()) {                                                           \
-      if (!first) out += ", ";                                                                                         \
-      out += name;                                                                                                     \
-      first = false;                                                                                                   \
-    }                                                                                                                  \
-    return out;                                                                                                        \
-  }())
-#define GET_FLAGS_NAMES_TO_STRING(_flag_type)                                                                          \
-  ([]() -> std::string {                                                                                               \
-    std::string out;                                                                                                   \
-    bool        first = true;                                                                                          \
-    for (auto name : magic_enum::enum_names<_flag_type>()) {                                                           \
-      if (!first) out += "|";                                                                                          \
-      out += name;                                                                                                     \
-      first = false;                                                                                                   \
-    }                                                                                                                  \
-    return out;                                                                                                        \
-  }())
-
-
-constexpr std::string& EArch_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::EArch);
-  return s;
-}
-constexpr std::string& EPlatform_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::EPlatform);
-  return s;
-}
-constexpr std::string& EABI_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::EABI);
-  return s;
-}
-constexpr std::string& EVendor_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::EVendor);
-  return s;
-}
-constexpr std::string& ECallConvention_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::ECallConvention);
-  return s;
-}
-
-constexpr std::string& ECStandard_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::ECStandard);
-  return s;
-}
-constexpr std::string& FCSource_names()
-{
-  static auto s = GET_FLAGS_NAMES_TO_STRING(common::env::FCSource);
-  return s;
-}
-constexpr std::string& EEnvironment_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::EEnvironment);
-  return s;
-}
-constexpr std::string& ELibC_names()
-{
-  static auto s = GET_ENUM_NAMES_TO_STRING(common::env::ELibC);
-  return s;
-}
-
-#undef GET_ENUM_NAMES_TO_STRING
-#undef GET_FLAGS_NAMES_TO_STRING
 
 } // namespace common::env

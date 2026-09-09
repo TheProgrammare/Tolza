@@ -1,17 +1,22 @@
 #include "pipeline/preparer.hpp"
 
+#include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
 #include "compiler/io.hpp"
+#include "id/cuid.hpp"
 #include "lexer/lexer.hpp"
 #include "metacode/preprocessor.hpp"
 #include "metacode/token_generator.hpp"
-#include "parser/parser_context.hpp"
+#include "parser/context.hpp"
 #include "pipeline/pipeline.hpp"
-#include "pool/link/definition.hpp"
+#include "pool/node_to_def.hpp"
 
+#include <cassert>
 #include <chrono>
-#include <common/compiler_options.hpp>
-#include <print>
+#include <cstddef>
+#include <functional>
+#include <ratio>
 
 
 inline double timing(const std::function<void()>& f) noexcept

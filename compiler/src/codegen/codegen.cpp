@@ -1,42 +1,44 @@
 #include "codegen.hpp"
 
 #include "ast/data.hpp"
-#include "ast/definition.hpp"
-#include "ast/definition/ast_base.hpp"
-#include "ast/definition/ast_declaration_extension.hpp"
-#include "ast/definition/ast_declaration_global.hpp"
-#include "ast/definition/ast_declaration_local.hpp"
-#include "ast/definition/ast_declaration_sfm.hpp"
-#include "ast/definition/ast_expression.hpp"
-#include "ast/definition/ast_literal.hpp"
-#include "ast/definition/ast_operation.hpp"
-#include "ast/definition/ast_statement.hpp"
 #include "ast/forward.hpp"
-#include "codegen/codegen_insurance.hpp"
-#include "codegen/codegen_type.hpp"
+#include "ast/node/base.hpp"
+#include "ast/node/declaration_extension.hpp"
+#include "ast/node/declaration_global.hpp"
+#include "ast/node/declaration_local.hpp"
+#include "ast/node/declaration_sfm.hpp"
+#include "ast/node/expression.hpp"
+#include "ast/node/literal.hpp"
+#include "ast/node/operation.hpp"
+#include "ast/node/statement.hpp"
+#include "ast/pool.hpp"
 #include "codegen/debug_info.hpp"
-#include "codegen_tools.hpp"
+#include "codegen/eval.hpp"
+#include "codegen/insurance.hpp"
+#include "codegen/tool.hpp"
+#include "codegen/type.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "id/nodeid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "pipeline/pipeline.hpp"
-#include "pool/ast.hpp"
-#include "pool/link/extension.hpp"
-#include "pool/link/inference.hpp"
-#include "pool/link/resolved.hpp"
-#include "pool/link/semantic_metadata.hpp"
-#include "pool/type.hpp"
-#include "resolver/resolver_base.hpp"
-#include "static_evaluation.hpp"
+#include "pool/node_to_ext.hpp"
+#include "pool/node_to_metadata.hpp"
+#include "resolver/base.hpp"
 #include "type/data.hpp"
-#include "type/definition.hpp"
+#include "type/pool.hpp"
+#include "type/tool.hpp"
+#include "type/type.hpp"
 
+#include <algorithm>
+#include <cassert>
 #include <common/compiler_options.hpp>
 #include <cstdint>
 #include <cstring>
+#include <exception>
+#include <format>
 #include <functional>
 #include <llvm-19/llvm/IR/DIBuilder.h>
+#include <llvm-19/llvm/IR/IRBuilder.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/STLExtras.h>
@@ -60,8 +62,21 @@
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
+#include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
+
+
+namespace codegen
+{
+class Builder : public llvm::IRBuilder<>
+{
+public:
+  using llvm::IRBuilder<>::IRBuilder;
+};
+
+} // namespace codegen
 
 
 #define NOT_DEFINED                                                                                                    \
@@ -75,9 +90,9 @@
 codegen::Codegen_AST::Codegen_AST(cu::CU& p_CU, llvm::LLVMContext& p_ctx)
   : resolver::Base(p_CU)
   , ctx(p_ctx)
+  , builder(*new codegen::Builder(p_ctx))
   , types(*new codegen::Codegen_Type(p_CU, p_ctx))
   , mod(CU.llvm_module)
-  , builder(*new llvm::IRBuilder<>(ctx))
   , dinfo(new DebugInfo(this, p_CU.cuid))
   , is_debug_mode(OPTIONS.profile.debug)
   , tools(*new Tools(*this))
@@ -172,8 +187,6 @@ llvm::Value* codegen::Codegen_AST::codegen_node(ast::ID nodeid) noexcept
     case_node(Literal_Textual_Format);
     case_node(Literal_Format_Specifier);
     case_node(Literal_Table);
-    case_node(Literal_Table_Population);
-    case_node(Literal_Map);
     case_node(Literal_Tuple);
     case_node(Literal_Range);
     case_node(Literal_Record);
@@ -186,16 +199,7 @@ llvm::Value* codegen::Codegen_AST::codegen_node(ast::ID nodeid) noexcept
     case_node(Expression_Invocation_Extend);
     case_node(Expression_Invocation_Rule);
     case_node(Expression_Table_Access);
-    case_node(Expression_Ptr_Val);
-    case_node(Expression_Mut_Of);
-    case_node(Expression_Ref_Of);
-    case_node(Expression_Move_Of);
-    case_node(Expression_Copy_Of);
-    case_node(Expression_Addr_Of);
-    case_node(Expression_Size_Of);
-    case_node(Expression_GetBits);
     case_node(Expression_New_Ptr);
-    case_node(Expression_Get_Type);
     case_node_noret(Statement_If);
     case_node_noret(Statement_For);
     case_node_noret(Statement_Loop);
@@ -214,6 +218,8 @@ llvm::Value* codegen::Codegen_AST::codegen_node(ast::ID nodeid) noexcept
     case_node(Operation_Binary);
     case_node(Operation_Unary);
     case_node(Operation_Interval);
+    case_node(Operation_Mem);
+  case ast::ENodeKind::Call_Contract:
   case ast::ENodeKind::NONE:
   case ast::ENodeKind::Path_Regex:
   case ast::ENodeKind::Import:
@@ -232,9 +238,6 @@ llvm::Value* codegen::Codegen_AST::codegen_node(ast::ID nodeid) noexcept
   case ast::ENodeKind::Generic_Facet:
   case ast::ENodeKind::Generic_Extension:
   case ast::ENodeKind::Generic_Rule:
-  case ast::ENodeKind::Memory_Del:
-  case ast::ENodeKind::Memory_Align:
-  case ast::ENodeKind::Memory_Drop:
   case ast::ENodeKind::Global_Reexport:
   case ast::ENodeKind::Global_Alias_Type:
   case ast::ENodeKind::Global_Alias_Module:
@@ -298,7 +301,7 @@ std::pair<llvm::Type*, llvm::Value*> codegen::Codegen_AST::codegen_collection_da
     return {get_type(typtr->inner), ptr};
   }
 
-  for (auto ext : tyid.extensions()) {
+  for (auto ext : extension::get_extensions(tyid)) {
     if (const auto* ext_ptr = ext.as<ast::Global_Extend_Cast>()) {
       // layout { ptr, i64 }
       if (const auto* typtr = ext_ptr->as_type.as<type::Array>()) {
@@ -410,11 +413,11 @@ llvm::AllocaInst* codegen::Codegen_AST::create_alloca(type::ID tyid, std::string
 
 
 llvm::Function* codegen::Codegen_AST::generate_stub(llvm::FunctionType* fn_ty, std::string_view name,
-                                                    llvm::Function::LinkageTypes link_ty) noexcept
+                                                    int link_ty) noexcept
 {
   if (auto* func = mod->getFunction(name)) return func;
 
-  auto* fn = llvm::Function::Create(fn_ty, link_ty, name, *mod);
+  auto* fn = llvm::Function::Create(fn_ty, llvm::Function::LinkageTypes(link_ty), name, *mod);
   return fn;
 }
 
@@ -458,7 +461,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Variable(const ast::Global_Var
     return add_generation(n.nodeid(), v);
   }
 
-  llvm::Function::LinkageTypes linkage = n.visibility == EVisibility::Cross_File_Scope || !n.extern_abi.empty()
+  llvm::Function::LinkageTypes linkage = n.visibility == ast::EVisibility::Cross_File_Scope || !n.extern_abi.empty()
                                              ? llvm::Function::ExternalLinkage
                                              : llvm::Function::InternalLinkage;
 
@@ -517,7 +520,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Global_Function(const ast::Global_Fun
 
   llvm::Function* fn = nullptr;
 
-  llvm::Function::LinkageTypes linkage = n.visibility == EVisibility::Cross_File_Scope || !n.extern_abi.empty()
+  llvm::Function::LinkageTypes linkage = n.visibility == ast::EVisibility::Cross_File_Scope || !n.extern_abi.empty()
                                              ? llvm::Function::ExternalLinkage
                                              : llvm::Function::InternalLinkage;
 
@@ -956,15 +959,6 @@ llvm::ConstantArray* codegen::Codegen_AST::codegen_Literal_Table(const ast::Lite
 {
   return nullptr;
 }
-llvm::Value* codegen::Codegen_AST::codegen_Literal_Table_Population(const ast::Literal_Table_Population& n) noexcept
-{
-  return nullptr;
-}
-
-llvm::Value* codegen::Codegen_AST::codegen_Literal_Map(const ast::Literal_Map& n) noexcept
-{
-  return nullptr;
-}
 llvm::Value* codegen::Codegen_AST::codegen_Literal_Tuple(const ast::Literal_Tuple& n) noexcept
 {
   GENERATION_GUARD
@@ -1108,7 +1102,7 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Invocation(const ast::Expr
 
   if (auto* fn_ptr = n.nodeid().def().node().as<ast::Global_Function>()) {
     llvm::Function::LinkageTypes liknage =
-        fn_ptr->visibility == EVisibility::Cross_File_Scope || !fn_ptr->extern_abi.empty()
+        fn_ptr->visibility == ast::EVisibility::Cross_File_Scope || !fn_ptr->extern_abi.empty()
             ? llvm::Function::ExternalLinkage
             : llvm::Function::InternalLinkage;
 
@@ -1181,74 +1175,31 @@ llvm::Value* codegen::Codegen_AST::codegen_Expression_Table_Access(const ast::Ex
   return add_generation(n.nodeid(), gep);
 }
 
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Ptr_Val(const ast::Expression_Ptr_Val& n) noexcept
-{
-  if (auto* arr = n.target.type().as<type::Array>()) {
-    auto* target = codegen_node(n.target);
-    auto* ptr    = builder.CreateInBoundsGEP(get_type(n.target.type()), target, {const_int(0)});
-    return add_generation(n.nodeid(), builder.CreateLoad(ptr->getType(), ptr, "valof"));
-  }
-  return add_generation(n.nodeid(), insurance.ensure_lvalue(n.target));
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Mut_Of(const ast::Expression_Mut_Of& n) noexcept
+llvm::Value* codegen::Codegen_AST::codegen_Operation_Mem(const ast::Operation_Mem& n) noexcept
 {
   GENERATION_GUARD
 
   auto* targetPtr = codegen_node(n.target);
 
-  if (!targetPtr->getType()->isPointerTy()) {
-    assert(false && "requires an lvalue expression");
+  switch (n.op) {
+  case ast::EOp_Mem::_val:  return add_generation(n.nodeid(), insurance.ensure_lvalue(n.target));
+  case ast::EOp_Mem::_mut:
+  case ast::EOp_Mem::_ref:
+  case ast::EOp_Mem::_move:
+  case ast::EOp_Mem::_copy:
+  case ast::EOp_Mem::_addr:
+  case ast::EOp_Mem::_del:
+  case ast::EOp_Mem::_drop:
+  case ast::EOp_Mem::_out:
+  case ast::EOp_Mem::NONE:  break;
   }
 
-  // return the pointer directly
-  return add_generation(n.nodeid(), targetPtr);
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Ref_Of(const ast::Expression_Ref_Of& n) noexcept
-{
-  GENERATION_GUARD
-
-  auto* targetPtr = codegen_node(n.target);
-
-  if (!targetPtr->getType()->isPointerTy()) {
-    assert(false && "& requires an lvalue expression");
-  }
-
-  // return the pointer directly
-  return add_generation(n.nodeid(), targetPtr);
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Addr_Of(const ast::Expression_Addr_Of& n) noexcept
-{
-  GENERATION_GUARD
-
-  return add_generation(n.nodeid(), insurance.ensure_lvalue(n.target));
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Size_Of(const ast::Expression_Size_Of& n) noexcept
-{
   return nullptr;
-}
-llvm::Value* codegen::Codegen_AST::codegen_Expression_GetBits(const ast::Expression_GetBits& n) noexcept
-{
-  return nullptr;
-}
-
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Move_Of(const ast::Expression_Move_Of& n) noexcept
-{
-  return nullptr;
-}
-
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Copy_Of(const ast::Expression_Copy_Of& n) noexcept
-{
-  NOT_DEFINED;
 }
 
 llvm::Value* codegen::Codegen_AST::codegen_Expression_New_Ptr(const ast::Expression_New_Ptr& n) noexcept
 {
   return nullptr;
-}
-
-llvm::Value* codegen::Codegen_AST::codegen_Expression_Get_Type(const ast::Expression_Get_Type& n) noexcept
-{
-  NOT_DEFINED;
 }
 
 void codegen::Codegen_AST::codegen_Statement_If(const ast::Statement_If& n, llvm::BasicBlock* bb_parent_merge) noexcept

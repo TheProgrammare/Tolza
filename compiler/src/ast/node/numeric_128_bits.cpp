@@ -1,0 +1,100 @@
+#include "ast/node/numeric_128_bits.hpp"
+
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
+#include <string_view>
+
+Float128::Float128()
+  : val(new llvm::APFloat(llvm::APFloatBase::IEEEquad(), llvm::StringRef("0.0")))
+{
+}
+
+Float128::~Float128()
+{
+}
+
+Float128::Float128(const llvm::APFloat& value)
+  : val(new llvm::APFloat(value))
+{
+}
+
+Float128::Float128(double value)
+  : val(new llvm::APFloat(value))
+{
+}
+
+Float128::Float128(std::string_view s)
+  : val(new llvm::APFloat(llvm::APFloatBase::IEEEquad(), llvm::StringRef(s)))
+{
+}
+
+
+void Float128::string_to_f128(std::string_view s)
+{
+  llvm::StringRef sr(s);
+  llvm::APFloat   tmp(llvm::APFloatBase::IEEEquad(), sr);
+  *val = tmp;
+}
+
+std::string Float128::float128_to_string(int precision) const
+{
+  llvm::SmallVector<char, 128> buf;
+  val->toString(buf, precision);
+  return {buf.begin(), buf.end()};
+}
+
+
+Int128::Int128()
+  : val(new llvm::APInt(128, 0, true))
+{
+}
+
+Int128::~Int128()
+{
+}
+
+
+Int128::Int128(const llvm::APInt& value)
+  : val(new llvm::APInt(value))
+{
+}
+
+Int128::Int128(long long value)
+  : val(new llvm::APInt(128, value))
+{
+}
+
+Int128::Int128(std::string_view s, uint8_t radix)
+  : val(new llvm::APInt(128, llvm::StringRef(s), radix))
+{
+}
+
+void Int128::string_to_i128(std::string_view s, int base) const
+{
+  llvm::APInt tmp(128, 0,
+                  true); // 128 bits signed
+  bool        ok = false;
+
+  try {
+    tmp = llvm::APInt(128, llvm::StringRef(s),
+                      base); // base 10 or 16
+    ok  = true;
+  } catch (...) {
+    ok = false;
+  }
+
+  if (!ok) {
+    throw std::invalid_argument("String contains invalid characters for int128");
+  }
+
+  *val = tmp;
+}
+
+std::string Int128::i128_to_string(int radix) const noexcept
+{
+  llvm::SmallVector<char, 128> buf;
+  val->toString(buf, radix, true);
+  return {buf.begin(), buf.end()};
+}

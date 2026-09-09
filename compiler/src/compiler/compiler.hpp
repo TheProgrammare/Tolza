@@ -19,10 +19,14 @@
 
 #include "misc/error_output.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 
+#include <common/enum_lite.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 // log color
 #define color_RESET   "\033[0m"
@@ -32,11 +36,22 @@
 #define color_YELLOW  "\033[33m" /* Yellow */
 #define color_MAGENTA "\033[35m" /* Magenta */
 
+#ifndef SOFTWARE_VERSION
+#define SOFTWARE_VERSION "2026-09-03"
+#endif
+#ifndef TOLZA_VERSION
+#define TOLZA_VERSION "2026-09"
+#endif
+#ifndef SOFTWARE_NAME
+#define SOFTWARE_NAME "tolza-compiler"
+#endif
+
 constexpr size_t MAX_ERRORS = 100;
 
 
 constexpr size_t k_max_path_seg_size = 12;
 constexpr size_t k_max_keyword_size  = 32;
+
 
 using ErrorCode = short;
 
@@ -73,20 +88,20 @@ constexpr std::string_view SOFTWARE_ABOUT =
     "  Source: https://github.com/TheProgrammare/Tolza";
 
 
-enum class EPhase : uint8_t {
-  filesystem,
-  lexer,
-  preprosessor,
-  parser,
-  shipowner,
-  binder,
-  resolver_symbol,
-  resolver_type,
-  resolver_semantic,
-  resolver_evaluation,
-  llvmir,
-  linker
-};
+DEFINE_ENUM(EPhase, uint8_t,         //
+            filesystem, 1,           //
+            lexer, 2,                //
+            preprosessor, 3,         //
+            parser, 4,               //
+            shipowner, 5,            //
+            binder, 6,               //
+            resolver_symbol, 7,      //
+            resolver_type, 8,        //
+            resolver_semantic, 9,    //
+            resolver_evaluation, 10, //
+            llvmir, 11,              //
+            linker, 12,              //
+)
 
 
 struct Compiler {
@@ -111,7 +126,6 @@ struct Compiler {
 };
 
 [[nodiscard]] std::string Phase_to_code(EPhase phase);
-[[nodiscard]] std::string Phase_to_str(EPhase phase);
 
 
 } // namespace compiler

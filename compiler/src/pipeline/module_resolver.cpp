@@ -1,18 +1,29 @@
 #include "pipeline/module_resolver.hpp"
 
-#include "ast/definition/ast_base.hpp"
-#include "binder/binder_ffi.hpp"
+#include "ast/node/base.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "ffi/manager.hpp"
+#include "id/cuid.hpp"
+#include "id/nodeid.hpp"
+#include "lexer/pool.hpp"
+#include "module/pool.hpp"
+#include "module/tool.hpp"
 #include "pipeline/pipeline.hpp"
-#include "pool/module.hpp"
-#include "pool/token.hpp"
-#include "pool/unresolved.hpp"
+#include "pool/node_unresolved.hpp"
 
+#include <cassert>
 #include <common/compiler_options.hpp>
 #include <common/fileutils.hpp>
+#include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -43,7 +54,7 @@ bool module_resolver::resolve_modules(std::unordered_set<cu::ID, cu::ID::Hash>& 
       assert(regex);
 
       // binding generation query
-      if (regex->source == cu::EFileSource::binding) (void)generate_bind(regex->path, imp->alias);
+      if (regex->source == cu::EFileSource::bind) (void)generate_bind(regex->path, imp->alias);
 
       // resolve import module source
       auto modid_found = cu::resolve_regex_path(modid, regex->path, regex->source);

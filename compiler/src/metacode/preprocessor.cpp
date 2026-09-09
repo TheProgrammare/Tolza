@@ -1,18 +1,30 @@
 #include "preprocessor.hpp"
 
 #include "ast/data.hpp"
+#include "ast/tool.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "id/base.hpp"
+#include "id/metaid.hpp"
+#include "id/tokid.hpp"
+#include "lexer/data.hpp"
+#include "lexer/pool.hpp"
 #include "lexer/token_viewer.hpp"
-#include "metacode/token_generator.hpp"
+#include "metacode/data.hpp"
+#include "metacode/pool.hpp"
 #include "misc/error_output.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "pool/metacode.hpp"
-#include "pool/token.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <format>
+#include <initializer_list>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 
 metacode::Preprocessor::Preprocessor(cu::CU& CU) noexcept
@@ -25,7 +37,7 @@ metacode::Preprocessor::Preprocessor(cu::CU& CU) noexcept
 bool metacode::Preprocessor::start_preprocessor() noexcept
 {
   auto last_err_count = COMPILER.errors.size();
-  current_parent      = &CU.metacodes->get_file_root();
+  current_parent      = &CU.metacodes->get_file_root().header;
 
   // parse metacodes
   while (!tok_v->is_end()) {
@@ -110,7 +122,7 @@ metacode::ID metacode::Preprocessor::preprocess_metablock() noexcept
   METACODE_CREATE(block, Metablock)
 
   auto* old_parent = current_parent;
-  current_parent   = block;
+  current_parent   = &block->header;
 
   while (!tok_v->is_end()) {
     // no more metacode to process in one block
@@ -142,16 +154,16 @@ metacode::ID metacode::Preprocessor::preprocess_metablock() noexcept
 
 
     metacode::Instruction instruction{.words = std::move(instruct_words)};
-    block->instructions.emplace_back(std::move(instruction));
+    block->header.instructions.emplace_back(std::move(instruction));
   }
 
-  preprocess_scope(*block);
+  preprocess_scope(block->header);
 
   current_parent = old_parent;
 
-  return block->metaid;
+  return block->metaid();
 }
-void metacode::Preprocessor::preprocess_scope(metacode::Metacode& meta) noexcept
+void metacode::Preprocessor::preprocess_scope(metacode::MetacodeHeader& meta) noexcept
 {
   constexpr std::string_view hint =
       R"(define scope like:
@@ -209,11 +221,11 @@ metacode::ID metacode::Preprocessor::preprocess_if() noexcept
 
   METACODE_CREATE(if_meta, If)
 
-  if_meta->condition       = preprocess_condition();
-  if_meta->scope.start_pos = tok_v->peek().begin;
+  if_meta->condition              = preprocess_condition();
+  if_meta->header.scope.start_pos = tok_v->peek().begin;
 
   auto* old_parent = current_parent;
-  current_parent   = if_meta;
+  current_parent   = &if_meta->header;
 
   while (!tok_v->is_end()) {
     // end of flow
@@ -234,7 +246,7 @@ metacode::ID metacode::Preprocessor::preprocess_if() noexcept
 bool metacode::Preprocessor::_if_end(metacode::If& end_wait) noexcept
 {
   if (match_metacode({"end", "if", pattern_constants::end})) {
-    end_wait.scope.end_pos = tok_v->peek(-4).begin;
+    end_wait.header.scope.end_pos = tok_v->peek(-4).begin;
     return true;
   }
   return false;
@@ -247,13 +259,13 @@ bool metacode::Preprocessor::_else(metacode::If& before_else) noexcept
     else_meta->is_else = true;
 
     auto* old_parent = current_parent;
-    current_parent   = else_meta;
+    current_parent   = &else_meta->header;
 
     bool correct_else_exit = false;
     while (!tok_v->is_end()) {
       // end of flow
       if (_if_end(*else_meta)) {
-        before_else.alternative = else_meta->metaid;
+        before_else.alternative = else_meta->metaid();
         return true;
       }
 
@@ -277,12 +289,12 @@ bool metacode::Preprocessor::_elif(metacode::If& before_elif) noexcept
     elif_meta->is_elif = true;
 
     auto* old_parent     = current_parent;
-    current_parent       = elif_meta;
+    current_parent       = &elif_meta->header;
     elif_meta->condition = preprocess_condition();
 
     while (!tok_v->is_end()) {
       if (_if_end(*elif_meta) || _else(*elif_meta) || _elif(*elif_meta)) {
-        before_elif.alternative = elif_meta->metaid;
+        before_elif.alternative = elif_meta->metaid();
         return true;
       }
 
@@ -319,7 +331,7 @@ metacode::ID metacode::Preprocessor::preprocess_expand() noexcept
   METACODE_CREATE(expand, Expand)
 
   auto* old_parent = current_parent;
-  current_parent   = expand;
+  current_parent   = &expand->header;
   current_expand   = expand;
 
   _expand_header();
@@ -329,7 +341,7 @@ metacode::ID metacode::Preprocessor::preprocess_expand() noexcept
   current_parent = old_parent;
   current_expand = nullptr;
 
-  return expand->metaid;
+  return expand->metaid();
 }
 void metacode::Preprocessor::_expand_header() noexcept
 {
@@ -353,8 +365,8 @@ void metacode::Preprocessor::_expand_header() noexcept
 
         current_expand->placeholders.emplace_back(placeholder);
       } else if (match_metacode({"each", pattern_constants::end})) {
-        current_expand->scope.start_pos = tok_v->peek().begin;
-        clean_end                       = true;
+        current_expand->header.scope.start_pos = tok_v->peek().begin;
+        clean_end                              = true;
         break;
       } else {
         tok_v->add_error(142, "Expected metacode expand instruction.", expand_hint);
@@ -382,8 +394,8 @@ void metacode::Preprocessor::_expand_body() noexcept
   while (!tok_v->is_end()) {
     // end of expand
     if (match_metacode({"end", "each", pattern_constants::end})) {
-      current_expand->scope.end_pos = tok_v->peek().begin - 4;
-      clean_end                     = true;
+      current_expand->header.scope.end_pos = tok_v->peek().begin - 4;
+      clean_end                            = true;
       break;
     }
 
@@ -412,7 +424,7 @@ metacode::ID metacode::Preprocessor::preprocess_condition() noexcept
       bin->left  = lhs;
       bin->right = rhs;
       bin->type  = ast::ETokenKind_to_EOp_Bin(op);
-      lhs        = bin->metaid;
+      lhs        = bin->metaid();
     } else {
       break; // no op -> end
     }
@@ -439,7 +451,7 @@ metacode::ID metacode::Preprocessor::_cond_atom() noexcept
     METACODE_CREATE(_not, Unary_Not_Cond)
 
     _not->term = term;
-    return _not->metaid;
+    return _not->metaid();
   }
 
   METACODE_CREATE(expr, Cond_expr);
@@ -449,7 +461,7 @@ metacode::ID metacode::Preprocessor::_cond_atom() noexcept
 
   expr->val = preprocess_token(tok_v->next());
 
-  return expr->metaid;
+  return expr->metaid();
 }
 
 bool metacode::Preprocessor::match_metacode(std::initializer_list<std::string_view> pattern) noexcept

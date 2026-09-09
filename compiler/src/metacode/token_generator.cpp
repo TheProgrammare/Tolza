@@ -3,23 +3,30 @@
 #include "ast/data.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "id/metaid.hpp"
+#include "id/tokid.hpp"
+#include "lexer/pool.hpp"
+#include "metacode/data.hpp"
+#include "metacode/pool.hpp"
 #include "metacode/preprocessor.hpp"
 #include "misc/error_output.hpp"
-#include "nexus/ids.hpp"
-#include "pool/metacode.hpp"
-#include "pool/token.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <common/compiler_options.hpp>
 #include <cstddef>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 
 metacode::Generator::Generator(cu::CU& p_CU, metacode::Preprocessor& p_prepro) noexcept
   : CU(p_CU)
   , prepro(p_prepro)
 {
-  tokens_generated.reserve(CU.file_info.tokens->tokens.size() * 1.33);
+  tokens_generated.reserve(size_t(float(CU.file_info.tokens->tokens.size()) * 1.33));
 }
 
 std::vector<metacode::ID>* metacode::Generator::get_children(metacode::ID id) const noexcept
@@ -29,8 +36,8 @@ std::vector<metacode::ID>* metacode::Generator::get_children(metacode::ID id) co
   return nullptr;
 }
 
-metacode::Metacode& metacode::Generator::get_child(const std::vector<metacode::ID>* children,
-                                                   size_t                           gen_count) const noexcept
+metacode::MetacodeHeader& metacode::Generator::get_child(const std::vector<metacode::ID>* children,
+                                                         size_t                           gen_count) const noexcept
 {
   assert(children);
   assert(gen_count < children->size());
@@ -119,9 +126,9 @@ void metacode::Generator::gen_tokens(const std::vector<token::ID>& toks) noexcep
   }
 }
 
-void metacode::Generator::gen_Metacode(metacode::Metacode& m) noexcept
+void metacode::Generator::gen_Metacode(metacode::MetacodeHeader& m) noexcept
 {
-  switch (m.kind()) {
+  switch (m.kind) {
   case EMetacodeKind::Root:      gen_Root(*CU.metacodes->as<metacode::Root>(m.metaid)); break;
   case EMetacodeKind::Metablock: gen_Metablock(*CU.metacodes->as<metacode::Metablock>(m.metaid)); break;
   case EMetacodeKind::If:        gen_If(*CU.metacodes->as<metacode::If>(m.metaid)); break;
@@ -133,8 +140,8 @@ void metacode::Generator::gen_Root(metacode::Root& m) noexcept
 {
   size_t child_gen_count = 0;
 
-  current_metacode = &m;
-  gen_tokens(m.tokens_to_generate);
+  current_metacode = &m.header;
+  gen_tokens(m.header.tokens_to_generate);
   current_metacode = nullptr;
 }
 void metacode::Generator::gen_Metablock(metacode::Metablock& m) noexcept
@@ -143,10 +150,10 @@ void metacode::Generator::gen_Metablock(metacode::Metablock& m) noexcept
 void metacode::Generator::gen_If(metacode::If& m) noexcept
 {
   auto* old_metacode = current_metacode;
-  current_metacode   = &m;
+  current_metacode   = &m.header;
 
   if (m.is_else || eval_cond(m.condition))
-    gen_tokens(m.tokens_to_generate);
+    gen_tokens(m.header.tokens_to_generate);
   else if (m.alternative)
     gen_Metacode(CU.metacodes->get(m.alternative));
 
@@ -157,7 +164,7 @@ void metacode::Generator::gen_Expand(metacode::Expand& m) noexcept
   size_t child_gen_count = 0;
 
   auto* old_current_metacode = current_metacode;
-  current_metacode           = &m;
+  current_metacode           = &m.header;
   auto* old_current_expand   = current_expand;
   current_expand             = &m;
 
@@ -179,7 +186,7 @@ void metacode::Generator::gen_Expand(metacode::Expand& m) noexcept
       r /= bases[j];
     }
 
-    metacode::Env env;
+    std::vector<token::ID> env;
     env.reserve(m.placeholders.size());
     for (size_t j = 0; j < m.placeholders.size(); j++) {
       const auto& ph = m.placeholders[j];
@@ -189,7 +196,7 @@ void metacode::Generator::gen_Expand(metacode::Expand& m) noexcept
 
     current_placeholder_env = env;
 
-    gen_tokens(m.tokens_to_generate);
+    gen_tokens(m.header.tokens_to_generate);
   }
 
 
@@ -200,7 +207,7 @@ void metacode::Generator::gen_Expand(metacode::Expand& m) noexcept
 bool metacode::Generator::eval_cond(metacode::ID id) noexcept
 {
   auto& c = CU.metacodes->get(id);
-  switch (c.kind()) {
+  switch (c.kind) {
   case EMetacodeKind::Binary_Cond:         return eval_binary(*CU.metacodes->as<metacode::Binary_Cond>(c.metaid));
   case EMetacodeKind::Unary_Not_Cond:      return eval_not_unary(*CU.metacodes->as<metacode::Unary_Not_Cond>(c.metaid));
   case metacode::EMetacodeKind::Cond_expr: {
@@ -265,7 +272,9 @@ std::string metacode::Generator::eval_expr(metacode::ID id) noexcept
   auto& prepro_args = OPTIONS.PREPROCESSOR_ARGS;
   auto  str         = std::string(CU.file_info.tokens->audit.Token_to_str(expr->val));
 
-  if (auto it = prepro_args.find(str); it != prepro_args.end()) {
+  if (auto it = std::ranges::find_if(
+          prepro_args, [&](const std::pair<std::string, std::string>& pair) { return pair.first == str; });
+      it != prepro_args.end()) {
     return it->second;
   }
 

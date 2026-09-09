@@ -1,10 +1,12 @@
 #pragma once
 
+#include "id/metaid.hpp"
+#include "lexer/pool.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
-#include "pool/token.hpp"
 
-#include <string_view>
+#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 
@@ -23,15 +25,15 @@ struct Generator final {
   void normalize_tokens_generated_ids() noexcept;
 
 
-  [[nodiscard]] std::vector<ID>*    get_children(metacode::ID id) const noexcept;
-  [[nodiscard]] metacode::Metacode& get_child(const std::vector<metacode::ID>* children,
-                                              size_t                           gen_count) const noexcept;
+  [[nodiscard]] std::vector<ID>*          get_children(metacode::ID id) const noexcept;
+  [[nodiscard]] metacode::MetacodeHeader& get_child(const std::vector<metacode::ID>* children,
+                                                    size_t                           gen_count) const noexcept;
 
   void add_token(token::Token& tok) noexcept;
 
   void gen_tokens(const std::vector<token::ID>& toks) noexcept;
 
-  void gen_Metacode(metacode::Metacode& m) noexcept;
+  void gen_Metacode(metacode::MetacodeHeader& m) noexcept;
 
   void gen_Root(metacode::Root& m) noexcept;
   void gen_Metablock(metacode::Metablock& m) noexcept;
@@ -49,9 +51,9 @@ struct Generator final {
 
   std::vector<token::Token> tokens_generated;
 
-  metacode::Metacode* current_metacode = nullptr;
-  metacode::Expand*   current_expand   = nullptr;
-  metacode::Env       current_placeholder_env;
+  metacode::MetacodeHeader* current_metacode = nullptr;
+  metacode::Expand*         current_expand   = nullptr;
+  std::vector<token::ID>    current_placeholder_env;
 };
 
 } // namespace metacode

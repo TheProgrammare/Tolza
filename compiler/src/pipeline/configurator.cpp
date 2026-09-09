@@ -6,6 +6,9 @@
 #include <common/compiler_options.hpp>
 #include <common/fileutils.hpp>
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace fs = std::filesystem;
 

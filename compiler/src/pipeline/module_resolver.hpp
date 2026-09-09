@@ -1,8 +1,11 @@
 #pragma once
 
-#include "nexus/ids.hpp"
+#include "id/cuid.hpp"
 
+#include <string>
+#include <string_view>
 #include <unordered_set>
+#include <vector>
 
 namespace module_resolver
 {

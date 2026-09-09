@@ -1,2 +1,9 @@
 CompileFlags:
   CompilationDatabase: build/debug
+
+Diagnostics:
+  UnusedIncludes: Strict
+  MissingIncludes: Strict
+
+  Includes:
+    AnalyzeAngledIncludes: true

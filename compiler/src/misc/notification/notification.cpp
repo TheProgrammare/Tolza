@@ -1,10 +1,12 @@
 #include "notification.hpp"
 
-#include "common/compiler_options.hpp"
 #include "compiler/compiler.hpp"
 
+#include <common/compiler_options.hpp>
+#include <cstdlib>
 #include <format>
 #include <string>
+#include <string_view>
 
 #ifdef _WIN32
 

@@ -2,11 +2,17 @@
 
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
+#include "id/cuid.hpp"
+#include "id/tokid.hpp"
+#include "lexer/data.hpp"
+#include "lexer/pool.hpp"
 #include "misc/error_output.hpp"
-#include "nexus/ids.hpp"
-#include "pool/token.hpp"
 
 #include <cstddef>
+#include <initializer_list>
+#include <string>
+#include <string_view>
 
 
 token::Viewer::Viewer(cu::CU& p_CU)
@@ -67,11 +73,6 @@ void token::Viewer::jump(size_t newPosition) noexcept
   } else {
     current = tokens.size() - 1;
   }
-
-#ifdef DEBUG
-  current_str   = tokens[current].debug_val;
-  current_token = tokens[current].kind;
-#endif
 }
 
 token::Token& token::Viewer::next() noexcept
@@ -82,10 +83,6 @@ token::Token& token::Viewer::next() noexcept
     auto& pre_tok = tokens[current];
     current++;
     auto& post_tok = tokens[current];
-#ifdef DEBUG
-    current_str   = post_tok.debug_val;
-    current_token = post_tok.kind;
-#endif
     return pre_tok;
   }
   return tokens.back();
@@ -267,10 +264,6 @@ void token::Viewer::rewind(size_t pos) noexcept
 
   if (pos >= tokens.size()) pos = tokens.size() - 1;
   current = pos;
-#ifdef DEBUG
-  current_str   = tokens[pos].debug_val;
-  current_token = tokens[pos].kind;
-#endif
 }
 
 const token::Token& token::Viewer::get(size_t pos) const noexcept

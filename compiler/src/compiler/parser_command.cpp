@@ -1,23 +1,28 @@
-#include "parser_command.hpp"
+#include "compiler/parser_command.hpp"
 
-#include "binder/ffi_c_reader.hpp"
-#include "binder/ffi_json_reader.hpp"
+#include "common/commands.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
+#include "ffi/c_reader.hpp"
+#include "ffi/json_reader.hpp"
 #include "pipeline/configurator.hpp"
+#include "pipeline/pipeline.hpp"
 
 #include <CLIUtils/CLI11.hpp>
-#include <Neargye/magic_enum.hpp>
-#include <common/common.hpp>
 #include <common/compiler_options.hpp>
 #include <common/environment.hpp>
 #include <common/fileutils.hpp>
+#include <cstdlib>
 #include <filesystem>
 #include <print>
 #include <string>
 
 namespace fs = std::filesystem;
 
+
+pipeline::Pipeline         PIPELINE = pipeline::Pipeline();
+compiler::Compiler         COMPILER = compiler::Compiler();
+common::compiler::Manifest OPTIONS  = common::compiler::Manifest();
 
 compiler::Commander::Commander(CLI::App& _app, int argc, const char* argv[])
   : common::Commander(_app, argc, argv)

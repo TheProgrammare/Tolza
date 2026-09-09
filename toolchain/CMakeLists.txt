@@ -50,6 +50,13 @@ add_subdirectory(../common tolza-common)
 
 add_executable(tolza ${TOLZA_SOURCES})
 
+
+target_precompile_headers(tolza
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/pch.hpp"
+)
+
+
 # version
 string(TIMESTAMP SOFTWARE_VERSION "%Y-%m-%d")
 string(TIMESTAMP TOLZA_VERSION "%Y-%m")

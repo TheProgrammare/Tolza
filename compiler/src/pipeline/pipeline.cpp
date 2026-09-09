@@ -1,28 +1,30 @@
 #include "pipeline.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <chrono>
-#include <common/common.hpp>
 #include <common/compiler_options.hpp>
 #include <common/fileutils.hpp>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <memory>
-#include <print>
+#include <iterator>
+#include <ratio>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
 
 // Project headers
-#include "binder/ffi_c_reader.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
 #include "compiler/io.hpp"
+#include "ffi/c_reader.hpp"
+#include "id/cuid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 #include "pipeline/preparer.hpp"
 
 namespace fs = std::filesystem;
@@ -44,14 +46,14 @@ inline double timing(const std::function<void()>& f) noexcept
 
 pipeline::Pipeline::Pipeline()
 {
-  auto root_cu         = std::make_unique<cu::CU>();
+  auto* root_cu        = new cu::CU();
   root_cu->status.root = true;
 
-  compilation_units.emplace_back(std::move(root_cu));
+  compilation_units.emplace_back(root_cu);
 }
 
 
-std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept
+cu::CU* pipeline::Pipeline::build_CU_from_path(cu::ID parent_cuid, std::string_view path) noexcept
 {
   assert(common::fileutils::is_tolza_file(path));
 
@@ -78,10 +80,10 @@ std::unique_ptr<cu::CU> pipeline::Pipeline::build_CU_from_path(cu::ID parent_cui
         common::fileutils::is_sub_path(common::fileutils::get_temp_dir(), path)
             ? common::fileutils::overlay_to_real_path(path, OPTIONS.dir.overlay, OPTIONS.project_path)
             : std::string(path);
-    return std::make_unique<cu::CU>(parent_cuid, cuid, file_path, data, last_offset_line);
+    return new cu::CU(parent_cuid, cuid, file_path, data, last_offset_line);
   }
 
-  return std::make_unique<cu::CU>(parent_cuid, cuid, path, data, last_offset_line);
+  return new cu::CU(parent_cuid, cuid, path, data, last_offset_line);
 }
 
 std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std::string_view path) noexcept
@@ -109,11 +111,11 @@ std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std
         continue;
       }
 
-      auto cu   = build_CU_from_path(parent_cuid, file);
-      auto cuid = cu->cuid;
+      auto* cu   = build_CU_from_path(parent_cuid, file);
+      auto  cuid = cu->cuid;
 
       compilation_units_ids.emplace_back(cuid);
-      compilation_units.emplace_back(std::move(cu));
+      compilation_units.emplace_back(cu);
 
       path_generated.try_emplace(file, cuid);
 
@@ -133,11 +135,11 @@ std::vector<cu::ID> pipeline::Pipeline::query_CUs_at_dir(cu::ID parent_cuid, std
       continue;
     }
 
-    auto cu   = build_CU_from_path(parent_cuid, file);
-    auto cuid = cu->cuid;
+    auto* cu   = build_CU_from_path(parent_cuid, file);
+    auto  cuid = cu->cuid;
 
     compilation_units_ids.emplace_back(cuid);
-    compilation_units.emplace_back(std::move(cu));
+    compilation_units.emplace_back(cu);
 
     path_generated.try_emplace(file, cuid);
 
@@ -167,10 +169,10 @@ cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view
       return it->second;
     }
 
-    auto cu     = build_CU_from_path(parent_cuid, file_path.string());
-    auto new_id = cu->cuid;
+    auto* cu     = build_CU_from_path(parent_cuid, file_path.string());
+    auto  new_id = cu->cuid;
 
-    compilation_units.emplace_back(std::move(cu));
+    compilation_units.emplace_back(cu);
     path_generated.try_emplace(file_path.string(), new_id);
 
     return new_id;
@@ -180,10 +182,10 @@ cu::ID pipeline::Pipeline::query_CU_at_path(cu::ID parent_cuid, std::string_view
     return it->second;
   }
 
-  auto cu     = build_CU_from_path(parent_cuid, file_path.string());
-  auto new_id = cu->cuid;
+  auto* cu     = build_CU_from_path(parent_cuid, file_path.string());
+  auto  new_id = cu->cuid;
 
-  compilation_units.emplace_back(std::move(cu));
+  compilation_units.emplace_back(cu);
   path_generated.try_emplace(file_path.string(), new_id);
 
   return new_id;

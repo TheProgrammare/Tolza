@@ -1,50 +1,11 @@
 #pragma once
 
-#include "ids.hpp"
-
+#include <common/enum_lite.hpp>
 #include <cstdint>
-#include <string>
 #include <string_view>
-#include <unordered_map>
-#include <vector>
 
 using ErrorCode = short;
-enum class EVisibility : uint8_t { Lexical_Scope, File_Scope, Cross_File_Scope };
-enum class ECallContract : uint8_t { Static, Assert, Result, Panic };
 
-struct StringHash {
-  using is_transparent = void;
-
-  size_t operator()(std::string_view s) const noexcept
-  {
-    return std::hash<std::string_view>{}(s);
-  }
-
-  size_t operator()(const std::string& s) const noexcept
-  {
-    return (*this)(std::string_view{s});
-  }
-
-  size_t operator()(const char* s) const noexcept
-  {
-    return (*this)(s);
-  }
-};
-
-template <typename T>
-using StringMap = std::unordered_map<std::string, T, StringHash, std::equal_to<>>;
-
-
-enum class EPathAnchor : uint8_t {
-  src,            // user scripts
-  vendor_lib,     // 3rd party scripts
-  stdlib,         // standard library
-  pkg_lib,        // package library
-  binding,        // binding library
-  relative_self,  // relative current module
-  relative_super, // relative parent module
-  relative_root,  // relative script root module
-};
 
 namespace evaluated
 {
@@ -65,6 +26,7 @@ struct Profile;
 
 namespace scope
 {
+class ID;
 struct Scope;
 struct Graph;
 } // namespace scope
@@ -93,7 +55,7 @@ namespace token
 {
 
 enum class ETokenKind : uint8_t;
-
+class ID;
 struct Arena;
 struct Viewer;
 struct Token;
@@ -112,7 +74,11 @@ enum class EOp_Other : uint8_t;
 enum class EExprPassMode : uint8_t;
 enum class EVariableKind : uint8_t;
 enum class ETransfertType : uint8_t;
+enum class ECallContract : uint8_t;
+enum class EVisibility : uint8_t;
+enum class EPathAnchor : uint8_t;
 
+class ID;
 struct Arena;
 struct NodeHeader;
 
@@ -128,19 +94,14 @@ namespace type
 enum class ETextType : uint8_t;
 enum class EPrimitiveTypeKind : uint8_t;
 enum class ETypeKind : uint8_t;
+
+class ID;
 struct Arena;
 struct Qualifier;
 struct TypeHeader;
 
 
-struct Prototype_Param final {
-  ast::EPassMode passmode;
-  ID             type;
-  ast::ID        nodeid;
-  bool           is_restrict = false;
-
-  auto operator<=>(const Prototype_Param&) const = default;
-};
+struct Prototype_Param;
 
 
 struct Qualifier final {
@@ -169,7 +130,7 @@ struct Arena;
 
 namespace definition
 {
-
+class ID;
 struct Arena;
 struct Symbol;
 } // namespace definition
@@ -177,11 +138,14 @@ struct Symbol;
 namespace cu
 {
 enum class EFileSource : uint8_t;
+
+class ID;
 struct CU;
 } // namespace cu
 
 namespace module
 {
+class ID;
 struct Module;
 struct Graph;
 } // namespace module
@@ -215,9 +179,10 @@ struct Arena;
 
 namespace metacode
 {
+class ID;
 struct Graph;
 struct Preprocessor;
-struct Metacode;
+struct MetacodeHeader;
 struct Root;
 struct Expand;
 struct If;
@@ -225,7 +190,6 @@ struct Instruction;
 struct Metablock;
 struct Binary_Cond;
 struct Unary_Not_Cond;
-using Env = std::vector<token::ID>;
 
 } // namespace metacode
 
@@ -237,7 +201,6 @@ struct Parser_Type;
 struct Parser_Literal;
 struct Parser_Declaration_Local;
 struct Parser_Operator;
-struct Parser_Memory;
 struct Parser_Declaration;
 struct Parser_Declaration_SFM;
 struct Parser_Statement;
@@ -247,31 +210,14 @@ struct Parser_Context;
 
 namespace semantic
 {
-enum class EBuiltin_Member : uint8_t {
-  NONE,
-  _data,
-  _len,
-  _capa,
-};
+DEFINE_ENUM(EBuiltin_Member, uint8_t, //
+            _data, 1,                 //
+            _len, 2,                  //
+            _capa, 3,                 //
 
+)
+
+class ID;
 struct Arena;
 struct Metadata;
 } // namespace semantic
-
-
-// llvm convention (dot separation)
-// hello -> hello
-static std::string mangle_id(std::string_view id)
-{
-  return std::string(id);
-}
-
-// llvm convention (dot separation)
-// { hello, world } -> hello.world
-static std::string mangle_path(const std::vector<std::string_view>& ids)
-{
-  std::string out;
-  out.reserve(ids.size() * 12);
-  for (auto elem : ids) std::format_to(std::back_inserter(out), "{}.", elem);
-  return out.substr(0, out.size() - 1);
-}

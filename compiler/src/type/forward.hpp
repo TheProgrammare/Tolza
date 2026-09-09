@@ -20,5 +20,6 @@ struct Enum;
 struct Flag;
 struct Union;
 struct Identifier;
+struct Range;
 
 } // namespace type

@@ -1,10 +1,12 @@
 #pragma once
 
+#include "id/nodeid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -26,56 +28,15 @@ namespace cu
 {
 
 enum class EFileSource : uint8_t {
-  src,        // user scripts
-  vendor_lib, // 3rd party scripts
-  stdlib,     // standard library
-  pkg_lib,    // package library
-  binding,    // binding library
-  relative,   // relative script
+  src,    // user scripts
+  vendor, // 3rd party scripts
+  std,    // standard library
+  pkg,    // package library
+  bind,   // binding library
+  self,   // relative script
 };
 
-[[nodiscard]] EFileSource      file_path_to_EFileSource(std::string_view file);
-[[nodiscard]] std::string      EFileSource_to_dir(EFileSource p_file_source);
-[[nodiscard]] std::string_view EFileSource_to_str(EFileSource p_file_source);
-
-[[nodiscard]] std::string normalize_tolza_script_path(std::string_view path);
-[[nodiscard]] std::string file_path_to_str(const std::vector<std::string>& path, EFileSource p_file_source);
-
-struct FileInfo {
-  explicit FileInfo() = default;
-
-  explicit FileInfo(cu::ID _cuid, std::string_view path, const std::string& _data,
-                    const std::vector<size_t>& _last_offset_line);
-
-  FileInfo(const FileInfo&)            = delete;
-  FileInfo& operator=(const FileInfo&) = delete;
-
-  const ID                  cuid;
-  const EFileSource         source = EFileSource::src;
-  const std::string         path;
-  const std::string         data;
-  const std::vector<size_t> line_end_offset;
-  token::Arena* const       tokens     = nullptr;
-  const bool                is_mod_dir = false;
-  const bool                is_barrel  = false;
-  const bool                is_dirty   = false;
-
-  [[nodiscard]] std::string get_module_name() const;
-  [[nodiscard]] std::string get_module_path() const;
-  [[nodiscard]] std::string get_file_name() const;
-  [[nodiscard]] std::string get_file_extension() const;
-
-  [[nodiscard]] size_t           get_line_from_pos(size_t pos) const;
-  [[nodiscard]] size_t           get_column_from_pos(size_t pos) const;
-  // start at 0
-  [[nodiscard]] std::string_view get_line(size_t line) const;
-  // start at 0
-  [[nodiscard]] size_t           get_line_end(size_t line) const;
-  // start at 0
-  [[nodiscard]] size_t           get_line_start(size_t line) const;
-  // start at 0
-  [[nodiscard]] size_t           get_line_size(size_t line) const;
-};
+struct FileInfo;
 
 struct CU {
   CU();
@@ -103,9 +64,9 @@ struct CU {
 
 
   // base
-  const ID       cuid;
-  const ID       parent_cuid;
-  const FileInfo file_info;
+  const ID  cuid;
+  const ID  parent_cuid;
+  FileInfo& file_info;
 
   // local pools
   metacode::Graph*   metacodes       = nullptr; // preprocessor pass
@@ -135,7 +96,5 @@ struct TEMP_CU : public CU {
   size_t temp_cu_offset;
 };
 
-[[nodiscard]] module::ID resolve_regex_path(module::ID ctx, const std::vector<std::string>& path,
-                                            EFileSource src) noexcept;
 
 } // namespace cu

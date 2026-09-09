@@ -1,16 +1,19 @@
 #include "pipeline/resolver.hpp"
 
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
 #include "compiler/io.hpp"
+#include "id/cuid.hpp"
 #include "pipeline/pipeline.hpp"
-#include "resolver/resolver_eval.hpp"
-#include "resolver/resolver_inference.hpp"
-#include "resolver/resolver_semantic.hpp"
-#include "resolver/resolver_symbol.hpp"
+#include "resolver/eval.hpp"
+#include "resolver/inference.hpp"
+#include "resolver/semantic.hpp"
+#include "resolver/symbol.hpp"
 
 #include <chrono>
-#include <common/compiler_options.hpp>
-#include <print>
+#include <cstddef>
+#include <functional>
+#include <ratio>
 
 
 inline double timing(const std::function<void()>& f) noexcept

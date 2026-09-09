@@ -1,45 +1,38 @@
 #include "pipeline/linker.hpp"
 
 #include "compiler/compilation_unit.hpp"
+#include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
 #include "compiler/io.hpp"
+#include "id/cuid.hpp"
 #include "pipeline/pipeline.hpp"
 
+#include <cassert>
 #include <common/compiler_options.hpp>
+#include <common/environment.hpp>
+#include <cstddef>
+#include <cstdlib>
 #include <filesystem>
+#include <format>
+#include <llvm-19/llvm/ADT/StringRef.h>
+#include <llvm-19/llvm/IR/LLVMContext.h>
+#include <llvm-19/llvm/IR/LegacyPassManager.h>
+#include <llvm-19/llvm/IR/Module.h>
+#include <llvm-19/llvm/IR/PassManager.h>
+#include <llvm-19/llvm/IR/Verifier.h>
+#include <llvm-19/llvm/Linker/Linker.h>
+#include <llvm-19/llvm/MC/TargetRegistry.h>
+#include <llvm-19/llvm/Passes/PassBuilder.h>
+#include <llvm-19/llvm/Support/CodeGen.h>
+#include <llvm-19/llvm/Support/FileSystem.h>
+#include <llvm-19/llvm/Support/raw_ostream.h>
+#include <llvm-19/llvm/Target/TargetMachine.h>
+#include <llvm-19/llvm/TargetParser/Host.h>
+#include <memory>
 #include <print>
-
-
-// LLVM core
-#include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/PassManager.h>
-#include <llvm/IR/Verifier.h>
-
-// Passes / pipeline
-#include <llvm/Passes/OptimizationLevel.h>
-#include <llvm/Passes/PassBuilder.h>
-
-// Target / codegen
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/TargetParser/Host.h>
-
-// Backend init
-#include <llvm/Support/CommandLine.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Program.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/raw_ostream.h>
-
-// Analysis managers
-#include <llvm/Analysis/LoopAnalysisManager.h>
-
-// Linking / IR tools
-#include <llvm/Linker/Linker.h>
+#include <string>
+#include <system_error>
+#include <utility>
 
 namespace fs = std::filesystem;
 
@@ -81,7 +74,7 @@ bool linker::link_modules() noexcept
 
 bool linker::link_executable() noexcept
 {
-  std::string extension = OPTIONS.target.triple.platform == common::env::EPlatform::windows ? ".exe" : "";
+  std::string extension = OPTIONS.target.triple.platform == common::env::EPlatform::_windows ? ".exe" : "";
 
   fs::create_directories(OPTIONS.get_dir_build_profile());
 

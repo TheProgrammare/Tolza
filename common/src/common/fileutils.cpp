@@ -1,13 +1,19 @@
 #include "fileutils.hpp"
 
-#include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <print>
-#include <format>
-
 #include "common.hpp"
 #include "time.hpp"
+
+#include <cassert>
+#include <cstdlib>
+#include <filesystem>
+#include <format>
+#include <fstream>
+#include <print>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <system_error>
 
 namespace fs = std::filesystem;
 

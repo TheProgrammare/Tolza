@@ -1,0 +1,434 @@
+#include "ffi/json_reader.hpp"
+
+#include "ast/data.hpp"
+#include "ast/forward.hpp"
+#include "ast/node/declaration_global.hpp"
+#include "ast/node/declaration_local.hpp"
+#include "ast/node/declaration_sfm.hpp"
+#include "ast/node/literal.hpp"
+#include "ast/pool.hpp"
+#include "common/environment.hpp"
+#include "id/base.hpp"
+#include "id/nodeid.hpp"
+#include "id/typeid.hpp"
+#include "nexus/forward.hpp"
+#include "type/data.hpp"
+#include "type/pool.hpp"
+#include "type/type.hpp"
+
+#include <common/common.hpp>
+#include <common/utils.hpp>
+#include <cstddef>
+#include <filesystem>
+#include <format>
+#include <fstream>
+#include <functional>
+#include <nlohmann/json.hpp>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace fs = std::filesystem;
+
+
+ffi::JSON_Reader::JSON_Reader()
+  : current_ast(std::make_unique<ffi::AST>())
+  , current_cu(*current_ast->temp_cu)
+{
+}
+
+
+type::ID ffi::JSON_Reader::to_type(const json& j) noexcept
+{
+  const bool is_forward_id = !j.contains("kind") && j.contains("name");
+
+  type::Qualifier dec;
+  if (j.contains("qualifier")) {
+    std::stringstream        ss(j.value("qualifier", ""));
+    std::string              elem;
+    std::vector<std::string> elems;
+    elems.reserve(3);
+
+    while (std::getline(ss, elem, ',')) {
+      elems.emplace_back(elem);
+    }
+
+    for (const auto& s : elems) {
+      if (s == "const")
+        dec.is_constant = true;
+      else if (s == "volatile")
+        dec.is_volatile = true;
+      else if (s == "optional")
+        dec.is_optional = true;
+    }
+  }
+
+  if (is_forward_id) {
+    auto name = j.value("name", "");
+
+    if (!common::utils::is_valid_identifier(name))
+      common::FATAL_ERROR("Expected valid identifier ([a-zA-Z_][a-zA-Z0-9_]*) path separation possible '::'");
+
+    return current_cu.types->factory.make_forward_identifier(name);
+  }
+
+
+  type::ETypeKind kind = type::ETypeKind_from_str(j.value("kind", "NONE"));
+
+  auto data = j.value("data", json::object());
+
+  if (kind == type::ETypeKind::NONE) switch (kind) {
+    case type::ETypeKind::NONE: {
+      common::FATAL_ERROR(std::format("Invalid type kind specified ({})", type::ETypeKind_to_str(kind)));
+      return NO_ID;
+    }
+    case type::ETypeKind::Primitive: {
+      expect_field(data, "primitive");
+      auto txt = data.value("primitive", "NONE");
+      txt      = "_" + txt;
+
+      type::EPrimitiveTypeKind primty = type::EPrimitiveTypeKind_from_str(txt);
+      if (primty == type::EPrimitiveTypeKind::NONE)
+        common::FATAL_ERROR(std::format("Invalid primitive type specified ({})", txt.substr(1)));
+      return current_cu.types->factory.make_primitive(primty, dec);
+    }
+    case type::ETypeKind::String: {
+      expect_field(data, "kind");
+      auto txt = data.value("kind", "NONE");
+      txt      = "_" + txt;
+
+      type::ETextType strty = type::ETextType_from_str(txt);
+      if (strty == type::ETextType::NONE)
+        common::FATAL_ERROR(std::format("Invalid textual kind specified ({})", txt.substr(1)));
+      return current_cu.types->factory.make_string(strty, dec);
+    }
+    case type::ETypeKind::Tuple: {
+      std::vector<type::ID> types;
+      expect_field(data, "elements");
+      auto elems = data.value("elements", json::array());
+      types.reserve(elems.size());
+      for (const auto& elem : elems) types.emplace_back(to_type(elem));
+
+      return current_cu.types->factory.make_tuple(types, dec);
+    }
+    case type::ETypeKind::Array: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      expect_field(data, "size");
+      size_t size = data.value("size", 0);
+      if (size <= 0) common::FATAL_ERROR(std::format("Illegal size specified ({}) <= 0", size));
+
+      return current_cu.types->factory.make_static_array(inner, size, NO_ID, dec);
+    }
+    case type::ETypeKind::Buffer: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      return current_cu.types->factory.make_dynamic_array(inner, dec);
+    }
+    case type::ETypeKind::Slice: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      return current_cu.types->factory.make_slice(inner, dec);
+    }
+    case type::ETypeKind::Ptr: {
+      expect_field(data, "inner");
+      auto inner = to_type(data.value("inner", json::object()));
+
+      return current_cu.types->factory.make_ptr(inner, dec);
+    }
+
+    case type::ETypeKind::Prototype: {
+      using Param = type::Prototype_Param;
+
+      type::ID ret_type = type::TYPEID_u0;
+      if (data.contains("ret_type")) ret_type = to_type(data.value("ret_type", json::object()));
+
+      bool is_variadic = data.value("is_variadic", false);
+
+      std::vector<Param> params;
+      if (data.contains("params")) {
+        auto data_params = data.value("params", json::array());
+        params.reserve(data_params.size());
+
+        for (const auto& param : data_params) {
+          expect_field(param, "pass_mode");
+          expect_field(param, "type");
+
+          Param p{
+              .passmode    = ast::EPassMode_from_str(param.value("pass_mode", "")),
+              .type        = to_type(param.value("type", json::object())),
+              .is_restrict = param.value("is_restrict", false),
+          };
+
+          params.emplace_back(p);
+        }
+      }
+
+      return current_cu.types->factory.make_prototype(params, ret_type, is_variadic);
+    }
+    case type::ETypeKind::Identifier: {
+      expect_field(data, "name");
+      auto name = data.value("name", "");
+      if (!common::utils::is_valid_identifier(name, true))
+        common::FATAL_ERROR("Expected valid identifier ([a-zA-Z_][a-zA-Z0-9_]*) path separation possible '::'");
+
+      return current_cu.types->factory.make_forward_identifier(name, dec);
+    }
+    default: {
+      common::FATAL_ERROR(std::format("Invalid type kind specified ({})", type::ETypeKind_to_str(kind)));
+    }
+    }
+
+  return NO_ID;
+}
+
+void ffi::JSON_Reader::expect_field(const json& j, std::string_view field_name) noexcept
+{
+  if (!j.contains(field_name))
+    common::FATAL_ERROR("Expected valid identifier ([a-zA-Z_][a-zA-Z0-9_]*) path separation possible '::'");
+}
+
+
+ast::ID ffi::JSON_Reader::to_func(const json& j, std::string_view j_name) noexcept
+{
+  auto& n = current_cu.ast->add_get<ast::Global_Function>();
+  n.name  = j_name;
+
+  expect_field(j, "param_names");
+  expect_field(j, "prototype");
+  expect_field(j, "call_convention");
+
+  if (common::utils::is_valid_identifier(n.name))
+    common::FATAL_ERROR(std::format("Expected valid identifier ({})", n.name));
+  n.call_convention = common::env::ECallConvention_from_str(j.value("call_convention", ""));
+  n.prototype       = to_type(j.value("prototype", json::object()));
+
+  auto        j_param_names = j.value("param_names", json::array());
+  const auto* proto_ty      = n.prototype.as<type::Prototype>();
+
+  if (proto_ty->params.size() != j_param_names.size())
+    common::FATAL_ERROR(
+        std::format("Unexpected prototype parameter count ({}) not equals to function parameter names count ({})",
+                    proto_ty->params.size(), j_param_names.size()));
+  for (size_t i = 0; i < j_param_names.size(); i++) {
+    const auto& proto_param = proto_ty->params[i];
+    const auto& param_name  = j_param_names[i];
+
+    auto& param_n       = current_cu.ast->add_get<ast::Local_Parameter>();
+    param_n.name        = param_name;
+    param_n.passmode    = proto_param.passmode;
+    param_n.type        = proto_param.type;
+    param_n.is_restrict = proto_param.is_restrict;
+
+    n.parameters.emplace_back(param_n.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_flag(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "fields");
+
+  auto& n = current_cu.ast->add_get<ast::Global_Flag>();
+  n.name  = j_name;
+
+  n.underlying_type = type::ID::make(
+      cu::ID::make(-1), static_cast<size_t>(type::EPrimitiveTypeKind_from_str(j.value("underlying_type", "usize"))));
+
+  auto fields = j.value("fields", json::array());
+  n.flags.reserve(fields.size());
+
+  for (const auto& field : decltype(fields)::array()) {
+    auto& f = current_cu.ast->add_get<ast::Flag_Field>();
+    f.name  = field.get<std::string>();
+    if (f.name.empty()) common::FATAL_ERROR("Expected field name");
+
+    n.flags.emplace_back(f.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_union(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "fields");
+
+  auto& n = current_cu.ast->add_get<ast::Global_Union>();
+  n.name  = j_name;
+
+  auto fields = j.value("fields", json::object());
+  n.variants.reserve(fields.size());
+
+  for (auto it = fields.begin(); it != fields.end(); ++it) {
+    const auto& name = it.key();
+    const auto& data = it.value();
+
+    expect_field(data, "type");
+
+    auto& f = current_cu.ast->add_get<ast::Union_Field>();
+    f.name  = name;
+    if (f.name.empty()) common::FATAL_ERROR("Expected field name");
+
+    f.type = to_type(data.value("type", json::object()));
+
+    n.variants.emplace_back(f.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_enum(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "fields");
+
+  auto& n = current_cu.ast->add_get<ast::Global_Enum>();
+  n.name  = j_name;
+
+  auto fields = j.value("fields", json::object());
+  n.variants.reserve(fields.size());
+
+  for (auto it = fields.begin(); it != fields.end(); ++it) {
+    const auto& name = it.key();
+    const auto& data = it.value();
+
+    expect_field(data, "type");
+
+    auto& f = current_cu.ast->add_get<ast::Enum_Field>();
+    f.name  = name;
+    if (f.name.empty()) common::FATAL_ERROR("Expected field name");
+
+    f.type = to_type(data.value("type", json::object()));
+
+    n.variants.emplace_back(f.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_facet(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "fields");
+
+  auto& n = current_cu.ast->add_get<ast::SFM_Facet>();
+  n.name  = j_name;
+
+  auto fields = j.value("fields", json::object());
+  for (auto it = fields.begin(); it != fields.end(); ++it) {
+    const auto& name = it.key();
+    const auto& data = it.value();
+
+    expect_field(data, "kind");
+    expect_field(data, "type");
+
+    auto& f = current_cu.ast->add_get<ast::SFM_Facet_Field>();
+    f.name  = name;
+
+    f.type       = to_type(data.value("type", json::object()));
+    f.capability = ast::ECapability_from_str(data.value("kind", "NONE"));
+    if (f.capability == ast::ECapability::NONE)
+      common::FATAL_ERROR(std::format("Illegal capability kind specified ({}), expected `ref`, `mut` or `var`",
+                                      data.value("kind", "NONE")));
+
+    n.fields.emplace_back(f.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_form(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "facets");
+
+  auto& n = current_cu.ast->add_get<ast::SFM_Form>();
+  n.name  = j_name;
+
+  auto facets = j.value("facets", json::object());
+  for (const auto& facet : decltype(facets)::array()) {
+    const auto& f    = current_cu.ast->add_get<ast::Literal_Record>();
+    auto&       name = current_cu.ast->add_get<ast::Symbol_Id>();
+    name.name        = facet.get<std::string>();
+
+    n.facets.emplace_back(f.nodeid());
+  }
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_global(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "type");
+  expect_field(j, "is_const");
+
+  auto& n = current_cu.ast->add_get<ast::Global_Variable>();
+  n.name  = j_name;
+
+  n.type = to_type(j.value("type", json::object()));
+  n.kind = j.value("is_const", false) ? ast::EVariableKind::_let : ast::EVariableKind::_var;
+
+  return n.nodeid();
+}
+
+ast::ID ffi::JSON_Reader::to_typealias(const json& j, std::string_view j_name) noexcept
+{
+  expect_field(j, "type");
+
+  auto& n = current_cu.ast->add_get<ast::Global_Alias_Type>();
+  n.alias = j_name;
+  n.type  = to_type(j.value("type", json::object()));
+
+  return n.nodeid();
+}
+
+std::unique_ptr<ffi::AST> ffi::JSON_Reader::parse_json_compilation_unit(std::string_view json_path) noexcept
+{
+  if (!fs::exists(json_path))
+    common::FATAL_ERROR(std::format("[ffi:JSON::ERROR] The file located at \"{}\" doesn't exists.", json_path));
+
+  std::ifstream f(json_path.data());
+  std::string   buf;
+  f >> buf;
+
+  json j(buf);
+
+  expect_field(j, "bind");
+  expect_field(j["bind"], "lang");
+  expect_field(j["bind"], "abi");
+  expect_field(j["bind"], "lib");
+  expect_field(j["bind"], "is_barrel");
+
+  ffi::JSON_Reader r;
+  r.current_ast->bind.lang = j["bind"].value("lang", "");
+  r.current_ast->bind.abi  = j["bind"].value("abi", "");
+  r.current_ast->bind.lib  = j["bind"].value("lib", "");
+
+
+  using TConvert = std::function<ast::ID(const json&, std::string_view s)>;
+
+  auto generate = [&](const TConvert& converter, std::string_view category) {
+    if (j.contains(category)) {
+      auto elems = j.value(category, json::object());
+      for (auto it = elems.begin(); it != elems.end(); ++it) {
+        const auto& name = it.key();
+        const auto& data = it.value();
+        converter(data, name);
+      }
+    }
+  };
+
+  generate([&](const json& j, std::string_view j_name) { return r.to_func(j, j_name); }, "functions");
+  generate([&](const json& j, std::string_view j_name) { return r.to_facet(j, j_name); }, "facets");
+  generate([&](const json& j, std::string_view j_name) { return r.to_global(j, j_name); }, "globals");
+  generate([&](const json& j, std::string_view j_name) { return r.to_enum(j, j_name); }, "enums");
+  generate([&](const json& j, std::string_view j_name) { return r.to_union(j, j_name); }, "unions");
+  generate([&](const json& j, std::string_view j_name) { return r.to_union(j, j_name); }, "flags");
+  generate([&](const json& j, std::string_view j_name) { return r.to_union(j, j_name); }, "entities");
+  generate([&](const json& j, std::string_view j_name) { return r.to_union(j, j_name); }, "typealiases");
+
+  return std::move(r.current_ast);
+}

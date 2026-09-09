@@ -1,23 +1,23 @@
 #include "compiler.hpp"
 
 #include "compiler/io.hpp"
+#include "id/cuid.hpp"
 #include "misc/error_output.hpp"
 #include "misc/notification/notification.hpp"
+#include "module/pool.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 #include "pipeline/codegen.hpp"
 #include "pipeline/linker.hpp"
 #include "pipeline/module_resolver.hpp"
 #include "pipeline/pipeline.hpp"
 #include "pipeline/preparer.hpp"
 #include "pipeline/resolver.hpp"
-#include "pool/link/evaluated.hpp"
-#include "pool/link/inference.hpp"
-#include "pool/link/resolved.hpp"
-#include "pool/link/semantic_metadata.hpp"
-#include "pool/module.hpp"
-#include "pool/type.hpp"
-#include "pool/unresolved.hpp"
+#include "pool/node_resolved.hpp"
+#include "pool/node_to_eval.hpp"
+#include "pool/node_to_inf.hpp"
+#include "pool/node_to_metadata.hpp"
+#include "pool/node_unresolved.hpp"
+#include "type/pool.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -27,15 +27,14 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <format>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Target/TargetMachine.h>
 #include <print>
+#include <ratio>
 #include <string>
+#include <vector>
 
-
-pipeline::Pipeline         PIPELINE = pipeline::Pipeline();
-compiler::Compiler         COMPILER = compiler::Compiler();
-common::compiler::Manifest OPTIONS  = common::compiler::Manifest();
 
 namespace fs = std::filesystem;
 
@@ -261,23 +260,5 @@ std::string compiler::Phase_to_code(EPhase phase)
   case EPhase::resolver_evaluation: return "EVAL";
   case EPhase::llvmir:              return "LLVM";
   case EPhase::linker:              return "LINK";
-  }
-}
-
-std::string compiler::Phase_to_str(EPhase phase)
-{
-  switch (phase) {
-  case EPhase::filesystem:          return "file rule";
-  case EPhase::lexer:               return "lexer";
-  case EPhase::preprosessor:        return "preprocessor";
-  case EPhase::parser:              return "parser";
-  case EPhase::binder:              return "external module binder";
-  case EPhase::shipowner:           return "shipowner";
-  case EPhase::resolver_symbol:     return "resolver symbol";
-  case EPhase::resolver_type:       return "resolver type";
-  case EPhase::resolver_semantic:   return "resolver semantic";
-  case EPhase::resolver_evaluation: return "resolver evaluation";
-  case EPhase::llvmir:              return "LLVM IR";
-  case EPhase::linker:              return "linker";
   }
 }

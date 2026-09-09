@@ -20,10 +20,12 @@
 #include "nexus/forward.hpp"
 #include "stream_tracker.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <set>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 

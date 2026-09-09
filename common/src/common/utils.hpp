@@ -1,26 +1,18 @@
 #pragma once
 
+#include "common/forward.hpp"
+
+#include <cstddef>
 #include <cstdint>
-#include <map>
+#include <initializer_list>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
-
-
-#define GET_ENUM_NAME(_enum)   std::string(magic_enum::enum_name(_enum))
-#define GET_FLAGS_NAME(_flags) std::string(magic_enum::enum_flags_name(_flags, '|'))
-
-
-#define STR_TO_ENUM(_input, _enum)                                                                                     \
-  magic_enum::enum_cast<_enum>(common::utils::str_to_snake(_input), magic_enum::case_insensitive)
-#define STR_TO_FLAGS(_input, _flags)                                                                                   \
-  magic_enum::enum_flags_cast<_flags>(common::utils::str_to_snake(_input), '|', magic_enum::case_insensitive)
-
 
 namespace common::utils
 {
 
-
-[[nodiscard]] std::vector<std::string> split_flags(std::string_view s, char separator = '|') noexcept;
 
 [[nodiscard]] bool is_valid_identifier(std::string_view s, bool path_possible = false) noexcept;
 
@@ -64,41 +56,20 @@ namespace common::utils
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 
-static std::string str_to_kebab(std::string_view s) noexcept
-{
-  std::string out;
-  out.reserve(s.size());
 
-  for (char c : s) {
-    if (c == '_')
-      out.push_back('-');
-    else
-      out.push_back(c);
-  }
-
-  return out;
-}
-
-static std::string str_to_snake(std::string_view s) noexcept
-{
-  std::string out;
-  out.reserve(s.size());
-
-  for (char c : s) {
-    if (c == '-')
-      out.push_back('_');
-    else
-      out.push_back(c);
-  }
-
-  return out;
-}
+void fmt_template(std::string& s, const std::initializer_list<std::string>& args) noexcept;
+void fmt_template(std::string& s, const std::initializer_list<std::string_view>& args) noexcept;
+void fmt_template(std::string&                                                                s,
+                  const std::initializer_list<std::pair<std::string_view, std::string_view>>& args) noexcept;
+void fmt_template(std::string& s, const std::initializer_list<std::pair<std::string, std::string>>& args) noexcept;
 
 
-void fmt_template(std::string& template_str, const std::initializer_list<std::string>& args) noexcept;
-void fmt_template(std::string& template_str, const std::initializer_list<std::string_view>& args) noexcept;
-void fmt_template(std::string& template_str, const std::map<std::string_view, std::string_view>& args) noexcept;
-void fmt_template(std::string& template_str, const std::map<std::string, std::string>& args) noexcept;
+void merge_list_cstr(std::vector<const char*>& _dest, const std::vector<const char*>& _val,
+                     compiler::EMergeMode mode) noexcept;
+void merge_list_str(std::vector<std::string>& _dest, const std::vector<std::string>& _val,
+                    compiler::EMergeMode mode) noexcept;
+void merge_map(std::vector<std::pair<std::string, std::string>>&       _dest,
+               const std::vector<std::pair<std::string, std::string>>& _val, compiler::EMergeMode mode) noexcept;
 
 
 struct FastRNG {

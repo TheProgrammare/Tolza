@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <print>
+#include <string_view>
 
 
 void common::compiler::DEBUG_TOLZA_ICE(std::string_view msg)

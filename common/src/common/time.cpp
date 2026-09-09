@@ -1,6 +1,9 @@
 #include "time.hpp"
 
+#include <bits/chrono.h>
 #include <chrono>
+#include <format>
+#include <string>
 
 
 std::string common::time::now_datetime() noexcept

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nexus/ids.hpp"
+#include "id/cuid.hpp"
 
 namespace codegen
 {

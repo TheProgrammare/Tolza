@@ -1,18 +1,25 @@
 #pragma once
 
+#include "id/cuid.hpp"
+#include "id/nodeid.hpp"
 #include "nexus/forward.hpp"
-#include "nexus/ids.hpp"
 
 #include <cassert>
+#include <common/enum_lite.hpp>
 #include <cstddef>
+#include <cstdint>
+#include <cstdio>
 #include <string>
 #include <string_view>
-#include <sys/types.h>
 #include <utility>
 
-enum class EErrorSeverity : uint8_t { debug, warning, error, fatal };
+DEFINE_ENUM(EErrorSeverity, uint8_t, //
+            debug, 1,                //
+            warning, 2,              //
+            error, 3,                //
+            fatal, 4                 //
+)
 
-[[nodiscard]] std::string_view ESeverity_to_str(EErrorSeverity severity) noexcept;
 [[nodiscard]] std::string_view ESeverity_to_color(EErrorSeverity severity) noexcept;
 
 [[nodiscard]] std::string      escapeChar(unsigned char c) noexcept;
