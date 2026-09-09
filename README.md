@@ -293,7 +293,6 @@ Third-party components are **not automatically covered by the Tolza license** an
 
 When redistributing Tolza, please ensure that the applicable licenses and notices for third-party components are preserved.
 
----
 
 # Trademark and Brand
 
@@ -347,7 +346,6 @@ However, a fork should clearly identify itself as a fork or derivative project a
 
 Forks are encouraged to use their own project name, logo and visual identity.
 
----
 
 # Copyright
 
@@ -357,7 +355,6 @@ The Tolza source code is licensed under the Apache License 2.0.
 
 The **Tolza name, logo, wordmark and associated branding are separate from the source-code license and are reserved**.
 
----
 
 # Disclaimer
 
