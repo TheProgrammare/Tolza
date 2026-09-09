@@ -7,10 +7,10 @@ To splice a info, use the prefix operator `\`, the compiler will investigate the
 flags reflexion:
 ```tolza
 flags FPermissions { Read, Write, Execute }
-let first_flag = @FPermission.Flags[0]
+let first_flag = @FPermissions.Flags[0]
 
 fn main() {
-  let current_permission = \first_flag b.and FPermission::Execute
+  let current_permission = \first_flag b.and FPermissions::Execute
   let val_metainfo = @current_permission.value
 
   print("all permissions: ")
