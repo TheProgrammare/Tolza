@@ -352,6 +352,7 @@ Forks are encouraged to use their own project name, logo and visual identity.
 Copyright © 2026 Foz Florian - Tolza
 
 The Tolza source code is licensed under the Apache License 2.0.
+
 Source: https://github.com/TheProgrammare/Tolza
 
 The **Tolza name, logo, wordmark and associated branding are separate from the source-code license and are reserved**.
