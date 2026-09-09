@@ -190,14 +190,14 @@ Tolza allows the use of external code with minimal boilerplate and no name colli
 
 ### Example: Using a C Library
 ```Tolza
-import bind/C/stdio as C
+import bind::C::stdio as C
 
 fn main() {
-  C::printf("Hello World !"c_str)
+  C::printf("Hello World !")
 }
 ```
 Explanation:
-- `import bind/C/stdio` declares a binding to import
+- `import bind::C::stdio` declares a binding to import
 - `C::printf` references the language, then the script
 - `as C` isolate the importation into the `C` namespace to use like `C::scanf(...)`
 - The compiler generates a binding script linking the external function automatically
@@ -259,3 +259,112 @@ install compiler:
 ```
 cd REPO_LOCATION/tolza/compiler && cmake --preset release && cmake --install build/release
 ```
+
+---
+
+# License
+
+## Source Code
+
+The **Tolza source code** is licensed under the:
+
+**Apache License 2.0**
+
+See the [`LICENSE`](LICENSE) file for the complete license text.
+
+The Apache License 2.0 permits, among other things:
+
+* use of the source code;
+* modification;
+* reproduction;
+* distribution;
+* creation of derivative works;
+* commercial use.
+
+The Apache License 2.0 also provides an express patent license, subject to the terms and conditions of the license.
+
+You may use, modify and distribute Tolza, including for commercial purposes, provided that you comply with the Apache License 2.0.
+
+## Third-Party Components
+
+Tolza may use or distribute third-party software and libraries.
+
+Third-party components are **not automatically covered by the Tolza license** and remain subject to their respective licenses and copyright notices.
+
+When redistributing Tolza, please ensure that the applicable licenses and notices for third-party components are preserved.
+
+---
+
+# Trademark and Brand
+
+The **Tolza** name, logo, wordmark and associated visual identity are separate from the license covering the source code.
+
+The Apache License 2.0 applies to the **source code**. It does **not** grant permission to use the Tolza trademarks or branding in a way that implies official endorsement, affiliation or sponsorship.
+
+## Tolza Name
+
+The name **Tolza** identifies the official project and its associated software and ecosystem.
+
+You may refer to Tolza when necessary to accurately describe the software, including when describing compatibility with or use of Tolza.
+
+For example:
+
+> "This software uses the Tolza programming language."
+
+or:
+
+> "This project is a fork of Tolza."
+
+Such use must not imply that the project is officially maintained, endorsed or sponsored by the Tolza project or its maintainers.
+
+## Logo and Visual Identity
+
+The Tolza logos, wordmarks and other visual assets located in the [`logo/`](logo/) directory are **reserved brand assets**.
+
+They are not licensed under the Apache License 2.0 unless explicitly stated otherwise.
+
+The Apache License 2.0 therefore does not grant permission to:
+
+* use the Tolza logo as the primary branding of a fork;
+* present a modified compiler or distribution as an official Tolza release;
+* use Tolza branding to imply endorsement by the Tolza project;
+* create a product or service whose branding could reasonably be confused with the official Tolza project.
+
+Forks and derivative projects are welcome, but should use a **distinct name and visual identity**.
+
+## Forks
+
+The Apache License 2.0 permits forks and derivative works.
+
+A fork may therefore:
+
+* modify the Tolza source code;
+* redistribute the modified source code;
+* distribute compiled versions;
+* use Tolza as a base for commercial software.
+
+However, a fork should clearly identify itself as a fork or derivative project and should not represent itself as the official Tolza project.
+
+Forks are encouraged to use their own project name, logo and visual identity.
+
+---
+
+# Copyright
+
+Copyright © 2026 TheProgrammare.
+
+The Tolza source code is licensed under the Apache License 2.0.
+
+The **Tolza name, logo, wordmark and associated branding are separate from the source-code license and are reserved**.
+
+---
+
+# Disclaimer
+
+Tolza is experimental software and is currently under active development.
+
+The language, compiler, toolchain, syntax, semantics, ABI and generated code may change without notice.
+
+Tolza is provided under the terms of the Apache License 2.0, without warranties or conditions of any kind, to the extent permitted by applicable law.
+
+Users are responsible for evaluating the suitability, security and correctness of Tolza and software produced with it before using it in production or safety-critical environments.
