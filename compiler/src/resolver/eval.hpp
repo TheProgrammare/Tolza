@@ -2,18 +2,28 @@
 
 #include "ast/forward.hpp"
 #include "nexus/forward.hpp"
-#include "resolver/base.hpp"
+
+#include <string_view>
 
 
 namespace resolver
 {
 
+struct Evaluator final {
+  Evaluator() = delete;
+  explicit Evaluator(cu::CU& p_CU)
+    : CU(p_CU)
+  {
+  }
 
-struct Evaluator final : Base {
-  // keep parent constructor
-  using Base::Base;
+  cu::CU& CU;
 
   bool start_resolver();
+
+  void add_error(ErrorCode code, const ast::NodeHeader& n, std::string_view msg, std::string_view hint) const;
+
+  void add_error_two_nodes(ErrorCode, const ast::NodeHeader& first, const ast::NodeHeader& second, std::string_view msg,
+                           std::string_view hint) const;
 
   void add_evaluation(ast::ID nodeid, ast::ID constant) noexcept;
 

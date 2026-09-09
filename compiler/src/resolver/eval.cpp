@@ -9,7 +9,9 @@
 #include "ast/pool.hpp"
 #include "compiler/compilation_unit.hpp"
 #include "compiler/compiler.hpp"
+#include "compiler/file_info.hpp"
 #include "id/base.hpp"
+#include "lexer/pool.hpp"
 #include "misc/error_output.hpp"
 #include "nexus/forward.hpp"
 #include "type/data.hpp"
@@ -19,6 +21,7 @@
 #include <cstddef>
 #include <llvm-19/llvm/ADT/APFloat.h>
 #include <llvm-19/llvm/ADT/APInt.h>
+#include <string_view>
 
 
 bool resolver::Evaluator::start_resolver()
@@ -30,6 +33,29 @@ bool resolver::Evaluator::start_resolver()
 
 void resolver::Evaluator::add_evaluation(ast::ID nodeid, ast::ID constant) noexcept
 {
+}
+
+
+void resolver::Evaluator::add_error(ErrorCode code, const ast::NodeHeader& n, std::string_view msg,
+                                    std::string_view hint) const
+{
+  auto& tok   = CU.file_info.tokens->get(n.start_tokid);
+  auto  error = Error_Diagnostic(CU.cuid, code, n.nodeid, compiler::EPhase::resolver_evaluation, msg, hint);
+  COMPILER.add_error(error);
+}
+
+void resolver::Evaluator::add_error_two_nodes(ErrorCode code, const ast::NodeHeader& first,
+                                              const ast::NodeHeader& second, std::string_view msg,
+                                              std::string_view hint) const
+{
+  auto&            first_tok  = CU.file_info.tokens->get(first.start_tokid);
+  auto&            second_tok = CU.file_info.tokens->get(second.start_tokid);
+  auto             err_first  = Error_Elem(CU.cuid, code, first_tok.begin, first_tok.begin + first_tok.length,
+                                           compiler::EPhase::resolver_evaluation, msg, hint);
+  auto             err_second = Error_Elem(CU.cuid, code, second_tok.begin, second_tok.begin + first_tok.length,
+                                           compiler::EPhase::resolver_evaluation, msg, hint);
+  Error_Diagnostic err(err_first, err_second);
+  COMPILER.add_error(err);
 }
 
 ast::ID resolver::Evaluator::eval_node(ast::ID nodeid) noexcept
