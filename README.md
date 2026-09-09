@@ -349,7 +349,7 @@ Forks are encouraged to use their own project name, logo and visual identity.
 
 # Copyright
 
-Copyright © 2026 TheProgrammare.
+Copyright © 2026 Foz Florian - Tolza
 
 The Tolza source code is licensed under the Apache License 2.0.
 
