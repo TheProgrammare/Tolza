@@ -55,45 +55,47 @@ This project uses the following open-source libraries:
 # WIKI
 
 ## A. Procedural Programming
-1. [variables](docs/wiki/variable.md)
-2. [operators](docs/wiki/operators.md)	
-3. [control flow](docs/wiki/flow.md)
-4. [pattern matching](docs/wiki/pattern.md)
+1. [variables](docs/wiki/language/variable.md)
+2. [operators](docs/wiki/language/operators.md)	
+3. [control flow](docs/wiki/language/flow.md)
+4. [pattern matching](docs/wiki/language/pattern.md)
 
 ## B. Functional Programming
-1. [functions](docs/wiki/function.md)
-2. [parameters](docs/wiki/parameter.md)
-2. [closures](docs/wiki/closure.md)
+1. [functions](docs/wiki/language/function.md)
+2. [parameters](docs/wiki/language/parameter.md)
+2. [closures](docs/wiki/language/closure.md)
 
-## C. Compositional Oriented Programming
-0. [paradigm](docs/wiki/cop.md)
-1. [components](docs/wiki/component.md)
-2. [entities](docs/wiki/entity.md)
-3. [systems](docs/wiki/system.md)
+## C. Structural Facet Model
+1. [paradigm](docs/wiki/language/sfm.md)
+2. [facet](docs/wiki/language/facet.md)
+3. [form](docs/wiki/language/form.md)
+4. [rule](docs/wiki/language/rule.md)
 
 ## D. Type System
-1. [types](docs/wiki/type.md)
-2. [textual](docs/wiki/textual.md)
-3. [tuples](docs/wiki/tuple.md)
-4. [tables](docs/wiki/table.md)
-5. [flags](docs/wiki/flag.md)
-6. [unions](docs/wiki/union.md)
-7. [enumerators](docs/wiki/enumerator.md)
-8. [generics](docs/wiki/generic.md)
+1. [types](docs/wiki/language/type.md)
+2. [textual](docs/wiki/language/textual.md)
+3. [tuples](docs/wiki/language/tuple.md)
+4. [tables](docs/wiki/language/table.md)
+5. [flags](docs/wiki/language/flag.md)
+6. [unions](docs/wiki/language/union.md)
+7. [enumerators](docs/wiki/language/enumerator.md)
+8. [generics](docs/wiki/language/generic.md)
 
 ## E. Memory Model
-1. [stack](docs/wiki/memory_stack.md)
-2. [heap](docs/wiki/memory_heap.md)
+1. [stack](docs/wiki/language/memory_stack.md)
+2. [heap](docs/wiki/language/memory_heap.md)
 
 ## F. Modules & Tooling
-1. [modules](docs/wiki/module.md)
-2. [metacodes](docs/wiki/metacode.md)
-3. [script binding](docs/wiki/bindgen.md)
+1. [modules](docs/wiki/language/module.md)
+2. [metacodes](docs/wiki/language/metacode.md)
+3. [reflexions](docs/wiki/language/reflexion.md)
+4. [script binding](docs/wiki/language/bindgen.md)
 
 ## G. Runtime
-1. [input output](docs/wiki/io.md)
-2. [threading](docs/wiki/threading.md)
+1. [input output](docs/wiki/language/io.md)
+2. [threading](docs/wiki/language/threading.md)
+
 
 ## H. Low Level
-1. [assembly](docs/wiki/asm.md)	       
+1. [assembly](docs/wiki/language/asm.md)	       
 
