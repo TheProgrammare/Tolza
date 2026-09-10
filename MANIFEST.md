@@ -63,7 +63,8 @@ This project uses the following open-source libraries:
 ## B. Functional Programming
 1. [functions](docs/wiki/language/function.md)
 2. [parameters](docs/wiki/language/parameter.md)
-2. [closures](docs/wiki/language/closure.md)
+3. [closures](docs/wiki/language/closure.md)
+4. [extensions](docs/wiki/language/extension.md)
 
 ## C. Structural Facet Model
 1. [paradigm](docs/wiki/language/sfm.md)
