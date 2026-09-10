@@ -45,7 +45,7 @@ b.print()
 | mutable operator | `extend T op += {...}` | the two terms are always the same types, returns the type | `my_type1 += my_type2`
 | ordering | `extend T op <=> {...}` | the two terms are always the same types, returns ordering value, generate boolean version, no equality, can be overrided | `my_type1 > my_type2`
 | index operator | `extend T op [index: usize] -> U {...}` | returns the type reference mut/ref | `ref elem = my_type[1]`
-| index bound operator | `extend MyType op ?[index: usize] -> T? {...}` | returns optional | `if let elem = my_type?[1]`
+| index bound operator | `extend T op ?[index: usize] -> T? {...}` | returns optional | `if let elem = my_type?[1]`
 | slice operator | `extend T op [start..end] -> Slice<U> {...}` | returns the slice type | `ref elem = my_type[0..8]`
 | slice bound operator | `extend T op ?[start..end] -> Slice<U>? {...}` | returns the slice type | `ref elem = my_type?[0..8]`
 | slice bits operator | `extend T op ~[start..end] -> U {...}` | returns byte type | `let bits: bsize = my_type~[0..64]`
