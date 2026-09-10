@@ -63,8 +63,8 @@ use this for too long names and for most used local variable or temporary variab
 | bool | `b` |
 | void | `u0` |
 | ptrdiff | `pdif` |
-| i8 - i128 - isize | `i8` - `i128` `isz` |
-| u8 - u128 - isize| `u8` - `u128` `usz` |
+| s8 - s128 - ssize | `s8` - `s128` `ssz` |
+| u8 - u128 - usize| `u8` - `u128` `usz` |
 | b8 - b128 - bsize | `b8` `b128` `bsz` |
 | f32 - f64 - fsize | `f32` `f64` `fsz` |
 | ascii | `aii` |
