@@ -118,13 +118,11 @@ Any pull request must be made with some minimal requirements:
 - Avoid boilerplate
 - Avoid nested code logic
 - Avoid raw pointer when it's possible
-- Prefer the stack and smart pointers
-- `weak_ptr` are most of time a reference bridge
+- Prefer smart pointers and ids/pool
 - Functions must do one thing
 - Too long functions are prohibited
-- Use errors handler, see !(error handlers)[error_handlers]
 - Avoid cryptic code
-- Avoid micro-optimization (clang is smarter in optimization)
+- Avoid micro-optimization by esoteric tricks
 - Stay simple
 - Code must be explicit: human readable, commented and use `[[nodiscard]]` `[[maybe_unused]]` when it's appropriate
 - Use lambda when a function seems too specialized and too tiny (used only in one code section)
