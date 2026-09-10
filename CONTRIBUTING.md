@@ -67,6 +67,7 @@ This project contains several sub-projects:
   - FFI Binder
   - Resolver
   - Codegen
+  - ...
 - Toolchain
   - Commands
   - Package Manager
