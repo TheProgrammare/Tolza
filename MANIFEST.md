@@ -67,9 +67,9 @@ This project uses the following open-source libraries:
 
 ## C. Structural Facet Model
 1. [paradigm](docs/wiki/language/sfm.md)
-2. [facet](docs/wiki/language/facet.md)
-3. [form](docs/wiki/language/form.md)
-4. [rule](docs/wiki/language/rule.md)
+2. [facet](docs/wiki/language/sfm_facet.md)
+3. [form](docs/wiki/language/sfm_form.md)
+4. [rule](docs/wiki/language/sfm_rule.md)
 
 ## D. Type System
 1. [types](docs/wiki/language/type.md)
